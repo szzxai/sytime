@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>校园地图</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    background: #ffffff;
+    color: #000000;
+    font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+  }
+  #map {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: #ffffff;
+  }
+  .btn {
+    display: inline-block;
+    background: #ffffff;
+    color: #000000;
+    border: 2px solid #000000;
+    border-radius: 0;
+    padding: 8px 14px;
+    font-size: 14px;
+    font-family: inherit;
+    cursor: pointer;
+    text-decoration: none;
+    line-height: 1;
+  }
+  .btn:hover { background: #000000; color: #ffffff; }
+  .btn.active { background: #000000; color: #ffffff; }
+  .top-left {
+    position: absolute;
+    z-index: 1000;
+    top: 12px;
+    left: 12px;
+  }
+  .top-right {
+    position: absolute;
+    z-index: 1000;
+    top: 12px;
+    right: 12px;
+    display: flex;
+    gap: 8px;
+  }
+  .tip-box {
+    position: absolute;
+    z-index: 1000;
+    bottom: 12px;
+    left: 12px;
+    background: #ffffff;
+    border: 2px solid #000000;
+    padding: 8px 12px;
+    font-size: 13px;
+    line-height: 1.6;
+  }
+  .leaflet-control-zoom a {
+    background: #ffffff;
+    color: #000000;
+    border: 2px solid #000000;
+    border-radius: 0;
+  }
+  .leaflet-control-zoom a:hover { background: #000000; color: #ffffff; }
+</style>
+</head>
+<body>
+  <div id="map"></div>
+
+  <div class="top-left">
+    <a class="btn" href="index.html">⬅️ 返回首页</a>
+  </div>
+
+  <div class="top-right">
+    <button class="btn active" id="floor1Btn" onclick="setFloor(1)">1F</button>
+    <button class="btn" id="floor2Btn" onclick="setFloor(2)">2F</button>
+    <button class="btn" id="floor3Btn" onclick="setFloor(3)">3F</button>
+    <button class="btn" id="floor4Btn" onclick="setFloor(4)">4F</button>
+  </div>
+
+  <div class="tip-box">
+    鼠标滚轮：缩放<br>
+    鼠标拖拽：移动地图<br>
+    键盘 W A S D / 方向键：移动地图
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    var map = L.map("map", {
+      crs: L.CRS.Simple,
+      minZoom: -1,
+      maxZoom: 6,
+      zoomControl: false,
+      attributionControl: false,
+      keyboard: false,
+      scrollWheelZoom: true,
+      dragging: true
+    });
+
+    L.control.zoom({ position: "bottomright" }).addTo(map);
+
+    map.createPane("labelsPane");
+    map.getPane("labelsPane").style.zIndex = 650;
+
+    var AXIS_Y = 420;
+    var RECT_W = 1200;
+    var RECT_H = 700;
+
+    var style = null;
+    var baseZoom = 1;
+    var scalablePaths = [];
+
+    var baseLayer = L.layerGroup().addTo(map);
+    var floorGroups = {
+      1: L.layerGroup(),
+      2: L.layerGroup(),
+      3: L.layerGroup(),
+      4: L.layerGroup()
+    };
+
+    function point(x, y) {
+      return [y, x];
+    }
+
+    function mirrorY(y) {
+      return 2 * AXIS_Y - y;
+    }
+
+    function createAreaLabel(text, x1, y1, x2, y2, color, scale) {
+      var w = Math.abs(x2 - x1);
+      var h = Math.abs(y2 - y1);
+      var ns = "http://www.w3.org/2000/svg";
+      var svg = document.createElementNS(ns, "svg");
+      svg.setAttribute("xmlns", ns);
+      svg.setAttribute("viewBox", "0 0 " + w + " " + h);
+      svg.setAttribute("font-weight", "300");
+      var fillColor = color || "#777777";
+      var textScale = scale || 0.8;
+
+      var chars = text.split("");
+      var vertical = h >= w;
+      var fontSize;
+
+      if (vertical) {
+        fontSize = Math.min(w * textScale, (h / chars.length) * textScale);
+        chars.forEach(function (ch, index) {
+          var t = document.createElementNS(ns, "text");
+          t.setAttribute("x", w / 2);
+          t.setAttribute("y", (index + 0.5) * (h / chars.length));
+          t.setAttribute("font-size", fontSize);
+          t.setAttribute("fill", fillColor);
+          t.setAttribute("text-anchor", "middle");
+          t.setAttribute("dominant-baseline", "central");
+          t.setAttribute("font-family", "Microsoft YaHei, PingFang SC, sans-serif");
+          t.textContent = ch;
+          svg.appendChild(t);
+        });
+      } else {
+        fontSize = Math.min((w / chars.length) * textScale, h * textScale);
+        var t = document.createElementNS(ns, "text");
+        t.setAttribute("x", w / 2);
+        t.setAttribute("y", h / 2);
+        t.setAttribute("font-size", fontSize);
+        t.setAttribute("fill", fillColor);
+        t.setAttribute("text-anchor", "middle");
+        t.setAttribute("dominant-baseline", "central");
+        t.setAttribute("font-family", "Microsoft YaHei, PingFang SC, sans-serif");
+        t.textContent = text;
+        svg.appendChild(t);
+      }
+
+      return svg;
+    }
+
+    function popupHtml(feat) {
+      if (feat.popup && feat.name && feat.popup !== feat.name) {
+        return "<b>" + feat.name + "</b><br>" + feat.popup;
+      }
+      return feat.popup || feat.name || "";
+    }
+
+    function targetGroups(layers) {
+      var out = [];
+      layers.forEach(function (l) {
+        if (l === "base") {
+          out.push(baseLayer);
+        } else if (floorGroups[l]) {
+          out.push(floorGroups[l]);
+        }
+      });
+      return out;
+    }
+
+    function styleOptions(feat) {
+      var opts = {
+        color: style.outline,
+        weight: feat.weight || 1,
+        opacity: 1,
+        fill: !!feat.fill && feat.cat !== "none",
+        fillColor: style.palette[feat.cat] || style.outline,
+        fillOpacity: style.fillOpacity,
+        stroke: feat.stroke !== false
+      };
+      if (feat.type === "polyline") {
+        opts.fill = false;
+        opts.stroke = true;
+      }
+      if (feat.dash) {
+        opts.dashArray = feat.dash;
+      }
+      return opts;
+    }
+
+    function renderFeature(feat) {
+      var groups = targetGroups(feat.layers);
+
+      if (feat.type === "label") {
+        groups.forEach(function (g) {
+          L.svgOverlay(
+            createAreaLabel(feat.text, feat.x1, feat.y1, feat.x2, feat.y2, style.labelColor, feat.scale),
+            L.latLngBounds(point(feat.x1, feat.y1), point(feat.x2, feat.y2)),
+            { pane: "labelsPane" }
+          ).addTo(g);
+        });
+        return;
+      }
+
+      var pts = feat.points.map(function (p) { return point(p[0], p[1]); });
+      var opts = styleOptions(feat);
+
+      groups.forEach(function (g) {
+        var shape = feat.type === "polygon" ? L.polygon(pts, opts) : L.polyline(pts, opts);
+        if (feat.popup || feat.name) {
+          shape.bindPopup(popupHtml(feat));
+        }
+        shape.addTo(g);
+        scalablePaths.push(shape);
+      });
+    }
+
+    function collectPaths(obj) {
+      if (obj instanceof L.Path) {
+        if (obj.options.baseWeight === undefined) {
+          obj.options.baseWeight = obj.options.weight;
+        }
+      } else if (obj && typeof obj.eachLayer === "function") {
+        obj.eachLayer(function (child) { collectPaths(child); });
+      }
+    }
+
+    function updateLineWeights() {
+      var factor = Math.pow(2, map.getZoom() - baseZoom);
+      factor = Math.min(1, Math.max(0.3, factor));
+      scalablePaths.forEach(function (path) {
+        var base = path.options.baseWeight === undefined ? path.options.weight : path.options.baseWeight;
+        path.setStyle({ weight: Math.max(0.4, base * factor) });
+      });
+    }
+
+    function setFloor(n) {
+      [1, 2, 3, 4].forEach(function (f) {
+        var g = floorGroups[f];
+        if (f === n) {
+          if (!map.hasLayer(g)) { g.addTo(map); }
+        } else if (map.hasLayer(g)) {
+          map.removeLayer(g);
+        }
+      });
+      for (var i = 1; i <= 4; i++) {
+        document.getElementById("floor" + i + "Btn").classList.toggle("active", i === n);
+      }
+    }
+
+    function build(data) {
+      style = data.style;
+      AXIS_Y = data.meta.axisY;
+      RECT_W = data.meta.rectW;
+      RECT_H = data.meta.rectH;
+      map.setMinZoom(data.meta.minZoom);
+      map.setMaxZoom(data.meta.maxZoom);
+
+      var order = { polygon: 0, polyline: 1, label: 2 };
+      var feats = data.features.slice().sort(function (a, b) {
+        return (order[a.type] === undefined ? 0 : order[a.type]) - (order[b.type] === undefined ? 0 : order[b.type]);
+      });
+
+      feats.forEach(renderFeature);
+
+      map.fitBounds([[0, 0], [RECT_H, RECT_W]]);
+      setFloor(1);
+      baseZoom = map.getZoom();
+
+      collectPaths(baseLayer);
+      [1, 2, 3, 4].forEach(function (f) { collectPaths(floorGroups[f]); });
+
+      map.on("zoomend", updateLineWeights);
+      updateLineWeights();
+    }
+
+    var loadError = document.createElement("div");
+    loadError.style.cssText = "position:absolute;z-index:2000;top:60px;left:12px;background:#fff;border:2px solid #000;padding:8px 12px;font-size:14px;";
+    loadError.textContent = "地图数据加载中…";
+    document.body.appendChild(loadError);
+
+    fetch("/api/map-data")
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        loadError.parentNode.removeChild(loadError);
+        build(data);
+      })
+      .catch(function (err) {
+        loadError.textContent = "地图数据加载失败：" + err.message;
+      });
+
+    document.addEventListener("keydown", function (e) {
+      var k = e.key.toLowerCase();
+      var step = 90;
+      var moved = true;
+
+      if (k === "w" || e.key === "ArrowUp") {
+        map.panBy([0, -step], { animate: false });
+      } else if (k === "s" || e.key === "ArrowDown") {
+        map.panBy([0, step], { animate: false });
+      } else if (k === "a" || e.key === "ArrowLeft") {
+        map.panBy([-step, 0], { animate: false });
+      } else if (k === "d" || e.key === "ArrowRight") {
+        map.panBy([step, 0], { animate: false });
+      } else {
+        moved = false;
+      }
+
+      if (moved) { e.preventDefault(); }
+    });
+  </script>
+</body>
+</html>
