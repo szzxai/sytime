@@ -15,9 +15,47 @@
     color: #000000;
     font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
   }
+  .header {
+    position: relative;
+    z-index: 1100;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 2px solid #000000;
+    padding: 16px 32px;
+    background: #ffffff;
+  }
+  .logo {
+    font-size: 22px;
+    font-weight: bold;
+    letter-spacing: 2px;
+  }
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+  }
+  .nav {
+    display: flex;
+    gap: 24px;
+  }
+  .nav a {
+    color: #000000;
+    text-decoration: none;
+    font-size: 16px;
+    padding: 6px 4px;
+    border-bottom: 2px solid transparent;
+  }
+  .nav a:hover {
+    border-bottom: 2px solid #000000;
+  }
+  .auth {
+    display: flex;
+    gap: 8px;
+  }
   #map {
     position: absolute;
-    top: 0;
+    top: 63px;
     left: 0;
     right: 0;
     bottom: 0;
@@ -38,16 +76,10 @@
   }
   .btn:hover { background: #000000; color: #ffffff; }
   .btn.active { background: #000000; color: #ffffff; }
-  .top-left {
-    position: absolute;
-    z-index: 1000;
-    top: 12px;
-    left: 12px;
-  }
   .top-right {
     position: absolute;
     z-index: 1000;
-    top: 12px;
+    top: 96px;
     right: 12px;
     display: flex;
     gap: 8px;
@@ -70,14 +102,65 @@
     border-radius: 0;
   }
   .leaflet-control-zoom a:hover { background: #000000; color: #ffffff; }
+  .leaflet-popup { margin-bottom: 8px; }
+  .leaflet-popup-content-wrapper {
+    background: #ffffff;
+    color: #000000;
+    border: 2px solid #000000;
+    border-radius: 0;
+    box-shadow: none;
+  }
+  .leaflet-popup-content {
+    margin: 10px 14px;
+    color: #000000;
+    font-size: 14px;
+    line-height: 1.55;
+  }
+  .leaflet-popup-tip-container { display: none; }
+  .leaflet-container a.leaflet-popup-close-button {
+    color: #000000;
+    font-weight: normal;
+  }
+  .map-popup {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .map-popup-text { white-space: pre-wrap; }
+  .map-popup-edit {
+    align-self: flex-end;
+    margin-top: 8px;
+    background: #ffffff;
+    color: #000000;
+    border: 2px solid #000000;
+    border-radius: 0;
+    padding: 4px 12px;
+    font-size: 12px;
+    font-family: inherit;
+    cursor: pointer;
+    line-height: 1;
+  }
+  .map-popup-edit:hover { background: #000000; color: #ffffff; }
 </style>
 </head>
 <body>
-  <div id="map"></div>
+  <header class="header">
+    <div class="logo">校园信息网</div>
+    <div class="header-right">
+      <nav class="nav">
+        <a href="index.html">首页</a>
+        <a href="map.html">校园地图</a>
+        <a href="forum.html">论坛</a>
+        <a href="recipe.html">菜谱评价</a>
+      </nav>
+      <div class="auth" id="authArea">
+        <a class="btn" href="login.html">登录</a>
+        <a class="btn" href="register.html">注册</a>
+      </div>
+    </div>
+  </header>
 
-  <div class="top-left">
-    <a class="btn" href="index.html">⬅️ 返回首页</a>
-  </div>
+  <div id="map"></div>
 
   <div class="top-right">
     <button class="btn active" id="floor1Btn" onclick="setFloor(1)">1F</button>
@@ -102,13 +185,26 @@
       attributionControl: false,
       keyboard: false,
       scrollWheelZoom: true,
-      dragging: true
+      dragging: true,
+      closePopupOnClick: true
     });
 
     L.control.zoom({ position: "bottomright" }).addTo(map);
 
     map.createPane("labelsPane");
     map.getPane("labelsPane").style.zIndex = 650;
+    map.getPane("labelsPane").style.pointerEvents = "none";
+
+    map.on("popupopen", function (e) {
+      var el = e.popup.getElement();
+      if (!el) { return; }
+      L.DomEvent.disableClickPropagation(el);
+      L.DomEvent.disableScrollPropagation(el);
+      L.DomEvent.on(el, "click", function (ev) {
+        if (ev.target && ev.target.tagName === "A") { ev.preventDefault(); }
+        L.DomEvent.stopPropagation(ev);
+      });
+    });
 
     var AXIS_Y = 420;
     var RECT_W = 1200;
@@ -117,6 +213,12 @@
     var style = null;
     var baseZoom = 1;
     var scalablePaths = [];
+    var currentFloor = 1;
+    var currentRole = "guest";
+    var canEditPopups = false;
+    var popupShapes = [];
+    var lastEditedName = null;
+    var zoomHandlerBound = false;
 
     var baseLayer = L.layerGroup().addTo(map);
     var floorGroups = {
@@ -180,13 +282,6 @@
       return svg;
     }
 
-    function popupHtml(feat) {
-      if (feat.popup && feat.name && feat.popup !== feat.name) {
-        return "<b>" + feat.name + "</b><br>" + feat.popup;
-      }
-      return feat.popup || feat.name || "";
-    }
-
     function targetGroups(layers) {
       var out = [];
       layers.forEach(function (l) {
@@ -219,16 +314,74 @@
       return opts;
     }
 
+    function buildPopupContent(feat) {
+      var wrap = document.createElement("div");
+      wrap.className = "map-popup";
+      var span = document.createElement("div");
+      span.className = "map-popup-text";
+      span.textContent = feat.popup === undefined || feat.popup === null ? "" : String(feat.popup);
+      wrap.appendChild(span);
+      if (canEditPopups) {
+        var btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "map-popup-edit";
+        btn.textContent = "编辑";
+        L.DomEvent.on(btn, "click", function (ev) {
+          L.DomEvent.stop(ev);
+          openEditPrompt(feat.name, span);
+        });
+        wrap.appendChild(btn);
+      }
+      return wrap;
+    }
+
+    function openEditPrompt(name, spanEl) {
+      var current = spanEl ? spanEl.textContent : "";
+      var input = prompt("修改弹窗内容（" + (name || "") + "）", current);
+      if (input === null) { return; }
+      if (!confirm("确定要修改吗？")) { return; }
+      var token = localStorage.getItem("token") || "";
+      fetch("/api/admin/map-popup", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token },
+        body: JSON.stringify({ name: name, popup: input })
+      })
+        .then(function (res) {
+          return res.json().catch(function () { return {}; }).then(function (data) {
+            return { ok: res.ok, data: data };
+          });
+        })
+        .then(function (r) {
+          if (!r.ok) {
+            alert("修改失败：" + (r.data && r.data.error ? r.data.error : "unknown error"));
+            return;
+          }
+          if (spanEl) { spanEl.textContent = input; }
+          lastEditedName = name;
+          refreshMapData();
+        })
+        .catch(function (err) {
+          alert("修改失败：" + err.message);
+        });
+    }
+
     function renderFeature(feat) {
       var groups = targetGroups(feat.layers);
 
       if (feat.type === "label") {
         groups.forEach(function (g) {
-          L.svgOverlay(
+          var clickable = !!feat.popup;
+          var overlay = L.svgOverlay(
             createAreaLabel(feat.text, feat.x1, feat.y1, feat.x2, feat.y2, style.labelColor, feat.scale),
             L.latLngBounds(point(feat.x1, feat.y1), point(feat.x2, feat.y2)),
-            { pane: "labelsPane" }
+            { pane: "labelsPane", interactive: clickable }
           ).addTo(g);
+          var overlayEl = overlay.getElement();
+          if (overlayEl) {
+            overlayEl.style.pointerEvents = clickable ? "auto" : "none";
+            if (clickable) { overlayEl.style.cursor = "pointer"; }
+          }
+          if (clickable) { overlay.bindPopup(buildPopupContent(feat)); }
         });
         return;
       }
@@ -238,8 +391,10 @@
 
       groups.forEach(function (g) {
         var shape = feat.type === "polygon" ? L.polygon(pts, opts) : L.polyline(pts, opts);
-        if (feat.popup || feat.name) {
-          shape.bindPopup(popupHtml(feat));
+        if (feat.popup) {
+          shape.bindPopup(buildPopupContent(feat));
+          shape._popupName = feat.name;
+          popupShapes.push(shape);
         }
         shape.addTo(g);
         scalablePaths.push(shape);
@@ -266,6 +421,7 @@
     }
 
     function setFloor(n) {
+      currentFloor = n;
       [1, 2, 3, 4].forEach(function (f) {
         var g = floorGroups[f];
         if (f === n) {
@@ -279,13 +435,11 @@
       }
     }
 
-    function build(data) {
-      style = data.style;
-      AXIS_Y = data.meta.axisY;
-      RECT_W = data.meta.rectW;
-      RECT_H = data.meta.rectH;
-      map.setMinZoom(data.meta.minZoom);
-      map.setMaxZoom(data.meta.maxZoom);
+    function renderMap(data) {
+      baseLayer.clearLayers();
+      [1, 2, 3, 4].forEach(function (f) { floorGroups[f].clearLayers(); });
+      scalablePaths = [];
+      popupShapes = [];
 
       var order = { polygon: 0, polyline: 1, label: 2 };
       var feats = data.features.slice().sort(function (a, b) {
@@ -294,15 +448,52 @@
 
       feats.forEach(renderFeature);
 
-      map.fitBounds([[0, 0], [RECT_H, RECT_W]]);
-      setFloor(1);
-      baseZoom = map.getZoom();
-
       collectPaths(baseLayer);
       [1, 2, 3, 4].forEach(function (f) { collectPaths(floorGroups[f]); });
-
-      map.on("zoomend", updateLineWeights);
       updateLineWeights();
+    }
+
+    function build(data) {
+      style = data.style;
+      AXIS_Y = data.meta.axisY;
+      RECT_W = data.meta.rectW;
+      RECT_H = data.meta.rectH;
+      map.setMinZoom(data.meta.minZoom);
+      map.setMaxZoom(data.meta.maxZoom);
+
+      renderMap(data);
+
+      map.fitBounds([[0, 0], [RECT_H, RECT_W]]);
+      var savedFloor = preferredFloor !== null ? preferredFloor : parseInt(localStorage.getItem("defaultFloor"), 10);
+      currentFloor = savedFloor >= 1 && savedFloor <= 4 ? savedFloor : 1;
+      setFloor(currentFloor);
+      baseZoom = map.getZoom();
+      updateLineWeights();
+      map.fire("viewreset");
+
+      if (!zoomHandlerBound) {
+        map.on("zoomend", updateLineWeights);
+        zoomHandlerBound = true;
+      }
+    }
+
+    function refreshMapData() {
+      return fetch("/api/map-data")
+        .then(function (res) { return res.json(); })
+        .then(function (data) {
+          renderMap(data);
+          setFloor(currentFloor);
+          map.fire("viewreset");
+          if (lastEditedName) {
+            for (var i = 0; i < popupShapes.length; i++) {
+              if (popupShapes[i]._popupName === lastEditedName) {
+                popupShapes[i].openPopup();
+                break;
+              }
+            }
+          }
+        })
+        .catch(function () {});
     }
 
     var loadError = document.createElement("div");
@@ -310,7 +501,48 @@
     loadError.textContent = "地图数据加载中…";
     document.body.appendChild(loadError);
 
-    fetch("/api/map-data")
+    var preferredFloor = null;
+
+    function resolvePreferredFloor() {
+      var token = localStorage.getItem("token");
+      var local = parseInt(localStorage.getItem("defaultFloor"), 10);
+      var fallback = (local >= 1 && local <= 4) ? local : null;
+      if (!token) return Promise.resolve(fallback);
+      return fetch("/api/user/profile", { headers: { Authorization: "Bearer " + token } })
+        .then(function (res) { return res.ok ? res.json() : null; })
+        .then(function (data) {
+          var f = data && data.user ? parseInt(data.user.default_floor, 10) : NaN;
+          return (f >= 1 && f <= 4) ? f : fallback;
+        })
+        .catch(function () { return fallback; });
+    }
+
+    function loadRole() {
+      var token = localStorage.getItem("token");
+      if (!token) {
+        currentRole = "guest";
+        canEditPopups = false;
+        return Promise.resolve();
+      }
+      return fetch("/api/me", { headers: { Authorization: "Bearer " + token } })
+        .then(function (res) { return res.ok ? res.json() : null; })
+        .then(function (data) {
+          currentRole = data && data.user ? data.user.role : "guest";
+        })
+        .catch(function () { currentRole = "guest"; })
+        .then(function () {
+          canEditPopups = ["admin", "super_admin", "developer"].indexOf(currentRole) !== -1;
+        });
+    }
+
+    resolvePreferredFloor()
+      .then(function (floor) {
+        preferredFloor = floor;
+        return loadRole();
+      })
+      .then(function () {
+        return fetch("/api/map-data");
+      })
       .then(function (res) { return res.json(); })
       .then(function (data) {
         loadError.parentNode.removeChild(loadError);
@@ -340,5 +572,6 @@
       if (moved) { e.preventDefault(); }
     });
   </script>
+  <script src="auth.js"></script>
 </body>
 </html>

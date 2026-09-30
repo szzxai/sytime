@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>论坛 · 校园信息网</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: #ffffff;
+    color: #000000;
+    font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+  }
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 2px solid #000000;
+    padding: 16px 32px;
+  }
+  .logo {
+    font-size: 22px;
+    font-weight: bold;
+    letter-spacing: 2px;
+  }
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+  }
+  .nav {
+    display: flex;
+    gap: 24px;
+  }
+  .nav a {
+    color: #000000;
+    text-decoration: none;
+    font-size: 16px;
+    padding: 6px 4px;
+    border-bottom: 2px solid transparent;
+  }
+  .nav a:hover { border-bottom: 2px solid #000000; }
+  .auth {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .btn {
+    display: inline-block;
+    background: #ffffff;
+    color: #000000;
+    border: 2px solid #000000;
+    border-radius: 0;
+    padding: 8px 14px;
+    font-size: 14px;
+    font-family: inherit;
+    cursor: pointer;
+    text-decoration: none;
+    line-height: 1;
+  }
+  .btn:hover { background: #000000; color: #ffffff; }
+  .btn.active { background: #000000; color: #ffffff; }
+  .wrap {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 32px 16px 56px;
+  }
+  .switch {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+  .toolbar { margin-bottom: 20px; }
+  .panel {
+    border: 2px solid #000000;
+    padding: 20px;
+    margin-bottom: 24px;
+  }
+  .panel h2 {
+    font-size: 16px;
+    letter-spacing: 1px;
+    margin: 0 0 16px;
+  }
+  .field { margin-bottom: 14px; }
+  .field label {
+    display: block;
+    font-size: 13px;
+    color: #555555;
+    margin-bottom: 6px;
+  }
+  .field input,
+  .field textarea,
+  .field select {
+    width: 100%;
+    border: 2px solid #000000;
+    border-radius: 0;
+    padding: 10px 12px;
+    font-size: 14px;
+    font-family: inherit;
+    color: #000000;
+    background: #ffffff;
+    outline: none;
+  }
+  .field textarea { min-height: 110px; resize: vertical; }
+  .submit {
+    background: #000000;
+    color: #ffffff;
+    border: 2px solid #000000;
+    border-radius: 0;
+    padding: 10px 22px;
+    font-size: 14px;
+    font-family: inherit;
+    cursor: pointer;
+  }
+  .submit:hover { background: #ffffff; color: #000000; }
+  .submit:disabled { opacity: 0.5; cursor: default; }
+  .msg { min-height: 18px; font-size: 13px; margin-top: 12px; }
+  .msg.error { color: #cc0000; }
+  .msg.ok { color: #008800; }
+  .login-hint {
+    border: 2px dashed #000000;
+    padding: 24px;
+    text-align: center;
+    font-size: 14px;
+    margin-bottom: 24px;
+  }
+  .login-hint a { color: #000000; }
+  .posts { display: flex; flex-direction: column; gap: 14px; }
+  .post { border: 2px solid #000000; padding: 16px; }
+  .post-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 8px;
+  }
+  .post-title { font-size: 16px; font-weight: bold; }
+  .tag {
+    flex: none;
+    font-size: 12px;
+    border: 1px solid #000000;
+    padding: 2px 8px;
+  }
+  .post-meta { font-size: 12px; color: #777777; margin-bottom: 10px; }
+  .post-content {
+    font-size: 14px;
+    line-height: 1.7;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .post-actions { margin-top: 12px; }
+  .ctx-menu {
+    position: fixed;
+    z-index: 3000;
+    min-width: 130px;
+    background: #ffffff;
+    border: 2px solid #000000;
+    display: flex;
+    flex-direction: column;
+  }
+  .ctx-menu button {
+    background: none;
+    border: none;
+    text-align: left;
+    padding: 10px 16px;
+    font-size: 14px;
+    font-family: inherit;
+    color: #000000;
+    cursor: pointer;
+  }
+  .ctx-menu button:hover { background: #000000; color: #ffffff; }
+  .link-btn {
+    background: none;
+    border: none;
+    padding: 0;
+    font-size: 13px;
+    font-family: inherit;
+    color: #000000;
+    text-decoration: underline;
+    cursor: pointer;
+  }
+  .replies {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px dashed #cccccc;
+  }
+  .reply-list { display: flex; flex-direction: column; gap: 10px; }
+  .reply-meta { font-size: 12px; color: #777777; margin-bottom: 2px; }
+  .reply-content {
+    font-size: 14px;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .reply-form { margin-top: 12px; }
+  .reply-form textarea {
+    width: 100%;
+    border: 2px solid #000000;
+    border-radius: 0;
+    padding: 8px 10px;
+    font-size: 14px;
+    font-family: inherit;
+    color: #000000;
+    background: #ffffff;
+    min-height: 64px;
+    resize: vertical;
+    outline: none;
+    margin-bottom: 10px;
+  }
+  .login-hint-sm { margin-top: 12px; font-size: 13px; color: #777777; }
+  .login-hint-sm a { color: #000000; }
+  .empty-sm { font-size: 13px; color: #888888; }
+  .empty {
+    font-size: 14px;
+    color: #777777;
+    text-align: center;
+    padding: 24px;
+    border: 2px dashed #dddddd;
+  }
+</style>
+</head>
+<body>
+  <header class="header">
+    <div class="logo">校园信息网</div>
+    <div class="header-right">
+      <nav class="nav">
+        <a href="index.html">首页</a>
+        <a href="map.html">校园地图</a>
+        <a href="forum.html">论坛</a>
+        <a href="recipe.html">菜谱评价</a>
+      </nav>
+      <div class="auth" id="authArea">
+        <a class="btn" href="login.html">登录</a>
+        <a class="btn" href="register.html">注册</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <div class="switch">
+      <button class="btn active" id="discussBtn">讨论</button>
+      <button class="btn" id="questionBtn">提问</button>
+    </div>
+
+    <div class="toolbar">
+      <button type="button" class="btn" id="newPostBtn">发布帖子</button>
+    </div>
+
+    <div class="panel" id="publishPanel" style="display:none;">
+      <h2>发布帖子</h2>
+      <form id="postForm" autocomplete="off">
+        <div class="field">
+          <label for="title">标题</label>
+          <input type="text" id="title" required>
+        </div>
+        <div class="field">
+          <label for="category">分类</label>
+          <select id="category">
+            <option value="讨论">讨论</option>
+            <option value="提问">提问</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="content">内容</label>
+          <textarea id="content" required></textarea>
+        </div>
+        <button type="submit" class="submit" id="postSubmit">发布</button>
+        <div class="msg" id="formMsg"></div>
+      </form>
+      <button type="button" class="btn" id="collapsePostBtn" style="margin-top:12px;">收起</button>
+    </div>
+
+    <div class="login-hint" id="loginHint" style="display:none;">
+      请先登录后再发布帖子　<a href="login.html">前往登录</a>
+    </div>
+
+    <div class="posts" id="postList"></div>
+  </main>
+
+  <script src="auth.js"></script>
+  <script>
+    var token = localStorage.getItem("token");
+    var currentCategory = "讨论";
+    var ROLE_WEIGHTS = { developer: 6, super_admin: 5, admin: 4, student: 3, user: 2, guest: 1 };
+
+    function escapeHtml(value) {
+      if (value === null || value === undefined) return "";
+      return String(value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }
+
+    function formatTime(sec) {
+      var d = new Date(Number(sec) * 1000);
+      function p(n) { return n < 10 ? "0" + n : "" + n; }
+      return d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" + p(d.getDate()) + " " + p(d.getHours()) + ":" + p(d.getMinutes());
+    }
+
+    function setCategory(category) {
+      currentCategory = category;
+      document.getElementById("discussBtn").classList.toggle("active", category === "讨论");
+      document.getElementById("questionBtn").classList.toggle("active", category === "提问");
+      loadPosts();
+    }
+
+    function loadPosts() {
+      var list = document.getElementById("postList");
+      list.innerHTML = '<div class="empty">加载中…</div>';
+      fetch("/api/forum/posts?category=" + encodeURIComponent(currentCategory))
+        .then(function (res) { return res.json(); })
+        .then(function (data) {
+          var posts = data.posts || [];
+          if (!posts.length) {
+            list.innerHTML = '<div class="empty">还没有帖子，来发第一帖吧</div>';
+            return;
+          }
+          list.innerHTML = posts.map(function (p) {
+            var replyArea = token
+              ? '<div class="reply-form">' +
+                  '<textarea data-reply-input placeholder="写下你的回复…"></textarea>' +
+                  '<button type="button" class="submit" data-reply-submit>发布回复</button>' +
+                  '<div class="msg" data-reply-msg></div>' +
+                '</div>'
+              : '<div class="login-hint-sm">请先登录后回复　<a href="login.html">前往登录</a></div>';
+            return '<div class="post" data-post-id="' + p.id + '" data-user-id="' + p.user_id + '">' +
+              '<div class="post-head">' +
+                '<span class="post-title">' + escapeHtml(p.title) + '</span>' +
+                '<span class="tag">' + escapeHtml(p.category) + '</span>' +
+              '</div>' +
+              '<div class="post-meta">' + escapeHtml(p.username) + ' · ' + formatTime(p.created_at) + '</div>' +
+              '<div class="post-content">' + escapeHtml(p.content) + '</div>' +
+              '<div class="post-actions">' +
+                '<button type="button" class="link-btn" data-replies-toggle>回复（<span data-reply-count>' + (p.reply_count || 0) + '</span>）</button>' +
+              '</div>' +
+              '<div class="replies" data-replies style="display:none;">' +
+                '<div class="reply-list" data-reply-list></div>' +
+                replyArea +
+              '</div>' +
+            '</div>';
+          }).join("");
+        })
+        .catch(function (err) {
+          list.innerHTML = '<div class="empty">加载失败：' + escapeHtml(err.message) + '</div>';
+        });
+    }
+
+    document.getElementById("discussBtn").addEventListener("click", function () { setCategory("讨论"); });
+    document.getElementById("questionBtn").addEventListener("click", function () { setCategory("提问"); });
+
+    function togglePublishPanel(forceClose) {
+      var panel = document.getElementById("publishPanel");
+      var btn = document.getElementById("newPostBtn");
+      if (forceClose || panel.style.display === "block") {
+        panel.style.display = "none";
+        btn.classList.remove("active");
+        return;
+      }
+      document.getElementById("loginHint").style.display = "none";
+      document.getElementById("category").value = currentCategory;
+      panel.style.display = "block";
+      btn.classList.add("active");
+    }
+
+    document.getElementById("newPostBtn").addEventListener("click", function () {
+      if (!token) {
+        document.getElementById("loginHint").style.display = "block";
+        return;
+      }
+      togglePublishPanel();
+    });
+
+    document.getElementById("collapsePostBtn").addEventListener("click", function () {
+      togglePublishPanel(true);
+    });
+
+    document.getElementById("postForm").addEventListener("submit", function (e) {
+      e.preventDefault();
+      var msg = document.getElementById("formMsg");
+      var submit = document.getElementById("postSubmit");
+      var category = document.getElementById("category").value;
+      var title = document.getElementById("title").value.trim();
+      var content = document.getElementById("content").value.trim();
+
+      if (!title || !content) {
+        msg.className = "msg error";
+        msg.textContent = "标题和内容不能为空";
+        return;
+      }
+
+      msg.className = "msg";
+      msg.textContent = "发布中…";
+      submit.disabled = true;
+
+      fetch("/api/forum/posts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token },
+        body: JSON.stringify({ category: category, title: title, content: content })
+      })
+        .then(function (res) {
+          return res.json().then(function (data) { return { ok: res.ok, data: data }; });
+        })
+        .then(function (r) {
+          if (!r.ok) {
+            msg.className = "msg error";
+            msg.textContent = r.data.error === "login required" ? "请先登录" : (r.data.error || "发布失败");
+            submit.disabled = false;
+            return;
+          }
+          document.getElementById("postForm").reset();
+          msg.className = "msg ok";
+          msg.textContent = "发布成功";
+          submit.disabled = false;
+          if (currentCategory === category) {
+            loadPosts();
+          } else {
+            setCategory(category);
+          }
+        })
+        .catch(function (err) {
+          msg.className = "msg error";
+          msg.textContent = "网络错误：" + err.message;
+          submit.disabled = false;
+        });
+    });
+
+    function loadReplies(postEl) {
+      var id = postEl.getAttribute("data-post-id");
+      var listEl = postEl.querySelector("[data-reply-list]");
+      listEl.innerHTML = '<div class="empty-sm">加载中…</div>';
+      fetch("/api/forum/posts/" + id + "/replies")
+        .then(function (res) { return res.json(); })
+        .then(function (data) {
+          var replies = data.replies || [];
+          if (!replies.length) {
+            listEl.innerHTML = '<div class="empty-sm">还没有回复</div>';
+            return;
+          }
+          listEl.innerHTML = replies.map(function (r) {
+            return '<div class="reply">' +
+              '<div class="reply-meta">' + escapeHtml(r.username) + ' · ' + formatTime(r.created_at) + '</div>' +
+              '<div class="reply-content">' + escapeHtml(r.content) + '</div>' +
+            '</div>';
+          }).join("");
+        })
+        .catch(function (err) {
+          listEl.innerHTML = '<div class="empty-sm">加载失败：' + escapeHtml(err.message) + '</div>';
+        });
+    }
+
+    function submitReply(postEl) {
+      var id = postEl.getAttribute("data-post-id");
+      var input = postEl.querySelector("[data-reply-input]");
+      var msg = postEl.querySelector("[data-reply-msg]");
+      var btn = postEl.querySelector("[data-reply-submit]");
+      var content = input.value.trim();
+      if (!content) {
+        msg.className = "msg error";
+        msg.textContent = "回复内容不能为空";
+        return;
+      }
+      msg.className = "msg";
+      msg.textContent = "发布中…";
+      btn.disabled = true;
+      fetch("/api/forum/posts/" + id + "/replies", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token },
+        body: JSON.stringify({ content: content })
+      })
+        .then(function (res) {
+          return res.json().then(function (data) { return { ok: res.ok, data: data }; });
+        })
+        .then(function (r) {
+          if (!r.ok) {
+            msg.className = "msg error";
+            msg.textContent = r.data.error === "login required" ? "请先登录" : (r.data.error || "发布失败");
+            btn.disabled = false;
+            return;
+          }
+          input.value = "";
+          msg.className = "msg ok";
+          msg.textContent = "回复成功";
+          btn.disabled = false;
+          loadReplies(postEl);
+          var countEl = postEl.querySelector("[data-reply-count]");
+          if (countEl) countEl.textContent = String(parseInt(countEl.textContent, 10) + 1);
+        })
+        .catch(function (err) {
+          msg.className = "msg error";
+          msg.textContent = "网络错误：" + err.message;
+          btn.disabled = false;
+        });
+    }
+
+    document.getElementById("postList").addEventListener("click", function (e) {
+      var postEl = e.target.closest ? e.target.closest(".post") : null;
+      if (!postEl) return;
+      if (e.target.closest("[data-replies-toggle]")) {
+        var replies = postEl.querySelector("[data-replies]");
+        var isHidden = replies.style.display === "none";
+        replies.style.display = isHidden ? "block" : "none";
+        if (isHidden && !postEl.getAttribute("data-replies-loaded")) {
+          postEl.setAttribute("data-replies-loaded", "1");
+          loadReplies(postEl);
+        }
+      } else if (e.target.closest("[data-reply-submit]")) {
+        submitReply(postEl);
+      }
+    });
+
+    function currentUser() {
+      var user = null;
+      try { user = JSON.parse(localStorage.getItem("user") || "null"); } catch (e) { user = null; }
+      return user;
+    }
+
+    function canDelete(postEl) {
+      var user = currentUser();
+      if (!user) return false;
+      if ((ROLE_WEIGHTS[user.role] || 0) >= ROLE_WEIGHTS.admin) return true;
+      return String(postEl.getAttribute("data-user-id")) === String(user.id);
+    }
+
+    var ctxMenu = null;
+
+    function closeCtxMenu() {
+      if (ctxMenu && ctxMenu.parentNode) ctxMenu.parentNode.removeChild(ctxMenu);
+      ctxMenu = null;
+    }
+
+    function deletePost(postEl) {
+      var id = postEl.getAttribute("data-post-id");
+      if (!confirm("确定要删除这条帖子吗？")) return;
+      fetch("/api/forum/posts/" + id, { method: "DELETE", headers: { "Authorization": "Bearer " + token } })
+        .then(function (res) {
+          return res.json().then(function (data) { return { ok: res.ok, status: res.status, data: data }; });
+        })
+        .then(function (r) {
+          if (!r.ok) {
+            alert(r.status === 403 ? "没有权限删除该帖子" : (r.data.error || "删除失败"));
+            return;
+          }
+          loadPosts();
+        })
+        .catch(function (err) { alert("网络错误：" + err.message); });
+    }
+
+    document.getElementById("postList").addEventListener("contextmenu", function (e) {
+      var postEl = e.target.closest ? e.target.closest(".post") : null;
+      if (!postEl) return;
+      e.preventDefault();
+      closeCtxMenu();
+      if (!canDelete(postEl)) return;
+      ctxMenu = document.createElement("div");
+      ctxMenu.className = "ctx-menu";
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.textContent = "删除帖子";
+      btn.addEventListener("click", function () {
+        closeCtxMenu();
+        deletePost(postEl);
+      });
+      ctxMenu.appendChild(btn);
+      document.body.appendChild(ctxMenu);
+      var x = Math.min(e.clientX, window.innerWidth - ctxMenu.offsetWidth - 4);
+      var y = Math.min(e.clientY, window.innerHeight - ctxMenu.offsetHeight - 4);
+      ctxMenu.style.left = x + "px";
+      ctxMenu.style.top = y + "px";
+    });
+
+    document.addEventListener("click", function (e) {
+      if (ctxMenu && !ctxMenu.contains(e.target)) closeCtxMenu();
+    });
+    document.addEventListener("scroll", closeCtxMenu, true);
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape") closeCtxMenu();
+    });
+
+    renderAuth();
+    setCategory("讨论");
+  </script>
+</body>
+</html>

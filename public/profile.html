@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>个人中心 · 校园信息网</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: #ffffff;
+    color: #000000;
+    font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+  }
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 2px solid #000000;
+    padding: 16px 32px;
+  }
+  .logo {
+    font-size: 22px;
+    font-weight: bold;
+    letter-spacing: 2px;
+  }
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+  }
+  .nav {
+    display: flex;
+    gap: 24px;
+  }
+  .nav a {
+    color: #000000;
+    text-decoration: none;
+    font-size: 16px;
+    padding: 6px 4px;
+    border-bottom: 2px solid transparent;
+  }
+  .nav a:hover { border-bottom: 2px solid #000000; }
+  .auth {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .btn {
+    display: inline-block;
+    background: #ffffff;
+    color: #000000;
+    border: 2px solid #000000;
+    border-radius: 0;
+    padding: 8px 14px;
+    font-size: 14px;
+    font-family: inherit;
+    cursor: pointer;
+    text-decoration: none;
+    line-height: 1;
+  }
+  .btn:hover { background: #000000; color: #ffffff; }
+  .layout {
+    display: flex;
+    align-items: stretch;
+    min-height: calc(100vh - 63px);
+  }
+  .sidebar {
+    flex: none;
+    width: 220px;
+    border-right: 2px solid #000000;
+    padding: 22px 0;
+  }
+  .menu-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    background: none;
+    border: none;
+    padding: 10px 22px;
+    font-size: 15px;
+    font-family: inherit;
+    font-weight: bold;
+    letter-spacing: 1px;
+    color: #000000;
+    cursor: pointer;
+    text-align: left;
+  }
+  .menu-arrow {
+    display: inline-block;
+    width: 0;
+    height: 0;
+    border-top: 5px solid transparent;
+    border-bottom: 5px solid transparent;
+    border-left: 6px solid #000000;
+    transition: transform 0.2s ease;
+  }
+  .menu-title.open .menu-arrow { transform: rotate(90deg); }
+  .submenu { padding: 4px 0 0; }
+  .submenu a {
+    display: block;
+    padding: 9px 22px 9px 40px;
+    font-size: 14px;
+    color: #000000;
+    text-decoration: none;
+  }
+  .submenu a:hover { background: #f2f2f2; }
+  .submenu a.active { background: #000000; color: #ffffff; }
+  .sidebar-bottom { padding: 22px; }
+  .content {
+    flex: 1;
+    padding: 28px 32px 56px;
+    max-width: 640px;
+  }
+  .view { display: none; }
+  .view.active { display: block; }
+  .view h1 {
+    font-size: 18px;
+    letter-spacing: 1px;
+    margin: 0 0 22px;
+  }
+  .block {
+    border: 2px solid #000000;
+    padding: 22px;
+    margin-bottom: 22px;
+  }
+  .block h2 {
+    font-size: 15px;
+    letter-spacing: 1px;
+    margin: 0 0 18px;
+  }
+  .field { margin-bottom: 14px; }
+  .field label {
+    display: block;
+    font-size: 13px;
+    color: #555555;
+    margin-bottom: 6px;
+  }
+  .field input,
+  .field textarea,
+  .field select {
+    width: 100%;
+    border: 2px solid #000000;
+    border-radius: 0;
+    padding: 10px 12px;
+    font-size: 14px;
+    font-family: inherit;
+    color: #000000;
+    background: #ffffff;
+    outline: none;
+  }
+  .field textarea { min-height: 80px; resize: vertical; }
+  .field input[readonly] {
+    background: #f2f2f2;
+    color: #777777;
+    cursor: not-allowed;
+  }
+  .submit {
+    background: #000000;
+    color: #ffffff;
+    border: 2px solid #000000;
+    border-radius: 0;
+    padding: 10px 22px;
+    font-size: 14px;
+    font-family: inherit;
+    cursor: pointer;
+  }
+  .submit:hover { background: #ffffff; color: #000000; }
+  .submit:disabled { opacity: 0.5; cursor: default; }
+  .msg { min-height: 18px; font-size: 13px; margin-top: 12px; }
+  .msg.error { color: #cc0000; }
+  .msg.ok { color: #008800; }
+  .avatar-row {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
+  .avatar-box {
+    width: 96px;
+    height: 96px;
+    flex: none;
+    border: 2px solid #000000;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    font-size: 12px;
+    color: #999999;
+  }
+  .avatar-box img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  #avatarFile { display: none; }
+  .rule { font-size: 12px; color: #999999; margin-top: 10px; }
+</style>
+</head>
+<body>
+  <header class="header">
+    <div class="logo">校园信息网</div>
+    <div class="header-right">
+      <nav class="nav">
+        <a href="index.html">首页</a>
+        <a href="map.html">校园地图</a>
+        <a href="forum.html">论坛</a>
+        <a href="recipe.html">菜谱评价</a>
+      </nav>
+      <div class="auth" id="authArea">
+        <a class="btn" href="login.html">登录</a>
+        <a class="btn" href="register.html">注册</a>
+      </div>
+    </div>
+  </header>
+
+  <div class="layout">
+    <aside class="sidebar">
+      <button type="button" class="menu-title open" id="settingsToggle">设置<span class="menu-arrow"></span></button>
+      <div class="submenu" id="settingsSubmenu">
+        <a href="#" data-panel="profile" class="active">个人资料</a>
+        <a href="#" data-panel="security">账号安全</a>
+        <a href="#" data-panel="site">网站设置</a>
+      </div>
+      <div class="sidebar-bottom">
+        <button type="button" class="btn" id="logoutBtn">退出登录</button>
+      </div>
+    </aside>
+
+    <main class="content">
+      <section class="view active" id="view-profile">
+        <h1>个人资料</h1>
+
+        <div class="block">
+          <h2>用户名</h2>
+          <div class="field">
+            <input type="text" id="username" readonly>
+          </div>
+          <div class="rule">用户名不可修改</div>
+        </div>
+
+        <div class="block">
+          <h2>头像</h2>
+          <div class="avatar-row">
+            <div class="avatar-box" id="avatarBox">暂无头像</div>
+            <div>
+              <button type="button" class="btn" id="chooseAvatar">选择文件</button>
+              <input type="file" id="avatarFile" accept="image/jpeg,image/png">
+            </div>
+          </div>
+          <div class="rule">仅支持 jpg / png，大小不超过 2MB</div>
+          <div class="msg" id="avatarMsg"></div>
+        </div>
+
+        <div class="block">
+          <h2>昵称</h2>
+          <div class="field">
+            <label for="nickname">昵称</label>
+            <input type="text" id="nickname">
+          </div>
+          <button type="button" class="submit" id="nicknameSubmit">保存</button>
+          <div class="msg" id="nicknameMsg"></div>
+        </div>
+
+        <div class="block">
+          <h2>个性签名</h2>
+          <div class="field">
+            <label for="signature">个性签名</label>
+            <textarea id="signature" placeholder="介绍一下自己…"></textarea>
+          </div>
+          <button type="button" class="submit" id="signatureSubmit">保存</button>
+          <div class="msg" id="signatureMsg"></div>
+        </div>
+      </section>
+
+      <section class="view" id="view-security">
+        <h1>账号安全</h1>
+        <div class="block">
+          <h2>修改密码</h2>
+          <div class="field">
+            <label for="oldPassword">旧密码</label>
+            <input type="password" id="oldPassword" autocomplete="off">
+          </div>
+          <div class="field">
+            <label for="newPassword">新密码</label>
+            <input type="password" id="newPassword" autocomplete="off">
+          </div>
+          <div class="field">
+            <label for="confirmPassword">确认新密码</label>
+            <input type="password" id="confirmPassword" autocomplete="off">
+          </div>
+          <button type="button" class="submit" id="passwordSubmit">保存</button>
+          <div class="msg" id="passwordMsg"></div>
+        </div>
+      </section>
+
+      <section class="view" id="view-site">
+        <h1>网站设置</h1>
+        <div class="block">
+          <h2>默认进入界面</h2>
+          <div class="field">
+            <select id="defaultPage">
+              <option value="index.html">首页</option>
+              <option value="map.html">校园地图</option>
+              <option value="forum.html">论坛</option>
+              <option value="recipe.html">菜谱评价</option>
+            </select>
+          </div>
+          <div class="rule">访问网站首页时会自动跳转到所选界面</div>
+        </div>
+        <div class="block">
+          <h2>校园地图默认楼层</h2>
+          <div class="field">
+            <select id="defaultFloor">
+              <option value="1">1F</option>
+              <option value="2">2F</option>
+              <option value="3">3F</option>
+              <option value="4">4F</option>
+            </select>
+          </div>
+          <div class="rule">进入校园地图模块后默认显示的楼层</div>
+        </div>
+        <div class="block">
+          <h2>菜谱评价默认页</h2>
+          <div class="field">
+            <select id="recipeDefaultView">
+              <option value="all">全部（A-Z）</option>
+              <option value="weekly">每周食谱</option>
+            </select>
+          </div>
+          <div class="rule">进入菜谱评价页时默认显示的标签</div>
+        </div>
+        <button type="button" class="submit" id="siteSubmit">保存</button>
+        <div class="msg" id="siteMsg"></div>
+      </section>
+    </main>
+  </div>
+
+  <script src="auth.js"></script>
+  <script>
+    var token = localStorage.getItem("token");
+    if (!token) { location.href = "login.html"; }
+
+    function escapeHtml(value) {
+      if (value === null || value === undefined) return "";
+      return String(value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }
+
+    function authHeaders() {
+      return { "Authorization": "Bearer " + token };
+    }
+
+    function handleStatus(status) {
+      if (status === 401) {
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        location.href = "login.html";
+        return true;
+      }
+      return false;
+    }
+
+    function setAvatar(url) {
+      var box = document.getElementById("avatarBox");
+      if (url) {
+        box.innerHTML = '<img src="' + escapeHtml(url) + '" alt="头像">';
+      } else {
+        box.innerHTML = "暂无头像";
+      }
+    }
+
+    function updateStoredUser(patch) {
+      var user = null;
+      try { user = JSON.parse(localStorage.getItem("user") || "null"); } catch (e) { user = null; }
+      if (!user) return;
+      for (var key in patch) { if (patch.hasOwnProperty(key)) user[key] = patch[key]; }
+      localStorage.setItem("user", JSON.stringify(user));
+    }
+
+    document.getElementById("settingsToggle").addEventListener("click", function () {
+      var sub = document.getElementById("settingsSubmenu");
+      var open = sub.style.display !== "none";
+      sub.style.display = open ? "none" : "block";
+      this.classList.toggle("open", !open);
+    });
+
+    var panelLinks = document.querySelectorAll("[data-panel]");
+    for (var i = 0; i < panelLinks.length; i++) {
+      panelLinks[i].addEventListener("click", function (e) {
+        e.preventDefault();
+        var name = this.getAttribute("data-panel");
+        for (var j = 0; j < panelLinks.length; j++) {
+          panelLinks[j].classList.toggle("active", panelLinks[j] === this);
+        }
+        var views = document.querySelectorAll(".view");
+        for (var k = 0; k < views.length; k++) {
+          views[k].classList.toggle("active", views[k].id === "view-" + name);
+        }
+      });
+    }
+
+    document.getElementById("logoutBtn").addEventListener("click", function () {
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      location.href = "index.html";
+    });
+
+    fetch("/api/user/profile", { headers: authHeaders() })
+      .then(function (res) {
+        if (handleStatus(res.status)) throw new Error("unauthorized");
+        return res.json();
+      })
+      .then(function (data) {
+        var user = data.user;
+        document.getElementById("username").value = user.username || "";
+        document.getElementById("nickname").value = user.nickname || "";
+        document.getElementById("signature").value = user.signature || "";
+        setAvatar(user.avatar_url);
+        updateStoredUser({
+          nickname: user.nickname,
+          avatar_url: user.avatar_url,
+          signature: user.signature
+        });
+        var page = user.default_page || localStorage.getItem("defaultPage") || "index.html";
+        var floor = user.default_floor ? String(user.default_floor) : (localStorage.getItem("defaultFloor") || "1");
+        var recipeView = user.recipe_default_view || localStorage.getItem("recipeDefaultView") || "all";
+        document.getElementById("defaultPage").value = page;
+        document.getElementById("defaultFloor").value = floor;
+        document.getElementById("recipeDefaultView").value = recipeView;
+      })
+      .catch(function (err) {
+        if (err.message !== "unauthorized") {
+          document.getElementById("avatarMsg").className = "msg error";
+          document.getElementById("avatarMsg").textContent = "加载失败：" + err.message;
+        }
+      });
+
+    document.getElementById("chooseAvatar").addEventListener("click", function () {
+      document.getElementById("avatarFile").click();
+    });
+
+    document.getElementById("avatarFile").addEventListener("change", function () {
+      var fileInput = document.getElementById("avatarFile");
+      var msg = document.getElementById("avatarMsg");
+      var file = fileInput.files && fileInput.files[0];
+      if (!file) return;
+
+      if (file.size > 2 * 1024 * 1024) {
+        msg.className = "msg error";
+        msg.textContent = "图片不能超过 2MB";
+        fileInput.value = "";
+        return;
+      }
+
+      var formData = new FormData();
+      formData.append("avatar", file);
+      msg.className = "msg";
+      msg.textContent = "上传中…";
+
+      fetch("/api/user/avatar", { method: "POST", headers: authHeaders(), body: formData })
+        .then(function (res) {
+          if (handleStatus(res.status)) throw new Error("unauthorized");
+          return res.json().then(function (data) { return { ok: res.ok, data: data }; });
+        })
+        .then(function (r) {
+          if (!r.ok) {
+            msg.className = "msg error";
+            msg.textContent = r.data.error || "上传失败";
+            return;
+          }
+          setAvatar(r.data.avatar_url + "?t=" + Date.now());
+          updateStoredUser({ avatar_url: r.data.avatar_url });
+          renderAuth();
+          msg.className = "msg ok";
+          msg.textContent = "头像更新成功";
+        })
+        .catch(function (err) {
+          if (err.message !== "unauthorized") {
+            msg.className = "msg error";
+            msg.textContent = "网络错误：" + err.message;
+          }
+        })
+        .then(function () { fileInput.value = ""; });
+    });
+
+    document.getElementById("nicknameSubmit").addEventListener("click", function () {
+      var msg = document.getElementById("nicknameMsg");
+      var submit = document.getElementById("nicknameSubmit");
+      var nickname = document.getElementById("nickname").value.trim();
+      if (!nickname) {
+        msg.className = "msg error";
+        msg.textContent = "昵称不能为空";
+        return;
+      }
+      msg.className = "msg";
+      msg.textContent = "保存中…";
+      submit.disabled = true;
+      fetch("/api/user/nickname", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token },
+        body: JSON.stringify({ nickname: nickname })
+      })
+        .then(function (res) {
+          if (handleStatus(res.status)) throw new Error("unauthorized");
+          return res.json().then(function (data) { return { ok: res.ok, data: data }; });
+        })
+        .then(function (r) {
+          if (!r.ok) {
+            msg.className = "msg error";
+            msg.textContent = r.data.error || "保存失败";
+            submit.disabled = false;
+            return;
+          }
+          updateStoredUser({ nickname: nickname });
+          renderAuth();
+          msg.className = "msg ok";
+          msg.textContent = "昵称修改成功";
+          submit.disabled = false;
+        })
+        .catch(function (err) {
+          if (err.message !== "unauthorized") {
+            msg.className = "msg error";
+            msg.textContent = "网络错误：" + err.message;
+            submit.disabled = false;
+          }
+        });
+    });
+
+    document.getElementById("signatureSubmit").addEventListener("click", function () {
+      var msg = document.getElementById("signatureMsg");
+      var submit = document.getElementById("signatureSubmit");
+      var signature = document.getElementById("signature").value.trim();
+      msg.className = "msg";
+      msg.textContent = "保存中…";
+      submit.disabled = true;
+      fetch("/api/user/signature", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token },
+        body: JSON.stringify({ signature: signature })
+      })
+        .then(function (res) {
+          if (handleStatus(res.status)) throw new Error("unauthorized");
+          return res.json().then(function (data) { return { ok: res.ok, data: data }; });
+        })
+        .then(function (r) {
+          if (!r.ok) {
+            msg.className = "msg error";
+            msg.textContent = r.data.error || "保存失败";
+            submit.disabled = false;
+            return;
+          }
+          updateStoredUser({ signature: signature });
+          msg.className = "msg ok";
+          msg.textContent = "个性签名已保存";
+          submit.disabled = false;
+        })
+        .catch(function (err) {
+          if (err.message !== "unauthorized") {
+            msg.className = "msg error";
+            msg.textContent = "网络错误：" + err.message;
+            submit.disabled = false;
+          }
+        });
+    });
+
+    document.getElementById("passwordSubmit").addEventListener("click", function () {
+      var msg = document.getElementById("passwordMsg");
+      var submit = document.getElementById("passwordSubmit");
+      var oldPassword = document.getElementById("oldPassword").value;
+      var newPassword = document.getElementById("newPassword").value;
+      var confirmPassword = document.getElementById("confirmPassword").value;
+
+      if (!oldPassword || !newPassword) {
+        msg.className = "msg error";
+        msg.textContent = "请填写旧密码和新密码";
+        return;
+      }
+      if (newPassword !== confirmPassword) {
+        msg.className = "msg error";
+        msg.textContent = "两次输入的新密码不一致";
+        return;
+      }
+
+      msg.className = "msg";
+      msg.textContent = "保存中…";
+      submit.disabled = true;
+      fetch("/api/user/password", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token },
+        body: JSON.stringify({ oldPassword: oldPassword, newPassword: newPassword })
+      })
+        .then(function (res) {
+          if (handleStatus(res.status)) throw new Error("unauthorized");
+          return res.json().then(function (data) { return { ok: res.ok, data: data }; });
+        })
+        .then(function (r) {
+          if (!r.ok) {
+            msg.className = "msg error";
+            msg.textContent = r.data.error === "old password is incorrect" ? "旧密码错误" : (r.data.error || "保存失败");
+            submit.disabled = false;
+            return;
+          }
+          document.getElementById("oldPassword").value = "";
+          document.getElementById("newPassword").value = "";
+          document.getElementById("confirmPassword").value = "";
+          msg.className = "msg ok";
+          msg.textContent = "密码修改成功";
+          submit.disabled = false;
+        })
+        .catch(function (err) {
+          if (err.message !== "unauthorized") {
+            msg.className = "msg error";
+            msg.textContent = "网络错误：" + err.message;
+            submit.disabled = false;
+          }
+        });
+    });
+
+    document.getElementById("siteSubmit").addEventListener("click", function () {
+      var msg = document.getElementById("siteMsg");
+      var submit = document.getElementById("siteSubmit");
+      var defaultPage = document.getElementById("defaultPage").value;
+      var defaultFloor = document.getElementById("defaultFloor").value;
+      var recipeDefaultView = document.getElementById("recipeDefaultView").value;
+      msg.className = "msg";
+      msg.textContent = "保存中…";
+      submit.disabled = true;
+      fetch("/api/user/settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token },
+        body: JSON.stringify({ default_page: defaultPage, default_floor: defaultFloor, recipe_default_view: recipeDefaultView })
+      })
+        .then(function (res) {
+          if (handleStatus(res.status)) throw new Error("unauthorized");
+          return res.json().then(function (data) { return { ok: res.ok, data: data }; });
+        })
+        .then(function (r) {
+          if (!r.ok) {
+            msg.className = "msg error";
+            msg.textContent = r.data.error || "保存失败";
+            submit.disabled = false;
+            return;
+          }
+          localStorage.setItem("defaultPage", r.data.default_page);
+          localStorage.setItem("defaultFloor", String(r.data.default_floor));
+          localStorage.setItem("recipeDefaultView", r.data.recipe_default_view);
+          msg.className = "msg ok";
+          msg.textContent = "网站设置已保存到账号";
+          submit.disabled = false;
+        })
+        .catch(function (err) {
+          if (err.message !== "unauthorized") {
+            msg.className = "msg error";
+            msg.textContent = "网络错误：" + err.message;
+            submit.disabled = false;
+          }
+        });
+    });
+  </script>
+</body>
+</html>

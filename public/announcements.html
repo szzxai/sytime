@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>更新公告 · 校园信息网</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: #ffffff;
+    color: #000000;
+    font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+  }
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 2px solid #000000;
+    padding: 16px 32px;
+  }
+  .logo {
+    font-size: 22px;
+    font-weight: bold;
+    letter-spacing: 2px;
+  }
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+  }
+  .nav {
+    display: flex;
+    gap: 24px;
+  }
+  .nav a {
+    color: #000000;
+    text-decoration: none;
+    font-size: 16px;
+    padding: 6px 4px;
+    border-bottom: 2px solid transparent;
+  }
+  .nav a:hover { border-bottom: 2px solid #000000; }
+  .auth {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .btn {
+    display: inline-block;
+    background: #ffffff;
+    color: #000000;
+    border: 2px solid #000000;
+    border-radius: 0;
+    padding: 8px 14px;
+    font-size: 14px;
+    font-family: inherit;
+    cursor: pointer;
+    text-decoration: none;
+    line-height: 1;
+  }
+  .btn:hover { background: #000000; color: #ffffff; }
+  .layout {
+    display: flex;
+    align-items: stretch;
+    min-height: calc(100vh - 63px);
+  }
+  .sidebar {
+    flex: none;
+    width: 300px;
+    max-width: 40%;
+    border-right: 2px solid #000000;
+    padding: 20px 0;
+  }
+  .side-title {
+    font-size: 15px;
+    font-weight: bold;
+    letter-spacing: 1px;
+    padding: 0 22px 14px;
+    border-bottom: 2px solid #000000;
+    margin-bottom: 12px;
+  }
+  .ann-item {
+    display: block;
+    width: 100%;
+    background: none;
+    border: none;
+    border-left: 4px solid transparent;
+    text-align: left;
+    padding: 12px 20px;
+    font-family: inherit;
+    color: #000000;
+    cursor: pointer;
+  }
+  .ann-item:hover { background: #f2f2f2; }
+  .ann-item.active { background: #000000; color: #ffffff; }
+  .ann-date {
+    font-size: 12px;
+    color: #777777;
+    margin-bottom: 4px;
+  }
+  .ann-item.active .ann-date { color: #cccccc; }
+  .ann-title {
+    font-size: 15px;
+    line-height: 1.4;
+    word-break: break-word;
+  }
+  .content {
+    flex: 1;
+    padding: 32px 40px 56px;
+    max-width: 780px;
+  }
+  .detail h1 {
+    font-size: 24px;
+    letter-spacing: 1px;
+    margin: 0 0 10px;
+  }
+  .detail-date {
+    font-size: 13px;
+    color: #777777;
+    padding-bottom: 16px;
+    border-bottom: 2px solid #000000;
+    margin-bottom: 20px;
+  }
+  .detail-body {
+    font-size: 15px;
+    line-height: 1.9;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .empty {
+    font-size: 14px;
+    color: #777777;
+    text-align: center;
+    padding: 40px 20px;
+    border: 2px dashed #dddddd;
+  }
+</style>
+</head>
+<body>
+  <header class="header">
+    <div class="logo">校园信息网</div>
+    <div class="header-right">
+      <nav class="nav">
+        <a href="index.html">首页</a>
+        <a href="map.html">校园地图</a>
+        <a href="forum.html">论坛</a>
+        <a href="recipe.html">菜谱评价</a>
+      </nav>
+      <div class="auth" id="authArea">
+        <a class="btn" href="login.html">登录</a>
+        <a class="btn" href="register.html">注册</a>
+      </div>
+    </div>
+  </header>
+
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="side-title">更新公告</div>
+      <div id="annList"></div>
+    </aside>
+    <main class="content" id="annDetail"></main>
+  </div>
+
+  <script src="auth.js"></script>
+  <script>
+    var announcements = [];
+
+    function escapeHtml(value) {
+      if (value === null || value === undefined) return "";
+      return String(value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }
+
+    function renderDetail(item) {
+      var detail = document.getElementById("annDetail");
+      if (!item) {
+        detail.innerHTML = '<div class="empty">暂无公告</div>';
+        return;
+      }
+      detail.innerHTML =
+        '<div class="detail">' +
+          '<h1>' + escapeHtml(item.title) + '</h1>' +
+          '<div class="detail-date">发布于 ' + escapeHtml(item.publish_date) + '</div>' +
+          '<div class="detail-body">' + escapeHtml(item.content) + '</div>' +
+        '</div>';
+      window.scrollTo(0, 0);
+    }
+
+    function selectItem(id) {
+      var items = document.querySelectorAll(".ann-item");
+      for (var i = 0; i < items.length; i++) {
+        items[i].classList.toggle("active", items[i].getAttribute("data-id") === String(id));
+      }
+      var found = null;
+      for (var j = 0; j < announcements.length; j++) {
+        if (String(announcements[j].id) === String(id)) { found = announcements[j]; break; }
+      }
+      renderDetail(found);
+    }
+
+    function render() {
+      var list = document.getElementById("annList");
+      if (!announcements.length) {
+        list.innerHTML = '<div class="empty" style="margin:12px;">暂无公告</div>';
+        renderDetail(null);
+        return;
+      }
+      list.innerHTML = announcements.map(function (a) {
+        return '<button type="button" class="ann-item" data-id="' + a.id + '">' +
+          '<div class="ann-date">' + escapeHtml(a.publish_date) + '</div>' +
+          '<div class="ann-title">' + escapeHtml(a.title) + '</div>' +
+        '</button>';
+      }).join("");
+
+      var items = document.querySelectorAll(".ann-item");
+      for (var i = 0; i < items.length; i++) {
+        items[i].addEventListener("click", function () {
+          selectItem(this.getAttribute("data-id"));
+        });
+      }
+      selectItem(announcements[0].id);
+    }
+
+    fetch("/api/announcements")
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        announcements = data.announcements || [];
+        render();
+      })
+      .catch(function (err) {
+        document.getElementById("annDetail").innerHTML =
+          '<div class="empty">加载失败：' + escapeHtml(err.message) + '</div>';
+      });
+  </script>
+</body>
+</html>

@@ -157,7 +157,9 @@
       "y1": 370,
       "x2": 50,
       "y2": 470,
-      "scale": null
+      "scale": null,
+      "name": "北门",
+      "popup": "北门"
     },
     {
       "layers": [
@@ -169,7 +171,9 @@
       "y1": 400,
       "x2": 580,
       "y2": 440,
-      "scale": null
+      "scale": null,
+      "name": "香樟大道",
+      "popup": "香樟大道"
     },
     {
       "layers": [
@@ -181,19 +185,19 @@
       "cat": "building",
       "points": [
         [
-          100,
-          440
-        ],
-        [
           110,
           440
         ],
         [
-          110,
+          120,
+          440
+        ],
+        [
+          120,
           470
         ],
         [
-          100,
+          110,
           470
         ]
       ],
@@ -212,19 +216,15 @@
       "cat": "none",
       "points": [
         [
-          100,
-          440
-        ],
-        [
           110,
           440
         ],
         [
-          110,
-          470
+          120,
+          440
         ],
         [
-          100,
+          120,
           470
         ]
       ],
@@ -239,9 +239,9 @@
       ],
       "type": "label",
       "text": "楼梯",
-      "x1": 100,
+      "x1": 110,
       "y1": 440,
-      "x2": 110,
+      "x2": 120,
       "y2": 470,
       "scale": null
     },
@@ -255,19 +255,19 @@
       "cat": "building",
       "points": [
         [
-          100,
-          570
-        ],
-        [
           110,
           570
         ],
         [
-          110,
+          120,
+          570
+        ],
+        [
+          120,
           600
         ],
         [
-          100,
+          110,
           600
         ]
       ],
@@ -286,20 +286,16 @@
       "cat": "none",
       "points": [
         [
-          100,
-          570
-        ],
-        [
-          110,
-          570
-        ],
-        [
           110,
           600
         ],
         [
-          100,
+          120,
           600
+        ],
+        [
+          120,
+          570
         ]
       ],
       "fill": false,
@@ -313,9 +309,9 @@
       ],
       "type": "label",
       "text": "楼梯",
-      "x1": 100,
+      "x1": 110,
       "y1": 570,
-      "x2": 110,
+      "x2": 120,
       "y2": 600,
       "scale": null
     },
@@ -329,19 +325,19 @@
       "cat": "building",
       "points": [
         [
-          100,
-          370
-        ],
-        [
           110,
           370
         ],
         [
-          110,
+          120,
+          370
+        ],
+        [
+          120,
           400
         ],
         [
-          100,
+          110,
           400
         ]
       ],
@@ -360,20 +356,16 @@
       "cat": "none",
       "points": [
         [
-          100,
-          370
-        ],
-        [
-          110,
-          370
-        ],
-        [
           110,
           400
         ],
         [
-          100,
+          120,
           400
+        ],
+        [
+          120,
+          370
         ]
       ],
       "fill": false,
@@ -387,9 +379,9 @@
       ],
       "type": "label",
       "text": "楼梯",
-      "x1": 100,
+      "x1": 110,
       "y1": 370,
-      "x2": 110,
+      "x2": 120,
       "y2": 400,
       "scale": null
     },
@@ -403,19 +395,19 @@
       "cat": "building",
       "points": [
         [
-          100,
-          240
-        ],
-        [
           110,
           240
         ],
         [
-          110,
+          120,
+          240
+        ],
+        [
+          120,
           270
         ],
         [
-          100,
+          110,
           270
         ]
       ],
@@ -434,19 +426,15 @@
       "cat": "none",
       "points": [
         [
-          100,
-          240
-        ],
-        [
           110,
           240
         ],
         [
-          110,
-          270
+          120,
+          240
         ],
         [
-          100,
+          120,
           270
         ]
       ],
@@ -461,9 +449,9 @@
       ],
       "type": "label",
       "text": "楼梯",
-      "x1": 100,
+      "x1": 110,
       "y1": 240,
-      "x2": 110,
+      "x2": 120,
       "y2": 270,
       "scale": null
     },
@@ -481,7 +469,8 @@
     },
     {
       "layers": [
-        "base"
+        1,
+        2
       ],
       "type": "label",
       "text": "东红楼",
@@ -493,7 +482,8 @@
     },
     {
       "layers": [
-        "base"
+        1,
+        2
       ],
       "type": "label",
       "text": "西红楼",
@@ -568,11 +558,11 @@
       "points": [
         [
           100,
-          440
+          470
         ],
         [
           100,
-          600
+          570
         ]
       ],
       "fill": false,
@@ -634,7 +624,7 @@
         ]
       ],
       "fill": true,
-      "stroke": true,
+      "stroke": false,
       "dash": null,
       "weight": null
     },
@@ -866,8 +856,8 @@
         1
       ],
       "type": "polygon",
-      "name": "绿地",
-      "popup": "红楼旁绿地",
+      "name": "东红楼旁绿地",
+      "popup": "东红楼旁绿地",
       "cat": "green",
       "points": [
         [
@@ -897,8 +887,8 @@
         1
       ],
       "type": "polygon",
-      "name": "绿地",
-      "popup": "红楼旁绿地",
+      "name": "东红楼旁绿地",
+      "popup": "东红楼旁绿地",
       "cat": "green",
       "points": [
         [
@@ -928,8 +918,8 @@
         1
       ],
       "type": "polygon",
-      "name": "绿地",
-      "popup": "红楼旁绿地",
+      "name": "东红楼旁绿地",
+      "popup": "东红楼旁绿地",
       "cat": "green",
       "points": [
         [
@@ -959,8 +949,8 @@
         1
       ],
       "type": "polygon",
-      "name": "绿地",
-      "popup": "红楼旁绿地",
+      "name": "西红楼旁绿地",
+      "popup": "西红楼旁绿地",
       "cat": "green",
       "points": [
         [
@@ -990,8 +980,8 @@
         1
       ],
       "type": "polygon",
-      "name": "绿地",
-      "popup": "红楼旁绿地",
+      "name": "西红楼旁绿地",
+      "popup": "西红楼旁绿地",
       "cat": "green",
       "points": [
         [
@@ -1021,8 +1011,8 @@
         1
       ],
       "type": "polygon",
-      "name": "绿地",
-      "popup": "红楼旁绿地",
+      "name": "西红楼旁绿地",
+      "popup": "西红楼旁绿地",
       "cat": "green",
       "points": [
         [
@@ -1052,8 +1042,8 @@
         1
       ],
       "type": "polygon",
-      "name": "红楼",
-      "popup": "红楼 · 教学楼",
+      "name": "东红楼",
+      "popup": "东红楼 · 教学楼",
       "cat": "building",
       "points": [
         [
@@ -1083,8 +1073,8 @@
         1
       ],
       "type": "polygon",
-      "name": "红楼",
-      "popup": "红楼 · 教学楼",
+      "name": "西红楼",
+      "popup": "西红楼 · 教学楼",
       "cat": "building",
       "points": [
         [
@@ -1114,8 +1104,8 @@
         1
       ],
       "type": "polyline",
-      "name": "红楼",
-      "popup": "红楼 · 教学楼 1F",
+      "name": "东红楼",
+      "popup": "东红楼 · 教学楼",
       "cat": "none",
       "points": [
         [
@@ -1137,8 +1127,8 @@
         1
       ],
       "type": "polyline",
-      "name": "红楼",
-      "popup": "红楼 · 教学楼 1F",
+      "name": "东红楼",
+      "popup": "东红楼 · 教学楼",
       "cat": "none",
       "points": [
         [
@@ -1160,8 +1150,8 @@
         1
       ],
       "type": "polyline",
-      "name": "红楼",
-      "popup": "红楼 · 教学楼 1F",
+      "name": "东红楼",
+      "popup": "东红楼 · 教学楼",
       "cat": "none",
       "points": [
         [
@@ -1183,8 +1173,8 @@
         1
       ],
       "type": "polyline",
-      "name": "红楼",
-      "popup": "红楼 · 教学楼 1F",
+      "name": "东红楼",
+      "popup": "东红楼 · 教学楼",
       "cat": "none",
       "points": [
         [
@@ -1206,8 +1196,8 @@
         1
       ],
       "type": "polyline",
-      "name": "红楼",
-      "popup": "红楼 · 教学楼 1F",
+      "name": "东红楼",
+      "popup": "东红楼 · 教学楼",
       "cat": "none",
       "points": [
         [
@@ -1229,8 +1219,8 @@
         1
       ],
       "type": "polyline",
-      "name": "红楼",
-      "popup": "红楼 · 教学楼 1F",
+      "name": "东红楼",
+      "popup": "东红楼 · 教学楼",
       "cat": "none",
       "points": [
         [
@@ -1252,8 +1242,8 @@
         1
       ],
       "type": "polyline",
-      "name": "红楼",
-      "popup": "红楼 · 教学楼 1F",
+      "name": "东红楼",
+      "popup": "东红楼 · 教学楼",
       "cat": "none",
       "points": [
         [
@@ -1275,8 +1265,8 @@
         1
       ],
       "type": "polyline",
-      "name": "红楼",
-      "popup": "红楼 · 教学楼 1F",
+      "name": "东红楼",
+      "popup": "东红楼 · 教学楼",
       "cat": "none",
       "points": [
         [
@@ -1298,8 +1288,8 @@
         1
       ],
       "type": "polyline",
-      "name": "红楼",
-      "popup": "红楼 · 教学楼 1F",
+      "name": "东红楼",
+      "popup": "东红楼 · 教学楼",
       "cat": "none",
       "points": [
         [
@@ -1321,8 +1311,8 @@
         1
       ],
       "type": "polyline",
-      "name": "红楼",
-      "popup": "红楼 · 教学楼 1F",
+      "name": "东红楼",
+      "popup": "东红楼 · 教学楼",
       "cat": "none",
       "points": [
         [
@@ -1344,8 +1334,8 @@
         1
       ],
       "type": "polyline",
-      "name": "红楼",
-      "popup": "红楼 · 教学楼 1F",
+      "name": "东红楼",
+      "popup": "东红楼 · 教学楼",
       "cat": "none",
       "points": [
         [
@@ -1367,8 +1357,8 @@
         1
       ],
       "type": "polyline",
-      "name": "红楼",
-      "popup": "红楼 · 教学楼 1F",
+      "name": "东红楼",
+      "popup": "东红楼 · 教学楼",
       "cat": "none",
       "points": [
         [
@@ -1390,8 +1380,8 @@
         1
       ],
       "type": "polyline",
-      "name": "红楼",
-      "popup": "红楼 · 教学楼 1F",
+      "name": "东红楼",
+      "popup": "东红楼 · 教学楼",
       "cat": "none",
       "points": [
         [
@@ -1413,8 +1403,8 @@
         1
       ],
       "type": "polyline",
-      "name": "红楼",
-      "popup": "红楼 · 教学楼 1F",
+      "name": "东红楼",
+      "popup": "东红楼 · 教学楼",
       "cat": "none",
       "points": [
         [
@@ -1436,8 +1426,8 @@
         1
       ],
       "type": "polyline",
-      "name": "红楼",
-      "popup": "红楼 · 教学楼 1F",
+      "name": "东红楼",
+      "popup": "东红楼 · 教学楼",
       "cat": "none",
       "points": [
         [
@@ -1459,8 +1449,8 @@
         1
       ],
       "type": "polyline",
-      "name": "红楼",
-      "popup": "红楼 · 教学楼 1F",
+      "name": "东红楼",
+      "popup": "东红楼 · 教学楼",
       "cat": "none",
       "points": [
         [
@@ -1482,8 +1472,8 @@
         1
       ],
       "type": "polyline",
-      "name": "红楼",
-      "popup": "红楼 · 教学楼 1F",
+      "name": "东红楼",
+      "popup": "东红楼 · 教学楼",
       "cat": "none",
       "points": [
         [
@@ -1505,8 +1495,8 @@
         1
       ],
       "type": "polyline",
-      "name": "红楼",
-      "popup": "红楼 · 教学楼 1F",
+      "name": "东红楼",
+      "popup": "东红楼 · 教学楼",
       "cat": "none",
       "points": [
         [
@@ -1528,8 +1518,8 @@
         1
       ],
       "type": "polyline",
-      "name": "红楼",
-      "popup": "红楼 · 教学楼 1F",
+      "name": "东红楼",
+      "popup": "东红楼 · 教学楼",
       "cat": "none",
       "points": [
         [
@@ -1551,8 +1541,8 @@
         1
       ],
       "type": "polyline",
-      "name": "红楼",
-      "popup": "红楼 · 教学楼 1F",
+      "name": "东红楼",
+      "popup": "东红楼 · 教学楼",
       "cat": "none",
       "points": [
         [
@@ -1566,7 +1556,7 @@
       ],
       "fill": false,
       "stroke": true,
-      "dash": "8,6",
+      "dash": null,
       "weight": null
     },
     {
@@ -1574,8 +1564,8 @@
         1
       ],
       "type": "polyline",
-      "name": "红楼",
-      "popup": "红楼 · 教学楼 1F",
+      "name": "东红楼",
+      "popup": "东红楼 · 教学楼",
       "cat": "none",
       "points": [
         [
@@ -1589,7 +1579,7 @@
       ],
       "fill": false,
       "stroke": true,
-      "dash": "8,6",
+      "dash": null,
       "weight": null
     },
     {
@@ -1597,8 +1587,8 @@
         1
       ],
       "type": "polyline",
-      "name": "红楼",
-      "popup": "红楼 · 教学楼 1F",
+      "name": "东红楼",
+      "popup": "东红楼 · 教学楼",
       "cat": "none",
       "points": [
         [
@@ -1620,8 +1610,8 @@
         1
       ],
       "type": "polyline",
-      "name": "红楼",
-      "popup": "红楼 · 教学楼 1F",
+      "name": "东红楼",
+      "popup": "东红楼 · 教学楼",
       "cat": "none",
       "points": [
         [
@@ -1635,7 +1625,7 @@
       ],
       "fill": false,
       "stroke": true,
-      "dash": "8,6",
+      "dash": null,
       "weight": null
     },
     {
@@ -1643,8 +1633,8 @@
         1
       ],
       "type": "polyline",
-      "name": "红楼",
-      "popup": "红楼 · 教学楼 1F",
+      "name": "东红楼",
+      "popup": "东红楼 · 教学楼",
       "cat": "none",
       "points": [
         [
@@ -1658,7 +1648,7 @@
       ],
       "fill": false,
       "stroke": true,
-      "dash": "8,6",
+      "dash": null,
       "weight": null
     },
     {
@@ -1666,8 +1656,8 @@
         1
       ],
       "type": "polyline",
-      "name": "红楼",
-      "popup": "红楼 · 教学楼 1F",
+      "name": "东红楼",
+      "popup": "东红楼 · 教学楼",
       "cat": "none",
       "points": [
         [
@@ -1689,8 +1679,8 @@
         1
       ],
       "type": "polyline",
-      "name": "红楼",
-      "popup": "红楼 · 教学楼 1F",
+      "name": "西红楼",
+      "popup": "西红楼 · 教学楼",
       "cat": "none",
       "points": [
         [
@@ -1712,8 +1702,8 @@
         1
       ],
       "type": "polyline",
-      "name": "红楼",
-      "popup": "红楼 · 教学楼 1F",
+      "name": "西红楼",
+      "popup": "西红楼 · 教学楼",
       "cat": "none",
       "points": [
         [
@@ -1735,8 +1725,8 @@
         1
       ],
       "type": "polyline",
-      "name": "红楼",
-      "popup": "红楼 · 教学楼 1F",
+      "name": "西红楼",
+      "popup": "西红楼 · 教学楼",
       "cat": "none",
       "points": [
         [
@@ -1758,8 +1748,8 @@
         1
       ],
       "type": "polyline",
-      "name": "红楼",
-      "popup": "红楼 · 教学楼 1F",
+      "name": "西红楼",
+      "popup": "西红楼 · 教学楼",
       "cat": "none",
       "points": [
         [
@@ -1781,8 +1771,8 @@
         1
       ],
       "type": "polyline",
-      "name": "红楼",
-      "popup": "红楼 · 教学楼 1F",
+      "name": "西红楼",
+      "popup": "西红楼 · 教学楼",
       "cat": "none",
       "points": [
         [
@@ -1804,8 +1794,8 @@
         1
       ],
       "type": "polyline",
-      "name": "红楼",
-      "popup": "红楼 · 教学楼 1F",
+      "name": "西红楼",
+      "popup": "西红楼 · 教学楼",
       "cat": "none",
       "points": [
         [
@@ -1827,8 +1817,8 @@
         1
       ],
       "type": "polyline",
-      "name": "红楼",
-      "popup": "红楼 · 教学楼 1F",
+      "name": "西红楼",
+      "popup": "西红楼 · 教学楼",
       "cat": "none",
       "points": [
         [
@@ -1850,8 +1840,8 @@
         1
       ],
       "type": "polyline",
-      "name": "红楼",
-      "popup": "红楼 · 教学楼 1F",
+      "name": "西红楼",
+      "popup": "西红楼 · 教学楼",
       "cat": "none",
       "points": [
         [
@@ -1873,8 +1863,8 @@
         1
       ],
       "type": "polyline",
-      "name": "红楼",
-      "popup": "红楼 · 教学楼 1F",
+      "name": "西红楼",
+      "popup": "西红楼 · 教学楼",
       "cat": "none",
       "points": [
         [
@@ -1896,8 +1886,8 @@
         1
       ],
       "type": "polyline",
-      "name": "红楼",
-      "popup": "红楼 · 教学楼 1F",
+      "name": "西红楼",
+      "popup": "西红楼 · 教学楼",
       "cat": "none",
       "points": [
         [
@@ -1919,8 +1909,8 @@
         1
       ],
       "type": "polyline",
-      "name": "红楼",
-      "popup": "红楼 · 教学楼 1F",
+      "name": "西红楼",
+      "popup": "西红楼 · 教学楼",
       "cat": "none",
       "points": [
         [
@@ -1942,8 +1932,8 @@
         1
       ],
       "type": "polyline",
-      "name": "红楼",
-      "popup": "红楼 · 教学楼 1F",
+      "name": "西红楼",
+      "popup": "西红楼 · 教学楼",
       "cat": "none",
       "points": [
         [
@@ -1965,8 +1955,8 @@
         1
       ],
       "type": "polyline",
-      "name": "红楼",
-      "popup": "红楼 · 教学楼 1F",
+      "name": "西红楼",
+      "popup": "西红楼 · 教学楼",
       "cat": "none",
       "points": [
         [
@@ -1988,8 +1978,8 @@
         1
       ],
       "type": "polyline",
-      "name": "红楼",
-      "popup": "红楼 · 教学楼 1F",
+      "name": "西红楼",
+      "popup": "西红楼 · 教学楼",
       "cat": "none",
       "points": [
         [
@@ -2011,8 +2001,8 @@
         1
       ],
       "type": "polyline",
-      "name": "红楼",
-      "popup": "红楼 · 教学楼 1F",
+      "name": "西红楼",
+      "popup": "西红楼 · 教学楼",
       "cat": "none",
       "points": [
         [
@@ -2034,8 +2024,8 @@
         1
       ],
       "type": "polyline",
-      "name": "红楼",
-      "popup": "红楼 · 教学楼 1F",
+      "name": "西红楼",
+      "popup": "西红楼 · 教学楼",
       "cat": "none",
       "points": [
         [
@@ -2057,8 +2047,8 @@
         1
       ],
       "type": "polyline",
-      "name": "红楼",
-      "popup": "红楼 · 教学楼 1F",
+      "name": "西红楼",
+      "popup": "西红楼 · 教学楼",
       "cat": "none",
       "points": [
         [
@@ -2080,8 +2070,8 @@
         1
       ],
       "type": "polyline",
-      "name": "红楼",
-      "popup": "红楼 · 教学楼 1F",
+      "name": "西红楼",
+      "popup": "西红楼 · 教学楼",
       "cat": "none",
       "points": [
         [
@@ -2103,8 +2093,8 @@
         1
       ],
       "type": "polyline",
-      "name": "红楼",
-      "popup": "红楼 · 教学楼 1F",
+      "name": "西红楼",
+      "popup": "西红楼 · 教学楼",
       "cat": "none",
       "points": [
         [
@@ -2126,8 +2116,8 @@
         1
       ],
       "type": "polyline",
-      "name": "红楼",
-      "popup": "红楼 · 教学楼 1F",
+      "name": "西红楼",
+      "popup": "西红楼 · 教学楼",
       "cat": "none",
       "points": [
         [
@@ -2141,7 +2131,7 @@
       ],
       "fill": false,
       "stroke": true,
-      "dash": "8,6",
+      "dash": null,
       "weight": null
     },
     {
@@ -2149,8 +2139,8 @@
         1
       ],
       "type": "polyline",
-      "name": "红楼",
-      "popup": "红楼 · 教学楼 1F",
+      "name": "西红楼",
+      "popup": "西红楼 · 教学楼",
       "cat": "none",
       "points": [
         [
@@ -2164,7 +2154,7 @@
       ],
       "fill": false,
       "stroke": true,
-      "dash": "8,6",
+      "dash": null,
       "weight": null
     },
     {
@@ -2172,8 +2162,8 @@
         1
       ],
       "type": "polyline",
-      "name": "红楼",
-      "popup": "红楼 · 教学楼 1F",
+      "name": "西红楼",
+      "popup": "西红楼 · 教学楼",
       "cat": "none",
       "points": [
         [
@@ -2195,8 +2185,8 @@
         1
       ],
       "type": "polyline",
-      "name": "红楼",
-      "popup": "红楼 · 教学楼 1F",
+      "name": "西红楼",
+      "popup": "西红楼 · 教学楼",
       "cat": "none",
       "points": [
         [
@@ -2210,7 +2200,7 @@
       ],
       "fill": false,
       "stroke": true,
-      "dash": "8,6",
+      "dash": null,
       "weight": null
     },
     {
@@ -2218,8 +2208,8 @@
         1
       ],
       "type": "polyline",
-      "name": "红楼",
-      "popup": "红楼 · 教学楼 1F",
+      "name": "西红楼",
+      "popup": "西红楼 · 教学楼",
       "cat": "none",
       "points": [
         [
@@ -2233,7 +2223,7 @@
       ],
       "fill": false,
       "stroke": true,
-      "dash": "8,6",
+      "dash": null,
       "weight": null
     },
     {
@@ -2241,8 +2231,8 @@
         1
       ],
       "type": "polyline",
-      "name": "红楼",
-      "popup": "红楼 · 教学楼 1F",
+      "name": "西红楼",
+      "popup": "西红楼 · 教学楼",
       "cat": "none",
       "points": [
         [
@@ -2265,7 +2255,7 @@
       ],
       "type": "polygon",
       "name": "科学楼",
-      "popup": "科学楼 · 实验楼",
+      "popup": "科学楼",
       "cat": "building",
       "points": [
         [
@@ -2323,7 +2313,7 @@
         1
       ],
       "type": "polygon",
-      "name": "绿地",
+      "name": "科学楼旁绿地",
       "popup": "科学楼旁绿地",
       "cat": "green",
       "points": [
@@ -2354,8 +2344,8 @@
         1
       ],
       "type": "polygon",
-      "name": "绿地",
-      "popup": "绿地",
+      "name": "春雨池旁绿地1",
+      "popup": "春雨池旁绿地1",
       "cat": "green",
       "points": [
         [
@@ -2385,8 +2375,8 @@
         1
       ],
       "type": "polygon",
-      "name": "绿地",
-      "popup": "绿地",
+      "name": "春雨池旁绿地2",
+      "popup": "春雨池旁绿地2",
       "cat": "green",
       "points": [
         [
@@ -2460,7 +2450,7 @@
       ],
       "type": "polygon",
       "name": "道山",
-      "popup": "道山 · 假山绿地",
+      "popup": "道山",
       "cat": "green",
       "points": [
         [
@@ -2829,8 +2819,33 @@
           440
         ],
         [
+          110,
+          440
+        ]
+      ],
+      "fill": false,
+      "stroke": true,
+      "dash": null,
+      "weight": null
+    },
+    {
+      "layers": [
+        2,
+        3,
+        4
+      ],
+      "type": "polyline",
+      "name": "东紫阳楼",
+      "popup": "东紫阳楼 · 教学楼",
+      "cat": "none",
+      "points": [
+        [
           100,
-          460
+          470
+        ],
+        [
+          110,
+          470
         ]
       ],
       "fill": false,
@@ -2856,31 +2871,6 @@
         [
           100,
           570
-        ]
-      ],
-      "fill": false,
-      "stroke": true,
-      "dash": null,
-      "weight": null
-    },
-    {
-      "layers": [
-        2,
-        3,
-        4
-      ],
-      "type": "polyline",
-      "name": "东紫阳楼",
-      "popup": "东紫阳楼 · 教学楼",
-      "cat": "none",
-      "points": [
-        [
-          100,
-          580
-        ],
-        [
-          100,
-          600
         ]
       ],
       "fill": false,
@@ -2992,7 +2982,7 @@
         ],
         [
           100,
-          370
+          240
         ]
       ],
       "fill": false,
@@ -3013,11 +3003,11 @@
       "points": [
         [
           100,
-          380
+          270
         ],
         [
           100,
-          400
+          370
         ]
       ],
       "fill": false,
@@ -3194,15 +3184,11 @@
           600
         ],
         [
-          100,
+          120,
           600
         ],
         [
-          110,
-          600
-        ],
-        [
-          110,
+          120,
           610
         ],
         [
@@ -3231,7 +3217,7 @@
           600
         ],
         [
-          110,
+          120,
           600
         ]
       ],
@@ -3262,7 +3248,7 @@
       ],
       "fill": false,
       "stroke": true,
-      "dash": "8,6",
+      "dash": null,
       "weight": null
     },
     {
@@ -3287,7 +3273,7 @@
       ],
       "fill": false,
       "stroke": true,
-      "dash": "8,6",
+      "dash": null,
       "weight": null
     },
     {
@@ -3312,7 +3298,7 @@
       ],
       "fill": false,
       "stroke": true,
-      "dash": "8,6",
+      "dash": null,
       "weight": null
     },
     {
@@ -3337,7 +3323,7 @@
       ],
       "fill": false,
       "stroke": true,
-      "dash": "8,6",
+      "dash": null,
       "weight": null
     },
     {
@@ -3345,8 +3331,8 @@
         2
       ],
       "type": "polygon",
-      "name": "红楼",
-      "popup": "红楼 · 教学楼",
+      "name": "东红楼",
+      "popup": "东红楼 · 教学楼",
       "cat": "building",
       "points": [
         [
@@ -3376,8 +3362,8 @@
         2
       ],
       "type": "polygon",
-      "name": "红楼",
-      "popup": "红楼 · 教学楼",
+      "name": "西红楼",
+      "popup": "西红楼 · 教学楼",
       "cat": "building",
       "points": [
         [
@@ -3407,8 +3393,8 @@
         2
       ],
       "type": "polyline",
-      "name": "红楼",
-      "popup": "红楼 · 教学楼",
+      "name": "东红楼",
+      "popup": "东红楼 · 教学楼",
       "cat": "none",
       "points": [
         [
@@ -3430,8 +3416,8 @@
         2
       ],
       "type": "polyline",
-      "name": "红楼",
-      "popup": "红楼 · 教学楼",
+      "name": "东红楼",
+      "popup": "东红楼 · 教学楼",
       "cat": "none",
       "points": [
         [
@@ -3453,8 +3439,8 @@
         2
       ],
       "type": "polyline",
-      "name": "红楼",
-      "popup": "红楼 · 教学楼",
+      "name": "东红楼",
+      "popup": "东红楼 · 教学楼",
       "cat": "none",
       "points": [
         [
@@ -3476,8 +3462,8 @@
         2
       ],
       "type": "polyline",
-      "name": "红楼",
-      "popup": "红楼 · 教学楼",
+      "name": "东红楼",
+      "popup": "东红楼 · 教学楼",
       "cat": "none",
       "points": [
         [
@@ -3499,8 +3485,8 @@
         2
       ],
       "type": "polyline",
-      "name": "红楼",
-      "popup": "红楼 · 教学楼",
+      "name": "东红楼",
+      "popup": "东红楼 · 教学楼",
       "cat": "none",
       "points": [
         [
@@ -3522,8 +3508,8 @@
         2
       ],
       "type": "polyline",
-      "name": "红楼",
-      "popup": "红楼 · 教学楼",
+      "name": "东红楼",
+      "popup": "东红楼 · 教学楼",
       "cat": "none",
       "points": [
         [
@@ -3545,8 +3531,8 @@
         2
       ],
       "type": "polyline",
-      "name": "红楼",
-      "popup": "红楼 · 教学楼",
+      "name": "东红楼",
+      "popup": "东红楼 · 教学楼",
       "cat": "none",
       "points": [
         [
@@ -3560,7 +3546,7 @@
       ],
       "fill": false,
       "stroke": true,
-      "dash": "8,6",
+      "dash": null,
       "weight": null
     },
     {
@@ -3568,8 +3554,8 @@
         2
       ],
       "type": "polyline",
-      "name": "红楼",
-      "popup": "红楼 · 教学楼",
+      "name": "东红楼",
+      "popup": "东红楼 · 教学楼",
       "cat": "none",
       "points": [
         [
@@ -3583,7 +3569,7 @@
       ],
       "fill": false,
       "stroke": true,
-      "dash": "8,6",
+      "dash": null,
       "weight": null
     },
     {
@@ -3591,8 +3577,8 @@
         2
       ],
       "type": "polyline",
-      "name": "红楼",
-      "popup": "红楼 · 教学楼",
+      "name": "东红楼",
+      "popup": "东红楼 · 教学楼",
       "cat": "none",
       "points": [
         [
@@ -3614,8 +3600,8 @@
         2
       ],
       "type": "polyline",
-      "name": "红楼",
-      "popup": "红楼 · 教学楼",
+      "name": "东红楼",
+      "popup": "东红楼 · 教学楼",
       "cat": "none",
       "points": [
         [
@@ -3637,8 +3623,8 @@
         2
       ],
       "type": "polyline",
-      "name": "红楼",
-      "popup": "红楼 · 教学楼",
+      "name": "东红楼",
+      "popup": "东红楼 · 教学楼",
       "cat": "none",
       "points": [
         [
@@ -3660,8 +3646,8 @@
         2
       ],
       "type": "polyline",
-      "name": "红楼",
-      "popup": "红楼 · 教学楼",
+      "name": "东红楼",
+      "popup": "东红楼 · 教学楼",
       "cat": "none",
       "points": [
         [
@@ -3683,8 +3669,8 @@
         2
       ],
       "type": "polyline",
-      "name": "红楼",
-      "popup": "红楼 · 教学楼",
+      "name": "东红楼",
+      "popup": "东红楼 · 教学楼",
       "cat": "none",
       "points": [
         [
@@ -3706,8 +3692,8 @@
         2
       ],
       "type": "polyline",
-      "name": "红楼",
-      "popup": "红楼 · 教学楼",
+      "name": "东红楼",
+      "popup": "东红楼 · 教学楼",
       "cat": "none",
       "points": [
         [
@@ -3729,8 +3715,8 @@
         2
       ],
       "type": "polyline",
-      "name": "红楼",
-      "popup": "红楼 · 教学楼",
+      "name": "东红楼",
+      "popup": "东红楼 · 教学楼",
       "cat": "none",
       "points": [
         [
@@ -3752,8 +3738,8 @@
         2
       ],
       "type": "polyline",
-      "name": "红楼",
-      "popup": "红楼 · 教学楼",
+      "name": "东红楼",
+      "popup": "东红楼 · 教学楼",
       "cat": "none",
       "points": [
         [
@@ -3775,8 +3761,8 @@
         2
       ],
       "type": "polyline",
-      "name": "红楼",
-      "popup": "红楼 · 教学楼",
+      "name": "东红楼",
+      "popup": "东红楼 · 教学楼",
       "cat": "none",
       "points": [
         [
@@ -3790,7 +3776,7 @@
       ],
       "fill": false,
       "stroke": true,
-      "dash": "8,6",
+      "dash": null,
       "weight": null
     },
     {
@@ -3798,8 +3784,8 @@
         2
       ],
       "type": "polyline",
-      "name": "红楼",
-      "popup": "红楼 · 教学楼",
+      "name": "东红楼",
+      "popup": "东红楼 · 教学楼",
       "cat": "none",
       "points": [
         [
@@ -3821,8 +3807,8 @@
         2
       ],
       "type": "polyline",
-      "name": "红楼",
-      "popup": "红楼 · 教学楼",
+      "name": "东红楼",
+      "popup": "东红楼 · 教学楼",
       "cat": "none",
       "points": [
         [
@@ -3836,7 +3822,7 @@
       ],
       "fill": false,
       "stroke": true,
-      "dash": "8,6",
+      "dash": null,
       "weight": null
     },
     {
@@ -3844,8 +3830,8 @@
         2
       ],
       "type": "polyline",
-      "name": "红楼",
-      "popup": "红楼 · 教学楼",
+      "name": "西红楼",
+      "popup": "西红楼 · 教学楼",
       "cat": "none",
       "points": [
         [
@@ -3867,8 +3853,8 @@
         2
       ],
       "type": "polyline",
-      "name": "红楼",
-      "popup": "红楼 · 教学楼",
+      "name": "西红楼",
+      "popup": "西红楼 · 教学楼",
       "cat": "none",
       "points": [
         [
@@ -3890,8 +3876,8 @@
         2
       ],
       "type": "polyline",
-      "name": "红楼",
-      "popup": "红楼 · 教学楼",
+      "name": "西红楼",
+      "popup": "西红楼 · 教学楼",
       "cat": "none",
       "points": [
         [
@@ -3913,8 +3899,8 @@
         2
       ],
       "type": "polyline",
-      "name": "红楼",
-      "popup": "红楼 · 教学楼",
+      "name": "西红楼",
+      "popup": "西红楼 · 教学楼",
       "cat": "none",
       "points": [
         [
@@ -3936,8 +3922,8 @@
         2
       ],
       "type": "polyline",
-      "name": "红楼",
-      "popup": "红楼 · 教学楼",
+      "name": "西红楼",
+      "popup": "西红楼 · 教学楼",
       "cat": "none",
       "points": [
         [
@@ -3959,8 +3945,8 @@
         2
       ],
       "type": "polyline",
-      "name": "红楼",
-      "popup": "红楼 · 教学楼",
+      "name": "西红楼",
+      "popup": "西红楼 · 教学楼",
       "cat": "none",
       "points": [
         [
@@ -3982,8 +3968,8 @@
         2
       ],
       "type": "polyline",
-      "name": "红楼",
-      "popup": "红楼 · 教学楼",
+      "name": "西红楼",
+      "popup": "西红楼 · 教学楼",
       "cat": "none",
       "points": [
         [
@@ -3997,7 +3983,7 @@
       ],
       "fill": false,
       "stroke": true,
-      "dash": "8,6",
+      "dash": null,
       "weight": null
     },
     {
@@ -4005,8 +3991,8 @@
         2
       ],
       "type": "polyline",
-      "name": "红楼",
-      "popup": "红楼 · 教学楼",
+      "name": "西红楼",
+      "popup": "西红楼 · 教学楼",
       "cat": "none",
       "points": [
         [
@@ -4020,7 +4006,7 @@
       ],
       "fill": false,
       "stroke": true,
-      "dash": "8,6",
+      "dash": null,
       "weight": null
     },
     {
@@ -4028,8 +4014,8 @@
         2
       ],
       "type": "polyline",
-      "name": "红楼",
-      "popup": "红楼 · 教学楼",
+      "name": "西红楼",
+      "popup": "西红楼 · 教学楼",
       "cat": "none",
       "points": [
         [
@@ -4051,8 +4037,8 @@
         2
       ],
       "type": "polyline",
-      "name": "红楼",
-      "popup": "红楼 · 教学楼",
+      "name": "西红楼",
+      "popup": "西红楼 · 教学楼",
       "cat": "none",
       "points": [
         [
@@ -4074,8 +4060,8 @@
         2
       ],
       "type": "polyline",
-      "name": "红楼",
-      "popup": "红楼 · 教学楼",
+      "name": "西红楼",
+      "popup": "西红楼 · 教学楼",
       "cat": "none",
       "points": [
         [
@@ -4097,8 +4083,8 @@
         2
       ],
       "type": "polyline",
-      "name": "红楼",
-      "popup": "红楼 · 教学楼",
+      "name": "西红楼",
+      "popup": "西红楼 · 教学楼",
       "cat": "none",
       "points": [
         [
@@ -4120,8 +4106,8 @@
         2
       ],
       "type": "polyline",
-      "name": "红楼",
-      "popup": "红楼 · 教学楼",
+      "name": "西红楼",
+      "popup": "西红楼 · 教学楼",
       "cat": "none",
       "points": [
         [
@@ -4143,8 +4129,8 @@
         2
       ],
       "type": "polyline",
-      "name": "红楼",
-      "popup": "红楼 · 教学楼",
+      "name": "西红楼",
+      "popup": "西红楼 · 教学楼",
       "cat": "none",
       "points": [
         [
@@ -4166,8 +4152,8 @@
         2
       ],
       "type": "polyline",
-      "name": "红楼",
-      "popup": "红楼 · 教学楼",
+      "name": "西红楼",
+      "popup": "西红楼 · 教学楼",
       "cat": "none",
       "points": [
         [
@@ -4189,8 +4175,8 @@
         2
       ],
       "type": "polyline",
-      "name": "红楼",
-      "popup": "红楼 · 教学楼",
+      "name": "西红楼",
+      "popup": "西红楼 · 教学楼",
       "cat": "none",
       "points": [
         [
@@ -4212,8 +4198,8 @@
         2
       ],
       "type": "polyline",
-      "name": "红楼",
-      "popup": "红楼 · 教学楼",
+      "name": "西红楼",
+      "popup": "西红楼 · 教学楼",
       "cat": "none",
       "points": [
         [
@@ -4227,7 +4213,7 @@
       ],
       "fill": false,
       "stroke": true,
-      "dash": "8,6",
+      "dash": null,
       "weight": null
     },
     {
@@ -4235,8 +4221,8 @@
         2
       ],
       "type": "polyline",
-      "name": "红楼",
-      "popup": "红楼 · 教学楼",
+      "name": "西红楼",
+      "popup": "西红楼 · 教学楼",
       "cat": "none",
       "points": [
         [
@@ -4258,8 +4244,8 @@
         2
       ],
       "type": "polyline",
-      "name": "红楼",
-      "popup": "红楼 · 教学楼",
+      "name": "西红楼",
+      "popup": "西红楼 · 教学楼",
       "cat": "none",
       "points": [
         [
@@ -4273,7 +4259,1304 @@
       ],
       "fill": false,
       "stroke": true,
+      "dash": null,
+      "weight": null
+    },
+    {
+      "layers": [
+        2,
+        3,
+        4
+      ],
+      "type": "polygon",
+      "name": "东紫阳楼",
+      "popup": "东紫阳楼 · 教学楼",
+      "cat": "building",
+      "points": [
+        [
+          100,
+          440
+        ],
+        [
+          110,
+          440
+        ],
+        [
+          110,
+          470
+        ],
+        [
+          100,
+          470
+        ]
+      ],
+      "fill": true,
+      "stroke": false,
+      "dash": null,
+      "weight": null
+    },
+    {
+      "layers": [
+        2,
+        3,
+        4
+      ],
+      "type": "polyline",
+      "name": "楼梯",
+      "popup": "楼梯",
+      "cat": "none",
+      "points": [
+        [
+          110,
+          460
+        ],
+        [
+          120,
+          460
+        ]
+      ],
+      "fill": false,
+      "stroke": true,
       "dash": "8,6",
+      "weight": null
+    },
+    {
+      "layers": [
+        2,
+        3,
+        4
+      ],
+      "type": "polyline",
+      "name": "东紫阳楼",
+      "popup": "东紫阳楼 · 教学楼",
+      "cat": "none",
+      "points": [
+        [
+          110,
+          440
+        ],
+        [
+          110,
+          460
+        ]
+      ],
+      "fill": false,
+      "stroke": true,
+      "dash": null,
+      "weight": null
+    },
+    {
+      "layers": [
+        1
+      ],
+      "type": "polygon",
+      "name": "东紫阳楼",
+      "popup": "东紫阳楼 · 教学楼",
+      "cat": "building",
+      "points": [
+        [
+          100,
+          440
+        ],
+        [
+          110,
+          440
+        ],
+        [
+          110,
+          470
+        ],
+        [
+          100,
+          470
+        ]
+      ],
+      "fill": true,
+      "stroke": false,
+      "dash": null,
+      "weight": null
+    },
+    {
+      "layers": [
+        2,
+        3,
+        4
+      ],
+      "type": "polyline",
+      "name": "东紫阳楼",
+      "popup": "东紫阳楼 · 教学楼",
+      "cat": "none",
+      "points": [
+        [
+          100,
+          570
+        ],
+        [
+          110,
+          570
+        ]
+      ],
+      "fill": false,
+      "stroke": true,
+      "dash": null,
+      "weight": null
+    },
+    {
+      "layers": [
+        2,
+        3,
+        4
+      ],
+      "type": "polyline",
+      "name": "东紫阳楼",
+      "popup": "东紫阳楼 · 教学楼",
+      "cat": "none",
+      "points": [
+        [
+          100,
+          600
+        ],
+        [
+          110,
+          600
+        ]
+      ],
+      "fill": false,
+      "stroke": true,
+      "dash": null,
+      "weight": null
+    },
+    {
+      "layers": [
+        2,
+        3,
+        4
+      ],
+      "type": "polyline",
+      "name": "东紫阳楼",
+      "popup": "东紫阳楼 · 教学楼",
+      "cat": "none",
+      "points": [
+        [
+          110,
+          580
+        ],
+        [
+          110,
+          600
+        ]
+      ],
+      "fill": false,
+      "stroke": true,
+      "dash": null,
+      "weight": null
+    },
+    {
+      "layers": [
+        2,
+        3,
+        4
+      ],
+      "type": "polyline",
+      "name": "楼梯",
+      "popup": "楼梯",
+      "cat": "none",
+      "points": [
+        [
+          110,
+          580
+        ],
+        [
+          120,
+          580
+        ]
+      ],
+      "fill": false,
+      "stroke": true,
+      "dash": "8,6",
+      "weight": null
+    },
+    {
+      "layers": [
+        2,
+        3,
+        4
+      ],
+      "type": "polygon",
+      "name": "东紫阳楼",
+      "popup": "东紫阳楼 · 教学楼",
+      "cat": "building",
+      "points": [
+        [
+          100,
+          570
+        ],
+        [
+          110,
+          570
+        ],
+        [
+          110,
+          600
+        ],
+        [
+          100,
+          600
+        ]
+      ],
+      "fill": true,
+      "stroke": false,
+      "dash": null,
+      "weight": null
+    },
+    {
+      "layers": [
+        1
+      ],
+      "type": "polygon",
+      "name": "东紫阳楼",
+      "popup": "东紫阳楼 · 教学楼",
+      "cat": "building",
+      "points": [
+        [
+          100,
+          570
+        ],
+        [
+          110,
+          570
+        ],
+        [
+          110,
+          600
+        ],
+        [
+          100,
+          600
+        ]
+      ],
+      "fill": true,
+      "stroke": false,
+      "dash": null,
+      "weight": null
+    },
+    {
+      "layers": [
+        2,
+        3,
+        4
+      ],
+      "type": "polyline",
+      "name": "西紫阳楼",
+      "popup": "西紫阳楼 · 教学楼",
+      "cat": "none",
+      "points": [
+        [
+          100,
+          370
+        ],
+        [
+          110,
+          370
+        ]
+      ],
+      "fill": false,
+      "stroke": true,
+      "dash": null,
+      "weight": null
+    },
+    {
+      "layers": [
+        2,
+        3,
+        4
+      ],
+      "type": "polyline",
+      "name": "西紫阳楼",
+      "popup": "西紫阳楼 · 教学楼",
+      "cat": "none",
+      "points": [
+        [
+          100,
+          400
+        ],
+        [
+          110,
+          400
+        ]
+      ],
+      "fill": false,
+      "stroke": true,
+      "dash": null,
+      "weight": null
+    },
+    {
+      "layers": [
+        2,
+        3,
+        4
+      ],
+      "type": "polyline",
+      "name": "西紫阳楼",
+      "popup": "西紫阳楼 · 教学楼",
+      "cat": "none",
+      "points": [
+        [
+          110,
+          380
+        ],
+        [
+          110,
+          400
+        ]
+      ],
+      "fill": false,
+      "stroke": true,
+      "dash": null,
+      "weight": null
+    },
+    {
+      "layers": [
+        2,
+        3,
+        4
+      ],
+      "type": "polyline",
+      "name": "楼梯",
+      "popup": "楼梯",
+      "cat": "none",
+      "points": [
+        [
+          110,
+          380
+        ],
+        [
+          120,
+          380
+        ]
+      ],
+      "fill": false,
+      "stroke": true,
+      "dash": "8,6",
+      "weight": null
+    },
+    {
+      "layers": [
+        2,
+        3,
+        4
+      ],
+      "type": "polygon",
+      "name": "西紫阳楼",
+      "popup": "西紫阳楼 · 教学楼",
+      "cat": "building",
+      "points": [
+        [
+          100,
+          370
+        ],
+        [
+          110,
+          370
+        ],
+        [
+          110,
+          400
+        ],
+        [
+          100,
+          400
+        ]
+      ],
+      "fill": true,
+      "stroke": false,
+      "dash": null,
+      "weight": null
+    },
+    {
+      "layers": [
+        1
+      ],
+      "type": "polygon",
+      "name": "西紫阳楼",
+      "popup": "西紫阳楼 · 教学楼",
+      "cat": "building",
+      "points": [
+        [
+          100,
+          370
+        ],
+        [
+          110,
+          370
+        ],
+        [
+          110,
+          400
+        ],
+        [
+          100,
+          400
+        ]
+      ],
+      "fill": true,
+      "stroke": false,
+      "dash": null,
+      "weight": null
+    },
+    {
+      "layers": [
+        2,
+        3,
+        4
+      ],
+      "type": "polyline",
+      "name": "西紫阳楼",
+      "popup": "西紫阳楼 · 教学楼",
+      "cat": "none",
+      "points": [
+        [
+          100,
+          240
+        ],
+        [
+          110,
+          240
+        ]
+      ],
+      "fill": false,
+      "stroke": true,
+      "dash": null,
+      "weight": null
+    },
+    {
+      "layers": [
+        2,
+        3,
+        4
+      ],
+      "type": "polyline",
+      "name": "西紫阳楼",
+      "popup": "西紫阳楼 · 教学楼",
+      "cat": "none",
+      "points": [
+        [
+          100,
+          270
+        ],
+        [
+          110,
+          270
+        ]
+      ],
+      "fill": false,
+      "stroke": true,
+      "dash": null,
+      "weight": null
+    },
+    {
+      "layers": [
+        2,
+        3,
+        4
+      ],
+      "type": "polyline",
+      "name": "西紫阳楼",
+      "popup": "西紫阳楼 · 教学楼",
+      "cat": "none",
+      "points": [
+        [
+          110,
+          240
+        ],
+        [
+          110,
+          260
+        ]
+      ],
+      "fill": false,
+      "stroke": true,
+      "dash": null,
+      "weight": null
+    },
+    {
+      "layers": [
+        2,
+        3,
+        4
+      ],
+      "type": "polyline",
+      "name": "楼梯",
+      "popup": "楼梯",
+      "cat": "none",
+      "points": [
+        [
+          110,
+          260
+        ],
+        [
+          120,
+          260
+        ]
+      ],
+      "fill": false,
+      "stroke": true,
+      "dash": "8,6",
+      "weight": null
+    },
+    {
+      "layers": [
+        2,
+        3,
+        4
+      ],
+      "type": "polygon",
+      "name": "西紫阳楼",
+      "popup": "西紫阳楼 · 教学楼",
+      "cat": "building",
+      "points": [
+        [
+          100,
+          240
+        ],
+        [
+          110,
+          240
+        ],
+        [
+          110,
+          270
+        ],
+        [
+          100,
+          270
+        ]
+      ],
+      "fill": true,
+      "stroke": false,
+      "dash": null,
+      "weight": null
+    },
+    {
+      "layers": [
+        1
+      ],
+      "type": "polygon",
+      "name": "西紫阳楼",
+      "popup": "西紫阳楼 · 教学楼",
+      "cat": "building",
+      "points": [
+        [
+          100,
+          240
+        ],
+        [
+          110,
+          240
+        ],
+        [
+          110,
+          270
+        ],
+        [
+          100,
+          270
+        ]
+      ],
+      "fill": true,
+      "stroke": false,
+      "dash": null,
+      "weight": null
+    },
+    {
+      "layers": [
+        1
+      ],
+      "type": "polyline",
+      "name": "东紫阳楼",
+      "popup": "东紫阳楼 · 教学楼",
+      "cat": "none",
+      "points": [
+        [
+          100,
+          440
+        ],
+        [
+          110,
+          440
+        ]
+      ],
+      "fill": false,
+      "stroke": true,
+      "dash": null,
+      "weight": null
+    },
+    {
+      "layers": [
+        1
+      ],
+      "type": "polyline",
+      "name": "东紫阳楼",
+      "popup": "东紫阳楼 · 教学楼",
+      "cat": "none",
+      "points": [
+        [
+          100,
+          470
+        ],
+        [
+          110,
+          470
+        ]
+      ],
+      "fill": false,
+      "stroke": true,
+      "dash": null,
+      "weight": null
+    },
+    {
+      "layers": [
+        1
+      ],
+      "type": "polyline",
+      "name": "东紫阳楼",
+      "popup": "东紫阳楼 · 教学楼",
+      "cat": "none",
+      "points": [
+        [
+          100,
+          570
+        ],
+        [
+          110,
+          570
+        ]
+      ],
+      "fill": false,
+      "stroke": true,
+      "dash": null,
+      "weight": null
+    },
+    {
+      "layers": [
+        1
+      ],
+      "type": "polyline",
+      "name": "东紫阳楼",
+      "popup": "东紫阳楼 · 教学楼",
+      "cat": "none",
+      "points": [
+        [
+          100,
+          600
+        ],
+        [
+          110,
+          600
+        ]
+      ],
+      "fill": false,
+      "stroke": true,
+      "dash": null,
+      "weight": null
+    },
+    {
+      "layers": [
+        1
+      ],
+      "type": "polyline",
+      "name": "东紫阳楼",
+      "popup": "东紫阳楼 · 教学楼",
+      "cat": "none",
+      "points": [
+        [
+          110,
+          440
+        ],
+        [
+          110,
+          460
+        ]
+      ],
+      "fill": false,
+      "stroke": true,
+      "dash": null,
+      "weight": null
+    },
+    {
+      "layers": [
+        1
+      ],
+      "type": "polyline",
+      "name": "东紫阳楼",
+      "popup": "东紫阳楼 · 教学楼",
+      "cat": "none",
+      "points": [
+        [
+          110,
+          580
+        ],
+        [
+          110,
+          600
+        ]
+      ],
+      "fill": false,
+      "stroke": true,
+      "dash": null,
+      "weight": null
+    },
+    {
+      "layers": [
+        1
+      ],
+      "type": "polyline",
+      "name": "西紫阳楼",
+      "popup": "西紫阳楼 · 教学楼",
+      "cat": "none",
+      "points": [
+        [
+          100,
+          270
+        ],
+        [
+          100,
+          370
+        ]
+      ],
+      "fill": false,
+      "stroke": true,
+      "dash": null,
+      "weight": null
+    },
+    {
+      "layers": [
+        1
+      ],
+      "type": "polyline",
+      "name": "西紫阳楼",
+      "popup": "西紫阳楼 · 教学楼",
+      "cat": "none",
+      "points": [
+        [
+          100,
+          400
+        ],
+        [
+          60,
+          400
+        ],
+        [
+          60,
+          240
+        ]
+      ],
+      "fill": false,
+      "stroke": true,
+      "dash": null,
+      "weight": null
+    },
+    {
+      "layers": [
+        1
+      ],
+      "type": "polyline",
+      "name": "西紫阳楼",
+      "popup": "西紫阳楼 · 教学楼",
+      "cat": "none",
+      "points": [
+        [
+          100,
+          240
+        ],
+        [
+          110,
+          240
+        ]
+      ],
+      "fill": false,
+      "stroke": true,
+      "dash": null,
+      "weight": null
+    },
+    {
+      "layers": [
+        1
+      ],
+      "type": "polyline",
+      "name": "西紫阳楼",
+      "popup": "西紫阳楼 · 教学楼",
+      "cat": "none",
+      "points": [
+        [
+          100,
+          270
+        ],
+        [
+          110,
+          270
+        ]
+      ],
+      "fill": false,
+      "stroke": true,
+      "dash": null,
+      "weight": null
+    },
+    {
+      "layers": [
+        1
+      ],
+      "type": "polyline",
+      "name": "西紫阳楼",
+      "popup": "西紫阳楼 · 教学楼",
+      "cat": "none",
+      "points": [
+        [
+          100,
+          370
+        ],
+        [
+          110,
+          370
+        ]
+      ],
+      "fill": false,
+      "stroke": true,
+      "dash": null,
+      "weight": null
+    },
+    {
+      "layers": [
+        1
+      ],
+      "type": "polyline",
+      "name": "西紫阳楼",
+      "popup": "西紫阳楼 · 教学楼",
+      "cat": "none",
+      "points": [
+        [
+          100,
+          400
+        ],
+        [
+          110,
+          400
+        ]
+      ],
+      "fill": false,
+      "stroke": true,
+      "dash": null,
+      "weight": null
+    },
+    {
+      "layers": [
+        1
+      ],
+      "type": "polyline",
+      "name": "西紫阳楼",
+      "popup": "西紫阳楼 · 教学楼",
+      "cat": "none",
+      "points": [
+        [
+          110,
+          240
+        ],
+        [
+          110,
+          260
+        ]
+      ],
+      "fill": false,
+      "stroke": true,
+      "dash": null,
+      "weight": null
+    },
+    {
+      "layers": [
+        1
+      ],
+      "type": "polyline",
+      "name": "西紫阳楼",
+      "popup": "西紫阳楼 · 教学楼",
+      "cat": "none",
+      "points": [
+        [
+          110,
+          380
+        ],
+        [
+          110,
+          400
+        ]
+      ],
+      "fill": false,
+      "stroke": true,
+      "dash": null,
+      "weight": null
+    },
+    {
+      "layers": [
+        1
+      ],
+      "type": "polyline",
+      "name": "楼梯",
+      "popup": "楼梯",
+      "cat": "none",
+      "points": [
+        [
+          110,
+          470
+        ],
+        [
+          120,
+          470
+        ]
+      ],
+      "fill": false,
+      "stroke": true,
+      "dash": "8,6",
+      "weight": null
+    },
+    {
+      "layers": [
+        1
+      ],
+      "type": "polyline",
+      "name": "楼梯",
+      "popup": "楼梯",
+      "cat": "none",
+      "points": [
+        [
+          110,
+          570
+        ],
+        [
+          120,
+          570
+        ]
+      ],
+      "fill": false,
+      "stroke": true,
+      "dash": "8,6",
+      "weight": null
+    },
+    {
+      "layers": [
+        1
+      ],
+      "type": "polyline",
+      "name": "楼梯",
+      "popup": "楼梯",
+      "cat": "none",
+      "points": [
+        [
+          110,
+          370
+        ],
+        [
+          120,
+          370
+        ]
+      ],
+      "fill": false,
+      "stroke": true,
+      "dash": "8,6",
+      "weight": null
+    },
+    {
+      "layers": [
+        1
+      ],
+      "type": "polyline",
+      "name": "楼梯",
+      "popup": "楼梯",
+      "cat": "none",
+      "points": [
+        [
+          110,
+          270
+        ],
+        [
+          120,
+          270
+        ]
+      ],
+      "fill": false,
+      "stroke": true,
+      "dash": "8,6",
+      "weight": null
+    },
+    {
+      "layers": [
+        1
+      ],
+      "type": "polygon",
+      "name": "东红楼",
+      "popup": "东红楼 · 教学楼",
+      "cat": "building",
+      "points": [
+        [
+          188,
+          436
+        ],
+        [
+          198,
+          436
+        ],
+        [
+          198,
+          643
+        ],
+        [
+          188,
+          643
+        ]
+      ],
+      "fill": true,
+      "stroke": false,
+      "dash": null,
+      "weight": null
+    },
+    {
+      "layers": [
+        1
+      ],
+      "type": "polygon",
+      "name": "西红楼",
+      "popup": "西红楼 · 教学楼",
+      "cat": "building",
+      "points": [
+        [
+          188,
+          197
+        ],
+        [
+          198,
+          197
+        ],
+        [
+          198,
+          404
+        ],
+        [
+          188,
+          404
+        ]
+      ],
+      "fill": true,
+      "stroke": false,
+      "dash": null,
+      "weight": null
+    },
+    {
+      "layers": [
+        2
+      ],
+      "type": "polygon",
+      "name": "东红楼",
+      "popup": "东红楼 · 教学楼",
+      "cat": "building",
+      "points": [
+        [
+          188,
+          436
+        ],
+        [
+          198,
+          436
+        ],
+        [
+          198,
+          643
+        ],
+        [
+          188,
+          643
+        ]
+      ],
+      "fill": true,
+      "stroke": false,
+      "dash": null,
+      "weight": null
+    },
+    {
+      "layers": [
+        2
+      ],
+      "type": "polygon",
+      "name": "西红楼",
+      "popup": "西红楼 · 教学楼",
+      "cat": "building",
+      "points": [
+        [
+          188,
+          197
+        ],
+        [
+          198,
+          197
+        ],
+        [
+          198,
+          404
+        ],
+        [
+          188,
+          404
+        ]
+      ],
+      "fill": true,
+      "stroke": false,
+      "dash": null,
+      "weight": null
+    },
+    {
+      "layers": [
+        2,
+        3,
+        4
+      ],
+      "type": "polygon",
+      "name": "三元楼",
+      "popup": "三元楼 · 综合楼",
+      "cat": "building",
+      "points": [
+        [
+          35,
+          688
+        ],
+        [
+          255,
+          688
+        ],
+        [
+          255,
+          658
+        ],
+        [
+          90,
+          658
+        ],
+        [
+          90,
+          600
+        ],
+        [
+          60,
+          600
+        ],
+        [
+          60,
+          658
+        ],
+        [
+          35,
+          658
+        ]
+      ],
+      "fill": true,
+      "stroke": false,
+      "dash": null,
+      "weight": null
+    },
+    {
+      "layers": [
+        2,
+        3,
+        4
+      ],
+      "type": "polyline",
+      "name": "楼梯",
+      "popup": "楼梯",
+      "cat": "none",
+      "points": [
+        [
+          110,
+          470
+        ],
+        [
+          120,
+          470
+        ]
+      ],
+      "fill": false,
+      "stroke": true,
+      "dash": null,
+      "weight": null
+    },
+    {
+      "layers": [
+        2,
+        3,
+        4
+      ],
+      "type": "polyline",
+      "name": "楼梯",
+      "popup": "楼梯",
+      "cat": "none",
+      "points": [
+        [
+          110,
+          570
+        ],
+        [
+          120,
+          570
+        ]
+      ],
+      "fill": false,
+      "stroke": true,
+      "dash": null,
+      "weight": null
+    },
+    {
+      "layers": [
+        2,
+        3,
+        4
+      ],
+      "type": "polyline",
+      "name": "楼梯",
+      "popup": "楼梯",
+      "cat": "none",
+      "points": [
+        [
+          110,
+          370
+        ],
+        [
+          120,
+          370
+        ]
+      ],
+      "fill": false,
+      "stroke": true,
+      "dash": null,
+      "weight": null
+    },
+    {
+      "layers": [
+        2,
+        3,
+        4
+      ],
+      "type": "polyline",
+      "name": "楼梯",
+      "popup": "楼梯",
+      "cat": "none",
+      "points": [
+        [
+          110,
+          270
+        ],
+        [
+          120,
+          270
+        ]
+      ],
+      "fill": false,
+      "stroke": true,
+      "dash": null,
       "weight": null
     }
   ]

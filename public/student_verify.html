@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>学生认证 · 校园信息网</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: #ffffff;
+    color: #000000;
+    font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+  }
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 2px solid #000000;
+    padding: 16px 32px;
+  }
+  .logo {
+    font-size: 22px;
+    font-weight: bold;
+    letter-spacing: 2px;
+  }
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+  }
+  .nav {
+    display: flex;
+    gap: 24px;
+  }
+  .nav a {
+    color: #000000;
+    text-decoration: none;
+    font-size: 16px;
+    padding: 6px 4px;
+    border-bottom: 2px solid transparent;
+  }
+  .nav a:hover { border-bottom: 2px solid #000000; }
+  .auth {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .btn {
+    display: inline-block;
+    background: #ffffff;
+    color: #000000;
+    border: 2px solid #000000;
+    border-radius: 0;
+    padding: 8px 14px;
+    font-size: 14px;
+    font-family: inherit;
+    cursor: pointer;
+    text-decoration: none;
+    line-height: 1;
+  }
+  .btn:hover { background: #000000; color: #ffffff; }
+  .main {
+    display: flex;
+    justify-content: center;
+    padding: 56px 16px;
+  }
+  .card {
+    width: 420px;
+    max-width: 100%;
+    border: 2px solid #000000;
+    padding: 28px;
+  }
+  .card h1 {
+    font-size: 20px;
+    letter-spacing: 2px;
+    margin: 0 0 10px;
+  }
+  .card .sub {
+    font-size: 13px;
+    color: #777777;
+    line-height: 1.7;
+    margin-bottom: 22px;
+  }
+  .field { margin-bottom: 16px; }
+  .field label {
+    display: block;
+    font-size: 13px;
+    color: #555555;
+    margin-bottom: 6px;
+  }
+  .field input,
+  .field textarea {
+    width: 100%;
+    border: 2px solid #000000;
+    border-radius: 0;
+    padding: 10px 12px;
+    font-size: 14px;
+    font-family: inherit;
+    color: #000000;
+    background: #ffffff;
+    outline: none;
+  }
+  .field textarea { min-height: 80px; resize: vertical; }
+  .field input:focus,
+  .field textarea:focus { background: #f2f2f2; }
+  .hint { font-size: 12px; color: #999999; margin-top: 6px; }
+  .submit {
+    width: 100%;
+    background: #000000;
+    color: #ffffff;
+    border: 2px solid #000000;
+    border-radius: 0;
+    padding: 11px;
+    font-size: 15px;
+    font-family: inherit;
+    cursor: pointer;
+  }
+  .submit:hover { background: #ffffff; color: #000000; }
+  .submit:disabled { opacity: 0.5; cursor: default; }
+  .msg { min-height: 20px; font-size: 14px; margin-top: 14px; text-align: center; }
+  .msg.error { color: #cc0000; }
+  .msg.ok { color: #008800; }
+  .already {
+    text-align: center;
+    font-size: 15px;
+    line-height: 2;
+  }
+  .already .badge {
+    display: inline-block;
+    border: 2px solid #000000;
+    background: #000000;
+    color: #ffffff;
+    padding: 4px 12px;
+    font-size: 13px;
+    letter-spacing: 1px;
+    margin-bottom: 12px;
+  }
+  .hidden { display: none; }
+</style>
+</head>
+<body>
+  <header class="header">
+    <div class="logo">校园信息网</div>
+    <div class="header-right">
+      <nav class="nav">
+        <a href="index.html">首页</a>
+        <a href="map.html">校园地图</a>
+        <a href="forum.html">论坛</a>
+        <a href="recipe.html">菜谱评价</a>
+      </nav>
+      <div class="auth" id="authArea">
+        <a class="btn" href="login.html">登录</a>
+        <a class="btn" href="register.html">注册</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="main">
+    <div class="card">
+      <div id="alreadyBox" class="already hidden">
+        <div class="badge">已认证</div>
+        <div>你已认证为学生</div>
+      </div>
+
+      <div id="formBox">
+        <h1>学生认证</h1>
+        <div class="sub">提交后由管理员审核；若管理员开启了邀请码，填入正确的邀请码可直接通过。</div>
+        <form id="applyForm" autocomplete="off">
+          <div class="field">
+            <label for="student_id">新生号</label>
+            <input type="text" id="student_id" required>
+          </div>
+          <div class="field">
+            <label for="class_name">班级</label>
+            <input type="text" id="class_name" required>
+          </div>
+          <div class="field">
+            <label for="real_name">真实姓名</label>
+            <input type="text" id="real_name" required>
+          </div>
+          <div class="field">
+            <label for="invite_code">邀请码（选填）</label>
+            <input type="text" id="invite_code">
+            <div class="hint">如果管理员开启了邀请码，填入可直接通过审核</div>
+          </div>
+          <div class="field">
+            <label for="extra_info">补充更多信息（选填）</label>
+            <textarea id="extra_info"></textarea>
+            <div class="hint">补充更多信息可提高通过率</div>
+          </div>
+          <button type="submit" class="submit" id="submitBtn">提交认证</button>
+          <div class="msg" id="msg"></div>
+        </form>
+      </div>
+    </div>
+  </main>
+
+  <script src="auth.js"></script>
+  <script>
+    var token = localStorage.getItem("token");
+    var ROLE_WEIGHTS = { developer: 6, super_admin: 5, admin: 4, student: 3, user: 2, guest: 1 };
+
+    if (!token) { location.href = "login.html"; }
+
+    function handleStatus(status) {
+      if (status === 401) {
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        location.href = "login.html";
+        return true;
+      }
+      return false;
+    }
+
+    function showAlready() {
+      document.getElementById("formBox").classList.add("hidden");
+      document.getElementById("alreadyBox").classList.remove("hidden");
+    }
+
+    fetch("/api/user/profile", { headers: { "Authorization": "Bearer " + token } })
+      .then(function (res) {
+        if (handleStatus(res.status)) throw new Error("unauthorized");
+        return res.json();
+      })
+      .then(function (data) {
+        var role = data.user && data.user.role;
+        if ((ROLE_WEIGHTS[role] || 0) >= ROLE_WEIGHTS.student) {
+          showAlready();
+        }
+      })
+      .catch(function () {});
+
+    document.getElementById("applyForm").addEventListener("submit", function (e) {
+      e.preventDefault();
+      var msg = document.getElementById("msg");
+      var submit = document.getElementById("submitBtn");
+      var payload = {
+        student_id: document.getElementById("student_id").value.trim(),
+        class_name: document.getElementById("class_name").value.trim(),
+        real_name: document.getElementById("real_name").value.trim(),
+        invite_code: document.getElementById("invite_code").value.trim(),
+        extra_info: document.getElementById("extra_info").value.trim()
+      };
+
+      if (!payload.student_id || !payload.class_name || !payload.real_name) {
+        msg.className = "msg error";
+        msg.textContent = "请填写新生号、班级和真实姓名";
+        return;
+      }
+
+      msg.className = "msg";
+      msg.textContent = "提交中…";
+      submit.disabled = true;
+
+      fetch("/api/student/apply", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token },
+        body: JSON.stringify(payload)
+      })
+        .then(function (res) {
+          if (handleStatus(res.status)) throw new Error("unauthorized");
+          return res.json().then(function (data) { return { ok: res.ok, data: data }; });
+        })
+        .then(function (r) {
+          if (!r.ok) {
+            msg.className = "msg error";
+            msg.textContent = r.data.error === "login required" ? "请先登录" : (r.data.error || "提交失败");
+            submit.disabled = false;
+            return;
+          }
+          if (r.data.status === "approved") {
+            msg.className = "msg ok";
+            msg.textContent = "认证成功";
+            var user = null;
+            try { user = JSON.parse(localStorage.getItem("user") || "null"); } catch (err) { user = null; }
+            if (user) { user.role = "student"; localStorage.setItem("user", JSON.stringify(user)); }
+            setTimeout(showAlready, 800);
+          } else {
+            msg.className = "msg ok";
+            msg.textContent = "已提交，等待管理员审核";
+            submit.disabled = false;
+          }
+        })
+        .catch(function (err) {
+          if (err.message !== "unauthorized") {
+            msg.className = "msg error";
+            msg.textContent = "网络错误：" + err.message;
+            submit.disabled = false;
+          }
+        });
+    });
+  </script>
+</body>
+</html>

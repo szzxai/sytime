@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>关于我们 · 校园信息网</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: #ffffff;
+    color: #000000;
+    font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+  }
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 2px solid #000000;
+    padding: 16px 32px;
+  }
+  .logo {
+    font-size: 22px;
+    font-weight: bold;
+    letter-spacing: 2px;
+  }
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+  }
+  .nav {
+    display: flex;
+    gap: 24px;
+  }
+  .nav a {
+    color: #000000;
+    text-decoration: none;
+    font-size: 16px;
+    padding: 6px 4px;
+    border-bottom: 2px solid transparent;
+  }
+  .nav a:hover { border-bottom: 2px solid #000000; }
+  .auth {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .btn {
+    display: inline-block;
+    background: #ffffff;
+    color: #000000;
+    border: 2px solid #000000;
+    border-radius: 0;
+    padding: 8px 14px;
+    font-size: 14px;
+    font-family: inherit;
+    cursor: pointer;
+    text-decoration: none;
+    line-height: 1;
+  }
+  .btn:hover { background: #000000; color: #ffffff; }
+  .wrap {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 40px 16px 64px;
+  }
+  .block {
+    border: 2px solid #000000;
+    padding: 24px;
+    margin-bottom: 22px;
+  }
+  .block h1 {
+    font-size: 20px;
+    letter-spacing: 2px;
+    margin: 0 0 16px;
+  }
+  .block h2 {
+    font-size: 15px;
+    letter-spacing: 1px;
+    margin: 0 0 12px;
+  }
+  .block p {
+    font-size: 15px;
+    line-height: 1.9;
+    margin: 0 0 12px;
+    color: #222222;
+  }
+  .block p:last-child { margin-bottom: 0; }
+  .contact { font-size: 15px; line-height: 2; }
+</style>
+</head>
+<body>
+  <header class="header">
+    <div class="logo">校园信息网</div>
+    <div class="header-right">
+      <nav class="nav">
+        <a href="index.html">首页</a>
+        <a href="map.html">校园地图</a>
+        <a href="forum.html">论坛</a>
+        <a href="recipe.html">菜谱评价</a>
+      </nav>
+      <div class="auth" id="authArea">
+        <a class="btn" href="login.html">登录</a>
+        <a class="btn" href="register.html">注册</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <div class="block">
+      <h1>关于我们</h1>
+      <p>「校园信息网」是一个黑白极简风格的校园信息网站，集成了首页、可切换楼层的交互式校园地图、论坛、菜谱评价、更新公告、学生认证与个人中心等功能，并配套一套完整的账号系统。</p>
+      <p>我们希望把校园里分散的信息集中到一个简洁、清爽的地方，用最少的视觉干扰，呈现最有用的内容。</p>
+    </div>
+
+    <div class="block">
+      <h2>发起原因</h2>
+      <p>最初它只是一个纯静态的校园地图页面，为了让地图数据便于维护与更新，逐步改造为 Node.js + Express 的动态站点，把几何数据抽离为 data.json，并加入低饱和度的实景配色。</p>
+      <p>此后我们陆续加入了账号系统（注册 / 登录 / 角色权限）、论坛与回复、菜谱评价、更新公告、学生认证、全站横幅与个人设置等功能，希望让它从一个地图工具成长为一个真正好用的校园信息平台。</p>
+    </div>
+
+    <div class="block">
+      <h2>联系方式</h2>
+      <div class="contact">
+        邮箱：contact@example.com<br>
+        QQ：123456789<br>
+        地址：校园信息网项目组
+      </div>
+    </div>
+  </main>
+
+  <script src="auth.js"></script>
+</body>
+</html>
