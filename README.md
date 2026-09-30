@@ -283,5 +283,3 @@ Authorization: Bearer <token>
 ## 许可证
 
 仓库的 [LICENSE](LICENSE) 文件包含 GNU Affero 通用公共许可证第 3 版（GNU Affero General Public License version 3，AGPLv3）文本。
-
-当前 `package.json` 的 `license` 字段为 `ISC`，与 `LICENSE` 不一致。发布或复用前，项目维护者应确认授权方式并统一许可证标识。
