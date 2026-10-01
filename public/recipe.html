@@ -7,7 +7,7 @@
       content="width=device-width, initial-scale=1, viewport-fit=cover"
     />
     <meta name="theme-color" content="#F5F3EE" />
-    <title>菜谱评价 · 校园信息网</title>
+    <title>菜品与食谱 · 校园信息网</title>
     <link rel="icon" href="/img/favicon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="/css/site.css" />
   </head>
@@ -24,9 +24,9 @@
       <div class="page-head">
         <div class="page-head__main">
           <span class="page-head__eyebrow">Canteen</span>
-          <h1 class="page-head__title">菜谱评价</h1>
+          <h1 class="page-head__title">菜品与食谱</h1>
         </div>
-        <div class="page-head__actions" id="writeAction">
+        <div class="page-head__actions" id="writeAction" hidden>
           <button type="button" class="btn btn--primary" id="writeBtn">
             <svg class="icon" aria-hidden="true">
               <use href="/img/icons.svg#i-pencil"></use></svg
@@ -46,6 +46,7 @@
         >
           全部菜品
         </button>
+        <button type="button" class="segmented__item" role="tab" id="reviewsBtn" data-view="reviews" aria-selected="false">菜品评价</button>
         <button
           type="button"
           class="segmented__item"
@@ -58,6 +59,18 @@
         </button>
       </div>
 
+      <section id="dishSearchArea" hidden aria-label="搜索菜品">
+        <div class="search-bar u-mb-4">
+          <div class="input-group">
+            <span class="input-group__icon"><svg class="icon" aria-hidden="true"><use href="/img/icons.svg#i-search"></use></svg></span>
+            <input class="input input--icon input--end" type="search" id="dishSearch" placeholder="搜索菜名、拼音或首字母…" aria-label="搜索菜品" enterkeyhint="search" />
+            <span class="input-group__end" id="searchClearWrap" hidden><button type="button" class="icon-btn icon-btn--sm" id="dishSearchClear" aria-label="清除搜索"><svg class="icon" aria-hidden="true"><use href="/img/icons.svg#i-close"></use></svg></button></span>
+          </div>
+        </div>
+        <p class="u-muted u-fs-sm u-mb-4" id="dishSummary" role="status"></p>
+        <span class="sr-only" aria-live="polite" id="dishSearchLive"></span>
+      </section>
+
       <div class="callout" id="loginHint" hidden>
         <span class="callout__text">登录后才能写评价。</span>
         <span class="callout__actions"
@@ -68,7 +81,8 @@
         >
       </div>
 
-      <div id="recipeList" aria-live="polite"></div>
+      <div id="recipeList" role="tabpanel" aria-labelledby="allBtn"></div>
+      <nav class="az-rail" id="dishRail" aria-label="菜品字母索引" hidden></nav>
       <div class="load-more" id="loadMore" hidden>
         <button type="button" class="btn" id="moreBtn">加载更多</button
         ><span id="moreInfo"></span>

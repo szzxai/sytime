@@ -10,6 +10,51 @@
     controller,
     more = P.el("loadMore"),
     selected = false;
+  var dishes = null, catalogMeta = {}, search = P.el("dishSearch"), rail = P.el("dishRail"), timer, composing = false, spy;
+  var params = new URLSearchParams(location.search), query = params.get("q") || "";
+  search.value = query;
+  function updateUrl() {
+    var url = new URL(location.href);
+    url.searchParams.set("view", view);
+    if (query) url.searchParams.set("q", query); else url.searchParams.delete("q");
+    history.replaceState(null, "", url);
+  }
+  function highlight(name) {
+    var start = name.toLocaleLowerCase().indexOf(query.trim().toLocaleLowerCase());
+    if (!query.trim() || start < 0) return UI.esc(name);
+    return UI.esc(name.slice(0, start)) + "<mark>" + UI.esc(name.slice(start, start + query.trim().length)) + "</mark>" + UI.esc(name.slice(start + query.trim().length));
+  }
+  function renderDishes() {
+    if (view !== "all" || !dishes) return;
+    if (spy) spy.disconnect();
+    var q = query.normalize("NFC").trim().toLocaleLowerCase(), latin = q.replace(/\s+/g, "");
+    var rows = dishes.filter(function (d) { return !q || d.name.normalize("NFC").toLocaleLowerCase().includes(q) || d.pinyin.includes(latin) || d.pinyin_initials.includes(latin); });
+    P.el("searchClearWrap").hidden = !query;
+    var updated = catalogMeta.last_sync_success_at || catalogMeta.updated_at;
+    P.el("dishSummary").textContent = (q ? "找到 " + rows.length + " 道 · " : "") + "共 " + dishes.length + " 道菜品" + (updated ? " · 更新于 " + new Intl.DateTimeFormat("zh-CN", {timeZone: "Asia/Shanghai", dateStyle: "medium"}).format(new Date(updated)) : "");
+    P.el("dishSearchLive").textContent = "找到 " + rows.length + " 道菜品";
+    rail.hidden = !rows.length;
+    if (!rows.length) {
+      rail.innerHTML = "";
+      list.innerHTML = UI.html.empty({ icon: "utensils", title: q ? "没有找到相关菜品" : "暂无菜品", desc: q ? "试试菜名、完整拼音或拼音首字母。" : "等待管理员同步学校菜单。" });
+      return;
+    }
+    var groups = new Map();
+    rows.forEach(function (d) { if (!groups.has(d.initial)) groups.set(d.initial, []); groups.get(d.initial).push(d); });
+    var letters = Array.from(groups.keys());
+    list.innerHTML = '<div class="az-layout dish-directory"><div class="az-list">' + letters.map(function (letter) {
+      var id = "dish-group-" + (letter === "#" ? "other" : letter), group = groups.get(letter);
+      return '<section class="az-group" id="' + id + '" aria-labelledby="' + id + '-title"><h2 class="az-group__letter" id="' + id + '-title">' + letter + '<span class="az-group__count">' + group.length + ' 道</span></h2><ul class="dish-list">' + group.map(function (d) { return '<li class="dish-row" data-dish-id="' + d.id + '"><span class="dish-row__name">' + highlight(d.name) + '</span></li>'; }).join("") + '</ul></section>';
+    }).join("") + '</div></div>';
+    rail.innerHTML = letters.map(function (letter) { return '<a href="#dish-group-' + (letter === "#" ? "other" : letter) + '" aria-label="跳到 ' + (letter === "#" ? "其他" : letter) + ' 类菜品">' + letter + '</a>'; }).join("");
+    spy = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (!entry.isIntersecting) return;
+        rail.querySelectorAll("a").forEach(function (a) { var active = a.hash === "#" + entry.target.id; a.classList.toggle("is-active", active); if (active) a.setAttribute("aria-current", "true"); else a.removeAttribute("aria-current"); });
+      });
+    }, { rootMargin: "-15% 0px -65% 0px" });
+    list.querySelectorAll(".az-group").forEach(function (group) { spy.observe(group); });
+  }
   function open() {
     if (!UI.session.token()) {
       UI.toast.warning("请先登录");
@@ -113,8 +158,11 @@
     controller = new AbortController();
     var wanted = view;
     more.hidden = true;
-    list.innerHTML = UI.html.skeleton(view === "all" ? "card" : "post", 3);
-    var r = await UI.api(view === "all" ? "/api/recipes" : "/api/weekly-menu", {
+    rail.hidden = true;
+    if (spy) spy.disconnect();
+    if (view === "all" && dishes) { renderDishes(); return; }
+    list.innerHTML = UI.html.skeleton(view === "reviews" ? "card" : view === "all" ? "row" : "post", 3);
+    var r = await UI.api(view === "all" ? "/api/dishes" : view === "reviews" ? "/api/recipes" : "/api/weekly-menu", {
       auth: false,
       signal: controller.signal,
     });
@@ -123,6 +171,7 @@
       P.error(list, r, load);
       return;
     }
+    if (view === "all") { dishes = r.data.dishes || []; catalogMeta = r.data.meta || {}; renderDishes(); return; }
     if (view === "weekly") {
       var images = r.data.images || [];
       list.innerHTML = images.length
@@ -164,11 +213,19 @@
     selected = true;
     view = tab.dataset.view;
     list.setAttribute("aria-labelledby", tab.id);
-    P.el("writeAction").hidden = view !== "all";
-    P.el("loginHint").hidden = view !== "all" || !!UI.session.token();
+    P.el("writeAction").hidden = view !== "reviews";
+    P.el("loginHint").hidden = view !== "reviews" || !!UI.session.token();
+    P.el("dishSearchArea").hidden = view !== "all";
+    updateUrl();
     load();
   }
   var tabs = UI.tabs(UI.qs('[role="tablist"]'), { onChange: setView });
+  function filter() { query = search.value; updateUrl(); renderDishes(); }
+  search.addEventListener("compositionstart", function () { composing = true; clearTimeout(timer); });
+  search.addEventListener("compositionend", function () { composing = false; clearTimeout(timer); timer = setTimeout(filter, 250); });
+  search.addEventListener("input", function () { clearTimeout(timer); if (!composing) timer = setTimeout(filter, 250); });
+  P.el("dishSearchClear").addEventListener("click", function () { clearTimeout(timer); search.value = ""; filter(); search.focus(); });
+  window.addEventListener("popstate", function () { var p = new URLSearchParams(location.search); query = p.get("q") || ""; search.value = query; tabs.select(p.get("view") === "weekly" ? "weeklyBtn" : p.get("view") === "reviews" ? "reviewsBtn" : "allBtn"); });
   P.el("writeBtn").addEventListener("click", open);
   P.el("moreBtn").addEventListener("click", batch);
   list.addEventListener("click", async function (e) {
@@ -218,6 +275,9 @@
     }
   });
   async function initial() {
+    if (["all", "reviews", "weekly"].includes(params.get("view")) || params.has("q")) {
+      tabs.select(params.get("view") === "weekly" ? "weeklyBtn" : params.get("view") === "reviews" ? "reviewsBtn" : "allBtn"); return;
+    }
     var fallback = localStorage.getItem("recipeDefaultView") || "all",
       defaultView = fallback;
     if (UI.session.token()) {
@@ -228,5 +288,6 @@
     if (!selected)
       tabs.select(defaultView === "weekly" ? "weeklyBtn" : "allBtn");
   }
+  list.innerHTML = UI.html.skeleton("row", 3);
   initial();
 })();

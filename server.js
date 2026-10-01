@@ -8,6 +8,8 @@ const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const multer = require("multer");
 const { DatabaseSync } = require("node:sqlite");
+const { MenuService } = require("./lib/menu/service");
+const { mountMenuRoutes } = require("./lib/menu/routes");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -16,6 +18,7 @@ const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "7d";
 
 const DB_PATH = path.join(__dirname, "data.db");
 const db = new DatabaseSync(DB_PATH);
+db.exec("PRAGMA busy_timeout=5000;");
 
 db.exec(`
 CREATE TABLE IF NOT EXISTS users (
@@ -1425,6 +1428,9 @@ app.put("/api/admin/map-popup", requirePermission("map_popup_edit"), function (r
   });
 });
 
+const menuService = new MenuService(db, __dirname);
+mountMenuRoutes(app, db, menuService, checkRole());
+
 app.use("/api", function (req, res) {
   res.status(404).json({ error: "not found" });
 });
@@ -1438,10 +1444,29 @@ app.use(function (req, res, next) {
 });
 
 app.use(function (err, req, res, next) {
+  if (req.path.startsWith("/api/admin/menu-sync")) {
+    const status = err.type === "entity.parse.failed" ? 400 : err.type === "entity.too.large" ? 413 : 500;
+    // Body-parser errors can contain the complete request body (including Key).
+    console.error("[menu-sync] request rejected", status);
+    res.status(status).json({ error: status === 400 ? "菜单设置 JSON 格式无效" : status === 413 ? "菜单请求超过大小限制" : "菜单请求执行失败，请重试" });
+    return;
+  }
   console.error(err);
   res.status(500).json({ error: "server error" });
 });
 
-app.listen(PORT, function () {
+const httpServer = app.listen(PORT, function () {
   console.log("Campus map running at http://localhost:" + PORT);
+  menuService.start();
 });
+
+let closing = false;
+async function shutdown() {
+  if (closing) return;
+  closing = true;
+  await menuService.close();
+  httpServer.close(() => { db.close(); process.exit(0); });
+  setTimeout(() => process.exit(0), 5000).unref();
+}
+process.once("SIGINT", shutdown);
+process.once("SIGTERM", shutdown);

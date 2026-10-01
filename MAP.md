@@ -1,6 +1,6 @@
 # szzx-info 项目地图
 
-> 更新日期：2026-10-01。本文描述需求 #4 全站 UI 改版后的代码；改版基于 `main` 的 `81ffb7ebde31cd2d2b399585673c2a29cc38b16b`（`10.1版本`）。
+> 更新日期：2026-10-02。本文描述 #4 UI 改版及 #5 菜品目录、网站内菜单同步与人工导入的代码。
 >
 > 本文依据实际文件、后端代码、全部前端页面、地图 JSON、SQLite 表结构及依赖清单整理。设计规范见 [UI.md](./UI.md)，验收记录见 [docs/ui/acceptance.md](./docs/ui/acceptance.md)，原始里程碑快照见 [PLAN_2026-10-01.md](./PLAN_2026-10-01.md)。
 
@@ -10,8 +10,8 @@
 
 | 层次 | 实际实现 | 入口 |
 | --- | --- | --- |
-| 服务端 | CommonJS、Node.js、Express 5；所有中间件、数据库初始化和业务路由集中在一个文件 | [server.js](./server.js) |
-| 数据库 | Node 内置 `node:sqlite` 的同步 `DatabaseSync`；13 张业务表 | [data.db](./data.db) |
+| 服务端 | CommonJS、Node.js、Express 5；原有业务及网站内菜单 worker 模块 | [server.js](./server.js)、[lib/menu/](./lib/menu/) |
+| 数据库 | Node 内置 `node:sqlite` 的同步 `DatabaseSync`；13 张原有表及 8 张菜单表 | [data.db](./data.db)、[lib/menu/store.js](./lib/menu/store.js) |
 | 前端 | 12 个现有页面及新增 404，统一外部 CSS 与页面脚本；原生 JavaScript，无构建流程 | [public/](./public/) |
 | 共享前端逻辑 | 导航壳、登录态、用户展示、横幅、表单、对话框、上传、图片查看器及页面工具 | [public/js/ui.js](./public/js/ui.js)、[public/js/page.js](./public/js/page.js) |
 | 地图 | 本地 Leaflet 1.9.4；自定义平面坐标数据，保留原有几何与楼层关系 | [public/vendor/leaflet/](./public/vendor/leaflet/)、[data.json](./data.json) |
@@ -33,7 +33,27 @@ szzx-info/
 ├── progress.md                   既有开发记录、接口和数据说明
 ├── package.json                  应用元数据、依赖、start/test 脚本
 ├── package-lock.json             npm lockfileVersion 3 依赖锁定文件
-├── server.js                     全部后端逻辑，53 个显式 API 路由
+├── server.js                     原有后端逻辑、菜单模块与调度启动
+├── lib/menu/
+│   ├── schema.js                 名称归一、拼音与八字段校验
+│   ├── store.js                  菜单建表、种子导入、原子发布与目录
+│   ├── config.js                 密钥加密、设置与模型测试指纹
+│   ├── schedule.js               北京时间每日调度纯函数
+│   ├── source.js                 官网 HTML/robots、内联图片与分页
+│   ├── provider.js               视觉 Chat Completions、严格 JSON 与缓存
+│   ├── images.js                 sharp 处理、重叠分块与覆盖复核
+│   ├── worker.js                 同步获取/识别任务
+│   ├── service.js                队列、租约、取消、重试与调度
+│   ├── manual.js                 JSON 预览、候选编辑、人工发布与审计
+│   └── routes.js                 目录、developer 配置及三种管理角色的导入 API
+├── data/menu-bootstrap.json      十篇历史菜单种子
+├── tools/build-menu-seed.py      开发时离线整理种子，标准库
+├── tools/build-menu-skill.py     同步规则并打包技能，标准库
+├── tools/summarize-menu-live.cjs 汇总真实模型实验的保存结果
+├── menu-json-rules.md            八字段 JSON、完整读图与人工导入规则
+├── szzx-menu.skill               可直接导入 AI 客户端的技能 ZIP 包
+├── skills/szzx-menu/             SKILL.md、references/menu-json-rules.md、scripts/validate_menu.py
+├── .private/                     运行时主密钥、原图、补图、诊断及缓存（忽略）
 ├── data.db                       随仓库提交的 SQLite 数据库
 ├── data.json                     校园地图几何、楼层、文字和配色
 ├── MAP.md                        项目结构与实现地图（本文）
@@ -48,6 +68,11 @@ szzx-info/
 │   ├── implementation.md         实施步骤与可复现验证方法
 │   └── acceptance.md             #4 实施范围及验收记录
 ├── tests/
+│   ├── menu.test.cjs             菜单数据/调度/提供商/队列/权限测试
+│   ├── menu-live.cjs             可选真实模型与三张菜单检查
+│   ├── node-deploy.cjs           全新 Node 生产依赖安装检查
+│   ├── menu-skill.py             便携技能、离线验证器及包内文件检查
+│   ├── fixtures/menu-manual-review.json 三张原图的局部目视抽样
 │   └── ui-smoke.mjs              页面、权限、表单及无障碍回归
 ├── public/
 │   ├── index.html                首页与关于我们；根路径默认页面跳转
@@ -55,7 +80,7 @@ szzx-info/
 │   ├── map.html                  校园地图、楼层切换、弹窗编辑
 │   ├── forum.html                讨论/提问列表、发帖、回复、点赞、删帖
 │   ├── post.html                 单帖详情，通过 ?id=<帖子 ID> 访问
-│   ├── recipe.html               菜谱评价列表与每周食谱图片
+│   ├── recipe.html               A–Z 菜品目录、评价与每周食谱三个页签
 │   ├── announcements.html        更新公告列表与正文
 │   ├── login.html                登录与被封账号的解封申诉
 │   ├── register.html             注册并自动登录
@@ -69,7 +94,7 @@ szzx-info/
 │   │   ├── ui.js                 全站交互、导航壳与统一 API 客户端
 │   │   ├── page.js               页面表单、请求、权限、面板和工单工具
 │   │   ├── forum.js              论坛及详情共用的点赞、回复与删除逻辑
-│   │   └── pages/                各页业务脚本，与 HTML 同名
+│   │   └── pages/                各页业务脚本、menu-admin.js 同步和 menu-import.js 人工导入
 │   ├── vendor/leaflet/           Leaflet JS、CSS、图片与上游 LICENSE
 │   └── auth.js                   加载 ui.js 的旧调用兼容入口
 └── uploads/
@@ -82,7 +107,7 @@ szzx-info/
         └── 1790495644744-976725163.png
 ```
 
-`npm ci` 创建 `node_modules/`，运行时按需创建 `uploads/`、`uploads/weekly/` 与 `uploads/bans/`；普通头像和评价图片直接写入 `uploads/`。`data.db` 与已有上传图片继续随仓库保存。项目暂无 Python、CI、Docker 或独立数据库迁移目录。
+`npm ci` 创建依赖，运行时创建 uploads 及非公开 `.private/`。生产只运行 Node，Python 脚本仅在开发时重建种子，无第二个服务。部署与配套密钥备份见 [docs/menu-sync.md](./docs/menu-sync.md)，确认范围见 [docs/issue-5-plan.md](./docs/issue-5-plan.md)。
 
 ## 3. 请求与数据流
 
@@ -121,13 +146,13 @@ flowchart LR
 | `map.html` | `CRS.Simple` 地图；1F–4F；缩放、拖动、WASD/方向键；按权限编辑建筑文字弹窗 | `/api/map-data`、`/api/me`、`/api/user/profile`、`PUT /api/admin/map-popup` |
 | `forum.html` | 讨论/提问切换；发帖对话框；每批 20 条；卡片跳转详情；回复展开、发布；点赞及失败回滚；更多菜单删帖 | `/api/forum/posts` 及其回复、点赞、删除路由 |
 | `post.html` | 按查询参数 `id` 加载正文与点赞状态；默认展开回复 | `/api/forum/posts/:id` 及其回复、点赞路由 |
-| `recipe.html` | “全部评价”按名称展示评价记录；评价对话框含菜名/评分/评论/图片；每周食谱按日期展开，图片缩放、拖动；有权用户可删每周图片 | `/api/recipes`、`/api/weekly-menu`、`/api/user/profile` |
+| `recipe.html` | A–Z 菜品目录与搜索；评价卡与发布对话框；每周食谱折叠、放大及授权删除 | `/api/dishes`、`/api/recipes`、`/api/weekly-menu`、`/api/user/profile` |
 | `announcements.html` | 桌面主从列表；手机先看列表，选择后显示正文并可返回 | `/api/announcements` |
 | `login.html` | 用户名/密码登录；封禁错误展示；允许申诉时提交理由及可选图片 | `/api/login`、`/api/user/appeal` |
 | `register.html` | 用户名/昵称/密码及重复密码校验；注册后调用登录 | `/api/register`、`/api/login` |
 | `student_verify.html` | 已达到学生角色时隐藏表单；否则填写新生号、班级、真实姓名，可填邀请码及补充信息 | `/api/user/profile`、`/api/student/apply` |
 | `profile.html` | 展示 ID/角色/额外权限；修改头像、昵称、签名、密码；保存三项网站设置；提交与查看本人工单 | `/api/user/*`、`/api/tickets`、`/api/tickets/mine` |
-| `admin.html` | 横幅、公告、学生审核、邀请码、每周菜谱、用户管理、申诉、工单；认证/申诉/工单菜单按待办数显示红点 | `/api/admin/*`、横幅和每周食谱读取接口 |
+| `admin.html` | 横幅、公告、学生审核、邀请码、每周菜谱、用户管理、申诉、工单、developer 菜单同步和三种管理角色的 JSON 手动导入；待办红点 | `/api/admin/*`，菜单接口见 [运维文档](./docs/menu-sync.md) |
 | `404.html` | 404 提示、返回首页与返回上一页 | 无 |
 | `js/ui.js` | 公共导航/页脚、账户菜单、手机抽屉、横幅、用户信息与全站交互组件 | `/api/user/profile`、`/api/settings/banner` |
 
@@ -135,7 +160,7 @@ flowchart LR
 
 ## 5. 后端 API 全量索引
 
-以下 53 个显式路由均位于 [server.js](./server.js)。表中“公开”表示该路由没有强制登录中间件；公开帖子读取可以携带 token 获取当前用户点赞状态。细粒度权限的默认角色见下一节。
+以下 53 个原有显式路由位于 [server.js](./server.js)。菜单新增 10 个方法/路径组合位于 [lib/menu/routes.js](./lib/menu/routes.js)，索引见 [菜单同步接口](./docs/menu-sync.md#接口)。表中“公开”表示没有强制登录；帖子读取可带 token 获取点赞状态。
 
 ### 5.1 账号、个人资料与设置
 
@@ -237,7 +262,7 @@ flowchart LR
 
 ### 7.1 SQLite
 
-以下 13 张业务表已在本地 `data.db` 中核对；另有 SQLite 内部表 `sqlite_sequence`。表结构在 server.js 启动阶段维护，并通过若干立即执行函数迁移旧版本。
+以下 13 张原有业务表保留；启动另外创建 8 张菜单表，迁移与种子导入位于 `lib/menu/store.js`。另有内部表 sqlite_sequence；本轮验证使用临时数据库，没有改写仓库 data.db。
 
 | 表 | 主要字段/约束 | 关联与用途 |
 | --- | --- | --- |
@@ -249,13 +274,21 @@ flowchart LR
 | recipes | user_id、username、name、rating、comment、image_url、is_weekly | 一条记录是一条用户评价，没有独立菜品 ID 或店铺 ID |
 | weekly_menu_images | user_id、menu_start_date、menu_end_date、filename、uploaded_at | 每周食谱整张图片，与 recipes 分开 |
 | announcements | title、content、publish_date | 公开公告 |
-| settings | key 主键、value | banner、banner_version，以及兼容的 student_invite_code |
+| settings | key 主键、value | 横幅、邀请码兼容设置及加密 menu_ai_config |
 | student_applications | user_id、student_id、class_name、real_name、extra_info、reject_reason、status | 认证审核；pending/approved/rejected |
 | invite_codes | code 唯一、max_uses、used_count | 多邀请码及次数限制 |
 | ban_appeals | user_id、appeal_reason、appeal_image、status | 解封审核；pending/approved/rejected |
 | tickets | user_id、username、title、content、visibility、status、reply_content、reply_image、reply_by、replied_at | 工单；pending/resolved |
+| dishes | id、name、唯一 name_key、initial、pinyin、pinyin_initials、sort_key | 独立稳定 ID 菜品 |
+| menu_sources | 来源 ID、可空 article_id、kind、publication_origin、revision、title/url、日期/摘要/计数/错误 | 官网队列与独立手动批次 |
+| menu_records | source_id/record_key 联合主键、dish_id、日期/餐次/地点/档口/价格/辣椒 | 供应记录，明确外键 |
+| menu_sync_jobs | UUID、唯一 auto_day、状态/阶段、配置版本、计数、取消标记 | 持久同步任务 |
+| menu_job_items | job_id/source_id 联合主键、状态、阶段、错误及资料路径 | 逐篇结果 |
+| menu_sync_lease | 单例 ID、owner、expires_at | 防并发同步与发布 fencing |
+| menu_sync_state | key/value | 发现锚点 |
+| menu_import_audit | source_id、actor_id、job_id、revision、records_json | 人工发布历史，与菜单发布同一事务 |
 
-关系通过各表的 `user_id`、`post_id` 在应用代码中使用；当前建表 SQL 没有声明外键约束。删帖时手动删除关联回复与点赞。学生人工审核申请和封禁申诉各有同一用户 600 秒提交限制，允许重新提交时会覆盖旧记录；有效邀请码直接认证走单独分支。
+原有 user_id/post_id 关系由应用维护；新增菜单记录和任务条目声明外键。菜单供应按篇事务替换，不修改原有评价表。原有删帖、认证和申诉限频规则保持。
 
 实际已提交数据库保留旧迁移结构，例如 users.display_id 通过后续 `ALTER TABLE` 添加，没有新建库 SQL 中的 UNIQUE 约束；不能假设旧库与新库的所有约束完全一致。
 
@@ -310,7 +343,7 @@ JWT_EXPIRES_IN=7d
 - data.db、data.json 的在线编辑结果、uploads/ 都是本地持久数据；部署需要可写、持久化的存储和 Node 服务。
 - 开发依赖为 Playwright 与 axe-core。运行 `npm.cmd test` 可执行浏览器回归；Windows 使用 Microsoft Edge，其他平台先运行 `npx playwright install chromium`。
 - 回归测试在系统临时目录启动独立后端并创建测试数据库与上传文件；项目内的 `data.db`、`uploads/` 和 `data.json` 不被测试改写。
-- 最近一次验证：264 项检查通过，360px/1280px、light/dark 扫描无违规、无页面横向溢出及脚本异常；结果和截图保存到被忽略的 `output/playwright/`。
+- 最近一次验证：13 项菜单后端测试、295 项浏览器检查及全新 Node 生产安装通过；360px/1280px、light/dark 扫描无违规。真实模型的失败与限制见 [菜单验证记录](./docs/menu-validation.md)，产物位于忽略的 output/。
 
 ## 9. 文档与实现约定
 
@@ -321,18 +354,18 @@ JWT_EXPIRES_IN=7d
 | docs/ui/assets 与 public | 前者是设计参考，后者是实际运行代码；运行代码包含资源路径、未保存表单保护和地图布局适配 |
 | PLAN_2026-10-01.md | 保留需求读取时的原始正文和状态；执行进度见 progress 与验收记录，实时关闭状态以 GitHub 为准 |
 | package.json、package-lock.json、LICENSE | 根包许可为 AGPL-3.0；本地 Leaflet 另附上游许可证 |
-| “全部评价”与 #5 | 当前仍是一条记录对应一条评价；独立菜品目录、搜索、Python 预处理和店铺关联属于后续功能 |
+| #5 菜品与评价 | 独立目录和网站内同步已实现；原评价独立保留，店铺关联后续实施 |
 
 ## 10. 国庆计划的代码定位
 
 | Issue | 当前相关位置 | 实施状态或后续能力 |
 | --- | --- | --- |
 | [#4 修改UI](https://github.com/szzxvc/szzx-info/issues/4) | public HTML、css/site.css、js/、本地 Leaflet、UI.md 与 docs/ui/ | 已完成全站改版及浏览器验收，保留现有业务接口 |
-| [#5 全部菜品](https://github.com/szzxvc/szzx-info/issues/5) | recipe.html、recipes 表及 `/api/recipes` | 独立菜品数据来源/模型、稳定 A–Z 规则、搜索、Python 预处理与环境说明 |
+| [#5 全部菜品](https://github.com/szzxvc/szzx-info/issues/5) | recipe.html、lib/menu、data 种子、离线工具、开发者后台 | 独立目录、统一拼音搜索、网站内识别、每日自定时间与运维文档 |
 | [#6 三元坊必吃榜](https://github.com/szzxvc/szzx-info/issues/6) | 导航、server.js 鉴权与数据初始化 | 店铺列表/上传/详情入口、店铺模型、最低上传角色、地图查询后录入字段 |
 | [#7 三元坊必吃榜 UI适配](https://github.com/szzxvc/szzx-info/issues/7) | profile.html、用户默认设置的保存模式 | 店铺详情页的两种布局、粘性导航与持久布局设置 |
 | [#8 三元坊必吃榜菜谱上传](https://github.com/szzxvc/szzx-info/issues/8) | student 角色、multer 存储器、现有评价模型 | 菜品与店铺关联、学生上传权限、图片、去重及异常数据处理 |
 | [#9 消息箱](https://github.com/szzxvc/szzx-info/issues/9) | 论坛回复/点赞接口、profile.html、js/ui.js | 消息模型、事件通知、已读状态、未读数、通知偏好与发送权限 |
 | [#10 头衔系统](https://github.com/szzxvc/szzx-info/issues/10) | 用户资料、后台用户管理、各用户内容渲染处 | 头衔目录/拥有关系/佩戴状态、授予撤销、自动规则、统一用户展示 |
 
-当前没有店铺、独立菜品、消息箱或头衔的业务表与专用页面，`UI.config.features` 中相应开关保持关闭。#4 的实现与验证记录见 [acceptance.md](./docs/ui/acceptance.md)；其他 issue 的需求正文、可选项和未决规则以 [PLAN_2026-10-01.md](./PLAN_2026-10-01.md) 收录的里程碑快照为准。
+菜品目录开关已开启；店铺、消息箱和头衔仍未实现。#4/#5 的验证见 [acceptance.md](./docs/ui/acceptance.md)，原始需求见里程碑快照，#5 当前约定见实施计划。

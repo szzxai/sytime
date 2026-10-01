@@ -66,7 +66,7 @@
 
 | Issue | 页面/改动 | features 开关 | 顺序 |
 | --- | --- | --- | --- |
-| #5 全部菜品 | recipe.html 增加 A–Z 目录 + dish.html | dishes | 1 |
+| #5 全部菜品 | recipe.html 三页签、A–Z 目录与搜索；developer 同步面板，见 issue-5-plan.md | dishes（已开启） | 1 |
 | #6 必吃榜 | shops.html + shop-new.html | shops | 2 |
 | #7 店铺详情 | shop.html + profile 设置项 + shopLayout 持久化 | shops | 3 |
 | #8 菜品上传 | shop.html 添加菜品对话框 + 权限 | shops | 4 |
@@ -116,6 +116,8 @@ Windows 使用已安装的 Microsoft Edge；其他平台先运行 `npx playwrigh
 | Leaflet CSS 放在 site.css 之后 | 地图控件被覆盖 | map.md 已规定顺序：leaflet.css 先，site.css 后 |
 
 ## 完成定义（DoD）
+
+菜单自动同步与 JSON 人工导入的实现和权限见 [同步运维](../menu-sync.md)及[后台规范](./pages/admin.md)。回归入口为 `npm run test:menu`（18 项）、`npm run test:ui`（331 项）、`npm run test:menu-skill`（便携包/16 个非法样例）及 `npm run test:deploy`（全新生产安装），均通过。真实模型三图的完整导入和局部抽样结果见 [验证记录](../menu-validation.md)，不由界面或格式测试推导识图准确率。
 
 - [ ] 阶段 0–2 全部验收项通过。
 - [ ] 12 个现有页面 + 404 全部完成并逐页验收。

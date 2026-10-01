@@ -12,6 +12,9 @@ const output = path.join(root, "output/playwright");
 fs.mkdirSync(output, { recursive: true });
 fs.copyFileSync(path.join(root, "server.js"), path.join(temp, "server.js"));
 fs.copyFileSync(path.join(root, "data.json"), path.join(temp, "data.json"));
+fs.copyFileSync(path.join(root, "menu-json-rules.md"), path.join(temp, "menu-json-rules.md"));
+fs.cpSync(path.join(root, "lib"), path.join(temp, "lib"), { recursive: true });
+fs.cpSync(path.join(root, "data"), path.join(temp, "data"), { recursive: true });
 // The isolated app uses temporary SQLite/uploads and the current static files.
 fs.symlinkSync(
   path.join(root, "public"),
@@ -225,6 +228,15 @@ try {
     4,
     "味道不错，欢迎来评价。",
   );
+  const menuJobId = "11111111-1111-4111-8111-111111111111";
+  db.prepare("INSERT INTO menu_sync_jobs(id,trigger,status,phase,created_at,finished_at,config_revision,provider,model,total,processed,failed,error) VALUES(?,'manual','failed','done',?,?,0,'openrouter','fixture',1,1,1,'菜单复核发现遗漏')").run(menuJobId, Date.now(), Date.now());
+  db.prepare("INSERT INTO menu_job_items(job_id,source_id,article_id,title,status,phase,error) VALUES(?,'szzx1000:36:11392',11392,'测试菜单','failed','audit','底部漏行')").run(menuJobId);
+  const menuArtifactDir = path.join(temp, ".private", "menu-jobs", menuJobId, "11392");
+  fs.mkdirSync(menuArtifactDir, {recursive: true});
+  fs.writeFileSync(path.join(menuArtifactDir, "source.json"), JSON.stringify({image_count: 1}));
+  const importRecord = {date:"2026-10-01",weekday:"周四",time:["noon"],place:null,group:null,name:"红烧牛肉面",price:17,spicy:false};
+  fs.writeFileSync(path.join(menuArtifactDir, "diagnostic.json"), JSON.stringify({complete: false, error: "底部漏行",partial_records:[importRecord]}));
+  fs.writeFileSync(path.join(menuArtifactDir, "image-0.png"), Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j6h0AAAAASUVORK5CYII=", "base64"));
   db.close();
   browser = await chromium.launch({
     channel: process.platform === "win32" ? "msedge" : undefined,
@@ -368,11 +380,77 @@ try {
     "tickets",
     "users",
     "invite",
+    "menu",
+    "menu-import",
   ]) {
     await adminPage.page.locator(`[data-panel="${panel}"]`).click();
     await adminPage.page.waitForLoadState("networkidle");
     await audit(adminPage.page, `admin/${panel}/360`);
   }
+  await adminPage.page.locator('[data-panel="menu"]').click();
+  await adminPage.page.locator("#menuDailyTime").fill("10:35");
+  await adminPage.page.locator("#menuSave").click();
+  await adminPage.page.waitForFunction(() => document.getElementById("menuSchedule").textContent.includes("10:35"));
+  check("developer daily time persisted", (await api("/api/admin/menu-sync/settings", {token: admin.token})).data.settings.daily_time === "10:35");
+  await adminPage.page.locator("#menuModel").fill("vision-test");
+  await adminPage.page.locator("#menuKey").fill("test-only-menu-key");
+  await adminPage.page.locator("#menuSave").click();
+  await adminPage.page.waitForFunction(() => document.getElementById("menuKeyHint").textContent.includes("已保存"));
+  check("key input cleared after save", await adminPage.page.locator("#menuKey").inputValue() === "");
+  check("public settings never return full key", !JSON.stringify((await api("/api/admin/menu-sync/settings", {token: admin.token})).data).includes("test-only-menu-key"));
+  const malformedMenu = await fetch(base + "/api/admin/menu-sync/settings", {method: "PUT", headers: {Authorization: "Bearer " + admin.token, "Content-Type": "application/json"}, body: '{"api_key":"malformed-secret-test-key"'});
+  check("malformed settings rejected without logging credentials", malformedMenu.status === 400 && !log.includes("malformed-secret-test-key"));
+  await adminPage.page.locator("[data-menu-detail]").click();
+  await adminPage.page.waitForSelector("[data-menu-file]");
+  await audit(adminPage.page, "admin/menu/detail/360");
+  await adminPage.page.locator('[data-menu-file="source"]').click();
+  await adminPage.page.waitForSelector("[data-images] img");
+  check("private menu image loads through authenticated request", true);
+  const downloadWait = adminPage.page.waitForEvent("download");
+  await adminPage.page.locator('[data-menu-file="diagnostic"]').click();
+  const download = await downloadWait;
+  check("menu diagnostic downloads", download.suggestedFilename().endsWith("-diagnostic.json"));
+  await adminPage.page.locator("#menuJobDialog [data-dialog-close]").click();
+  await adminPage.page.locator('[data-panel="menu-import"]').click();
+  await adminPage.page.waitForFunction(()=>document.querySelectorAll("#menuImportSource option").length>1);
+  await adminPage.page.locator("#menuImportJson").fill('{"records":[]}');
+  await adminPage.page.locator("#menuImportValidate").click();
+  await adminPage.page.waitForFunction(()=>document.getElementById("menuImportStatus").textContent.includes("数组"));
+  check("invalid pasted JSON cannot publish",await adminPage.page.locator("#menuImportPublish").isDisabled());
+  await adminPage.page.locator("#menuImportJson").fill(JSON.stringify([importRecord,importRecord]));
+  await adminPage.page.locator("#menuImportValidate").click();
+  await adminPage.page.waitForFunction(()=>document.getElementById("menuImportStatus").textContent.includes("去除 1 条"));
+  check("manual preview normalizes and removes exact duplicates",JSON.parse(await adminPage.page.locator("#menuImportJson").inputValue()).length===1);
+  await adminPage.page.locator("#menuImportReviewed").check();
+  await adminPage.page.locator("#menuImportJson").fill(JSON.stringify([{...importRecord,price:0}]));
+  check("editing invalidates preview and review acknowledgement",await adminPage.page.locator("#menuImportPublish").isDisabled() && !await adminPage.page.locator("#menuImportReviewed").isChecked());
+  await adminPage.page.locator("#menuImportValidate").click();
+  await adminPage.page.waitForFunction(()=>document.getElementById("menuImportStatus").textContent.includes("校验通过"));
+  await adminPage.page.locator("#menuImportReviewed").check();await adminPage.page.locator("#menuImportPublish").click();
+  await adminPage.page.waitForFunction(()=>document.getElementById("menuImportStatus").textContent.includes("已发布 1 条"));
+  const imported = (await api("/api/admin/menu-sync/imports",{token:admin.token})).data;
+  check("developer manual import publishes and records actor",imported.history[0].actor_id===admin.user.id && imported.history[0].records_count===1);
+  await adminPage.page.locator("#menuImportSource").selectOption("szzx1000:36:11392");
+  await adminPage.page.locator("#menuImportJob").selectOption(menuJobId);
+  await adminPage.page.locator("#menuImportLoad").click();
+  await adminPage.page.waitForFunction(()=>document.getElementById("menuImportWarning").textContent.includes("补全全部遗漏"));
+  check("failed vision candidates load into JSON editor",JSON.parse(await adminPage.page.locator("#menuImportJson").inputValue())[0].name===importRecord.name);
+  const draft=await adminPage.page.locator("#menuImportJson").inputValue();
+  await adminPage.page.locator("#menuImportRefresh").click();await adminPage.page.waitForLoadState("networkidle");
+  check("manual refresh preserves draft and selected task",await adminPage.page.locator("#menuImportJson").inputValue()===draft && await adminPage.page.locator("#menuImportJob").inputValue()===menuJobId);
+  await adminPage.page.locator("#menuImportImages").click();await adminPage.page.waitForSelector("#menuImportImageList img");
+  check("manual editor fetches private source image",true);
+  await audit(adminPage.page,"admin/manual/360");
+  await adminPage.page.screenshot({path:path.join(output,"menu-import-360.png"),fullPage:true});
+  await adminPage.page.setViewportSize({width:1280,height:850});await audit(adminPage.page,"admin/manual/1280");
+  await adminPage.page.screenshot({path:path.join(output,"menu-import-1280.png"),fullPage:true});
+  check("manual rules link serves detailed UTF-8 rules",(await fetch(base+"/menu-json-rules.md")).status===200);
+  await adminPage.page.locator('[data-panel="menu"]').click();
+  await adminPage.page.screenshot({path: path.join(output, "menu-admin-360.png"), fullPage: true});
+  await adminPage.page.setViewportSize({width: 1280, height: 850});
+  await audit(adminPage.page, "admin/menu/1280");
+  await adminPage.page.screenshot({path: path.join(output, "menu-admin-1280.png"), fullPage: true});
+  await adminPage.page.setViewportSize({width: 360, height: 850});
   await adminPage.page.locator('[data-panel="tickets"]').click();
   await adminPage.page.locator("[data-reply-ticket]").first().click();
   await adminPage.page.locator("#ticketReplyInput").fill("已收到，谢谢反馈。");
@@ -425,11 +503,13 @@ try {
     "tickets",
     "users",
     "invite",
+    "menu-import",
   ]) {
     await ep.locator(`[data-panel="${panel}"]`).click();
     await ep.waitForLoadState("networkidle");
     await audit(ep, `admin/${panel}/dark`);
   }
+  await ep.locator('[data-panel="invite"]').click();
   await ep.locator("#inviteCodeInput").fill("CAMPUS-UI");
   await ep.locator("#inviteMaxInput").fill("3");
   await ep.locator("#inviteAdd").click();
@@ -558,8 +638,42 @@ try {
       1 && (await partial.page.locator("#view-banner").isVisible()),
   );
   await partial.ctx.close();
+  check("ordinary token cannot access menu settings", (await api("/api/admin/menu-sync/settings", {token: ordinary.token})).status === 403);
+  check("guest cannot fetch menu artifacts", (await api("/api/admin/menu-sync/jobs/" + menuJobId + "/artifacts/source?source_id=szzx1000:36:11392")).status === 401);
   const recipe = await pageFor(ordinary, "/recipe.html", 360);
   await recipe.page.locator("#allBtn").click();
+  await recipe.page.waitForFunction(() => document.querySelectorAll("[data-dish-id]").length === 1243);
+  check("historical dishes visible independently from reviews", true);
+  await recipe.page.locator('#dishRail a[href="#dish-group-H"]').click();
+  await recipe.page.waitForFunction(() => {
+    const group = document.getElementById("dish-group-H").getBoundingClientRect();
+    return group.top >= document.getElementById("dishSearchArea").getBoundingClientRect().bottom && group.top < innerHeight;
+  });
+  check("A-Z jump keeps group title visible below sticky search", true);
+  await recipe.page.evaluate(() => { const input = document.getElementById("dishSearch"); input.dispatchEvent(new CompositionEvent("compositionstart")); input.value = "hongshao"; input.dispatchEvent(new Event("input", {bubbles: true})); });
+  await recipe.page.waitForTimeout(350);
+  check("IME composing does not filter prematurely", await recipe.page.locator("[data-dish-id]").count() === 1243);
+  await recipe.page.evaluate(() => document.getElementById("dishSearch").dispatchEvent(new CompositionEvent("compositionend")));
+  await recipe.page.locator("#dishSearch").fill("hongshao");
+  await recipe.page.waitForFunction(() => document.querySelectorAll("[data-dish-id]").length > 0 && document.querySelectorAll("[data-dish-id]").length < 1243);
+  check("pinyin query persisted in URL", new URL(recipe.page.url()).searchParams.get("q") === "hongshao");
+  await recipe.page.locator("#dishSearch").fill("<script>invalid</script>");
+  await recipe.page.waitForFunction(() => document.querySelectorAll("[data-dish-id]").length === 0);
+  check("search empty state escapes query", await recipe.page.locator("#recipeList").getByText("没有找到相关菜品").isVisible());
+  await recipe.page.locator("#dishSearchClear").click();
+  check("clear restores directory and focus", await recipe.page.locator("#dishSearch").evaluate(el => el === document.activeElement));
+  await audit(recipe.page, "recipe/directory/360");
+  await recipe.page.screenshot({path: path.join(output, "dishes-360.png")});
+  await recipe.page.setViewportSize({width: 1280, height: 850});
+  await audit(recipe.page, "recipe/directory/1280");
+  await recipe.page.screenshot({path: path.join(output, "dishes-1280.png")});
+  await recipe.page.locator("#dishSearch").fill("牛肉");
+  await recipe.page.waitForFunction(() => !!document.querySelector("#recipeList mark"));
+  check("Chinese query highlighted safely", true);
+  await recipe.page.reload({waitUntil: "networkidle"});
+  check("query restored after refresh", await recipe.page.locator("#dishSearch").inputValue() === "牛肉");
+  await recipe.page.setViewportSize({width: 360, height: 850});
+  await recipe.page.locator("#reviewsBtn").click();
   await recipe.page.locator("#writeBtn").click();
   await audit(recipe.page, "recipe/dialog/360");
   await recipe.page.locator("#name").fill("清蒸鱼");
@@ -639,6 +753,31 @@ try {
   );
   check("retry reloads the failed list", true);
   await retry.ctx.close();
+  for (const role of ["super_admin","admin"]) {
+    const staff=await account("manual-"+role);
+    check(role+" role assigned",(await api("/api/admin/users/role",{token:admin.token,method:"PUT",body:{userId:staff.user.id,newRole:role}})).status===200);
+    const login=(await api("/api/login",{method:"POST",body:{username:"manual-"+role,password:"test-password"}})).data;
+    const manual=await pageFor(login,"/admin.html#menu-import",360,"dark");
+    await manual.page.waitForSelector("#view-menu-import:not([hidden])");
+    check(role+" has manual panel without AI settings",await manual.page.locator('[data-panel="menu-import"]').isVisible() && !await manual.page.locator('[data-panel="menu"]').isVisible());
+    await manual.page.locator("#menuImportJson").fill(JSON.stringify([importRecord]));await manual.page.locator("#menuImportValidate").click();
+    await manual.page.waitForFunction(()=>document.getElementById("menuImportStatus").textContent.includes("校验通过"));
+    await manual.page.locator("#menuImportReviewed").check();await manual.page.locator("#menuImportPublish").click();
+    await manual.page.waitForFunction(()=>document.getElementById("menuImportStatus").textContent.includes("已发布 1 条"));
+    check(role+" publishes pasted JSON",(await api("/api/admin/menu-sync/imports",{token:login.token})).data.history[0].actor_id===login.user.id);
+    await manual.page.locator("#menuImportSource").selectOption("szzx1000:36:11392");
+    await manual.page.locator("#menuImportJob").selectOption(menuJobId);await manual.page.locator("#menuImportLoad").click();
+    await manual.page.waitForFunction(()=>document.getElementById("menuImportWarning").textContent.includes("补全全部遗漏"));
+    check(role+" can edit failed vision JSON",JSON.parse(await manual.page.locator("#menuImportJson").inputValue())[0].name===importRecord.name);
+    const current=(await api("/api/admin/menu-sync/imports/source?source_id=szzx1000:36:11392",{token:login.token})).data.records;
+    await manual.page.locator("#menuImportJson").fill(JSON.stringify([...current,{...importRecord,price:0}]));
+    await manual.page.locator("#menuImportValidate").click();await manual.page.waitForFunction(()=>document.getElementById("menuImportStatus").textContent.includes("校验通过"));
+    await manual.page.locator("#menuImportReviewed").check();await manual.page.locator("#menuImportPublish").click();
+    await manual.page.waitForFunction(()=>document.getElementById("menuImportStatus").textContent.includes("已发布"));
+    const history=(await api("/api/admin/menu-sync/imports",{token:login.token})).data.history[0];
+    check(role+" publishes corrected vision JSON",history.actor_id===login.user.id && history.job_id===menuJobId && history.source_id==="szzx1000:36:11392");
+    await audit(manual.page,"admin/manual/"+role+"/dark");await manual.ctx.close();
+  }
   const notFound = await fetch(base + "/missing/deep/path");
   check(
     "unknown page returns styled 404",

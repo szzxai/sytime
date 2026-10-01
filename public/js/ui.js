@@ -15,7 +15,7 @@
       iconsUrl: '/img/icons.svg',
       features: {
         shops: false,    // #6 三元坊必吃榜上线后改 true
-        dishes: false,   // #5 全部菜品上线后改 true
+        dishes: true,    // #5 菜品目录已上线；详情与店铺关联后续实现
         inbox: false,    // #9 消息箱上线后改 true
         titles: false,   // #10 头衔上线后改 true
         theme: false     // 深色主题（P2）
@@ -893,7 +893,7 @@
     { key: 'home', href: 'index.html', label: '首页', full: '首页', icon: 'home', onlyDrawer: true },
     { key: 'map', href: 'map.html', label: '地图', full: '校园地图', icon: 'map' },
     { key: 'forum', href: 'forum.html', label: '论坛', full: '论坛', icon: 'message' },
-    { key: 'recipe', href: 'recipe.html', label: '菜谱', full: '菜谱评价', icon: 'utensils' },
+    { key: 'recipe', href: 'recipe.html', label: '菜谱', full: '菜品与食谱', icon: 'utensils' },
     { key: 'shops', href: 'shops.html', label: '必吃榜', full: '三元坊必吃榜', icon: 'store', feature: 'shops' },
     { key: 'announce', href: 'announcements.html', label: '公告', full: '更新公告', icon: 'megaphone' }
   ];

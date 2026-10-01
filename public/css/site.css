@@ -1921,6 +1921,14 @@ dialog .toast-host { position: absolute; top: var(--sp-3); }
 .az-rail a.is-active { background: var(--primary); color: var(--ink-inverse); }
 .az-rail a.is-empty { color: var(--line-strong); pointer-events: none; }
 .az-layout .az-list { padding-right: 1.75rem; }
+.dish-directory .dish-row__name { white-space: normal; overflow-wrap: anywhere; }
+.dish-directory .dish-list { list-style: none; padding: 0; }
+#dishSearchArea { position: sticky; top: var(--header-h); z-index: var(--z-sticky); background: var(--bg); padding-right: 1.75rem; padding-top: var(--sp-2); }
+#dishSearchArea .search-bar { position: static; }
+.dish-directory .az-group { scroll-margin-top: calc(var(--header-h) + 8rem); }
+.menu-job__meta { overflow-wrap: anywhere; }
+.menu-images { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: var(--sp-3); }
+.menu-images img { max-width: 100%; max-height: 240px; object-fit: contain; }
 @media (min-width: 1100px) {
   .az-rail { right: max(1rem, calc((100vw - var(--w-page)) / 2 - 2.5rem)); }
 }
@@ -2473,3 +2481,4 @@ html[data-theme="dark"] {
   --ring: 0 0 0 3px rgba(111, 179, 194, 0.35);
   --ring-danger: 0 0 0 3px rgba(229, 115, 106, 0.35);
 }
+.menu-json-editor { font-family: var(--font-mono, monospace); min-height: 20rem; white-space: pre; overflow-wrap: normal; overflow-x: auto; }

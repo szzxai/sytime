@@ -115,8 +115,44 @@
               <use href="/img/icons.svg#i-tag"></use></svg
             >邀请码设置
           </button>
+          <span class="side-nav__group">系统</span><button type="button" class="side-nav__item" data-panel="menu" hidden><svg class="icon" aria-hidden="true"><use href="/img/icons.svg#i-utensils"></use></svg>菜单自动同步</button>
+          <button type="button" class="side-nav__item" data-panel="menu-import" hidden><svg class="icon" aria-hidden="true"><use href="/img/icons.svg#i-utensils"></use></svg>菜单手动导入</button>
         </nav>
         <div class="shell__main" id="contentArea">
+          <section class="view stack stack--md" id="view-menu-import" hidden>
+            <form id="menuImportForm" class="panel" novalidate>
+              <div class="panel__head"><h2 class="panel__title">菜单手动导入</h2><p class="panel__desc">粘贴完整的八字段 JSON 数组，或载入识图结果进行修改。校验并核对后发布。</p></div>
+              <div class="panel__body form">
+                <div class="field"><label class="field__label" for="menuImportSource">导入目标</label><select class="select" id="menuImportSource"><option value="">新建手动批次</option></select><span class="field__hint">新建批次加入目录；编辑已有菜单会替换该来源的全部记录。</span></div>
+                <div class="field" id="menuImportTitleField"><label class="field__label" for="menuImportTitle">批次名称</label><input class="input" id="menuImportTitle" maxlength="300" value="手动导入菜单" /></div>
+                <div class="field" id="menuImportJobField" hidden><label class="field__label" for="menuImportJob">载入内容</label><select class="select" id="menuImportJob"><option value="">已发布 JSON</option></select><span class="field__hint">失败任务的 JSON 可能缺行，需对照原图补全。切换来源或结果不会自动覆盖编辑内容。</span></div>
+                <div class="row row--wrap"><button type="button" class="btn" id="menuImportLoad" hidden>载入 JSON</button><button type="button" class="btn" id="menuImportImages" hidden>查看任务原图</button><a class="link" href="/menu-json-rules.md" target="_blank" rel="noopener">JSON 详细规则</a></div>
+                <p class="status-text" role="status" id="menuImportWarning"></p><div class="menu-images" id="menuImportImageList"></div>
+                <div class="field"><label class="field__label" for="menuImportJson">菜单 JSON 文本</label><textarea class="textarea menu-json-editor" id="menuImportJson" rows="18" spellcheck="false" placeholder='[{"date":null,"weekday":null,"time":[],"place":null,"group":null,"name":"菜品名","price":null,"spicy":null}]' aria-describedby="menuImportJsonHint"></textarea><span class="field__hint" id="menuImportJsonHint">只接受 JSON 数组，最多 20,000 条、6 MB。使用 null 表示无法确认，不要填写字符串 "null"。</span></div>
+                <p class="status-text" role="status" id="menuImportStatus"></p>
+                <label class="check-row"><input type="checkbox" class="check" id="menuImportReviewed" /><span class="check-row__text">已核对完整菜单、补全缺行并确认导入目标<span class="check-row__desc">JSON 格式校验不能替代原图核对。</span></span></label>
+              </div>
+              <div class="panel__foot row row--wrap"><button type="button" class="btn" id="menuImportValidate">校验并格式化 JSON</button><button type="submit" class="btn btn--primary" id="menuImportPublish" disabled>发布菜单</button></div>
+            </form>
+            <div class="panel"><div class="panel__head row row--between"><h2 class="panel__title">手动导入记录</h2><button type="button" class="btn" id="menuImportRefresh">刷新</button></div><div class="panel__body stack" id="menuImportHistory" aria-live="polite"></div></div>
+          </section>
+          <section class="view stack stack--md" id="view-menu" hidden>
+            <form id="menuSettingsForm" class="panel" novalidate>
+              <div class="panel__head"><h2 class="panel__title">菜单识别与每日同步</h2><p class="panel__desc">网站直接读取学校官网菜单。先保存模型配置并测试，通过后可开启自动同步。</p></div>
+              <div class="panel__body form">
+                <div class="form-grid form-grid--2">
+                  <div class="field"><label class="field__label" for="menuProvider">提供商</label><select class="select" id="menuProvider"><option value="openrouter">OpenRouter</option><option value="compatible">OpenAI 兼容接口</option></select></div>
+                  <div class="field"><label class="field__label" for="menuModel">视觉模型 ID</label><input class="input" id="menuModel" maxlength="200" placeholder="填写提供商支持的视觉模型 ID" /></div>
+                </div>
+                <div class="field" id="menuBaseField" hidden><label class="field__label" for="menuBase">API Base URL</label><input class="input" type="url" id="menuBase" placeholder="https://example.com/v1" /><span class="field__hint">HTTPS，支持图片输入与严格 JSON Schema 的 Chat Completions 接口。</span></div>
+                <div class="field"><label class="field__label" for="menuKey">API Key</label><input class="input" type="password" id="menuKey" autocomplete="new-password" maxlength="2048" /><span class="field__hint" id="menuKeyHint">留空保留已保存的 Key。</span></div>
+                <div class="form-grid form-grid--2"><div class="field"><label class="field__label" for="menuDailyTime">每日同步时间</label><input class="input" type="time" id="menuDailyTime" value="08:00" required /><span class="field__hint">北京时间（Asia/Shanghai）。修改时间后从下一次有效时刻执行；当天最多自动执行一次。</span></div><div class="field"><label class="check-row"><input class="check" type="checkbox" id="menuEnabled" /><span class="check-row__text">开启每日自动同步<span class="check-row__desc">配置测试通过后开启。修改模型后需要重新测试。</span></span></label></div></div>
+                <p class="field__hint" id="menuSchedule"></p><p class="status-text" role="status" id="menuConfigStatus"></p>
+              </div>
+              <div class="panel__foot row row--wrap"><button type="button" class="btn btn--danger-quiet" id="menuDeleteKey">删除 Key</button><button type="button" class="btn" id="menuTest">测试已保存配置</button><button class="btn btn--primary" type="submit" id="menuSave">保存设置</button></div>
+            </form>
+            <div class="panel"><div class="panel__head row row--between row--wrap"><h2 class="panel__title">同步任务</h2><div class="row row--sm"><button type="button" class="btn" id="menuRefresh">刷新</button><button type="button" class="btn btn--primary" id="menuSync">立即同步</button></div></div><div class="panel__body"><p class="u-muted u-fs-sm">每次最多识别十篇菜单，每篇最多二十分钟。未通过完整性校验的菜单保留原有数据，可查看诊断并重试。</p><div id="menuJobs" class="stack" aria-live="polite"></div></div></div>
+          </section>
           <section class="view" id="view-banner" hidden>
             <form id="bannerForm" novalidate>
               <div class="panel">
@@ -363,6 +399,7 @@
         </div>
       </div>
       <div id="denyBox" hidden></div>
+      <dialog class="dialog dialog--sheet dialog--wide" id="menuJobDialog" aria-labelledby="menuJobTitle"><div class="dialog__head"><h2 class="dialog__title" id="menuJobTitle">菜单任务详情</h2><button type="button" class="icon-btn icon-btn--sm" data-dialog-close aria-label="关闭"><svg class="icon" aria-hidden="true"><use href="/img/icons.svg#i-close"></use></svg></button></div><div class="dialog__body stack" id="menuJobDetail"></div></dialog>
       <dialog
         class="dialog dialog--sheet dialog--wide"
         id="banModal"
@@ -592,6 +629,8 @@
 
     <script src="/js/ui.js"></script>
     <script src="/js/page.js"></script>
+    <script src="/js/pages/menu-admin.js"></script>
+    <script src="/js/pages/menu-import.js"></script>
     <script src="/js/pages/admin.js"></script>
   </body>
 </html>

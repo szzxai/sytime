@@ -17,6 +17,8 @@
     tickets: ["ticket_manage", "admin"],
     users: ["user_manage", "super_admin"],
     invite: ["invite_manage", "super_admin"],
+    menu: [null, "developer"],
+    "menu-import": [null, "admin"],
   };
   var loaders = {
     banner: loadBanner,
@@ -26,8 +28,12 @@
     tickets: loadTickets,
     users: loadUsers,
     invite: loadInvites,
+    menu: function () { UI.menuAdmin.load(); },
+    "menu-import": function () { UI.menuImport.load(); },
   };
   function allowed(name) {
+    if (name === "menu") return me.role === "developer" && me.status === "active";
+    if (name === "menu-import") return ["developer","super_admin","admin"].includes(me.role) && me.status === "active";
     return UI.session.can(panelPerms[name][0], panelPerms[name][1], me);
   }
   async function counts() {

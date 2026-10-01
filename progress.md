@@ -1,6 +1,6 @@
 # 校园信息网 · 进度文档（progress.md）
 
-> 更新日期：2026-10-01。当前已完成需求 #4 全站 UI 改版。开启新对话时可用本文恢复开发上下文；完整结构及接口见 [MAP.md](./MAP.md)，设计总纲见 [UI.md](./UI.md)，验证结果见 [UI 验收记录](./docs/ui/acceptance.md)。第 9 节保留历史变更，当前行为以其他章节和代码为准。
+> 更新日期：2026-10-01。当前实现 #4 全站 UI 与 #5 独立菜品目录、网站内菜单同步。#5 配置/备份/故障处理见 [菜单同步](./docs/menu-sync.md)，用户确认的范围见 [实施计划](./docs/issue-5-plan.md)。完整结构及接口见 [MAP.md](./MAP.md)，验证见 [验收记录](./docs/ui/acceptance.md)。历史章节按当时实现保留。
 
 ---
 
@@ -15,7 +15,7 @@
 ## 2. 运行环境与依赖
 
 - 推荐 Node.js 24+；本次验证使用 Node.js 24.13.0、npm 11.19.0 和 Windows PowerShell。
-- 运行依赖：Express、cors、bcrypt、jsonwebtoken、multer、dotenv；数据库无需额外驱动。
+- 运行依赖：Express、cors、bcrypt、jsonwebtoken、multer、dotenv、sharp、cheerio、Ajv、pinyin-pro；数据库无需额外驱动，生产无需 Python 或另一台菜单服务。
 - 验证依赖：Playwright、axe-core。Windows 回归使用已安装的 Microsoft Edge；其他平台先运行 `npx playwright install chromium`。
 - 安装：`npm.cmd ci`；启动：`npm.cmd start`；回归：`npm.cmd test`。
 - 首页：`http://localhost:3000/`；地图：`http://localhost:3000/map.html`；地图接口：`http://localhost:3000/api/map-data`。
@@ -41,10 +41,17 @@ szzx-info/
 │   └── auth.js                  旧共享脚本兼容入口
 ├── docs/ui/                     组件、页面、场景、文案、参考资产和验收
 ├── tests/ui-smoke.mjs            浏览器功能、布局和无障碍回归
+├── tests/menu.test.cjs           菜单后端测试
+├── tests/node-deploy.cjs         全新 Node 生产依赖安装验证
+├── lib/menu/                    菜单来源、识别、配置、存储、队列及调度
+├── data/menu-bootstrap.json     十篇历史菜单种子
+├── tools/build-menu-seed.py      离线整理工具，仅开发时使用
+├── .private/                    主密钥、原图、补图、诊断与缓存（忽略）
+├── docs/menu-sync.md             同步配置、部署、备份和故障处理
 ├── uploads/                     头像、评价、weekly/ 食谱、bans/ 封禁图片
 ├── data.json                    227 个地图对象的几何、名称、楼层和主题
 ├── data.db                      SQLite 持久数据库
-├── server.js                    Express 后端与全部业务接口
+├── server.js                    Express 后端及菜单模块接入
 ├── package.json / package-lock.json
 ├── README.md                    使用、部署与复验说明
 ├── MAP.md                       项目结构、数据流和 API 索引
@@ -54,7 +61,7 @@ szzx-info/
 └── progress.md                  本文
 ```
 
-本机 `.env`、`node_modules/` 和 `output/playwright/` 不提交；`data.db` 与已有 `uploads/` 保留随仓库保存的策略。完整逐页结构见 MAP.md。
+本机 `.env`、`.private/`、`node_modules/` 和 `output/` 不提交。data.db 和 uploads 保留历史快照；不要提交保存生产模型凭据后的数据库。完整结构见 MAP.md。
 
 ---
 
@@ -372,7 +379,7 @@ CREATE INDEX idx_tickets_user ON tickets(user_id);
 | student_verify | 达到学生等级显示已认证；否则填写新生号、班级、姓名和可选邀请码/补充信息；保持直接认证、人工审核及限频规则 |
 | forum | 讨论/提问切换、每批 20 条、发帖对话框、点赞及失败回滚、回复展开与发布、卡片详情跳转、可键盘访问的删除菜单 |
 | post | 正文、点赞与默认显示的回复；分批加载、回复锚点定位；帖子缺失、无权限和加载失败有明确状态 |
-| recipe | 全部评价按名称展示；对话框发布菜名、1–5 分、评论和图片；每周食谱按日期折叠，自动展开当前周，图片查看器和有权删除；默认视图先读账号设置 |
+| recipe | 全部菜品、菜品评价、每周食谱三个页签；A–Z 目录与名称/拼音/首字母搜索，原评价和每周图片操作保留；明确 URL 优先于账号默认设置 |
 | announcements | 桌面列表与详情并排；手机选择后进入正文，可返回列表 |
 | profile | 资料、账号安全、网站设置、工单四个面板；ID/角色/额外权限、头像、昵称、签名、密码、默认页/楼层/菜谱视图及工单保持原接口 |
 | admin | 按权限显示横幅、公告、认证审核、邀请码、每周食谱、用户、申诉和工单八个面板；待办数、确认、拒绝、角色、特殊权限、封禁和批复统一使用新组件 |
@@ -445,12 +452,14 @@ CREATE INDEX idx_tickets_user ON tickets(user_id);
 43. **个人资料展示账号信息**：`profile.html` 个人资料顶部新增「账号信息」框，显示 **ID、权限等级（角色中文名）、特殊权限**（仅显示超出当前角色范围、通过 `user_permissions` 单独授予的权限，无则显示「无」）；数据取自 `GET /api/user/profile`（已含 `display_id`/`role`/`permissions`，无需改后端）。同时压缩个人资料页各框内边距与间距，减少留白。
 44. **工单功能**：新增 `tickets` 表（标题/内容/可见范围/状态/批复内容+图片+人+时间）。普通用户在 `profile.html` 新增「提交工单」面板（标题、内容、可见范围：管理员及以上 / 超级管理员及以上 / 仅开发者，最低管理员）调用 `POST /api/tickets`，并在「我的工单」查看 `GET /api/tickets/mine`。`admin.html` 新增「工单管理」面板，可对可见范围内工单「批复」（**内容必填 + 图片选填**，`PUT /api/admin/tickets/reply`）。新增权限 `ticket_manage`(admin)。**管理后台菜单「学生认证审核 / 申诉处理 / 工单管理」在小红点提示未处理项**（`GET /api/admin/pending-counts`）。因工单最低可见级为管理员，管理后台进入条件由「≥ super_admin」放宽为「**≥ admin**」（`auth.js` 入口与 `admin.html` 判定同步调整）。
 45. **需求 #4 全站 UI 改版**：统一 12 个现有页面及新增 404，采用「宣纸·黛青·朱印」令牌、组件和响应式布局；抽出共享及各页脚本；本地化 Leaflet 并调整配色和缩放，保留 227 个地图对象。原有账号、论坛、菜谱、认证、后台权限和工单流程保持原 API。新增浏览器回归，264 项检查通过，明暗主题与 360px/1280px 扫描零违规；参考组件 101 项通过。同步 UI 手册、项目结构、使用说明、里程碑快照及验收记录。
+46. **需求 #5 独立菜品与网站内同步**：导入十篇历史种子（1,243 菜品、5,874 供应记录），统一 Node 拼音排序，菜品页改为目录/评价/每周食谱三个页签。developer 可配置提供商、加密 Key、视觉模型和每日北京时间；Node worker 直接抓官网、识别、复核及原子发布，支持进度、诊断、停止、重试和补图。13 项后端、295 项浏览器及全新 Node 生产安装通过；三张真实菜单抽核中发现的模型不一致由完整性门禁拦截，详情见 docs/menu-validation.md。生产无需 Python 或第二个服务。
+47. **菜单 JSON 人工导入与复测**：三种管理角色可粘贴数组、新建批次、编辑已发布记录及失败识图候选、查看受限原图。增加严格预览、修改失效、整篇原子替换、版本/同步冲突检查与审计，18 项后端、331 项浏览器、技能包校验及全新生产安装通过。根 menu-json-rules.md 详述八字段规则，skills/szzx-menu 与 szzx-menu.skill 提供直接图片转 JSON 技能及离线格式验证。当前 vision-catalog-v2、openai/gpt-6-luna 三图实测无缓存，抽样四字段匹配 27/30，完整自动导入 0/3；诊断复核也存在误读，未把格式通过视为准确率保证。
 
 ---
 
 ## 10. 已知事项 / 待办
 
-- #5–#10 的独立菜品、店铺、消息箱及头衔尚待实施；设计规范已收录到 `docs/ui/pages/`，相应功能开关保持关闭。原始需求见 PLAN_2026-10-01.md。
+- #5 独立菜品目录和网站内同步已实现，developer 需保存提供商/Key/模型、通过测试并自行选择每日时间后开启。#6–#10 店铺、消息箱及头衔仍待实施，相关开关关闭。
 - 地图部分建筑说明仍是简短介绍，可按需补充真实内容；地图数据方向与几何约定保持不变。
 - 主题切换入口是手册 P2 能力，当前未开启。
 - 回归测试可用 `npm.cmd test` 重跑，在系统临时目录中运行，不修改项目数据库或上传数据；输出在被忽略的 `output/playwright/`。

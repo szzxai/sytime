@@ -5,18 +5,28 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "test": "node tests/ui-smoke.mjs"
+    "test": "npm run test:menu && npm run test:ui",
+    "test:menu": "node --test tests/menu.test.cjs",
+    "test:ui": "node tests/ui-smoke.mjs",
+    "test:menu:live": "node tests/menu-live.cjs",
+    "build:menu-skill": "python tools/build-menu-skill.py",
+    "test:menu-skill": "python tests/menu-skill.py",
+    "test:deploy": "node tests/node-deploy.cjs"
   },
   "keywords": [],
   "author": "",
   "license": "AGPL-3.0",
   "dependencies": {
+    "ajv": "^8.20.0",
     "bcrypt": "^6.0.0",
+    "cheerio": "^1.2.0",
     "cors": "^2.8.6",
     "dotenv": "^18.0.3",
     "express": "^5.2.1",
     "jsonwebtoken": "^9.0.3",
-    "multer": "^2.4.0"
+    "multer": "^2.4.0",
+    "pinyin-pro": "^3.29.4",
+    "sharp": "^0.35.5"
   },
   "devDependencies": {
     "axe-core": "^4.13.0",

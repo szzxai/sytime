@@ -1,0 +1,41 @@
+{
+  "method": "Visual transcription from the three original menu images; selected fields only, not the historical model JSON and not a complete gold dataset.",
+  "sources": [
+    {"article_id":11392,"samples":[
+      {"date":"2026-09-20","name":"红烧牛肉面","price":17,"spicy":false},
+      {"date":"2026-09-21","name":"藤椒牛肉面","price":17,"spicy":true},
+      {"date":"2026-09-22","name":"白切牛肉面","price":17,"spicy":false},
+      {"date":"2026-09-23","name":"香辣牛肉面","price":17,"spicy":true},
+      {"date":"2026-09-20","name":"茶叶蛋","price":2,"spicy":false},
+      {"date":"2026-09-20","name":"萝卜干毛豆","price":0,"spicy":false},
+      {"date":"2026-09-21","name":"辣炒海带丝","price":0,"spicy":true},
+      {"date":"2026-09-22","name":"蛋挞","price":3,"spicy":false},
+      {"date":"2026-09-23","name":"扬州炒饭","price":6,"spicy":false},
+      {"date":"2026-09-20","name":"白米饭/杂粮饭","price":null,"spicy":false}
+    ]},
+    {"article_id":11389,"samples":[
+      {"date":"2026-09-14","name":"红烧牛肉面","price":17,"spicy":false},
+      {"date":"2026-09-15","name":"藤椒牛肉面","price":17,"spicy":true},
+      {"date":"2026-09-07","name":"红烧牛肉面","price":17,"spicy":false},
+      {"date":"2026-09-08","name":"藤椒牛肉面","price":17,"spicy":true},
+      {"date":"2026-09-14","name":"茶叶蛋","price":2,"spicy":false},
+      {"date":"2026-09-14","name":"牛奶","price":3,"spicy":false},
+      {"date":"2026-09-14","name":"萝卜干毛豆","price":0,"spicy":false},
+      {"date":"2026-09-15","name":"辣炒海带丝","price":0,"spicy":true},
+      {"date":"2026-09-15","name":"蛋挞","price":3,"spicy":false},
+      {"date":"2026-09-16","name":"水饺","price":6,"spicy":false}
+    ]},
+    {"article_id":11386,"samples":[
+      {"date":"2026-09-07","name":"红烧牛肉面","price":17,"spicy":false},
+      {"date":"2026-09-08","name":"藤椒牛肉面","price":17,"spicy":true},
+      {"date":"2026-09-09","name":"香辣牛肉面","price":17,"spicy":true},
+      {"date":"2026-09-07","name":"茶叶蛋","price":2,"spicy":false},
+      {"date":"2026-09-07","name":"白煮蛋","price":1.5,"spicy":false},
+      {"date":"2026-09-08","name":"辣炒海带丝","price":0,"spicy":true},
+      {"date":"2026-09-12","name":"青椒土豆丝","price":0,"spicy":true},
+      {"date":"2026-09-08","name":"蛋挞","price":3,"spicy":false},
+      {"date":"2026-09-09","name":"扬州炒饭","price":6,"spicy":false},
+      {"date":"2026-09-07","name":"白米饭/杂粮饭","price":null,"spicy":false}
+    ]}
+  ]
+}
