@@ -198,6 +198,36 @@
   }
   #avatarFile { display: none; }
   .rule { font-size: 12px; color: #999999; margin-top: 10px; }
+  #view-profile h1 { margin-bottom: 16px; }
+  #view-profile .block { padding: 16px; margin-bottom: 14px; }
+  #view-profile .block h2 { margin-bottom: 12px; }
+  #view-profile .field { margin-bottom: 10px; }
+  #view-profile .rule { margin-top: 8px; }
+  #view-profile .msg { margin-top: 8px; }
+  .info-row {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    padding: 7px 0;
+    font-size: 14px;
+    border-bottom: 1px solid #e5e5e5;
+  }
+  .info-row:first-child { padding-top: 0; }
+  .info-row:last-child { border-bottom: none; padding-bottom: 0; }
+  .info-label { flex: none; width: 76px; color: #555555; font-size: 13px; }
+  .info-value { flex: 1; word-break: break-word; }
+  .section-sub { font-size: 15px; letter-spacing: 1px; margin: 22px 0 14px; }
+  .ticket-item { border: 2px solid #000000; padding: 14px 16px; margin-bottom: 12px; }
+  .ticket-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+  .ticket-title { font-size: 15px; font-weight: bold; word-break: break-word; }
+  .ticket-status { flex: none; font-size: 12px; }
+  .ticket-status.pending { color: #cc0000; }
+  .ticket-status.resolved { color: #008800; }
+  .ticket-meta { font-size: 12px; color: #777777; margin-top: 4px; }
+  .ticket-body { font-size: 14px; line-height: 1.7; margin-top: 8px; word-break: break-word; }
+  .ticket-reply { margin-top: 10px; padding: 10px 12px; background: #f2f2f2; font-size: 14px; line-height: 1.7; word-break: break-word; }
+  .ticket-thumb { display: block; max-width: 180px; border: 2px solid #000000; margin-top: 8px; }
+  .app-empty { font-size: 14px; color: #777777; text-align: center; padding: 24px; border: 2px dashed #dddddd; }
 </style>
 </head>
 <body>
@@ -224,6 +254,7 @@
         <a href="#" data-panel="profile" class="active">个人资料</a>
         <a href="#" data-panel="security">账号安全</a>
         <a href="#" data-panel="site">网站设置</a>
+        <a href="#" data-panel="tickets">提交工单</a>
       </div>
       <div class="sidebar-bottom">
         <button type="button" class="btn" id="logoutBtn">退出登录</button>
@@ -233,6 +264,22 @@
     <main class="content">
       <section class="view active" id="view-profile">
         <h1>个人资料</h1>
+
+        <div class="block">
+          <h2>账号信息</h2>
+          <div class="info-row">
+            <span class="info-label">ID</span>
+            <span class="info-value" id="infoId">—</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">权限等级</span>
+            <span class="info-value" id="infoRole">—</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">特殊权限</span>
+            <span class="info-value" id="infoPerms">—</span>
+          </div>
+        </div>
 
         <div class="block">
           <h2>用户名</h2>
@@ -336,6 +383,34 @@
         <button type="button" class="submit" id="siteSubmit">保存</button>
         <div class="msg" id="siteMsg"></div>
       </section>
+
+      <section class="view" id="view-tickets">
+        <h1>提交工单</h1>
+        <div class="block">
+          <h2>新建工单</h2>
+          <div class="field">
+            <label for="ticketTitle">标题</label>
+            <input type="text" id="ticketTitle" placeholder="简要描述问题">
+          </div>
+          <div class="field">
+            <label for="ticketContent">内容</label>
+            <textarea id="ticketContent" placeholder="详细描述你的问题或诉求…"></textarea>
+          </div>
+          <div class="field">
+            <label for="ticketVisibility">可见范围</label>
+            <select id="ticketVisibility">
+              <option value="admin">管理员及以上</option>
+              <option value="super_admin">超级管理员及以上</option>
+              <option value="developer">仅开发者</option>
+            </select>
+          </div>
+          <div class="rule">工单将提交给所选权限及以上的管理人员处理。</div>
+          <button type="button" class="submit" id="ticketSubmit">提交工单</button>
+          <div class="msg" id="ticketSubmitMsg"></div>
+        </div>
+        <h2 class="section-sub">我的工单</h2>
+        <div id="myTicketList"></div>
+      </section>
     </main>
   </div>
 
@@ -343,6 +418,53 @@
   <script>
     var token = localStorage.getItem("token");
     if (!token) { location.href = "login.html"; }
+
+    var ROLE_LABELS = {
+      developer: "开发者",
+      super_admin: "超级管理员",
+      admin: "管理员",
+      student: "学生",
+      user: "普通用户",
+      guest: "访客"
+    };
+    var ROLE_WEIGHTS = { developer: 6, super_admin: 5, admin: 4, student: 3, user: 2, guest: 1 };
+    var PERMISSION_REQUIRES = {
+      banner_edit: "super_admin",
+      announcement_publish: "super_admin",
+      student_review: "super_admin",
+      invite_manage: "super_admin",
+      user_manage: "super_admin",
+      ban_appeal_review: "super_admin",
+      weekly_menu_upload: "admin",
+      map_popup_edit: "admin",
+      ticket_manage: "admin"
+    };
+    var PERMISSION_LABELS = {
+      banner_edit: "编辑横幅",
+      announcement_publish: "发布更新公告",
+      student_review: "学生认证审核",
+      invite_manage: "邀请码管理",
+      weekly_menu_upload: "每周菜谱上传",
+      map_popup_edit: "地图弹窗编辑",
+      user_manage: "用户管理",
+      ban_appeal_review: "申诉处理",
+      ticket_manage: "工单管理"
+    };
+
+    function renderAccountInfo(user) {
+      document.getElementById("infoId").textContent =
+        user.display_id || (user.id !== undefined && user.id !== null ? String(user.id) : "—");
+      document.getElementById("infoRole").textContent = ROLE_LABELS[user.role] || user.role || "—";
+      var roleWeight = ROLE_WEIGHTS[user.role] || 0;
+      var perms = user.permissions || [];
+      var special = [];
+      for (var i = 0; i < perms.length; i++) {
+        var key = perms[i];
+        var required = ROLE_WEIGHTS[PERMISSION_REQUIRES[key]] || 0;
+        if (roleWeight < required) special.push(PERMISSION_LABELS[key] || key);
+      }
+      document.getElementById("infoPerms").textContent = special.length ? special.join("、") : "无";
+    }
 
     function escapeHtml(value) {
       if (value === null || value === undefined) return "";
@@ -404,6 +526,7 @@
         for (var k = 0; k < views.length; k++) {
           views[k].classList.toggle("active", views[k].id === "view-" + name);
         }
+        if (name === "tickets") loadMyTickets();
       });
     }
 
@@ -424,6 +547,7 @@
         document.getElementById("nickname").value = user.nickname || "";
         document.getElementById("signature").value = user.signature || "";
         setAvatar(user.avatar_url);
+        renderAccountInfo(user);
         updateStoredUser({
           nickname: user.nickname,
           avatar_url: user.avatar_url,
@@ -661,6 +785,102 @@
             msg.className = "msg error";
             msg.textContent = "网络错误：" + err.message;
             submit.disabled = false;
+          }
+        });
+    });
+
+    var TICKET_VIS_LABELS = { admin: "管理员及以上", super_admin: "超级管理员及以上", developer: "仅开发者" };
+
+    function formatTime(sec) {
+      if (!sec) return "";
+      var d = new Date(Number(sec) * 1000);
+      function p(n) { return n < 10 ? "0" + n : "" + n; }
+      return d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" + p(d.getDate()) + " " + p(d.getHours()) + ":" + p(d.getMinutes());
+    }
+
+    function loadMyTickets() {
+      var box = document.getElementById("myTicketList");
+      box.innerHTML = '<div class="app-empty">加载中…</div>';
+      fetch("/api/tickets/mine", { headers: authHeaders() })
+        .then(function (res) {
+          if (handleStatus(res.status)) throw new Error("unauthorized");
+          return res.json();
+        })
+        .then(function (data) {
+          var list = data.tickets || [];
+          if (!list.length) {
+            box.innerHTML = '<div class="app-empty">暂无工单</div>';
+            return;
+          }
+          box.innerHTML = list.map(function (t) {
+            var status = t.status === "resolved"
+              ? '<span class="ticket-status resolved">已批复</span>'
+              : '<span class="ticket-status pending">待处理</span>';
+            var vis = TICKET_VIS_LABELS[t.visibility] || t.visibility;
+            var reply = "";
+            if (t.status === "resolved") {
+              reply = '<div class="ticket-reply">批复（' + escapeHtml(t.reply_by || "管理员") +
+                (t.replied_at ? ' · ' + formatTime(t.replied_at) : '') + '）：<br>' +
+                escapeHtml(t.reply_content) +
+                (t.reply_image ? '<img class="ticket-thumb" src="' + escapeHtml(t.reply_image) + '" alt="批复图片">' : '') +
+                '</div>';
+            }
+            return '<div class="ticket-item">' +
+              '<div class="ticket-head"><span class="ticket-title">' + escapeHtml(t.title) + '</span>' + status + '</div>' +
+              '<div class="ticket-meta">可见范围：' + escapeHtml(vis) + ' · ' + formatTime(t.created_at) + '</div>' +
+              '<div class="ticket-body">' + escapeHtml(t.content) + '</div>' +
+              reply +
+            '</div>';
+          }).join("");
+        })
+        .catch(function (err) {
+          if (err.message !== "unauthorized") {
+            box.innerHTML = '<div class="app-empty">加载失败：' + escapeHtml(err.message) + '</div>';
+          }
+        });
+    }
+
+    document.getElementById("ticketSubmit").addEventListener("click", function () {
+      var msg = document.getElementById("ticketSubmitMsg");
+      var btn = document.getElementById("ticketSubmit");
+      var title = document.getElementById("ticketTitle").value.trim();
+      var content = document.getElementById("ticketContent").value.trim();
+      var visibility = document.getElementById("ticketVisibility").value;
+      if (!title || !content) {
+        msg.className = "msg error";
+        msg.textContent = "标题和内容不能为空";
+        return;
+      }
+      msg.className = "msg";
+      msg.textContent = "提交中…";
+      btn.disabled = true;
+      fetch("/api/tickets", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token },
+        body: JSON.stringify({ title: title, content: content, visibility: visibility })
+      })
+        .then(function (res) {
+          if (handleStatus(res.status)) throw new Error("unauthorized");
+          return res.json().then(function (data) { return { ok: res.ok, data: data }; });
+        })
+        .then(function (r) {
+          btn.disabled = false;
+          if (!r.ok) {
+            msg.className = "msg error";
+            msg.textContent = r.data.error || "提交失败";
+            return;
+          }
+          document.getElementById("ticketTitle").value = "";
+          document.getElementById("ticketContent").value = "";
+          msg.className = "msg ok";
+          msg.textContent = "工单已提交，请等待处理";
+          loadMyTickets();
+        })
+        .catch(function (err) {
+          btn.disabled = false;
+          if (err.message !== "unauthorized") {
+            msg.className = "msg error";
+            msg.textContent = "网络错误：" + err.message;
           }
         });
     });

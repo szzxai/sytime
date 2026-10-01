@@ -100,7 +100,7 @@
     if (!user) return "";
     var weight = ROLE_WEIGHTS[user.role] || 0;
     var hasPerms = user.permissions && user.permissions.length > 0;
-    if (weight >= ROLE_WEIGHTS.super_admin || hasPerms) {
+    if (weight >= ROLE_WEIGHTS.admin || hasPerms) {
       return '<a class="btn" href="admin.html">管理后台</a>';
     }
     return "";

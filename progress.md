@@ -56,6 +56,8 @@
 ├── .env.example               ← 环境变量模板
 ├── .gitignore                 ← 忽略 node_modules/、.env 及 SQLite 临时文件（*.db-journal/-wal/-shm）
 ├── README.md                  ← 项目说明（GitHub 用）
+├── 项目文档.md                ← 项目文档（概述/架构/数据/接口/部署）
+├── 开发计划模板.md            ← 开发计划模板
 ├── LICENSE                    ← AGPL-3.0 许可证
 └── progress.md                ← 本文件
 ```
@@ -198,12 +200,29 @@ CREATE TABLE ban_appeals (
   created_at INTEGER NOT NULL DEFAULT (strftime('%s','now'))
 );
 
+CREATE TABLE tickets (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL,
+  username TEXT NOT NULL DEFAULT '',
+  title TEXT NOT NULL,
+  content TEXT NOT NULL,
+  visibility TEXT NOT NULL DEFAULT 'admin',
+  status TEXT NOT NULL DEFAULT 'pending',
+  reply_content TEXT NOT NULL DEFAULT '',
+  reply_image TEXT NOT NULL DEFAULT '',
+  reply_by TEXT NOT NULL DEFAULT '',
+  replied_at INTEGER,
+  created_at INTEGER NOT NULL DEFAULT (strftime('%s','now'))
+);
+
 CREATE INDEX idx_forum_category ON forum_posts(category);
 CREATE INDEX idx_forum_replies_post ON forum_replies(post_id);
 CREATE INDEX idx_recipes_weekly ON recipes(is_weekly);
 CREATE INDEX idx_announcements_date ON announcements(publish_date);
 CREATE INDEX idx_student_applications_user ON student_applications(user_id);
 CREATE INDEX idx_ban_appeals_status ON ban_appeals(status);
+CREATE INDEX idx_tickets_status ON tickets(status);
+CREATE INDEX idx_tickets_user ON tickets(user_id);
 ```
 
 迁移：启动时 `migrateUserSettings()` 会为旧库补齐 `default_page / default_floor / recipe_default_view / display_id / status / ban_reason / ban_image / allow_appeal` 列，并**批量回填旧用户 `display_id = CAST(id AS TEXT)`**。
@@ -227,7 +246,7 @@ CREATE INDEX idx_ban_appeals_status ON ban_appeals(status);
 - `ROLE_WEIGHTS = { developer:6, super_admin:5, admin:4, student:3, user:2, guest:1 }`
 - `checkRole(requiredRole)`：解析 `Authorization: Bearer <token>`；无/无效 token **不报 401**，而是 `req.user = { id:null, role:'guest', username:null }` 放行；若指定了 requiredRole，则按权重比较，不足返回 **403**。token 缺 `username` 时按 id 回查数据库补全。
 - `requireLogin`：基于 `checkRole()`，未登录返回 **401** `{ error:"login required" }`。
-- **特殊权限（`user_permissions` 表 + `requirePermission(perm)`）**：在角色之外可给单个用户授予细粒度权限。`hasPermission` 判定 = **角色权重 ≥ 该权限默认要求**（`PERMISSION_REQUIRES`）**或**在 `user_permissions` 中有显式授权。权限键：`banner_edit`(super_admin)、`announcement_publish`(super_admin)、`student_review`(super_admin)、`invite_manage`(super_admin)、`user_manage`(super_admin)、`ban_appeal_review`(super_admin)、`weekly_menu_upload`(admin)、`map_popup_edit`(admin)。`requirePermission` 未登录 401、无权限 403。`GET /api/me` 与 `GET /api/user/profile` 均返回 `permissions` 数组。
+- **特殊权限（`user_permissions` 表 + `requirePermission(perm)`）**：在角色之外可给单个用户授予细粒度权限。`hasPermission` 判定 = **角色权重 ≥ 该权限默认要求**（`PERMISSION_REQUIRES`）**或**在 `user_permissions` 中有显式授权。权限键：`banner_edit`(super_admin)、`announcement_publish`(super_admin)、`student_review`(super_admin)、`invite_manage`(super_admin)、`user_manage`(super_admin)、`ban_appeal_review`(super_admin)、`weekly_menu_upload`(admin)、`map_popup_edit`(admin)、`ticket_manage`(admin)。`requirePermission` 未登录 401、无权限 403。`GET /api/me` 与 `GET /api/user/profile` 均返回 `permissions` 数组。
 
 **个人资料**（均需登录）
 - `GET /api/user/profile` — 返回 `{ user: { id, display_id, username, nickname, avatar_url, signature, role, default_page, default_floor, recipe_default_view, status } }`
@@ -286,8 +305,15 @@ CREATE INDEX idx_ban_appeals_status ON ban_appeals(status);
 
 **封禁申诉**
 - `POST /api/user/appeal`（**公开，无需登录**）— body `{ username, appeal_reason, appeal_image? }`；用户不存在 404、未被封禁 400；**限频：距上次申诉不足 10 分钟返回 429 `{ error:"rate_limited", message, retry_after }`；允许提交时先删除该用户旧申诉（覆盖上一次）再写入**，写入 `ban_appeals`（`status='pending'`），返回 `{ id, status }`
-- `GET /api/admin/ban-appeals`（`checkRole("super_admin")`）— 返回所有 `pending` 申诉，附带用户 `username`、`display_id`
-- `PUT /api/admin/ban-appeals/review`（`checkRole("super_admin")`）— body `{ appealId, action ∈ {approve, reject} }`；`approve` 将申诉置 `approved` 且用户解封（`status='active'`、清空封禁信息），`reject` 置 `rejected`
+- `GET /api/admin/ban-appeals`（`requirePermission("ban_appeal_review")`）— 返回所有 `pending` 申诉，附带用户 `username`、`display_id`
+- `PUT /api/admin/ban-appeals/review`（`requirePermission("ban_appeal_review")`）— body `{ appealId, action ∈ {approve, reject} }`；`approve` 将申诉置 `approved` 且用户解封（`status='active'`、清空封禁信息），`reject` 置 `rejected`
+
+**工单**
+- `POST /api/tickets`（需登录）— body `{ title, content, visibility }`；`title`/`content` 必填（400）；`visibility ∈ {admin, super_admin, developer}`，非法值回退 `admin`（表示「该角色及以上可见」，最低管理员）；写入 `tickets`（`status='pending'`），返回 `{ ticket:{ id, status } }`
+- `GET /api/tickets/mine`（需登录）— 返回本人全部工单（含 `status / reply_content / reply_image / reply_by / replied_at`），按时间倒序
+- `GET /api/admin/tickets`（`requirePermission("ticket_manage")`）— 仅返回**当前角色权重视野内**的工单（`ROLE_WEIGHTS[req.user.role] >= ROLE_WEIGHTS[ticket.visibility]`），待处理优先排序
+- `PUT /api/admin/tickets/reply`（`requirePermission("ticket_manage")`）— body `{ id, reply, reply_image? }`；`reply` 必填（400）；工单不存在 404；**可见性不足 403**；置 `status='resolved'` 并记录 `reply_content / reply_image / reply_by / replied_at`
+- `GET /api/admin/pending-counts`（需登录）— 返回 `{ counts: { student_review, ban_appeal_review, ticket_manage } }`；**仅有对应权限时才返回真实待办数否则为 0**；`ticket_manage` 仅统计当前角色可见范围内的 `pending` 工单。供管理后台菜单红点使用
 
 **设置（公开）**
 - `GET /api/settings/banner` — 返回 `{ banner, version }`，供全站横幅使用
@@ -339,7 +365,7 @@ CREATE INDEX idx_ban_appeals_status ON ban_appeals(status);
   1. **登录态渲染**：读 `localStorage.token` → 调 `GET /api/user/profile` → 已登录显示**圆形头像**（点击跳 `profile.html`，无头像显示昵称首字），未登录显示「登录 / 注册」；401 自动清理。
   2. **菜单栏折叠**：在菜单栏**正下方右下角外侧**注入小三角按钮（44×22，紧贴下边框的凸片），点击后带动画收起菜单栏；收起后在右上角显示同尺寸的展开三角。状态存 `localStorage.navCollapsed`。
   3. **全站横幅**：加载时调 `GET /api/settings/banner`，将文本渲染为导航栏上方全宽黑底白字横幅（空则不显示），并把高度写入 CSS 变量 `--banner-h` 以修正首页/地图布局位移。横幅右侧有 **×** 关闭按钮：关闭后按账号记录 `bannerDismissed:<username>` = 当前 `version`，该账号在 `version` 未变化前不再显示；横幅更新（version 自增）后重新显示。
-  4. **管理后台入口**：`GET /api/user/profile` 返回 `role` 与 `permissions`，**当角色权重 ≥ `super_admin`（5）或拥有任意授予权限时**，在导航右侧注入「管理后台」按钮（跳 `admin.html`）；否则不显示。
+  4. **管理后台入口**：`GET /api/user/profile` 返回 `role` 与 `permissions`，**当角色权重 ≥ `admin`（4）或拥有任意授予权限时**，在导航右侧注入「管理后台」按钮（跳 `admin.html`）；否则不显示。
   5. **学生认证入口**：登录后（任意角色）在导航右侧注入「学生认证」按钮（跳 `student_verify.html`）。
   6. 全局注入相关样式（头像、横幅、折叠、地图/首页随折叠位移）。
   7. **Logo 交互**：为 `.logo` 注入悬停下划线；**点击 Logo 跳转 `index.html`**。Logo 已**取消下拉菜单**（原「更新公告」改到顶部导航）。对应 CSS/JS 均在 `auth.js`；各页导航「首页」按钮已移除并统一由 Logo 承担回首页。
@@ -352,12 +378,13 @@ CREATE INDEX idx_ban_appeals_status ON ban_appeals(status);
 - **post.html**：帖子详情页。解析 `?id=`，调 `GET /api/forum/posts/:id` 展示标题/分类/作者/时间/正文（不存在显示「帖子不存在或已删除」）；正文下方「👍 点赞（n）」按钮（逻辑同列表页，已赞高亮，未登录提示「请先登录」）；点赞按钮旁有「回复」按钮，**进入详情页默认展开回复界面（回复列表 + 输入框），点「回复」按钮可收起/展开**；调 `GET /api/forum/posts/:id/replies` 按时间正序展示回复；已登录可提交回复，未登录显示「请先登录后回复」。顶部导航与 `auth.js` 同其他页面；有「← 返回论坛」链接。
 - **recipe.html**：全部（A-Z）/每周食谱切换；发布评价表单仅登录可见（菜名/评分1-5/评论/图片），图文卡片列表。**默认显示标签优先读账号 `recipe_default_view`，其次 `localStorage.recipeDefaultView`，再回退「全部」**。「每周食谱」标签**不显示评价表单**，改为调 `GET /api/weekly-menu`，每条上方一个**日期（起始-结束）按钮**用于展开/收起大图（不直接展示图片），大图下方左下角另有「收起」按钮（同一功能，均极简黑白风格）；点击大图可打开缩放层（**滚轮缩放、拖动、单击空白处关闭**，白底）；**仅上传者本人或 super_admin 及以上**时图片右上角显示「删除」（二次确认）；无数据显示「暂未上传本周食谱」。
 - **announcements.html**：更新公告。左侧侧边栏列出公告日期 + 标题概览（点击切换），右侧主区域显示选中公告的标题、发布日期与正文；加载时 fetch `/api/announcements` 并默认选中最新一条。
-- **admin.html**：管理后台（**进入条件：权重 ≥ super_admin 或拥有任意授予权限**；左侧菜单按 `PANEL_PERMS` 过滤，仅显示有权限的项，并默认激活第一个可用项）。左侧菜单「编辑横幅 / 更新公告 / 学生认证审核 / 邀请码设置 / 每周菜谱管理 / 用户管理 / 申诉处理」；编辑横幅读取 `GET /api/settings/banner`，点「确认修改」**先 `confirm()` 二次确认**再 `PUT /api/admin/settings/banner`；另有「取消横幅」按钮（二次确认后将横幅置空，全站不再显示）。更新公告填写标题/内容后 `POST /api/admin/announcements`。学生认证审核列出待审核申请（新生号/班级/真实姓名/提交人/补充信息），每条有「通过」与「拒绝」：「通过」调审核接口并移除；「拒绝」弹**自定义遮罩层**填写**选填的拒绝原因**后调拒绝接口并移除。邀请码设置支持**多条邀请码**：输入邀请码与可用次数（0=不限）后「添加」，下方列出已有邀请码及「已用 x / y」并可删除。每周菜谱管理：选第一天与最后一天日期（点整框弹出日历）+ 「选择图片并上传」，**选图后在上传栏内显示大图预览与「确认上传 / 取消」按钮（不单独弹出界面）**，下方按日期倒序列出已上传图片（显示上传者用户名、缩略图点击可放大、可删除并二次确认）。**用户管理**：表格列出所有用户（ID/用户名/昵称/角色/状态/操作）；对**非自己且权重低于自己**的用户，角色用下拉框（选项权重 ∈ [user, 自身-1]）选中即调 `PUT /api/admin/users/role`；「权限」按钮弹出**自定义遮罩层**（按 `GET /api/admin/permissions` 目录列出勾选项，默认勾选该用户已有权限），保存调 `PUT /api/admin/users/permissions`；「封号」弹**自定义遮罩层**（封禁理由选填 + 上传图片选填 + 「允许申请解封」默认勾选），确认调 `PUT /api/admin/users/ban`（FormData）；已封禁用户在同位置显示「解封」（二次确认调 unban）；对自己或权重 ≥ 自己的用户不显示任何修改控件。**申诉处理**：列表展示待处理申诉（用户ID/用户名/申诉理由/申诉图片可点击放大），每条「通过 / 驳回」调 `PUT /api/admin/ban-appeals/review` 并刷新。非管理员进入会显示无权限提示。
+- **admin.html**：管理后台（**进入条件：权重 ≥ admin 或拥有任意授予权限**；左侧菜单按 `PANEL_PERMS` 过滤，仅显示有权限的项，并默认激活第一个可用项）。左侧菜单「编辑横幅 / 更新公告 / 学生认证审核 / 邀请码设置 / 每周菜谱管理 / 用户管理 / 申诉处理 / 工单管理」；**菜单项「学生认证审核 / 申诉处理 / 工单管理」文字左上角带小红点（`.menu-dot`），进入后台时调 `GET /api/admin/pending-counts`，对应待办数 > 0 则显示红点，处理完自动刷新**。编辑横幅读取 `GET /api/settings/banner`，点「确认修改」**先 `confirm()` 二次确认**再 `PUT /api/admin/settings/banner`；另有「取消横幅」按钮（二次确认后将横幅置空，全站不再显示）。更新公告填写标题/内容后 `POST /api/admin/announcements`。学生认证审核列出待审核申请（新生号/班级/真实姓名/提交人/补充信息），每条有「通过」与「拒绝」：「通过」调审核接口并移除；「拒绝」弹**自定义遮罩层**填写**选填的拒绝原因**后调拒绝接口并移除。邀请码设置支持**多条邀请码**：输入邀请码与可用次数（0=不限）后「添加」，下方列出已有邀请码及「已用 x / y」并可删除。每周菜谱管理：选第一天与最后一天日期（点整框弹出日历）+ 「选择图片并上传」，**选图后在上传栏内显示大图预览与「确认上传 / 取消」按钮（不单独弹出界面）**，下方按日期倒序列出已上传图片（显示上传者用户名、缩略图点击可放大、可删除并二次确认）。**用户管理**：表格列出所有用户（ID/用户名/昵称/角色/状态/操作）；对**非自己且权重低于自己**的用户，角色用下拉框（选项权重 ∈ [user, 自身-1]）选中即调 `PUT /api/admin/users/role`；「权限」按钮弹出**自定义遮罩层**（按 `GET /api/admin/permissions` 目录列出勾选项，默认勾选该用户已有权限），保存调 `PUT /api/admin/users/permissions`；「封号」弹**自定义遮罩层**（封禁理由选填 + 上传图片选填 + 「允许申请解封」默认勾选），确认调 `PUT /api/admin/users/ban`（FormData）；已封禁用户在同位置显示「解封」（二次确认调 unban）；对自己或权重 ≥ 自己的用户不显示任何修改控件。**申诉处理**：列表展示待处理申诉（用户ID/用户名/申诉理由/申诉图片可点击放大），每条「通过 / 驳回」调 `PUT /api/admin/ban-appeals/review` 并刷新。**工单管理**：列出当前角色可见范围内的工单（待处理优先，含标题/内容/提交人/可见范围/时间；已批复的显示批复人与批复内容+图片可放大），每条待处理工单「批复」弹**自定义遮罩层**（**批复内容必填 + 上传图片选填**，图片读为 DataURL），确认调 `PUT /api/admin/tickets/reply`。非管理员进入会显示无权限提示。
 - **student_verify.html**：学生认证。加载时查当前角色，若已是 student 或更高则显示「你已认证为学生」并隐藏表单；否则显示表单（新生号/班级/真实姓名/邀请码选填/**补充更多信息选填**，含提示），提交 `POST /api/student/apply` 后提示「认证成功」或「已提交，等待管理员审核」；**表单下方提示「重复提交将覆盖上一次申请；10 分钟内只能提交一次」**，限频时展示后端 429 提示。
-- **profile.html**：个人中心（设置）。左侧菜单栏：可折叠的「设置」→ 子项 **个人资料 / 账号安全 / 网站设置**；底部「退出登录」。
-  - 个人资料：用户名（只读）、头像、昵称、个性签名（除用户名外均可改）。
+- **profile.html**：个人中心（设置）。左侧菜单栏：可折叠的「设置」→ 子项 **个人资料 / 账号安全 / 网站设置 / 提交工单**；底部「退出登录」。
+  - 个人资料：顶部「账号信息」框展示 **ID（display_id）/ 权限等级（角色中文名）/ 特殊权限（超出该角色范围、单独授予的权限，多个以「、」连接，无则显示「无」）**；其后依次为用户名（只读）、头像、昵称、个性签名（除用户名外均可改）。该页各框内边距/间距已压缩以减少留白。
   - 账号安全：修改密码。
   - 网站设置：默认进入界面（首页/地图/论坛/菜谱）、校园地图默认楼层（1F–4F）、菜谱评价默认页（全部 A-Z / 每周食谱）；**保存改为调用 `PUT /api/user/settings` 同步到账号**，并回写 `localStorage` 作为回退；页面加载优先读账号设置，无则回退 `localStorage`。
+  - 提交工单：表单（标题、内容、可见范围下拉「管理员及以上 / 超级管理员及以上 / 仅开发者」）提交 `POST /api/tickets`；下方「我的工单」调 `GET /api/tickets/mine` 列出本人工单（含状态、可见范围、时间；已批复的显示批复人/内容/图片），切换该面板时加载。
 
 所有用户输入均做 HTML 转义（`escapeHtml`）防 XSS；数据全部经 `fetch` 调 API 获取。
 
@@ -422,6 +449,9 @@ CREATE INDEX idx_ban_appeals_status ON ban_appeals(status);
 39. **文档**：新增 `README.md`（面向 GitHub 的项目说明）；`progress.md` 同步目录结构与最新功能。
 40. **许可证统一为 AGPL-3.0**：新增 `LICENSE`（GNU AGPL v3 全文）；`package.json` 的 `license` 字段由 `ISC` 改为 `AGPL-3.0`；README 的 License 章节同步更新。
 41. **纳入 data.db 与 uploads**：`.gitignore` 改为仅忽略 `node_modules/`、`.env` 及 SQLite 临时文件（`*.db-journal/-wal/-shm`），使 `data.db` 与 `uploads/` 随仓库提交；README 与本文档同步说明。
+42. **补充文档**：新增 `项目文档.md`（概述/角色权限/功能/架构/数据模型/接口清单/部署规范）与 `开发计划模板.md`（迭代计划通用模板）。
+43. **个人资料展示账号信息**：`profile.html` 个人资料顶部新增「账号信息」框，显示 **ID、权限等级（角色中文名）、特殊权限**（仅显示超出当前角色范围、通过 `user_permissions` 单独授予的权限，无则显示「无」）；数据取自 `GET /api/user/profile`（已含 `display_id`/`role`/`permissions`，无需改后端）。同时压缩个人资料页各框内边距与间距，减少留白。
+44. **工单功能**：新增 `tickets` 表（标题/内容/可见范围/状态/批复内容+图片+人+时间）。普通用户在 `profile.html` 新增「提交工单」面板（标题、内容、可见范围：管理员及以上 / 超级管理员及以上 / 仅开发者，最低管理员）调用 `POST /api/tickets`，并在「我的工单」查看 `GET /api/tickets/mine`。`admin.html` 新增「工单管理」面板，可对可见范围内工单「批复」（**内容必填 + 图片选填**，`PUT /api/admin/tickets/reply`）。新增权限 `ticket_manage`(admin)。**管理后台菜单「学生认证审核 / 申诉处理 / 工单管理」在小红点提示未处理项**（`GET /api/admin/pending-counts`）。因工单最低可见级为管理员，管理后台进入条件由「≥ super_admin」放宽为「**≥ admin**」（`auth.js` 入口与 `admin.html` 判定同步调整）。
 
 ---
 

@@ -82,6 +82,7 @@
   }
   .menu-item {
     display: block;
+    position: relative;
     width: 100%;
     background: none;
     border: none;
@@ -342,6 +343,27 @@
     font-size: 14px;
   }
   .check-row input { width: auto; }
+  .menu-dot {
+    position: absolute;
+    top: 9px;
+    left: 11px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #cc0000;
+    display: none;
+  }
+  .tag-pending { color: #cc0000; font-size: 12px; margin-left: 8px; }
+  .tag-ok { color: #008800; font-size: 12px; margin-left: 8px; }
+  .ticket-body { margin-top: 6px; font-size: 14px; line-height: 1.7; word-break: break-word; }
+  .ticket-reply {
+    margin-top: 10px;
+    padding: 10px 12px;
+    background: #f2f2f2;
+    font-size: 14px;
+    line-height: 1.7;
+    word-break: break-word;
+  }
 </style>
 </head>
 <body>
@@ -367,11 +389,12 @@
       <div id="menuArea">
         <button type="button" class="menu-item active" data-panel="banner">编辑横幅</button>
         <button type="button" class="menu-item" data-panel="announce">更新公告</button>
-        <button type="button" class="menu-item" data-panel="review">学生认证审核</button>
+        <button type="button" class="menu-item" data-panel="review"><span class="menu-dot" data-dot="review"></span>学生认证审核</button>
         <button type="button" class="menu-item" data-panel="invite">邀请码设置</button>
         <button type="button" class="menu-item" data-panel="weekly">每周菜谱管理</button>
         <button type="button" class="menu-item" data-panel="users">用户管理</button>
-        <button type="button" class="menu-item" data-panel="appeals">申诉处理</button>
+        <button type="button" class="menu-item" data-panel="appeals"><span class="menu-dot" data-dot="appeals"></span>申诉处理</button>
+        <button type="button" class="menu-item" data-panel="tickets"><span class="menu-dot" data-dot="tickets"></span>工单管理</button>
       </div>
     </aside>
 
@@ -459,6 +482,11 @@
         <h1>申诉处理</h1>
         <div id="appealList"></div>
       </section>
+
+      <section class="view" id="view-tickets">
+        <h1>工单管理</h1>
+        <div id="ticketList"></div>
+      </section>
     </main>
   </div>
 
@@ -509,6 +537,27 @@
       <div class="preview-actions">
         <button type="button" class="submit" id="permsConfirm">保存</button>
         <button type="button" class="btn" id="permsCancel">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-mask" id="ticketModal" style="display:none;">
+    <div class="modal-box">
+      <h2>批复工单 <span id="ticketTargetTitle"></span></h2>
+      <div class="field">
+        <label for="ticketReplyInput">批复内容（必填）</label>
+        <textarea id="ticketReplyInput" style="min-height:120px;"></textarea>
+      </div>
+      <div class="field">
+        <label>上传图片（选填）</label>
+        <button type="button" class="btn" id="ticketImageChoose">选择图片</button>
+        <input type="file" id="ticketImageInput" accept="image/jpeg,image/png" style="display:none;">
+        <span class="hint" id="ticketImageName" style="margin:0 0 0 10px;"></span>
+      </div>
+      <div class="msg" id="ticketMsg"></div>
+      <div class="preview-actions">
+        <button type="button" class="submit" id="ticketConfirm">确认批复</button>
+        <button type="button" class="btn" id="ticketCancel">取消</button>
       </div>
     </div>
   </div>
@@ -748,6 +797,7 @@
           if (!document.querySelector(".app-item")) {
             document.getElementById("reviewList").innerHTML = '<div class="app-empty">暂无待审核申请</div>';
           }
+          refreshDots();
         })
         .catch(function (err) {
           btn.disabled = false;
@@ -803,6 +853,7 @@
           if (!document.querySelector(".app-item")) {
             document.getElementById("reviewList").innerHTML = '<div class="app-empty">暂无待审核申请</div>';
           }
+          refreshDots();
         })
         .catch(function (err) {
           btn.disabled = false;
@@ -1173,7 +1224,8 @@
       invite: { perm: "invite_manage", role: "super_admin" },
       weekly: { perm: "weekly_menu_upload", role: "admin" },
       users: { perm: "user_manage", role: "super_admin" },
-      appeals: { perm: "ban_appeal_review", role: "super_admin" }
+      appeals: { perm: "ban_appeal_review", role: "super_admin" },
+      tickets: { perm: "ticket_manage", role: "admin" }
     };
 
     function canAccessPanel(name) {
@@ -1206,6 +1258,8 @@
       if (canAccessPanel("weekly")) loadWeekly();
       if (canAccessPanel("users")) { loadPermissionCatalog(); loadUsers(); }
       if (canAccessPanel("appeals")) loadAppeals();
+      if (canAccessPanel("tickets")) loadTickets();
+      refreshDots();
     }
 
     function loadPermissionCatalog() {
@@ -1459,6 +1513,7 @@
           if (!r.ok) { btn.disabled = false; alert(r.data.error || "操作失败"); return; }
           loadAppeals();
           loadUsers();
+          refreshDots();
         })
         .catch(function (err) {
           btn.disabled = false;
@@ -1481,6 +1536,173 @@
       if (rj) reviewAppeal(Number(rj.getAttribute("data-reject-appeal")), "reject", rj);
     });
 
+    var TICKET_VIS_LABELS = { admin: "管理员及以上", super_admin: "超级管理员及以上", developer: "仅开发者" };
+
+    function loadTickets() {
+      var box = document.getElementById("ticketList");
+      box.innerHTML = '<div class="app-empty">加载中…</div>';
+      fetch("/api/admin/tickets", { headers: authHeaders() })
+        .then(function (res) {
+          if (handleStatus(res.status)) throw new Error("unauthorized");
+          if (res.status === 403) throw new Error("forbidden");
+          return res.json();
+        })
+        .then(function (data) {
+          var list = data.tickets || [];
+          if (!list.length) {
+            box.innerHTML = '<div class="app-empty">暂无工单</div>';
+            return;
+          }
+          box.innerHTML = list.map(function (t) {
+            var statusTag = t.status === "resolved"
+              ? '<span class="tag-ok">已批复</span>'
+              : '<span class="tag-pending">待处理</span>';
+            var vis = TICKET_VIS_LABELS[t.visibility] || t.visibility;
+            var replyHtml = "";
+            if (t.status === "resolved") {
+              replyHtml = '<div class="ticket-reply">批复（' + escapeHtml(t.reply_by || "管理员") +
+                (t.replied_at ? ' · ' + formatTime(t.replied_at) : '') + '）：<br>' +
+                escapeHtml(t.reply_content) +
+                (t.reply_image ? '<img class="appeal-thumb" src="' + escapeHtml(t.reply_image) + '" data-zoom="' + escapeHtml(t.reply_image) + '" alt="批复图片">' : '') +
+                '</div>';
+            }
+            var actionHtml = t.status === "resolved"
+              ? ''
+              : '<div class="app-actions"><button type="button" class="submit" data-reply-ticket="' + t.id + '" data-title="' + escapeHtml(t.title) + '">批复</button></div>';
+            return '<div class="app-item" data-ticket-id="' + t.id + '">' +
+              '<div class="app-info">' +
+                '<b>' + escapeHtml(t.title) + '</b>' + statusTag +
+                '<div class="ticket-body">' + escapeHtml(t.content) + '</div>' +
+                '<span class="app-meta">提交人：' + escapeHtml(t.username || ("用户#" + t.user_id)) + ' · 可见范围：' + escapeHtml(vis) + ' · ' + formatTime(t.created_at) + '</span>' +
+                replyHtml +
+              '</div>' +
+              actionHtml +
+            '</div>';
+          }).join("");
+        })
+        .catch(function (err) {
+          box.innerHTML = '<div class="app-empty">加载失败：' +
+            escapeHtml(err.message === "forbidden" ? "无权限" : err.message) + '</div>';
+        });
+    }
+
+    document.getElementById("ticketList").addEventListener("click", function (e) {
+      var zoom = e.target.closest ? e.target.closest("[data-zoom]") : null;
+      if (zoom) {
+        openLightbox(zoom.getAttribute("data-zoom"));
+        return;
+      }
+      var btn = e.target.closest ? e.target.closest("[data-reply-ticket]") : null;
+      if (!btn) return;
+      openTicketModal(Number(btn.getAttribute("data-reply-ticket")), btn.getAttribute("data-title"));
+    });
+
+    var ticketPendingId = null;
+
+    function openTicketModal(id, title) {
+      ticketPendingId = id;
+      document.getElementById("ticketTargetTitle").textContent = title || ("#" + id);
+      document.getElementById("ticketReplyInput").value = "";
+      document.getElementById("ticketImageInput").value = "";
+      document.getElementById("ticketImageName").textContent = "";
+      var m = document.getElementById("ticketMsg");
+      m.className = "msg";
+      m.textContent = "";
+      document.getElementById("ticketModal").style.display = "flex";
+    }
+
+    function closeTicketModal() {
+      ticketPendingId = null;
+      document.getElementById("ticketModal").style.display = "none";
+    }
+
+    document.getElementById("ticketCancel").addEventListener("click", closeTicketModal);
+
+    document.getElementById("ticketImageChoose").addEventListener("click", function () {
+      document.getElementById("ticketImageInput").click();
+    });
+
+    document.getElementById("ticketImageInput").addEventListener("change", function () {
+      var f = this.files && this.files[0];
+      document.getElementById("ticketImageName").textContent = f ? f.name : "";
+    });
+
+    document.getElementById("ticketConfirm").addEventListener("click", function () {
+      if (ticketPendingId === null) return;
+      var msg = document.getElementById("ticketMsg");
+      var btn = document.getElementById("ticketConfirm");
+      var reply = document.getElementById("ticketReplyInput").value.trim();
+      if (!reply) {
+        msg.className = "msg error";
+        msg.textContent = "请填写批复内容";
+        return;
+      }
+      var file = document.getElementById("ticketImageInput").files && document.getElementById("ticketImageInput").files[0];
+
+      function send(replyImage) {
+        btn.disabled = true;
+        msg.className = "msg";
+        msg.textContent = "提交中…";
+        fetch("/api/admin/tickets/reply", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token },
+          body: JSON.stringify({ id: ticketPendingId, reply: reply, reply_image: replyImage })
+        })
+          .then(function (res) {
+            if (handleStatus(res.status)) throw new Error("unauthorized");
+            return res.json().then(function (data) { return { ok: res.ok, status: res.status, data: data }; });
+          })
+          .then(function (r) {
+            btn.disabled = false;
+            if (!r.ok) {
+              msg.className = "msg error";
+              msg.textContent = r.status === 403 ? "无权限批复该工单" : (r.data.error || "批复失败");
+              return;
+            }
+            closeTicketModal();
+            loadTickets();
+            refreshDots();
+          })
+          .catch(function (err) {
+            btn.disabled = false;
+            if (err.message !== "unauthorized") {
+              msg.className = "msg error";
+              msg.textContent = "网络错误：" + err.message;
+            }
+          });
+      }
+
+      if (!file) { send(""); return; }
+      if (file.size > 5 * 1024 * 1024) {
+        msg.className = "msg error";
+        msg.textContent = "图片不能超过 5MB";
+        return;
+      }
+      var reader = new FileReader();
+      reader.onload = function () { send(reader.result); };
+      reader.onerror = function () {
+        msg.className = "msg error";
+        msg.textContent = "图片读取失败";
+      };
+      reader.readAsDataURL(file);
+    });
+
+    function refreshDots() {
+      fetch("/api/admin/pending-counts", { headers: authHeaders() })
+        .then(function (res) { return res.json(); })
+        .then(function (data) {
+          var counts = (data && data.counts) || {};
+          var map = { review: "student_review", appeals: "ban_appeal_review", tickets: "ticket_manage" };
+          for (var panel in map) {
+            if (!map.hasOwnProperty(panel)) continue;
+            var dot = document.querySelector('[data-dot="' + panel + '"]');
+            if (!dot) continue;
+            dot.style.display = counts[map[panel]] > 0 ? "block" : "none";
+          }
+        })
+        .catch(function () {});
+    }
+
     function denyAccess(text) {
       document.getElementById("menuArea").style.display = "none";
       document.getElementById("contentArea").innerHTML =
@@ -1500,7 +1722,7 @@
           currentUserId = user.id;
           currentWeight = ROLE_WEIGHTS[user.role] || 0;
           currentPermissions = user.permissions || [];
-          if (currentWeight < ROLE_WEIGHTS.super_admin && currentPermissions.length === 0) {
+          if (currentWeight < ROLE_WEIGHTS.admin && currentPermissions.length === 0) {
             denyAccess("暂无权限访问管理后台");
             return;
           }

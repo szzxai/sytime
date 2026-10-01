@@ -221,6 +221,24 @@ CREATE TABLE IF NOT EXISTS ban_appeals (
 
 CREATE INDEX IF NOT EXISTS idx_ban_appeals_status ON ban_appeals(status);
 CREATE INDEX IF NOT EXISTS idx_ban_appeals_user ON ban_appeals(user_id);
+
+CREATE TABLE IF NOT EXISTS tickets (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL,
+  username TEXT NOT NULL DEFAULT '',
+  title TEXT NOT NULL,
+  content TEXT NOT NULL,
+  visibility TEXT NOT NULL DEFAULT 'admin',
+  status TEXT NOT NULL DEFAULT 'pending',
+  reply_content TEXT NOT NULL DEFAULT '',
+  reply_image TEXT NOT NULL DEFAULT '',
+  reply_by TEXT NOT NULL DEFAULT '',
+  replied_at INTEGER,
+  created_at INTEGER NOT NULL DEFAULT (strftime('%s','now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_tickets_status ON tickets(status);
+CREATE INDEX IF NOT EXISTS idx_tickets_user ON tickets(user_id);
 `);
 
 (function migrateInviteCode() {
@@ -299,6 +317,7 @@ const weeklyUpload = multer({
 });
 
 const ROLE_WEIGHTS = { developer: 6, super_admin: 5, admin: 4, student: 3, user: 2, guest: 1 };
+const TICKET_VISIBILITIES = ["admin", "super_admin", "developer"];
 
 const BANS_DIR = path.join(UPLOAD_DIR, "bans");
 if (!fs.existsSync(BANS_DIR)) {
@@ -379,7 +398,8 @@ const PERMISSIONS = {
   weekly_menu_upload: "每周菜谱上传",
   map_popup_edit: "地图弹窗编辑",
   user_manage: "用户管理",
-  ban_appeal_review: "申诉处理"
+  ban_appeal_review: "申诉处理",
+  ticket_manage: "工单管理"
 };
 
 const PERMISSION_REQUIRES = {
@@ -390,7 +410,8 @@ const PERMISSION_REQUIRES = {
   user_manage: "super_admin",
   ban_appeal_review: "super_admin",
   weekly_menu_upload: "admin",
-  map_popup_edit: "admin"
+  map_popup_edit: "admin",
+  ticket_manage: "admin"
 };
 
 function userPermissionList(userId) {
@@ -895,6 +916,95 @@ app.put("/api/admin/ban-appeals/review", requirePermission("ban_appeal_review"),
   }
   db.prepare("UPDATE ban_appeals SET status = 'rejected' WHERE id = ?").run(appealId);
   res.json({ ok: true, status: "rejected" });
+});
+
+app.post("/api/tickets", requireLogin, function (req, res) {
+  const body = req.body || {};
+  const title = body.title === undefined || body.title === null ? "" : String(body.title).trim();
+  const content = body.content === undefined || body.content === null ? "" : String(body.content).trim();
+  let visibility = body.visibility;
+  if (TICKET_VISIBILITIES.indexOf(visibility) === -1) visibility = "admin";
+  if (!title || !content) {
+    res.status(400).json({ error: "title and content are required" });
+    return;
+  }
+  const info = db
+    .prepare("INSERT INTO tickets (user_id, username, title, content, visibility, status) VALUES (?, ?, ?, ?, ?, 'pending')")
+    .run(req.user.id, req.user.username || "", title, content, visibility);
+  res.status(201).json({ ticket: { id: Number(info.lastInsertRowid), status: "pending" } });
+});
+
+app.get("/api/tickets/mine", requireLogin, function (req, res) {
+  const rows = db
+    .prepare(
+      "SELECT id, title, content, visibility, status, reply_content, reply_image, reply_by, replied_at, created_at FROM tickets WHERE user_id = ? ORDER BY created_at DESC, id DESC"
+    )
+    .all(req.user.id);
+  res.json({ tickets: rows });
+});
+
+app.get("/api/admin/tickets", requirePermission("ticket_manage"), function (req, res) {
+  const reviewerWeight = ROLE_WEIGHTS[req.user.role] || 0;
+  const allowed = TICKET_VISIBILITIES.filter(function (v) {
+    return (ROLE_WEIGHTS[v] || 0) <= reviewerWeight;
+  });
+  const rows = db
+    .prepare("SELECT * FROM tickets ORDER BY (status = 'pending') DESC, created_at DESC, id DESC")
+    .all();
+  const visible = rows.filter(function (t) {
+    return allowed.indexOf(t.visibility) !== -1;
+  });
+  res.json({ tickets: visible });
+});
+
+app.put("/api/admin/tickets/reply", requirePermission("ticket_manage"), function (req, res) {
+  const body = req.body || {};
+  const id = parseInt(body.id, 10);
+  const reply = body.reply === undefined || body.reply === null ? "" : String(body.reply).trim();
+  const replyImage = body.reply_image ? String(body.reply_image) : "";
+  if (isNaN(id) || !reply) {
+    res.status(400).json({ error: "id and reply are required" });
+    return;
+  }
+  const ticket = db.prepare("SELECT * FROM tickets WHERE id = ?").get(id);
+  if (!ticket) {
+    res.status(404).json({ error: "ticket not found" });
+    return;
+  }
+  const reviewerWeight = ROLE_WEIGHTS[req.user.role] || 0;
+  if ((ROLE_WEIGHTS[ticket.visibility] || 0) > reviewerWeight) {
+    res.status(403).json({ error: "forbidden" });
+    return;
+  }
+  db.prepare(
+    "UPDATE tickets SET status = 'resolved', reply_content = ?, reply_image = ?, reply_by = ?, replied_at = ? WHERE id = ?"
+  ).run(reply, replyImage, req.user.username || "", Math.floor(Date.now() / 1000), id);
+  res.json({ ok: true, id: id, status: "resolved" });
+});
+
+app.get("/api/admin/pending-counts", requireLogin, function (req, res) {
+  const counts = { student_review: 0, ban_appeal_review: 0, ticket_manage: 0 };
+  if (hasPermission(req, "student_review")) {
+    counts.student_review = Number(
+      db.prepare("SELECT COUNT(*) AS n FROM student_applications WHERE status = 'pending'").get().n
+    );
+  }
+  if (hasPermission(req, "ban_appeal_review")) {
+    counts.ban_appeal_review = Number(
+      db.prepare("SELECT COUNT(*) AS n FROM ban_appeals WHERE status = 'pending'").get().n
+    );
+  }
+  if (hasPermission(req, "ticket_manage")) {
+    const reviewerWeight = ROLE_WEIGHTS[req.user.role] || 0;
+    const allowed = TICKET_VISIBILITIES.filter(function (v) {
+      return (ROLE_WEIGHTS[v] || 0) <= reviewerWeight;
+    });
+    const rows = db.prepare("SELECT visibility FROM tickets WHERE status = 'pending'").all();
+    counts.ticket_manage = rows.filter(function (t) {
+      return allowed.indexOf(t.visibility) !== -1;
+    }).length;
+  }
+  res.json({ counts: counts });
 });
 
 app.get("/api/user/profile", requireLogin, function (req, res) {
