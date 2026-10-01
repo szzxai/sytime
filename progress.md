@@ -34,7 +34,7 @@
 ```
 项目文件夹/                     ← 项目根目录（Git 仓库根）
 ├── node_modules/              ← 已加入 .gitignore
-├── uploads/                   ← 图片上传目录（头像/菜谱；uploads/weekly/ 每周菜谱图片；uploads/bans/ 封禁图）（已加入 .gitignore，启动时自动创建）
+├── uploads/                   ← 图片上传目录（头像/菜谱；uploads/weekly/ 每周菜谱图片；uploads/bans/ 封禁图）（随仓库提交，运行时自动创建）
 ├── public/                    ← Express 静态目录
 │   ├── index.html             ← 首页（含默认界面跳转脚本）+ 关于我们
 │   ├── map.html               ← 校园地图（fetch 数据动态绘制）
@@ -49,13 +49,14 @@
 │   ├── profile.html           ← 个人中心（设置：个人资料/账号安全/网站设置）
 │   └── auth.js                ← 全站共享脚本（导航头像/登录态、菜单栏折叠、横幅）
 ├── data.json                  ← 地图数据（几何 + 名称 + 弹窗 + 颜色），约 178 条 feature
-├── data.db                    ← SQLite 数据库（已加入 .gitignore）
+├── data.db                    ← SQLite 数据库（随仓库提交）
 ├── server.js                  ← Express 后端
 ├── package.json / package-lock.json
 ├── .env                       ← 端口与密钥（已加入 .gitignore）
 ├── .env.example               ← 环境变量模板
-├── .gitignore                 ← node_modules/  .env  *.db  *.db-journal  uploads/
+├── .gitignore                 ← 忽略 node_modules/、.env 及 SQLite 临时文件（*.db-journal/-wal/-shm）
 ├── README.md                  ← 项目说明（GitHub 用）
+├── LICENSE                    ← AGPL-3.0 许可证
 └── progress.md                ← 本文件
 ```
 
@@ -419,6 +420,8 @@ CREATE INDEX idx_ban_appeals_status ON ban_appeals(status);
 37. **用户主键去空号**：将现存用户按顺序重排主键（`test2: 13 → 3`），同步更新所有 `user_id` 引用表，重置 `sqlite_sequence`，使 `users` 为连续的 1/2/3。
 38. **特殊权限系统**：新增 `user_permissions` 表与 `requirePermission(perm)` 中间件（判定=角色权重达标 **或** 显式授权）。9 个管理接口改用细粒度权限（公告/横幅/邀请码/学生审核/用户管理/申诉 → super_admin；菜谱上传/地图弹窗 → admin）。`GET /api/me`、`GET /api/user/profile` 返回 `permissions`；`GET /api/admin/users` 附带每人 `permissions`；新增 `GET /api/admin/permissions` 与 `PUT /api/admin/users/permissions`（不能改自己或 ≥ 自己的人）。`admin.html` 菜单按权限过滤、用户管理新增「权限」勾选弹窗；`auth.js` 有任意授予权限即可显示「管理后台」入口；`map.html` 授予 `map_popup_edit` 即可编辑弹窗。
 39. **文档**：新增 `README.md`（面向 GitHub 的项目说明）；`progress.md` 同步目录结构与最新功能。
+40. **许可证统一为 AGPL-3.0**：新增 `LICENSE`（GNU AGPL v3 全文）；`package.json` 的 `license` 字段由 `ISC` 改为 `AGPL-3.0`；README 的 License 章节同步更新。
+41. **纳入 data.db 与 uploads**：`.gitignore` 改为仅忽略 `node_modules/`、`.env` 及 SQLite 临时文件（`*.db-journal/-wal/-shm`），使 `data.db` 与 `uploads/` 随仓库提交；README 与本文档同步说明。
 
 ---
 

@@ -68,11 +68,11 @@
 │   ├── student_verify.html
 │   ├── profile.html     # 个人中心
 │   └── auth.js          # 全站共享脚本（登录态 / 导航 / 横幅）
-├── uploads/             # 上传目录（运行时自动创建，勿提交）
+├── uploads/             # 上传目录（随仓库提交）
 │   ├── weekly/          # 每周菜谱图片
 │   └── bans/            # 封禁图片
 ├── data.json            # 地图几何与配色数据
-├── data.db              # SQLite 数据库（运行时自动创建，勿提交）
+├── data.db              # SQLite 数据库（随仓库提交）
 ├── server.js            # Express 后端（全部接口）
 ├── package.json
 ├── .env.example         # 环境变量模板
@@ -145,7 +145,7 @@ npm.cmd start
 - 这是一个**动态站点**（Node 后端 + `/api/*`），**不能**直接部署到 GitHub Pages。
 - 可部署到 Render / Railway / Fly.io 等支持 Node 的平台。
 - 需持久化 `data.db` 与 `uploads/`（建议挂载持久卷，或改用外部存储）。
-- `.env`、`data.db`、`uploads/` 已加入 `.gitignore`，不会提交到仓库。
+- `.gitignore` 仅忽略 `.env`、`node_modules/` 及 SQLite 临时文件（`*.db-journal` / `*.db-wal` / `*.db-shm`）；`data.db` 与 `uploads/` 会随仓库提交（便于保留初始数据与图片）。
 - 修改 `server.js` 需重启；修改 `data.json` 无需重启（每次请求实时读取）；`public/` 下的静态资源改动刷新即可。
 
 ---
@@ -168,4 +168,6 @@ npm.cmd start
 
 ## License
 
-ISC
+This project is licensed under the **GNU Affero General Public License v3.0 (AGPL-3.0)**.
+
+完整许可文本见根目录 [LICENSE](./LICENSE)，或访问 <https://www.gnu.org/licenses/agpl-3.0.html>。
