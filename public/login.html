@@ -1,346 +1,142 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="zh-CN">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>登录 · 校园信息网</title>
-<style>
-  * { box-sizing: border-box; }
-  html, body {
-    margin: 0;
-    padding: 0;
-    height: 100%;
-    background: #ffffff;
-    color: #000000;
-    font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
-  }
-  .header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    border-bottom: 2px solid #000000;
-    padding: 16px 32px;
-  }
-  .logo {
-    font-size: 22px;
-    font-weight: bold;
-    letter-spacing: 2px;
-  }
-  .header-right {
-    display: flex;
-    align-items: center;
-    gap: 24px;
-  }
-  .nav {
-    display: flex;
-    gap: 24px;
-  }
-  .nav a {
-    color: #000000;
-    text-decoration: none;
-    font-size: 16px;
-    padding: 6px 4px;
-    border-bottom: 2px solid transparent;
-  }
-  .nav a:hover {
-    border-bottom: 2px solid #000000;
-  }
-  .auth {
-    display: flex;
-    gap: 8px;
-  }
-  .btn {
-    display: inline-block;
-    background: #ffffff;
-    color: #000000;
-    border: 2px solid #000000;
-    border-radius: 0;
-    padding: 8px 14px;
-    font-size: 14px;
-    font-family: inherit;
-    cursor: pointer;
-    text-decoration: none;
-    line-height: 1;
-  }
-  .btn:hover { background: #000000; color: #ffffff; }
-  .main {
-    padding: 56px 16px;
-  }
-  .card {
-    width: 360px;
-    max-width: 100%;
-    margin: 0 auto;
-    border: 2px solid #000000;
-    padding: 28px;
-  }
-  .card h1 {
-    font-size: 22px;
-    letter-spacing: 2px;
-    margin: 0 0 22px;
-  }
-  .field { margin-bottom: 16px; }
-  .field label {
-    display: block;
-    font-size: 13px;
-    color: #555555;
-    margin-bottom: 6px;
-  }
-  .field input {
-    width: 100%;
-    border: 2px solid #000000;
-    border-radius: 0;
-    padding: 10px 12px;
-    font-size: 14px;
-    font-family: inherit;
-    color: #000000;
-    background: #ffffff;
-    outline: none;
-  }
-  .field input:focus { background: #f2f2f2; }
-  .submit {
-    width: 100%;
-    background: #000000;
-    color: #ffffff;
-    border: 2px solid #000000;
-    border-radius: 0;
-    padding: 11px;
-    font-size: 15px;
-    font-family: inherit;
-    cursor: pointer;
-  }
-  .submit:hover { background: #ffffff; color: #000000; }
-  .submit:disabled { opacity: 0.5; cursor: default; }
-  .msg {
-    min-height: 20px;
-    font-size: 13px;
-    margin-top: 14px;
-  }
-  .msg.error { color: #cc0000; }
-  .msg.ok { color: #008800; }
-  .switch {
-    margin-top: 18px;
-    font-size: 13px;
-    text-align: center;
-  }
-  .switch a { color: #000000; }
-  .appeal-box {
-    margin-top: 22px;
-    border-top: 2px solid #000000;
-    padding-top: 18px;
-  }
-  .appeal-box h2 {
-    font-size: 16px;
-    letter-spacing: 1px;
-    margin: 0 0 16px;
-  }
-  .appeal-box textarea {
-    width: 100%;
-    border: 2px solid #000000;
-    border-radius: 0;
-    padding: 10px 12px;
-    font-size: 14px;
-    font-family: inherit;
-    color: #000000;
-    background: #ffffff;
-    outline: none;
-    min-height: 80px;
-    resize: vertical;
-  }
-  .appeal-box .hint {
-    font-size: 12px;
-    color: #999999;
-    margin: 0;
-  }
-  .appeal-box .upload-box {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
-</style>
-</head>
-<body>
-  <header class="header">
-    <div class="logo">校园信息网</div>
-    <div class="header-right">
-      <nav class="nav">
-        <a href="map.html">校园地图</a>
-        <a href="forum.html">论坛</a>
-        <a href="recipe.html">菜谱评价</a>
-        <a href="announcements.html">更新公告</a>
-      </nav>
-      <div class="auth" id="authArea">
-        <a class="btn" href="login.html">登录</a>
-        <a class="btn" href="register.html">注册</a>
-      </div>
-    </div>
-  </header>
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#F5F3EE" />
+    <title>登录 · 校园信息网</title>
+    <link rel="icon" href="/img/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/css/site.css" />
+  </head>
+  <body>
+    <noscript
+      ><div class="alert alert--warning">
+        <div class="alert__body">本站需要启用 JavaScript 才能正常使用。</div>
+      </div></noscript
+    >
+    <a class="skip-link" href="#main">跳到正文</a>
+    <div id="siteBanner"></div>
+    <div id="siteHeader"></div>
+    <main id="main" class="auth container container--narrow">
+      <div class="card auth-card">
+        <div class="auth-card__brand">
+          <svg class="brand__mark" aria-hidden="true">
+            <use href="/img/icons.svg#brand-mark"></use>
+          </svg>
+        </div>
+        <h1 class="auth-card__title">欢迎回来</h1>
+        <p class="auth-card__desc">登录后即可发帖、评价和管理个人设置</p>
 
-  <main class="main">
-    <div class="card">
-      <h1>登录</h1>
-      <form id="loginForm" autocomplete="off">
-        <div class="field">
-          <label for="username">用户名</label>
-          <input type="text" id="username" name="username" required>
-        </div>
-        <div class="field">
-          <label for="password">密码</label>
-          <input type="password" id="password" name="password" required>
-        </div>
-        <button type="submit" class="submit" id="submitBtn">登录</button>
-        <div class="msg" id="msg"></div>
-      </form>
-      <div class="appeal-box" id="appealBox" style="display:none;">
-        <h2>申请解封</h2>
-        <div class="field">
-          <label for="appealReason">申诉理由</label>
-          <textarea id="appealReason" placeholder="请说明情况，以便管理员审核"></textarea>
-        </div>
-        <div class="field">
-          <label>上传图片（选填）</label>
-          <div class="upload-box">
-            <button type="button" class="btn" id="appealImageChoose">选择图片</button>
-            <span class="hint" id="appealImageName"></span>
+        <form id="loginForm" class="form" autocomplete="on" novalidate>
+          <div id="loginAlert" hidden></div>
+          <div class="field">
+            <label class="field__label" for="username">用户名</label>
+            <input
+              class="input"
+              id="username"
+              name="username"
+              type="text"
+              autocomplete="username"
+              enterkeyhint="go"
+              required
+            />
           </div>
-          <input type="file" id="appealImageInput" accept="image/jpeg,image/png" style="display:none;">
+          <div class="field">
+            <label class="field__label" for="password">密码</label>
+            <div class="input-group">
+              <input
+                class="input input--end"
+                id="password"
+                name="password"
+                type="password"
+                autocomplete="current-password"
+                enterkeyhint="go"
+                required
+              />
+              <div class="input-group__end">
+                <button
+                  type="button"
+                  class="icon-btn icon-btn--sm"
+                  data-password-toggle
+                  aria-label="显示密码"
+                >
+                  <svg class="icon" aria-hidden="true">
+                    <use href="/img/icons.svg#i-eye"></use>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+          <button
+            type="submit"
+            class="btn btn--primary btn--lg btn--block"
+            id="submitBtn"
+          >
+            登录
+          </button>
+        </form>
+
+        <div class="auth-card__section" id="appealBox" hidden>
+          <h2 class="form__group-title">申请解封</h2>
+          <div
+            class="field"
+            data-upload
+            data-max-mb="2"
+            data-types="image/jpeg,image/png"
+          >
+            <label class="field__label" for="appealReason">申诉理由</label>
+            <textarea
+              class="textarea"
+              id="appealReason"
+              placeholder="请说明情况，以便管理员审核"
+              data-counter="500"
+            ></textarea>
+            <div class="field__foot">
+              <span class="field__hint"
+                >重复提交将覆盖上一次申请；10 分钟内只能提交一次。</span
+              ><span class="field__counter"></span>
+            </div>
+          </div>
+          <div
+            class="field"
+            data-upload
+            data-max-mb="2"
+            data-types="image/jpeg,image/png"
+          >
+            <span class="field__label"
+              >上传图片 <span class="field__opt">（选填）</span></span
+            >
+            <label class="upload"
+              ><span class="upload__icon"
+                ><svg class="icon icon--lg" aria-hidden="true">
+                  <use href="/img/icons.svg#i-image"></use></svg></span
+              ><span class="upload__title">点击选择图片</span
+              ><span class="upload__hint">JPG / PNG，不超过 2 MB</span
+              ><input
+                aria-label="上传图片"
+                type="file"
+                id="appealImageInput"
+                accept="image/jpeg,image/png"
+            /></label>
+            <div class="upload-preview-slot"></div>
+          </div>
+          <button type="button" class="btn btn--block" id="appealSubmit">
+            提交申诉
+          </button>
         </div>
-        <button type="button" class="submit" id="appealSubmit">提交申诉</button>
-        <div class="hint" style="margin-top:8px;text-align:center;">重复提交将覆盖上一次申请；10 分钟内只能提交一次。</div>
-        <div class="msg" id="appealMsg"></div>
+
+        <p class="auth-card__switch">
+          还没有账号？<a href="register.html">立即注册</a>
+        </p>
       </div>
-      <div class="switch">还没有账号？<a href="register.html">立即注册</a></div>
-    </div>
-  </main>
+    </main>
+    <div id="siteFooter"></div>
+    <script src="/js/ui.js"></script>
+    <script src="/js/page.js"></script>
 
-  <script>
-    var form = document.getElementById("loginForm");
-    var msg = document.getElementById("msg");
-    var submitBtn = document.getElementById("submitBtn");
-    var attemptUsername = "";
-
-    form.addEventListener("submit", function (e) {
-      e.preventDefault();
-      var username = document.getElementById("username").value.trim();
-      var password = document.getElementById("password").value;
-
-      msg.className = "msg";
-      msg.textContent = "登录中…";
-      submitBtn.disabled = true;
-
-      fetch("/api/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username: username, password: password })
-      })
-        .then(function (res) {
-          return res.json().then(function (data) {
-            return { ok: res.ok, status: res.status, data: data };
-          });
-        })
-        .then(function (r) {
-          if (!r.ok) {
-            if (r.status === 403 && r.data && r.data.error === "banned") {
-              showBanned(username, r.data);
-              submitBtn.disabled = false;
-              return;
-            }
-            msg.className = "msg error";
-            msg.textContent = r.data.error === "invalid username or password" ? "用户名或密码错误" : (r.data.error || "登录失败");
-            submitBtn.disabled = false;
-            return;
-          }
-          localStorage.setItem("token", r.data.token);
-          localStorage.setItem("user", JSON.stringify(r.data.user));
-          msg.className = "msg ok";
-          msg.textContent = "登录成功，正在跳转…";
-          setTimeout(function () { location.href = "index.html"; }, 600);
-        })
-        .catch(function (err) {
-          msg.className = "msg error";
-          msg.textContent = "网络错误：" + err.message;
-          submitBtn.disabled = false;
-        });
-    });
-
-    function showBanned(username, data) {
-      var reason = data.ban_reason ? String(data.ban_reason) : "";
-      if (Number(data.allow_appeal) === 1) {
-        attemptUsername = username;
-        msg.className = "msg error";
-        msg.textContent = reason ? ("账号已被封禁。封禁理由：" + reason) : "账号已被封禁。";
-        document.getElementById("appealBox").style.display = "block";
-        return;
-      }
-      msg.className = "msg error";
-      msg.textContent = (reason ? ("账号已被封禁。封禁理由：" + reason + "　") : "账号已被封禁。") +
-        "您已被封禁，如要解封请线下联系超级管理员";
-    }
-
-    document.getElementById("appealImageChoose").addEventListener("click", function () {
-      document.getElementById("appealImageInput").click();
-    });
-
-    document.getElementById("appealImageInput").addEventListener("change", function () {
-      var f = this.files && this.files[0];
-      document.getElementById("appealImageName").textContent = f ? f.name : "";
-    });
-
-    document.getElementById("appealSubmit").addEventListener("click", function () {
-      var amsg = document.getElementById("appealMsg");
-      var btn = document.getElementById("appealSubmit");
-      var reason = document.getElementById("appealReason").value.trim();
-      if (!reason) {
-        amsg.className = "msg error";
-        amsg.textContent = "请填写申诉理由";
-        return;
-      }
-      var file = document.getElementById("appealImageInput").files && document.getElementById("appealImageInput").files[0];
-      btn.disabled = true;
-      amsg.className = "msg";
-      amsg.textContent = "提交中…";
-
-      function send(dataUrl) {
-        fetch("/api/user/appeal", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ username: attemptUsername, appeal_reason: reason, appeal_image: dataUrl || "" })
-        })
-          .then(function (res) {
-            return res.json().then(function (data) { return { ok: res.ok, data: data }; });
-          })
-          .then(function (r) {
-            btn.disabled = false;
-            if (!r.ok) {
-              amsg.className = "msg error";
-              amsg.textContent = r.data.message || r.data.error || "提交失败";
-              return;
-            }
-            amsg.className = "msg ok";
-            amsg.textContent = "申诉已提交，请等待管理员审核";
-          })
-          .catch(function (err) {
-            btn.disabled = false;
-            amsg.className = "msg error";
-            amsg.textContent = "网络错误：" + err.message;
-          });
-      }
-
-      if (file) {
-        if (file.size > 2 * 1024 * 1024) {
-          btn.disabled = false;
-          amsg.className = "msg error";
-          amsg.textContent = "图片不能超过 2MB";
-          return;
-        }
-        var reader = new FileReader();
-        reader.onload = function () { send(reader.result); };
-        reader.onerror = function () { send(""); };
-        reader.readAsDataURL(file);
-      } else {
-        send("");
-      }
-    });
-  </script>
-  <script src="auth.js"></script>
-</body>
+    <script src="/js/pages/login.js"></script>
+  </body>
 </html>

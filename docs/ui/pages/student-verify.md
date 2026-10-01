@@ -1,0 +1,203 @@
+# 学生认证 · student_verify.html
+
+> 状态：现有改版 ｜ 优先级：P0 ｜ issue：#4 ｜ 依赖：阶段 0 ｜ 壳：默认 ｜ data-nav：无 ｜ 容器：`container--form`
+
+## 用途与目标
+
+未达学生角色的用户提交认证（新生号/班级/真实姓名 + 可选邀请码与补充信息）；填有效邀请码立即通过；否则进入待审核（10 分钟限流）。已达 student 的用户看到成功态。
+
+## 布局
+
+```text
+手机 360                     桌面 1280
+┌──────────────────┐   ┌────────────────────────────┐
+│ 页头              │   │ 页头                        │
+│ ┌──────────────┐ │   │   ┌────────────────┐       │
+│ │ 学生认证       │ │   │   │ 学生认证         │       │
+│ │ 说明一句       │ │   │   │ 说明一句         │       │
+│ │ 新生号 ____   │ │   │   │ 新生号 ____      │       │
+│ │ 班级   ____   │ │   │   │ 班级   ____      │       │
+│ │ 真实姓名 ____  │ │   │   │ 真实姓名 ____    │       │
+│ │ 邀请码 ____   │ │   │   │ 邀请码 ____ (选填)│       │
+│ │ 补充信息 ____ │ │   │   │ 补充信息 ____     │       │
+│ │ [ 提交认证 ]  │ │   │   │ [ 提交认证 ]      │       │
+│ └──────────────┘ │   │   └────────────────┘       │
+└──────────────────┘   └────────────────────────────┘
+已认证态：卡内居中 [已认证] 实心徽标 + 「你已认证为学生」
+```
+
+## HTML 骨架
+
+```html
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#F5F3EE">
+<title>学生认证 · 校园信息网</title>
+<link rel="icon" href="img/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="css/site.css">
+</head>
+<body>
+<a class="skip-link" href="#main">跳到正文</a>
+<div id="siteBanner"></div>
+<div id="siteHeader"></div>
+<main id="main" class="auth container container--form">
+  <div class="card auth-card auth-card--wide">
+    <div id="alreadyBox" class="empty empty--compact" hidden>
+      <div class="empty__icon"><svg class="icon" aria-hidden="true"><use href="img/icons.svg#i-graduation"></use></svg></div>
+      <div class="empty__title">你已认证为学生</div>
+      <div class="empty__desc">无需再次提交。发帖、评价等功能已解锁。</div>
+      <div class="empty__actions"><a class="btn" href="forum.html">去论坛</a></div>
+    </div>
+
+    <div id="formBox">
+      <h1 class="auth-card__title">学生认证</h1>
+      <p class="auth-card__desc">提交后由管理员审核；若管理员开启了邀请码，填入正确的邀请码可直接通过。</p>
+      <form id="applyForm" class="form" novalidate>
+        <div class="field">
+          <label class="field__label" for="student_id">新生号</label>
+          <input class="input" id="student_id" type="text" required enterkeyhint="next">
+        </div>
+        <div class="field">
+          <label class="field__label" for="class_name">班级</label>
+          <input class="input" id="class_name" type="text" required enterkeyhint="next">
+        </div>
+        <div class="field">
+          <label class="field__label" for="real_name">真实姓名</label>
+          <input class="input" id="real_name" type="text" required enterkeyhint="next">
+        </div>
+        <div class="field">
+          <label class="field__label" for="invite_code">邀请码 <span class="field__opt">（选填）</span></label>
+          <input class="input" id="invite_code" type="text" enterkeyhint="next">
+          <div class="field__hint">如果管理员开启了邀请码，填入可直接通过审核</div>
+        </div>
+        <div class="field">
+          <label class="field__label" for="extra_info">补充更多信息 <span class="field__opt">（选填）</span></label>
+          <textarea class="textarea" id="extra_info" data-counter="200"></textarea>
+          <div class="field__foot"><span class="field__hint">补充更多信息可提高通过率</span><span class="field__counter"></span></div>
+        </div>
+        <button type="submit" class="btn btn--primary btn--lg btn--block" id="submitBtn">提交认证</button>
+        <div class="field__hint u-center">重复提交将覆盖上一次申请；10 分钟内只能提交一次。</div>
+      </form>
+    </div>
+  </div>
+</main>
+<div id="siteFooter"></div>
+<script src="js/ui.js"></script>
+<script>
+var token = UI.session.token();
+var submitBtn = document.getElementById("submitBtn");
+var form = document.getElementById("applyForm");
+if (!token) { UI.goLogin(); }
+
+function showAlready() {
+  document.getElementById("formBox").hidden = true;
+  document.getElementById("alreadyBox").hidden = false;
+}
+
+// 已认证则显示成功态（原逻辑保留）
+UI.api("/api/user/profile").then(function (r) {
+  if (r.status === 401) return;
+  var role = r.data && r.data.user && r.data.user.role;
+  if (UI.session.isAtLeast("student", r.data && r.data.user)) showAlready();
+});
+
+form.addEventListener("submit", function (e) {
+  e.preventDefault();
+  UI.form.clearAll(form);
+  var payload = {
+    student_id: document.getElementById("student_id").value.trim(),
+    class_name: document.getElementById("class_name").value.trim(),
+    real_name: document.getElementById("real_name").value.trim(),
+    invite_code: document.getElementById("invite_code").value.trim(),
+    extra_info: document.getElementById("extra_info").value.trim()
+  };
+  var bad = null;
+  if (!payload.student_id) bad = ["student_id", "请填写新生号"];
+  else if (!payload.class_name) bad = ["class_name", "请填写班级"];
+  else if (!payload.real_name) bad = ["real_name", "请填写真实姓名"];
+  if (bad) { UI.form.fieldError(document.getElementById(bad[0]), bad[1]); UI.form.focusFirstInvalid(form); return; }
+  UI.form.busy(submitBtn, true);
+  UI.api("/api/student/apply", { method: "POST", body: payload }).then(function (r) {
+    if (!r.ok) {
+      UI.form.busy(submitBtn, false);
+      if (r.status === 429 && r.data && r.data.retry_after !== undefined) {
+        var left = Number(r.data.retry_after) || 600;
+        UI.toast.warning(UI.errorText(r));
+        UI.countdown(left, function (n) { submitBtn.textContent = "等待 " + UI.formatCountdown(n); }, function () { submitBtn.textContent = "提交认证"; });
+        return;
+      }
+      UI.toast.error(UI.errorText(r, "提交失败"));
+      return;
+    }
+    if (r.data.status === "approved") {
+      UI.session.patch({ role: "student" });
+      UI.shell.refreshAuth();
+      UI.toast.success("认证成功");
+      setTimeout(showAlready, 600);
+    } else {
+      UI.toast.success("已提交，等待管理员审核");
+      UI.form.busy(submitBtn, false);
+    }
+  });
+});
+UI.qsa('[data-counter]').forEach(UI.form.counter);
+</script>
+</body>
+</html>
+```
+
+## JS 钩子清单（旧 → 新）
+
+| 旧钩子 | 旧用途 | 新位置 | 处置 |
+| --- | --- | --- | --- |
+| #alreadyBox / #formBox | 成功态切换 | 同 ID（`hidden` 属性） | 保留 |
+| #applyForm / #student_id / #class_name / #real_name / #invite_code / #extra_info / #submitBtn | 表单 | 同 ID | 保留 |
+| #msg | 结果文字 | Toast + 字段错误 + 倒计时 | 删除 |
+| `.already .badge`（已认证徽标） | 成功态视觉 | `empty--compact` + 毕业帽图标 | 替换 |
+| `.hidden` 类 | 显隐 | `hidden` 属性 | 替换 |
+
+## 需要修改的脚本行为
+
+1. 校验拆分为逐字段内联（原为一条合并消息）。
+2. 429 → toast + 按钮 `UI.countdown` 倒计时（原来只是文字消息）。
+3. `approved` → `UI.session.patch({role:'student'})` + `UI.shell.refreshAuth()`（同步页头头像/菜单）+ toast，0.6s 后切成功态。
+4. 错误经 `UI.errorText`；「login required」类 401 由 `UI.api` 自动处理。
+
+## 状态矩阵
+
+| 状态 | 触发 | 界面 |
+| --- | --- | --- |
+| 未登录 | 无 token | `UI.goLogin()`（带 next） |
+| 已认证 | role ≥ student | 成功态（空态块：图标+标题+说明+去论坛） |
+| 表单默认 | 正常 | 认证表单 |
+| 提交中 | submit | busy |
+| 直通成功 | status=approved | toast「认证成功」→ 成功态 |
+| 待审核 | status=pending | toast「已提交，等待管理员审核」（表单可再次提交，覆盖原申请） |
+| 必填缺失 | 前端 | 内联错误 + 聚焦 |
+| 限流 | 429 | toast「10 分钟内只能提交一次，请稍后再试」+ 按钮倒计时 mm:ss |
+| 邀请码错误 | 走待审核分支 | 与待审核一致（不单独提示邀请码无效；避免暴露码池） |
+| 网络失败 | status 0 | toast 网络文案 |
+
+## 响应式
+
+- 360：全宽卡（576 上限）；768：垂直居中。
+
+## 边界场景
+
+- 真实姓名含空格 → trim 后提交；补充信息计数 200（软限制）。
+- 重复提交覆盖旧申请（后端行为）→ 界面无特殊处理（提示常驻在表单下方）。
+
+## 无障碍要点
+
+- 成功态焦点：切换后把焦点移到 `alreadyBox`（`alreadyBox.setAttribute('tabindex','-1'); alreadyBox.focus();`）。
+
+## 验收清单
+
+- [ ] 未登录跳登录带 next；已认证显示成功态并隐藏表单。
+- [ ] 逐字段校验 + 聚焦；邀请码选填。
+- [ ] 直通 approved：toast + 成功态 + 页头刷新。
+- [ ] 429：toast + 按钮倒计时并恢复。
+- [ ] 计数器工作；无 alert/confirm；控制台零报错。

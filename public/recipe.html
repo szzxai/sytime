@@ -1,633 +1,209 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="zh-CN">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>菜谱评价 · 校园信息网</title>
-<style>
-  * { box-sizing: border-box; }
-  html, body {
-    margin: 0;
-    padding: 0;
-    background: #ffffff;
-    color: #000000;
-    font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
-  }
-  .header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    border-bottom: 2px solid #000000;
-    padding: 16px 32px;
-  }
-  .logo {
-    font-size: 22px;
-    font-weight: bold;
-    letter-spacing: 2px;
-  }
-  .header-right {
-    display: flex;
-    align-items: center;
-    gap: 24px;
-  }
-  .nav {
-    display: flex;
-    gap: 24px;
-  }
-  .nav a {
-    color: #000000;
-    text-decoration: none;
-    font-size: 16px;
-    padding: 6px 4px;
-    border-bottom: 2px solid transparent;
-  }
-  .nav a:hover { border-bottom: 2px solid #000000; }
-  .auth {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-  .btn {
-    display: inline-block;
-    background: #ffffff;
-    color: #000000;
-    border: 2px solid #000000;
-    border-radius: 0;
-    padding: 8px 14px;
-    font-size: 14px;
-    font-family: inherit;
-    cursor: pointer;
-    text-decoration: none;
-    line-height: 1;
-  }
-  .btn:hover { background: #000000; color: #ffffff; }
-  .btn.active { background: #000000; color: #ffffff; }
-  .wrap {
-    max-width: 960px;
-    margin: 0 auto;
-    padding: 32px 16px 56px;
-  }
-  .switch {
-    display: flex;
-    gap: 8px;
-    margin-bottom: 20px;
-  }
-  .panel {
-    border: 2px solid #000000;
-    padding: 20px;
-    margin-bottom: 24px;
-  }
-  .panel h2 {
-    font-size: 16px;
-    letter-spacing: 1px;
-    margin: 0 0 16px;
-  }
-  .grid-form {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 0 16px;
-  }
-  .field { margin-bottom: 14px; }
-  .field.full { grid-column: 1 / -1; }
-  .field label {
-    display: block;
-    font-size: 13px;
-    color: #555555;
-    margin-bottom: 6px;
-  }
-  .field input,
-  .field textarea,
-  .field select {
-    width: 100%;
-    border: 2px solid #000000;
-    border-radius: 0;
-    padding: 10px 12px;
-    font-size: 14px;
-    font-family: inherit;
-    color: #000000;
-    background: #ffffff;
-    outline: none;
-  }
-  .field textarea { min-height: 90px; resize: vertical; }
-  .field input[type="file"] { padding: 8px; }
-  .submit {
-    background: #000000;
-    color: #ffffff;
-    border: 2px solid #000000;
-    border-radius: 0;
-    padding: 10px 22px;
-    font-size: 14px;
-    font-family: inherit;
-    cursor: pointer;
-  }
-  .submit:hover { background: #ffffff; color: #000000; }
-  .submit:disabled { opacity: 0.5; cursor: default; }
-  .msg { min-height: 18px; font-size: 13px; margin-top: 12px; }
-  .msg.error { color: #cc0000; }
-  .msg.ok { color: #008800; }
-  .login-hint {
-    border: 2px dashed #000000;
-    padding: 24px;
-    text-align: center;
-    font-size: 14px;
-    margin-bottom: 24px;
-  }
-  .login-hint a { color: #000000; }
-  .recipes {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-    gap: 16px;
-  }
-  .recipe {
-    border: 2px solid #000000;
-    display: flex;
-    flex-direction: column;
-  }
-  .recipe-img {
-    display: block;
-    width: 100%;
-    height: 170px;
-    object-fit: cover;
-    border-bottom: 2px solid #000000;
-  }
-  .recipe-body { padding: 14px; }
-  .recipe-head {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 8px;
-    margin-bottom: 8px;
-  }
-  .recipe-name { font-size: 16px; font-weight: bold; word-break: break-word; }
-  .rating { flex: none; font-size: 14px; letter-spacing: 1px; }
-  .recipe-comment {
-    font-size: 14px;
-    line-height: 1.6;
-    white-space: pre-wrap;
-    word-break: break-word;
-    margin-bottom: 10px;
-  }
-  .recipe-meta { font-size: 12px; color: #777777; }
-  .empty {
-    grid-column: 1 / -1;
-    font-size: 14px;
-    color: #777777;
-    text-align: center;
-    padding: 24px;
-    border: 2px dashed #dddddd;
-  }
-  .recipes.weekly-mode { display: block; }
-  .weekly-group { margin-bottom: 36px; }
-  .weekly-group:last-child { margin-bottom: 0; }
-  .weekly-group-title {
-    font-size: 16px;
-    letter-spacing: 1px;
-    text-align: center;
-    margin: 0 0 16px;
-  }
-  .weekly-images {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 18px;
-  }
-  .weekly-image {
-    display: block;
-    width: 100%;
-    max-width: 100%;
-    height: auto;
-    border: 2px solid #000000;
-    background: #ffffff;
-  }
-  .weekly-figure { position: relative; width: 100%; }
-  .weekly-entry {
-    border: 2px solid #000000;
-    margin-bottom: 14px;
-  }
-  .weekly-date-toggle {
-    display: block;
-    width: 100%;
-    text-align: left;
-    background: #ffffff;
-    color: #000000;
-    border: none;
-    padding: 14px 16px;
-    font-size: 15px;
-    font-family: inherit;
-    letter-spacing: 1px;
-    cursor: pointer;
-  }
-  .weekly-date-toggle:hover { background: #000000; color: #ffffff; }
-  .weekly-collapse-row { text-align: left; padding: 8px 12px 12px; }
-  .weekly-collapse {
-    background: #ffffff;
-    color: #000000;
-    border: 2px solid #000000;
-    padding: 6px 14px;
-    font-size: 13px;
-    font-family: inherit;
-    cursor: pointer;
-  }
-  .weekly-collapse:hover { background: #000000; color: #ffffff; }
-  .weekly-delete {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    background: #ffffff;
-    color: #000000;
-    border: 2px solid #000000;
-    padding: 6px 12px;
-    font-size: 13px;
-    font-family: inherit;
-    cursor: pointer;
-  }
-  .weekly-delete:hover { background: #000000; color: #ffffff; }
-  .zoom-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    z-index: 6000;
-    background: rgba(0, 0, 0, 0.85);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    overflow: hidden;
-  }
-  .zoom-img {
-    max-width: 90vw;
-    max-height: 90vh;
-    user-select: none;
-    -webkit-user-drag: none;
-    cursor: grab;
-    background: #ffffff;
-  }
-</style>
-</head>
-<body>
-  <header class="header">
-    <div class="logo">校园信息网</div>
-    <div class="header-right">
-      <nav class="nav">
-        <a href="map.html">校园地图</a>
-        <a href="forum.html">论坛</a>
-        <a href="recipe.html">菜谱评价</a>
-        <a href="announcements.html">更新公告</a>
-      </nav>
-      <div class="auth" id="authArea">
-        <a class="btn" href="login.html">登录</a>
-        <a class="btn" href="register.html">注册</a>
-      </div>
-    </div>
-  </header>
-
-  <main class="wrap">
-    <div class="switch">
-      <button class="btn active" id="allBtn">全部（A-Z）</button>
-      <button class="btn" id="weeklyBtn">每周食谱</button>
-    </div>
-
-    <div class="panel" id="publishPanel" style="display:none;">
-      <h2>发布评价</h2>
-      <form id="recipeForm" autocomplete="off">
-        <div class="grid-form">
-          <div class="field">
-            <label for="name">菜名</label>
-            <input type="text" id="name" required>
-          </div>
-          <div class="field">
-            <label for="rating">评分</label>
-            <select id="rating">
-              <option value="5">5 分</option>
-              <option value="4">4 分</option>
-              <option value="3">3 分</option>
-              <option value="2">2 分</option>
-              <option value="1">1 分</option>
-            </select>
-          </div>
-          <div class="field full">
-            <label for="comment">评论</label>
-            <textarea id="comment"></textarea>
-          </div>
-          <div class="field full">
-            <label for="image">图片（jpg / png，≤ 2MB）</label>
-            <input type="file" id="image" accept="image/jpeg,image/png">
-          </div>
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#F5F3EE" />
+    <title>菜谱评价 · 校园信息网</title>
+    <link rel="icon" href="/img/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/css/site.css" />
+  </head>
+  <body data-nav="recipe">
+    <noscript
+      ><div class="alert alert--warning">
+        <div class="alert__body">本站需要启用 JavaScript 才能正常使用。</div>
+      </div></noscript
+    >
+    <a class="skip-link" href="#main">跳到正文</a>
+    <div id="siteBanner"></div>
+    <div id="siteHeader"></div>
+    <main id="main" class="main container">
+      <div class="page-head">
+        <div class="page-head__main">
+          <span class="page-head__eyebrow">Canteen</span>
+          <h1 class="page-head__title">菜谱评价</h1>
         </div>
-        <button type="submit" class="submit" id="recipeSubmit">发布</button>
-        <div class="msg" id="formMsg"></div>
-      </form>
-    </div>
+        <div class="page-head__actions" id="writeAction">
+          <button type="button" class="btn btn--primary" id="writeBtn">
+            <svg class="icon" aria-hidden="true">
+              <use href="/img/icons.svg#i-pencil"></use></svg
+            >写评价
+          </button>
+        </div>
+      </div>
 
-    <div class="login-hint" id="loginHint" style="display:none;">
-      请先登录后再发布评价　<a href="login.html">前往登录</a>
-    </div>
+      <div class="segmented u-mb-6" role="tablist" aria-label="视图">
+        <button
+          type="button"
+          class="segmented__item"
+          role="tab"
+          id="allBtn"
+          data-view="all"
+          aria-selected="true"
+        >
+          全部菜品
+        </button>
+        <button
+          type="button"
+          class="segmented__item"
+          role="tab"
+          id="weeklyBtn"
+          data-view="weekly"
+          aria-selected="false"
+        >
+          每周食谱
+        </button>
+      </div>
 
-    <div class="recipes" id="recipeList"></div>
-  </main>
+      <div class="callout" id="loginHint" hidden>
+        <span class="callout__text">登录后才能写评价。</span>
+        <span class="callout__actions"
+          ><a class="btn btn--sm" href="login.html">登录</a
+          ><a class="btn btn--primary btn--sm" href="register.html"
+            >注册</a
+          ></span
+        >
+      </div>
 
-  <script src="auth.js"></script>
-  <script>
-    var token = localStorage.getItem("token");
-    var currentView = "all";
-    var ROLE_WEIGHTS = { developer: 6, super_admin: 5, admin: 4, student: 3, user: 2, guest: 1 };
+      <div id="recipeList" aria-live="polite"></div>
+      <div class="load-more" id="loadMore" hidden>
+        <button type="button" class="btn" id="moreBtn">加载更多</button
+        ><span id="moreInfo"></span>
+      </div>
 
-    function currentUser() {
-      var user = null;
-      try { user = JSON.parse(localStorage.getItem("user") || "null"); } catch (e) { user = null; }
-      return user;
-    }
+      <dialog
+        class="dialog dialog--sheet dialog--wide"
+        id="reviewDialog"
+        aria-labelledby="reviewDialog-t"
+      >
+        <form class="dialog__form" id="recipeForm" novalidate>
+          <div class="dialog__head">
+            <h2 class="dialog__title" id="reviewDialog-t">写评价</h2>
+            <button
+              type="button"
+              class="icon-btn icon-btn--sm"
+              data-dialog-close
+              aria-label="关闭"
+            >
+              <svg class="icon" aria-hidden="true">
+                <use href="/img/icons.svg#i-close"></use>
+              </svg>
+            </button>
+          </div>
+          <div class="dialog__body">
+            <div class="field">
+              <label class="field__label" for="name">菜名</label>
+              <input
+                class="input"
+                id="name"
+                type="text"
+                required
+                data-counter="20"
+                enterkeyhint="next"
+              />
+              <div class="field__foot">
+                <span class="field__hint">和食堂菜单写法一致更容易被搜到</span
+                ><span class="field__counter"></span>
+              </div>
+            </div>
+            <div class="field">
+              <span class="field__label" id="ratingLabel">评分</span>
+              <div
+                class="rating-input"
+                role="radiogroup"
+                aria-labelledby="ratingLabel"
+              >
+                <input
+                  type="radio"
+                  name="rating"
+                  id="r5"
+                  value="5"
+                  checked
+                /><label for="r5" title="5 分"
+                  ><svg class="icon" aria-hidden="true">
+                    <use href="/img/icons.svg#i-star"></use></svg
+                ></label>
+                <input type="radio" name="rating" id="r4" value="4" /><label
+                  for="r4"
+                  title="4 分"
+                  ><svg class="icon" aria-hidden="true">
+                    <use href="/img/icons.svg#i-star"></use></svg
+                ></label>
+                <input type="radio" name="rating" id="r3" value="3" /><label
+                  for="r3"
+                  title="3 分"
+                  ><svg class="icon" aria-hidden="true">
+                    <use href="/img/icons.svg#i-star"></use></svg
+                ></label>
+                <input type="radio" name="rating" id="r2" value="2" /><label
+                  for="r2"
+                  title="2 分"
+                  ><svg class="icon" aria-hidden="true">
+                    <use href="/img/icons.svg#i-star"></use></svg
+                ></label>
+                <input type="radio" name="rating" id="r1" value="1" /><label
+                  for="r1"
+                  title="1 分"
+                  ><svg class="icon" aria-hidden="true">
+                    <use href="/img/icons.svg#i-star"></use></svg
+                ></label>
+              </div>
+              <div class="field__hint">默认 5 分可改</div>
+            </div>
+            <div class="field">
+              <label class="field__label" for="comment"
+                >评论 <span class="field__opt">（选填）</span></label
+              >
+              <textarea
+                class="textarea"
+                id="comment"
+                data-counter="500"
+              ></textarea>
+              <div class="field__foot">
+                <span class="field__hint"></span
+                ><span class="field__counter"></span>
+              </div>
+            </div>
+            <div
+              class="field"
+              data-upload
+              data-max-mb="2"
+              data-types="image/jpeg,image/png"
+            >
+              <span class="field__label"
+                >图片 <span class="field__opt">（选填）</span></span
+              >
+              <label class="upload"
+                ><span class="upload__icon"
+                  ><svg class="icon icon--lg" aria-hidden="true">
+                    <use href="/img/icons.svg#i-image"></use></svg></span
+                ><span class="upload__title">点击选择或拖入图片</span
+                ><span class="upload__hint">JPG / PNG，不超过 2 MB</span
+                ><input
+                  aria-label="上传图片"
+                  type="file"
+                  id="image"
+                  accept="image/jpeg,image/png"
+              /></label>
+              <div class="upload-preview-slot"></div>
+            </div>
+          </div>
+          <div class="dialog__foot">
+            <button type="button" class="btn" data-dialog-close>取消</button>
+            <button type="submit" class="btn btn--primary" id="recipeSubmit">
+              发布
+            </button>
+          </div>
+        </form>
+      </dialog>
+    </main>
+    <div id="siteFooter"></div>
+    <script src="/js/ui.js"></script>
+    <script src="/js/page.js"></script>
 
-    function canDeleteWeekly(item) {
-      var user = currentUser();
-      if (!user) return false;
-      if ((ROLE_WEIGHTS[user.role] || 0) >= ROLE_WEIGHTS.super_admin) return true;
-      return item.user_id !== null && item.user_id !== undefined && String(item.user_id) === String(user.id);
-    }
-
-    function escapeHtml(value) {
-      if (value === null || value === undefined) return "";
-      return String(value)
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#39;");
-    }
-
-    function formatTime(sec) {
-      var d = new Date(Number(sec) * 1000);
-      function p(n) { return n < 10 ? "0" + n : "" + n; }
-      return d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" + p(d.getDate()) + " " + p(d.getHours()) + ":" + p(d.getMinutes());
-    }
-
-    function ratingStars(rating) {
-      var n = Math.max(0, Math.min(5, parseInt(rating, 10) || 0));
-      var out = "";
-      for (var i = 0; i < 5; i++) { out += i < n ? "★" : "☆"; }
-      return out;
-    }
-
-    function setView(view) {
-      currentView = view;
-      document.getElementById("allBtn").classList.toggle("active", view === "all");
-      document.getElementById("weeklyBtn").classList.toggle("active", view === "weekly");
-      var publishPanel = document.getElementById("publishPanel");
-      var loginHint = document.getElementById("loginHint");
-      if (view === "weekly") {
-        publishPanel.style.display = "none";
-        loginHint.style.display = "none";
-      } else {
-        publishPanel.style.display = token ? "block" : "none";
-        loginHint.style.display = token ? "none" : "block";
-      }
-      loadRecipes();
-    }
-
-    function renderWeeklyImages(images) {
-      var list = document.getElementById("recipeList");
-      if (!images.length) {
-        list.innerHTML = '<div class="empty">暂未上传本周食谱</div>';
-        return;
-      }
-      list.innerHTML = images.map(function (it) {
-        var range = it.menu_start_date === it.menu_end_date
-          ? it.menu_start_date
-          : (it.menu_start_date + " - " + it.menu_end_date);
-        return '<div class="weekly-entry">' +
-          '<button type="button" class="weekly-date-toggle" data-toggle-weekly>' + escapeHtml(range) + '</button>' +
-          '<div class="weekly-figure" data-weekly-body style="display:none;">' +
-            '<img class="weekly-image" src="' + escapeHtml(it.url) + '" alt="每周菜谱" loading="lazy" data-zoom="' + escapeHtml(it.url) + '">' +
-            (canDeleteWeekly(it) ? '<button type="button" class="weekly-delete" data-delete-weekly="' + it.id + '">删除</button>' : '') +
-            '<div class="weekly-collapse-row"><button type="button" class="weekly-collapse" data-collapse-weekly>收起</button></div>' +
-          '</div>' +
-        '</div>';
-      }).join("");
-    }
-
-    function loadRecipes() {
-      var list = document.getElementById("recipeList");
-      list.innerHTML = '<div class="empty">加载中…</div>';
-
-      if (currentView === "weekly") {
-        list.classList.add("weekly-mode");
-        fetch("/api/weekly-menu")
-          .then(function (res) { return res.json(); })
-          .then(function (data) {
-            renderWeeklyImages(data.images || []);
-          })
-          .catch(function (err) {
-            list.innerHTML = '<div class="empty">加载失败：' + escapeHtml(err.message) + '</div>';
-          });
-        return;
-      }
-
-      list.classList.remove("weekly-mode");
-      fetch("/api/recipes")
-        .then(function (res) { return res.json(); })
-        .then(function (data) {
-          var recipes = data.recipes || [];
-          if (!recipes.length) {
-            list.innerHTML = '<div class="empty">暂无菜谱评价</div>';
-            return;
-          }
-          list.innerHTML = recipes.map(function (r) {
-            return '<div class="recipe">' +
-              (r.image_url ? '<img class="recipe-img" src="' + escapeHtml(r.image_url) + '" alt="' + escapeHtml(r.name) + '">' : '') +
-              '<div class="recipe-body">' +
-                '<div class="recipe-head">' +
-                  '<span class="recipe-name">' + escapeHtml(r.name) + '</span>' +
-                  '<span class="rating">' + ratingStars(r.rating) + '</span>' +
-                '</div>' +
-                (r.comment ? '<div class="recipe-comment">' + escapeHtml(r.comment) + '</div>' : '') +
-                '<div class="recipe-meta">' + escapeHtml(r.username) + ' · ' + formatTime(r.created_at) + '</div>' +
-              '</div>' +
-            '</div>';
-          }).join("");
-        })
-        .catch(function (err) {
-          list.innerHTML = '<div class="empty">加载失败：' + escapeHtml(err.message) + '</div>';
-        });
-    }
-
-    document.getElementById("allBtn").addEventListener("click", function () { setView("all"); });
-    document.getElementById("weeklyBtn").addEventListener("click", function () { setView("weekly"); });
-
-    document.getElementById("recipeList").addEventListener("click", function (e) {
-      var toggle = e.target.closest ? e.target.closest("[data-toggle-weekly]") : null;
-      if (toggle) {
-        var entry = toggle.closest(".weekly-entry");
-        var body = entry ? entry.querySelector("[data-weekly-body]") : null;
-        if (body) body.style.display = body.style.display === "none" ? "block" : "none";
-        return;
-      }
-      var collapse = e.target.closest ? e.target.closest("[data-collapse-weekly]") : null;
-      if (collapse) {
-        var fig = collapse.closest(".weekly-figure");
-        if (fig) fig.style.display = "none";
-        return;
-      }
-      var del = e.target.closest ? e.target.closest("[data-delete-weekly]") : null;
-      if (del) {
-        var id = del.getAttribute("data-delete-weekly");
-        if (!confirm("确定要删除这张食谱图片吗？")) return;
-        del.disabled = true;
-        fetch("/api/admin/weekly-menu/" + id, { method: "DELETE", headers: { "Authorization": "Bearer " + token } })
-          .then(function (res) {
-            return res.json().then(function (data) { return { ok: res.ok, status: res.status, data: data }; });
-          })
-          .then(function (r) {
-            if (!r.ok) {
-              alert(r.status === 403 ? "没有权限删除（仅上传者或超级管理员）" : (r.data.error || "删除失败"));
-              del.disabled = false;
-              return;
-            }
-            loadRecipes();
-          })
-          .catch(function (err) {
-            del.disabled = false;
-            alert("网络错误：" + err.message);
-          });
-        return;
-      }
-      var zoom = e.target.closest ? e.target.closest("[data-zoom]") : null;
-      if (zoom) openZoom(zoom.getAttribute("data-zoom"));
-    });
-
-    function openZoom(url) {
-      var overlay = document.createElement("div");
-      overlay.className = "zoom-overlay";
-      var img = document.createElement("img");
-      img.className = "zoom-img";
-      img.src = url;
-      overlay.appendChild(img);
-      document.body.appendChild(overlay);
-
-      var scale = 1;
-      var tx = 0;
-      var ty = 0;
-      var dragging = false;
-      var startX = 0;
-      var startY = 0;
-
-      function apply() {
-        img.style.transform = "translate(" + tx + "px," + ty + "px) scale(" + scale + ")";
-      }
-
-      function onWheel(ev) {
-        ev.preventDefault();
-        scale = Math.min(8, Math.max(0.3, scale * (ev.deltaY < 0 ? 1.1 : 0.9)));
-        apply();
-      }
-      function onDown(ev) {
-        ev.preventDefault();
-        dragging = true;
-        startX = ev.clientX - tx;
-        startY = ev.clientY - ty;
-        img.style.cursor = "grabbing";
-      }
-      function onMove(ev) {
-        if (!dragging) return;
-        tx = ev.clientX - startX;
-        ty = ev.clientY - startY;
-        apply();
-      }
-      function onUp() {
-        dragging = false;
-        img.style.cursor = "grab";
-      }
-      function cleanup() {
-        document.removeEventListener("mousemove", onMove);
-        document.removeEventListener("mouseup", onUp);
-        if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
-      }
-
-      overlay.addEventListener("wheel", onWheel, { passive: false });
-      img.addEventListener("mousedown", onDown);
-      document.addEventListener("mousemove", onMove);
-      document.addEventListener("mouseup", onUp);
-      overlay.addEventListener("click", function (ev) {
-        if (ev.target === overlay) cleanup();
-      });
-    }
-
-    if (token) {
-      document.getElementById("publishPanel").style.display = "block";
-    } else {
-      document.getElementById("loginHint").style.display = "block";
-    }
-
-    document.getElementById("recipeForm").addEventListener("submit", function (e) {
-      e.preventDefault();
-      var msg = document.getElementById("formMsg");
-      var submit = document.getElementById("recipeSubmit");
-      var name = document.getElementById("name").value.trim();
-      var rating = document.getElementById("rating").value;
-      var comment = document.getElementById("comment").value.trim();
-      var imageInput = document.getElementById("image");
-
-      if (!name) {
-        msg.className = "msg error";
-        msg.textContent = "请填写菜名";
-        return;
-      }
-
-      var formData = new FormData();
-      formData.append("name", name);
-      formData.append("rating", rating);
-      formData.append("comment", comment);
-      if (imageInput.files && imageInput.files[0]) {
-        formData.append("image", imageInput.files[0]);
-      }
-
-      msg.className = "msg";
-      msg.textContent = "发布中…";
-      submit.disabled = true;
-
-      fetch("/api/recipes", {
-        method: "POST",
-        headers: { "Authorization": "Bearer " + token },
-        body: formData
-      })
-        .then(function (res) {
-          return res.json().then(function (data) { return { ok: res.ok, data: data }; });
-        })
-        .then(function (r) {
-          if (!r.ok) {
-            msg.className = "msg error";
-            msg.textContent = r.data.error === "login required" ? "请先登录" : (r.data.error || "发布失败");
-            submit.disabled = false;
-            return;
-          }
-          document.getElementById("recipeForm").reset();
-          msg.className = "msg ok";
-          msg.textContent = "发布成功";
-          submit.disabled = false;
-          loadRecipes();
-        })
-        .catch(function (err) {
-          msg.className = "msg error";
-          msg.textContent = "网络错误：" + err.message;
-          submit.disabled = false;
-        });
-    });
-
-    function applyDefaultView() {
-      var fallback = localStorage.getItem("recipeDefaultView") || "all";
-      function go(view) { setView(view === "weekly" ? "weekly" : "all"); }
-      if (!token) { go(fallback); return; }
-      fetch("/api/user/profile", { headers: { "Authorization": "Bearer " + token } })
-        .then(function (res) { return res.ok ? res.json() : null; })
-        .then(function (data) {
-          var v = data && data.user && data.user.recipe_default_view ? data.user.recipe_default_view : fallback;
-          go(v);
-        })
-        .catch(function () { go(fallback); });
-    }
-
-    renderAuth();
-    applyDefaultView();
-  </script>
-</body>
+    <script src="/js/pages/recipe.js"></script>
+  </body>
 </html>

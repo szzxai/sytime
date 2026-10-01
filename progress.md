@@ -1,77 +1,69 @@
-# 校园地图项目 · 进度文档（progress.md）
+# 校园信息网 · 进度文档（progress.md）
 
-> 用途：开启新对话时，把本文件贴给 AI，即可快速恢复上下文并继续开发下一个功能。
+> 更新日期：2026-10-01。当前已完成需求 #4 全站 UI 改版。开启新对话时可用本文恢复开发上下文；完整结构及接口见 [MAP.md](./MAP.md)，设计总纲见 [UI.md](./UI.md)，验证结果见 [UI 验收记录](./docs/ui/acceptance.md)。第 9 节保留历史变更，当前行为以其他章节和代码为准。
 
 ---
 
 ## 1. 项目简介
 
-一个黑白极简风格的校园信息网站，含**首页、可切换楼层的交互式校园地图、论坛、菜谱评价、更新公告、个人中心（设置）、管理后台**，并带一套**账号系统**（注册 / 登录 / JWT / 角色权限 / 资料修改）与**全站横幅**。
-后端为 **Node.js + Express**，地图几何数据抽离到 `data.json`，前端 `fetch` 动态绘制并已上色（低饱和度实景风格）。数据库使用 **SQLite（Node 内置 `node:sqlite`）**。
+一个采用「宣纸·黛青·朱印」极简风格的校园信息网站，包含首页、交互式校园地图、论坛、帖子详情、菜谱评价、每周食谱、公告、学生认证、个人中心及管理后台，并提供账号、角色、特殊权限、封禁申诉、全站横幅和工单。
+
+后端为 Node.js + Express 5，数据库使用 Node 内置的 `node:sqlite`。前端使用原生 HTML/CSS/JavaScript，无构建步骤；共享样式与交互统一外置，地图使用本地 Leaflet 1.9.4 和 `data.json`。
 
 ---
 
 ## 2. 运行环境与依赖
 
-- 运行环境：Node.js **v24.21.0**，npm **11.19.0**（Windows 10，PowerShell）
-- 依赖（`package.json`）：`express ^5.2.1`、`cors ^2.8.6`、`bcrypt ^6.0.0`、`jsonwebtoken ^9.0.3`、`multer ^2.4.0`、`dotenv ^18.0.3`、`nodemailer ^10.0.10`（**已弃用未引入**）
-- **数据库**：使用 Node 内置模块 `node:sqlite` 的 `DatabaseSync`（**未安装 `sqlite3`**，因其在 Node 24 无预编译包且本机缺 Python/编译工具而安装失败；改用内置模块，零依赖）。
-- 启动：
-  ```
-  npm.cmd start        # = node server.js（PowerShell 默认策略会阻止 npm.ps1，故用 npm.cmd）
-  ```
-- 访问：
-  - 首页 <http://localhost:3000/>
-  - 地图 <http://localhost:3000/map.html>
-  - 接口 <http://localhost:3000/api/map-data>
-- 停止服务：结束监听 3000 端口的 node 进程。
-- 说明：修改 `data.json` **无需重启**（每次请求实时读取）；修改 `server.js` 需重启。
+- 推荐 Node.js 24+；本次验证使用 Node.js 24.13.0、npm 11.19.0 和 Windows PowerShell。
+- 运行依赖：Express、cors、bcrypt、jsonwebtoken、multer、dotenv；数据库无需额外驱动。
+- 验证依赖：Playwright、axe-core。Windows 回归使用已安装的 Microsoft Edge；其他平台先运行 `npx playwright install chromium`。
+- 安装：`npm.cmd ci`；启动：`npm.cmd start`；回归：`npm.cmd test`。
+- 首页：`http://localhost:3000/`；地图：`http://localhost:3000/map.html`；地图接口：`http://localhost:3000/api/map-data`。
+- 修改 `server.js` 需重启；修改 `public/` 刷新即可；修改 `data.json` 在下次请求时生效。
 
 ---
 
 ## 3. 目录结构
 
-```
-项目文件夹/                     ← 项目根目录（Git 仓库根）
-├── node_modules/              ← 已加入 .gitignore
-├── uploads/                   ← 图片上传目录（头像/菜谱；uploads/weekly/ 每周菜谱图片；uploads/bans/ 封禁图）（随仓库提交，运行时自动创建）
-├── public/                    ← Express 静态目录
-│   ├── index.html             ← 首页（含默认界面跳转脚本）+ 关于我们
-│   ├── map.html               ← 校园地图（fetch 数据动态绘制）
-│   ├── login.html             ← 登录页（含封禁申诉表单）
-│   ├── register.html          ← 注册页
-│   ├── forum.html             ← 论坛（列表 + 点赞）
-│   ├── post.html              ← 帖子详情（正文 + 点赞 + 回复）
-│   ├── recipe.html            ← 菜谱评价（全部 / 每周食谱）
-│   ├── announcements.html     ← 更新公告（左侧公告列表 + 右侧详情）
-│   ├── admin.html             ← 管理后台（横幅/公告/学生审核/邀请码/每周菜谱/用户管理/申诉处理）
-│   ├── student_verify.html    ← 学生认证（新生号/班级/真实姓名/邀请码）
-│   ├── profile.html           ← 个人中心（设置：个人资料/账号安全/网站设置）
-│   └── auth.js                ← 全站共享脚本（导航头像/登录态、菜单栏折叠、横幅）
-├── data.json                  ← 地图数据（几何 + 名称 + 弹窗 + 颜色），约 178 条 feature
-├── data.db                    ← SQLite 数据库（随仓库提交）
-├── server.js                  ← Express 后端
+```text
+szzx-info/
+├── .env.example                 环境变量模板
+├── .gitignore                   依赖、密钥、数据库临时文件与测试产物
+├── public/
+│   ├── *.html                   12 个现有页面及 404；about 为兼容跳转
+│   ├── css/site.css             全站令牌、组件、明暗主题与响应式
+│   ├── js/ui.js                 统一交互、登录态、导航壳与 API 客户端
+│   ├── js/page.js               请求、表单、上传、面板与工单工具
+│   ├── js/forum.js              论坛共用的点赞、回复和删除逻辑
+│   ├── js/pages/                各页业务脚本
+│   ├── img/                     网站图标与 SVG 图标库
+│   ├── vendor/leaflet/           Leaflet 1.9.4 资源及上游许可证
+│   └── auth.js                  旧共享脚本兼容入口
+├── docs/ui/                     组件、页面、场景、文案、参考资产和验收
+├── tests/ui-smoke.mjs            浏览器功能、布局和无障碍回归
+├── uploads/                     头像、评价、weekly/ 食谱、bans/ 封禁图片
+├── data.json                    227 个地图对象的几何、名称、楼层和主题
+├── data.db                      SQLite 持久数据库
+├── server.js                    Express 后端与全部业务接口
 ├── package.json / package-lock.json
-├── .env                       ← 端口与密钥（已加入 .gitignore）
-├── .env.example               ← 环境变量模板
-├── .gitignore                 ← 忽略 node_modules/、.env 及 SQLite 临时文件（*.db-journal/-wal/-shm）
-├── README.md                  ← 项目说明（GitHub 用）
-├── 项目文档.md                ← 项目文档（概述/架构/数据/接口/部署）
-├── 开发计划模板.md            ← 开发计划模板
-├── LICENSE                    ← AGPL-3.0 许可证
-└── progress.md                ← 本文件
+├── README.md                    使用、部署与复验说明
+├── MAP.md                       项目结构、数据流和 API 索引
+├── PLAN_2026-10-01.md            原始里程碑快照
+├── UI.md                        全站设计手册总纲
+├── LICENSE                      AGPL-3.0
+└── progress.md                  本文
 ```
+
+本机 `.env`、`node_modules/` 和 `output/playwright/` 不提交；`data.db` 与已有 `uploads/` 保留随仓库保存的策略。完整逐页结构见 MAP.md。
 
 ---
 
 ## 4. 环境变量（.env）
 
-```
+复制 `.env.example` 为 `.env`，部署时修改 JWT 密钥：
+
+```dotenv
 PORT=3000
-MAIL_USER=your_email@example.com      # 已弃用
-MAIL_PASS=your_smtp_auth_code         # 已弃用
-MAIL_HOST=smtp.qq.com                 # 已弃用
-MAIL_PORT=465                         # 已弃用
 JWT_SECRET=replace_with_a_long_random_secret
 JWT_EXPIRES_IN=7d
 ```
@@ -329,12 +321,12 @@ CREATE INDEX idx_tickets_user ON tickets(user_id);
 
 ```jsonc
 {
-  "meta": { "rectW": 1200, "rectH": 700, "axisY": 420, "minZoom": -1, "maxZoom": 6 },
+  "meta": { "rectW": 1200, "rectH": 700, "axisY": 420, "minZoom": -2, "maxZoom": 6 },
   "style": {
-    "outline": "#333333",
-    "labelColor": "#777777",
-    "fillOpacity": 0.6,
-    "palette": { "building": "#D9D9D9", "green": "#D1E8D1", "water": "#B3D9FF", "white": "#FFFFFF", "none": null }
+    "outline": "#55656B",
+    "labelColor": "#66747B",
+    "fillOpacity": 0.75,
+    "palette": { "building": "#E4DFD3", "green": "#CFE0CC", "water": "#BBD7DF", "white": "#FFFFFF", "none": null }
   },
   "features": [
     {
@@ -359,34 +351,34 @@ CREATE INDEX idx_tickets_user ON tickets(user_id);
 
 ## 8. 前端页面
 
-### 8.1 公共导航（各页顶部 header）
-- 左侧 Logo「校园信息网」：**悬停时文字加下划线**；**点击任意页面 Logo 均跳回 `index.html`**（Logo 已无下拉菜单）。右侧导航：**校园地图 / 论坛 / 菜谱评价 / 更新公告**（**已移除「首页」，并新增「更新公告」**）；最右为登录态区域（`.auth#authArea`）。
-- **共享脚本 `public/auth.js`** 负责：
-  1. **登录态渲染**：读 `localStorage.token` → 调 `GET /api/user/profile` → 已登录显示**圆形头像**（点击跳 `profile.html`，无头像显示昵称首字），未登录显示「登录 / 注册」；401 自动清理。
-  2. **菜单栏折叠**：在菜单栏**正下方右下角外侧**注入小三角按钮（44×22，紧贴下边框的凸片），点击后带动画收起菜单栏；收起后在右上角显示同尺寸的展开三角。状态存 `localStorage.navCollapsed`。
-  3. **全站横幅**：加载时调 `GET /api/settings/banner`，将文本渲染为导航栏上方全宽黑底白字横幅（空则不显示），并把高度写入 CSS 变量 `--banner-h` 以修正首页/地图布局位移。横幅右侧有 **×** 关闭按钮：关闭后按账号记录 `bannerDismissed:<username>` = 当前 `version`，该账号在 `version` 未变化前不再显示；横幅更新（version 自增）后重新显示。
-  4. **管理后台入口**：`GET /api/user/profile` 返回 `role` 与 `permissions`，**当角色权重 ≥ `admin`（4）或拥有任意授予权限时**，在导航右侧注入「管理后台」按钮（跳 `admin.html`）；否则不显示。
-  5. **学生认证入口**：登录后（任意角色）在导航右侧注入「学生认证」按钮（跳 `student_verify.html`）。
-  6. 全局注入相关样式（头像、横幅、折叠、地图/首页随折叠位移）。
-  7. **Logo 交互**：为 `.logo` 注入悬停下划线；**点击 Logo 跳转 `index.html`**。Logo 已**取消下拉菜单**（原「更新公告」改到顶部导航）。对应 CSS/JS 均在 `auth.js`；各页导航「首页」按钮已移除并统一由 Logo 承担回首页。
+### 8.1 共享 UI 与导航
+
+- `public/css/site.css` 维护全站设计令牌、组件、布局、明暗主题及响应式；页面不再维护内联 CSS。
+- `public/js/ui.js` 维护 `window.UI`：登录态、角色与特殊权限、统一 API 请求、用户信息、转义、日期、表单校验、提交状态、Toast、对话框、菜单、抽屉、上传和图片查看器。
+- `public/js/page.js` 复用表单、请求、上传、面板和工单逻辑；`public/js/forum.js` 复用点赞、回复、删除；各页脚本位于 `public/js/pages/`。`auth.js` 仅是旧调用兼容入口。
+- Logo 返回首页；桌面导航提供地图、论坛、菜谱和公告；手机使用对话框抽屉。已登录显示头像和账户菜单，学生认证及管理入口按角色和特殊权限呈现。
+- 横幅由 `/api/settings/banner` 提供，关闭状态使用 `bannerDismissed:<username>` 和版本保存；更新版本后可重新显示。
+- 未登录的受限操作提供登录入口并携带 `next`；登录与注册成功后校验站内地址并返回原页面。
+- 明暗主题样式已经验证，主题切换入口属于 P2，`UI.config.features.theme` 当前关闭。
 
 ### 8.2 各页面
-- **index.html**：首页。`<head>` 内脚本：访问根路径 `/` 时，若已登录则先调 `GET /api/user/profile` 取 `default_page` 跳转，否则按 `localStorage.defaultPage` 跳转（仅根路径，避免循环）。`<main>` 内直接展示「关于我们 / 发起原因 / 联系方式」（原 `about.html` 已合并至此并删除）。
-- **map.html**：Leaflet 地图（`CRS.Simple`，右下缩放控件）；`labelsPane`(z650) 承载所有文字；`baseLayer` 常显 + `floorGroups[1..4]` 切换；右上 1F–4F 按钮（间距已下移避开折叠按钮）。进入时若已登录优先用账号 `default_floor`，否则用 `localStorage.defaultFloor` 选择默认楼层。WASD/方向键平移。**弹窗编辑权限**：角色为 admin/super_admin/developer **或**拥有 `map_popup_edit` 授予权限时 `canEditPopups=true`（依据 `/api/me` 返回的 `permissions`）。
-- **login.html / register.html**：账号表单；成功后 token+user 存 `localStorage` 并跳转首页；register 成功自动登录。**login.html 处理封禁**：登录返回 403 且 `error='banned'` 时显示封禁理由；`allow_appeal=1` 时展开内嵌「申请解封」表单（申诉理由 + 选填图片，图片转 DataURL），提交 `POST /api/user/appeal`，成功后提示「申诉已提交，请等待管理员审核」（**表单下方提示「重复提交将覆盖上一次申请；10 分钟内只能提交一次」，限频时展示 429 提示**）；`allow_appeal=0` 时提示「您已被封禁，如要解封请线下联系超级管理员」。
-- **forum.html**：讨论/提问切换；**独立「发布帖子」按钮**点击后展开面板（未登录点按提示“请先登录”），面板底部有「收起」按钮；在提问版块点发布默认分类为「提问」。帖子列表带 `reply_count`，「回复（n）」展开回复列表并可发布回复（已登录）。**每条帖子底部有「点赞（n）」按钮**：`is_liked` 为真时按钮高亮（黑底白字），点击按状态调 `POST/DELETE /api/forum/posts/:id/like`，成功后本地更新计数并切换高亮、不刷新页面；**未登录点击提示「请先登录」且不发请求**。**右键帖子卡片弹出上下文菜单**，作者本人或管理员可「删除帖子」（二次确认后删除并刷新列表）。**点击帖子卡片任意空白处（标题、正文区域）均跳转 `post.html?id=<id>` 详情页；点标题链接、点赞/回复按钮、回复框、右键菜单等交互元素不触发跳转**。
-- **post.html**：帖子详情页。解析 `?id=`，调 `GET /api/forum/posts/:id` 展示标题/分类/作者/时间/正文（不存在显示「帖子不存在或已删除」）；正文下方「👍 点赞（n）」按钮（逻辑同列表页，已赞高亮，未登录提示「请先登录」）；点赞按钮旁有「回复」按钮，**进入详情页默认展开回复界面（回复列表 + 输入框），点「回复」按钮可收起/展开**；调 `GET /api/forum/posts/:id/replies` 按时间正序展示回复；已登录可提交回复，未登录显示「请先登录后回复」。顶部导航与 `auth.js` 同其他页面；有「← 返回论坛」链接。
-- **recipe.html**：全部（A-Z）/每周食谱切换；发布评价表单仅登录可见（菜名/评分1-5/评论/图片），图文卡片列表。**默认显示标签优先读账号 `recipe_default_view`，其次 `localStorage.recipeDefaultView`，再回退「全部」**。「每周食谱」标签**不显示评价表单**，改为调 `GET /api/weekly-menu`，每条上方一个**日期（起始-结束）按钮**用于展开/收起大图（不直接展示图片），大图下方左下角另有「收起」按钮（同一功能，均极简黑白风格）；点击大图可打开缩放层（**滚轮缩放、拖动、单击空白处关闭**，白底）；**仅上传者本人或 super_admin 及以上**时图片右上角显示「删除」（二次确认）；无数据显示「暂未上传本周食谱」。
-- **announcements.html**：更新公告。左侧侧边栏列出公告日期 + 标题概览（点击切换），右侧主区域显示选中公告的标题、发布日期与正文；加载时 fetch `/api/announcements` 并默认选中最新一条。
-- **admin.html**：管理后台（**进入条件：权重 ≥ admin 或拥有任意授予权限**；左侧菜单按 `PANEL_PERMS` 过滤，仅显示有权限的项，并默认激活第一个可用项）。左侧菜单「编辑横幅 / 更新公告 / 学生认证审核 / 邀请码设置 / 每周菜谱管理 / 用户管理 / 申诉处理 / 工单管理」；**菜单项「学生认证审核 / 申诉处理 / 工单管理」文字左上角带小红点（`.menu-dot`），进入后台时调 `GET /api/admin/pending-counts`，对应待办数 > 0 则显示红点，处理完自动刷新**。编辑横幅读取 `GET /api/settings/banner`，点「确认修改」**先 `confirm()` 二次确认**再 `PUT /api/admin/settings/banner`；另有「取消横幅」按钮（二次确认后将横幅置空，全站不再显示）。更新公告填写标题/内容后 `POST /api/admin/announcements`。学生认证审核列出待审核申请（新生号/班级/真实姓名/提交人/补充信息），每条有「通过」与「拒绝」：「通过」调审核接口并移除；「拒绝」弹**自定义遮罩层**填写**选填的拒绝原因**后调拒绝接口并移除。邀请码设置支持**多条邀请码**：输入邀请码与可用次数（0=不限）后「添加」，下方列出已有邀请码及「已用 x / y」并可删除。每周菜谱管理：选第一天与最后一天日期（点整框弹出日历）+ 「选择图片并上传」，**选图后在上传栏内显示大图预览与「确认上传 / 取消」按钮（不单独弹出界面）**，下方按日期倒序列出已上传图片（显示上传者用户名、缩略图点击可放大、可删除并二次确认）。**用户管理**：表格列出所有用户（ID/用户名/昵称/角色/状态/操作）；对**非自己且权重低于自己**的用户，角色用下拉框（选项权重 ∈ [user, 自身-1]）选中即调 `PUT /api/admin/users/role`；「权限」按钮弹出**自定义遮罩层**（按 `GET /api/admin/permissions` 目录列出勾选项，默认勾选该用户已有权限），保存调 `PUT /api/admin/users/permissions`；「封号」弹**自定义遮罩层**（封禁理由选填 + 上传图片选填 + 「允许申请解封」默认勾选），确认调 `PUT /api/admin/users/ban`（FormData）；已封禁用户在同位置显示「解封」（二次确认调 unban）；对自己或权重 ≥ 自己的用户不显示任何修改控件。**申诉处理**：列表展示待处理申诉（用户ID/用户名/申诉理由/申诉图片可点击放大），每条「通过 / 驳回」调 `PUT /api/admin/ban-appeals/review` 并刷新。**工单管理**：列出当前角色可见范围内的工单（待处理优先，含标题/内容/提交人/可见范围/时间；已批复的显示批复人与批复内容+图片可放大），每条待处理工单「批复」弹**自定义遮罩层**（**批复内容必填 + 上传图片选填**，图片读为 DataURL），确认调 `PUT /api/admin/tickets/reply`。非管理员进入会显示无权限提示。
-- **student_verify.html**：学生认证。加载时查当前角色，若已是 student 或更高则显示「你已认证为学生」并隐藏表单；否则显示表单（新生号/班级/真实姓名/邀请码选填/**补充更多信息选填**，含提示），提交 `POST /api/student/apply` 后提示「认证成功」或「已提交，等待管理员审核」；**表单下方提示「重复提交将覆盖上一次申请；10 分钟内只能提交一次」**，限频时展示后端 429 提示。
-- **profile.html**：个人中心（设置）。左侧菜单栏：可折叠的「设置」→ 子项 **个人资料 / 账号安全 / 网站设置 / 提交工单**；底部「退出登录」。
-  - 个人资料：顶部「账号信息」框展示 **ID（display_id）/ 权限等级（角色中文名）/ 特殊权限（超出该角色范围、单独授予的权限，多个以「、」连接，无则显示「无」）**；其后依次为用户名（只读）、头像、昵称、个性签名（除用户名外均可改）。该页各框内边距/间距已压缩以减少留白。
-  - 账号安全：修改密码。
-  - 网站设置：默认进入界面（首页/地图/论坛/菜谱）、校园地图默认楼层（1F–4F）、菜谱评价默认页（全部 A-Z / 每周食谱）；**保存改为调用 `PUT /api/user/settings` 同步到账号**，并回写 `localStorage` 作为回退；页面加载优先读账号设置，无则回退 `localStorage`。
-  - 提交工单：表单（标题、内容、可见范围下拉「管理员及以上 / 超级管理员及以上 / 仅开发者」）提交 `POST /api/tickets`；下方「我的工单」调 `GET /api/tickets/mine` 列出本人工单（含状态、可见范围、时间；已批复的显示批复人/内容/图片），切换该面板时加载。
 
-所有用户输入均做 HTML 转义（`escapeHtml`）防 XSS；数据全部经 `fetch` 调 API 获取。
+| 页面 | 当前行为 |
+| --- | --- |
+| index | 首页介绍、四个功能入口、关于我们与工单反馈；根路径无锚点时按账号或本地默认页面跳转 |
+| about | 兼容旧地址，跳转 `/index.html#about` |
+| map | 本地 Leaflet、1F–4F、缩放/拖动/键盘平移、加载与重试、帮助；默认楼层先读账号设置，有权用户通过统一对话框编辑建筑说明 |
+| login / register | 表单校验、密码显隐、登录/自动登录、站内回跳；被封用户查看理由、图片并按允许状态提交申诉，429 显示倒计时 |
+| student_verify | 达到学生等级显示已认证；否则填写新生号、班级、姓名和可选邀请码/补充信息；保持直接认证、人工审核及限频规则 |
+| forum | 讨论/提问切换、每批 20 条、发帖对话框、点赞及失败回滚、回复展开与发布、卡片详情跳转、可键盘访问的删除菜单 |
+| post | 正文、点赞与默认显示的回复；分批加载、回复锚点定位；帖子缺失、无权限和加载失败有明确状态 |
+| recipe | 全部评价按名称展示；对话框发布菜名、1–5 分、评论和图片；每周食谱按日期折叠，自动展开当前周，图片查看器和有权删除；默认视图先读账号设置 |
+| announcements | 桌面列表与详情并排；手机选择后进入正文，可返回列表 |
+| profile | 资料、账号安全、网站设置、工单四个面板；ID/角色/额外权限、头像、昵称、签名、密码、默认页/楼层/菜谱视图及工单保持原接口 |
+| admin | 按权限显示横幅、公告、认证审核、邀请码、每周食谱、用户、申诉和工单八个面板；待办数、确认、拒绝、角色、特殊权限、封禁和批复统一使用新组件 |
+| 404 | 未知 GET 页面路径显示统一错误页；未知 API 仍返回 JSON 404 |
+
+动态文本通过 `UI.esc` 或 `textContent` 输出。长列表使用加载更多；异步区域提供加载、空和错误重试状态。发帖、评价、工单与公告表单保护未保存内容，提交失败保留填写内容。
 
 ---
 
@@ -452,24 +444,25 @@ CREATE INDEX idx_tickets_user ON tickets(user_id);
 42. **补充文档**：新增 `项目文档.md`（概述/角色权限/功能/架构/数据模型/接口清单/部署规范）与 `开发计划模板.md`（迭代计划通用模板）。
 43. **个人资料展示账号信息**：`profile.html` 个人资料顶部新增「账号信息」框，显示 **ID、权限等级（角色中文名）、特殊权限**（仅显示超出当前角色范围、通过 `user_permissions` 单独授予的权限，无则显示「无」）；数据取自 `GET /api/user/profile`（已含 `display_id`/`role`/`permissions`，无需改后端）。同时压缩个人资料页各框内边距与间距，减少留白。
 44. **工单功能**：新增 `tickets` 表（标题/内容/可见范围/状态/批复内容+图片+人+时间）。普通用户在 `profile.html` 新增「提交工单」面板（标题、内容、可见范围：管理员及以上 / 超级管理员及以上 / 仅开发者，最低管理员）调用 `POST /api/tickets`，并在「我的工单」查看 `GET /api/tickets/mine`。`admin.html` 新增「工单管理」面板，可对可见范围内工单「批复」（**内容必填 + 图片选填**，`PUT /api/admin/tickets/reply`）。新增权限 `ticket_manage`(admin)。**管理后台菜单「学生认证审核 / 申诉处理 / 工单管理」在小红点提示未处理项**（`GET /api/admin/pending-counts`）。因工单最低可见级为管理员，管理后台进入条件由「≥ super_admin」放宽为「**≥ admin**」（`auth.js` 入口与 `admin.html` 判定同步调整）。
+45. **需求 #4 全站 UI 改版**：统一 12 个现有页面及新增 404，采用「宣纸·黛青·朱印」令牌、组件和响应式布局；抽出共享及各页脚本；本地化 Leaflet 并调整配色和缩放，保留 227 个地图对象。原有账号、论坛、菜谱、认证、后台权限和工单流程保持原 API。新增浏览器回归，264 项检查通过，明暗主题与 360px/1280px 扫描零违规；参考组件 101 项通过。同步 UI 手册、项目结构、使用说明、里程碑快照及验收记录。
 
 ---
 
 ## 10. 已知事项 / 待办
 
-- `nodemailer` 仍在 `package.json` 但**未使用**，可移除。
-- 首页「关于我们」仍是空链接（`href="#"`）。
-- 弹窗文字多为占位（如“东紫阳楼 · 教学楼”），可按需补充真实介绍/图片。
-- 设置页左侧「设置」板块预留，后续可加更多板块。
-- 网站设置（默认界面/默认楼层/菜谱评价默认页）已同步到账号（`PUT /api/user/settings`），未登录时回退 `localStorage`。
-- **部署注意**：这是**动态**站点（Node 后端 + `/api/*`），**不能**直接放 GitHub Pages；可选 Render / Railway / Vercel（Node）。数据与上传目录（`data.db`、`uploads/`）需持久化存储。
-- 修改 `data.json` 无需重启；修改 `server.js` 需重启。
+- #5–#10 的独立菜品、店铺、消息箱及头衔尚待实施；设计规范已收录到 `docs/ui/pages/`，相应功能开关保持关闭。原始需求见 PLAN_2026-10-01.md。
+- 地图部分建筑说明仍是简短介绍，可按需补充真实内容；地图数据方向与几何约定保持不变。
+- 主题切换入口是手册 P2 能力，当前未开启。
+- 回归测试可用 `npm.cmd test` 重跑，在系统临时目录中运行，不修改项目数据库或上传数据；输出在被忽略的 `output/playwright/`。
+- 部署需要 Node 后端及可写、持久化的数据存储；该站点不能直接部署到 GitHub Pages。
 
 ---
 
 ## 11. 编码约定
 
-- 纯前端原生 JS（`var`、无构建工具、无框架），**代码中不写注释**。
-- 中文标签统一 `#777777`、字重 300、按框自动居中（竖排/横排自动判断）。
-- 颜色/透明度统一从 `data.json` 的 `style` 读取。
-- 共享前端逻辑放 `public/auth.js`；所有动态文本经 `escapeHtml` 转义。
+- 前端继续使用原生 HTML/CSS/JavaScript，不增加构建流程；页面业务脚本放在 `public/js/pages/`。
+- 颜色、字号、间距、圆角和组件以 UI.md 与 `public/css/site.css` 的令牌为准；地图配色读取 `data.json.style`。
+- 公共交互使用 `UI.*`，跨页业务工具使用 `UI.page` 和共享论坛脚本，避免重复实现。
+- 所有动态文本经过 `UI.esc` 或 `textContent`；URL 使用 `UI.safeUrl`；受限操作继续由后端校验权限。
+- 接口失败提供中文错误和重试入口；提交按钮管理 busy 状态，确认和输入使用统一对话框。
+- 修改共享组件或业务脚本后运行仓库回归，并按设计手册核对键盘、手机布局与明暗主题。

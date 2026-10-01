@@ -3,18 +3,18 @@
     "rectW": 1200,
     "rectH": 700,
     "axisY": 420,
-    "minZoom": -1,
+    "minZoom": -2,
     "maxZoom": 6,
     "baseZoom": 1
   },
   "style": {
-    "outline": "#333333",
-    "labelColor": "#777777",
-    "fillOpacity": 0.6,
+    "outline": "#55656B",
+    "labelColor": "#66747B",
+    "fillOpacity": 0.75,
     "palette": {
-      "building": "#D9D9D9",
-      "green": "#D1E8D1",
-      "water": "#B3D9FF",
+      "building": "#E4DFD3",
+      "green": "#CFE0CC",
+      "water": "#BBD7DF",
       "white": "#FFFFFF",
       "none": null
     }

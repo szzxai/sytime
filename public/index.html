@@ -1,162 +1,150 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="zh-CN">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>校园信息网</title>
-<style>
-  * { box-sizing: border-box; }
-  html, body {
-    margin: 0;
-    padding: 0;
-    height: 100%;
-    background: #ffffff;
-    color: #000000;
-    font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
-  }
-  .header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    border-bottom: 2px solid #000000;
-    padding: 16px 32px;
-  }
-  .logo {
-    font-size: 22px;
-    font-weight: bold;
-    letter-spacing: 2px;
-  }
-  .header-right {
-    display: flex;
-    align-items: center;
-    gap: 24px;
-  }
-  .nav {
-    display: flex;
-    gap: 24px;
-  }
-  .nav a {
-    color: #000000;
-    text-decoration: none;
-    font-size: 16px;
-    padding: 6px 4px;
-    border-bottom: 2px solid transparent;
-  }
-  .nav a:hover {
-    border-bottom: 2px solid #000000;
-  }
-  .auth {
-    display: flex;
-    gap: 8px;
-  }
-  .btn {
-    display: inline-block;
-    background: #ffffff;
-    color: #000000;
-    border: 2px solid #000000;
-    border-radius: 0;
-    padding: 8px 14px;
-    font-size: 14px;
-    font-family: inherit;
-    cursor: pointer;
-    text-decoration: none;
-    line-height: 1;
-  }
-  .btn:hover { background: #000000; color: #ffffff; }
-  .main {
-    min-height: calc(100% - 63px);
-  }
-  .wrap {
-    max-width: 720px;
-    margin: 0 auto;
-    padding: 40px 16px 64px;
-  }
-  .block {
-    border: 2px solid #000000;
-    padding: 24px;
-    margin-bottom: 22px;
-  }
-  .block h1 {
-    font-size: 20px;
-    letter-spacing: 2px;
-    margin: 0 0 16px;
-  }
-  .block h2 {
-    font-size: 15px;
-    letter-spacing: 1px;
-    margin: 0 0 12px;
-  }
-  .block p {
-    font-size: 15px;
-    line-height: 1.9;
-    margin: 0 0 12px;
-    color: #222222;
-  }
-  .block p:last-child { margin-bottom: 0; }
-  .contact { font-size: 15px; line-height: 2; }
-</style>
-<script>
-  (function () {
-    if (location.pathname !== "/" && location.pathname !== "") return;
-    function go(target) {
-      if (!target || target === "index.html") return;
-      location.replace(target);
-    }
-    var token = localStorage.getItem("token");
-    if (token) {
-      fetch("/api/user/profile", { headers: { "Authorization": "Bearer " + token } })
-        .then(function (r) { return r.ok ? r.json() : null; })
-        .then(function (d) {
-          if (d && d.user && d.user.default_page) go(d.user.default_page);
-          else go(localStorage.getItem("defaultPage"));
-        })
-        .catch(function () { go(localStorage.getItem("defaultPage")); });
-    } else {
-      go(localStorage.getItem("defaultPage"));
-    }
-  })();
-</script>
-</head>
-<body>
-  <header class="header">
-    <div class="logo">校园信息网</div>
-    <div class="header-right">
-      <nav class="nav">
-        <a href="map.html">校园地图</a>
-        <a href="forum.html">论坛</a>
-        <a href="recipe.html">菜谱评价</a>
-        <a href="announcements.html">更新公告</a>
-      </nav>
-      <div class="auth" id="authArea">
-        <a class="btn" href="login.html">登录</a>
-        <a class="btn" href="register.html">注册</a>
-      </div>
-    </div>
-  </header>
-  <main class="main">
-    <div class="wrap">
-      <div class="block">
-        <h1>关于我们</h1>
-        <p>「校园信息网」是一个黑白极简风格的校园信息网站，集成了首页、可切换楼层的交互式校园地图、论坛、菜谱评价、更新公告、学生认证与个人中心等功能，并配套一套完整的账号系统。</p>
-        <p>我们希望把校园里分散的信息集中到一个简洁、清爽的地方，用最少的视觉干扰，呈现最有用的内容。</p>
-      </div>
-
-      <div class="block">
-        <h2>发起原因</h2>
-        <p>最初它只是一个纯静态的校园地图页面，为了让地图数据便于维护与更新，逐步改造为 Node.js + Express 的动态站点，把几何数据抽离为 data.json，并加入低饱和度的实景配色。</p>
-        <p>此后我们陆续加入了账号系统（注册 / 登录 / 角色权限）、论坛与回复、菜谱评价、更新公告、学生认证、全站横幅与个人设置等功能，希望让它从一个地图工具成长为一个真正好用的校园信息平台。</p>
-      </div>
-
-      <div class="block">
-        <h2>联系方式</h2>
-        <div class="contact">
-          邮箱：contact@example.com<br>
-          QQ：123456789<br>
-          地址：校园信息网项目组
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#F5F3EE" />
+    <title>校园信息网</title>
+    <link rel="icon" href="/img/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/css/site.css" />
+  </head>
+  <body data-nav="home">
+    <noscript
+      ><div class="alert alert--warning">
+        <div class="alert__body">本站需要启用 JavaScript 才能正常使用。</div>
+      </div></noscript
+    >
+    <a class="skip-link" href="#main">跳到正文</a>
+    <div id="siteBanner"></div>
+    <div id="siteHeader"></div>
+    <main id="main" class="main container">
+      <section class="hero">
+        <svg class="hero__mark" aria-hidden="true">
+          <use href="/img/icons.svg#brand-glyph"></use>
+        </svg>
+        <div class="hero__inner">
+          <span class="hero__eyebrow">苏州中学 · 三元坊</span>
+          <h1 class="hero__title">校园里的信息，<br />收进一个干净的地方</h1>
+          <p class="hero__lead">
+            校园地图、论坛、食堂菜谱——少一点打扰，多一点有用的内容。
+          </p>
+          <div class="hero__actions">
+            <a class="btn btn--primary btn--lg" href="map.html"
+              ><svg class="icon" aria-hidden="true">
+                <use href="/img/icons.svg#i-map"></use></svg
+              >打开校园地图</a
+            >
+            <a class="btn btn--lg" href="forum.html">逛逛论坛</a>
+          </div>
         </div>
-      </div>
-    </div>
-  </main>
-  <script src="auth.js"></script>
-</body>
+      </section>
+
+      <section class="section">
+        <div class="section__head">
+          <h2 class="section__title">功能入口</h2>
+        </div>
+        <div class="grid grid--sm">
+          <article class="card card--interactive tile" data-hue="teal">
+            <span class="tile__icon"
+              ><svg class="icon icon--lg" aria-hidden="true">
+                <use href="/img/icons.svg#i-map"></use></svg
+            ></span>
+            <h3 class="tile__title">
+              <a class="card__link" href="map.html">校园地图</a
+              ><svg class="icon" aria-hidden="true">
+                <use href="/img/icons.svg#i-arrow-right"></use>
+              </svg>
+            </h3>
+            <p class="tile__desc">楼层切换，点击建筑查看介绍</p>
+          </article>
+          <article class="card card--interactive tile" data-hue="wisteria">
+            <span class="tile__icon"
+              ><svg class="icon icon--lg" aria-hidden="true">
+                <use href="/img/icons.svg#i-message"></use></svg
+            ></span>
+            <h3 class="tile__title">
+              <a class="card__link" href="forum.html">论坛</a
+              ><svg class="icon" aria-hidden="true">
+                <use href="/img/icons.svg#i-arrow-right"></use>
+              </svg>
+            </h3>
+            <p class="tile__desc">分享校园发现，一起讨论与提问</p>
+          </article>
+          <article class="card card--interactive tile" data-hue="ochre">
+            <span class="tile__icon"
+              ><svg class="icon icon--lg" aria-hidden="true">
+                <use href="/img/icons.svg#i-utensils"></use></svg
+            ></span>
+            <h3 class="tile__title">
+              <a class="card__link" href="recipe.html">菜谱评价</a
+              ><svg class="icon" aria-hidden="true">
+                <use href="/img/icons.svg#i-arrow-right"></use>
+              </svg>
+            </h3>
+            <p class="tile__desc">看看评价，找到今天想吃的菜</p>
+          </article>
+          <article class="card card--interactive tile" data-hue="indigo">
+            <span class="tile__icon"
+              ><svg class="icon icon--lg" aria-hidden="true">
+                <use href="/img/icons.svg#i-megaphone"></use></svg
+            ></span>
+            <h3 class="tile__title">
+              <a class="card__link" href="announcements.html">更新公告</a
+              ><svg class="icon" aria-hidden="true">
+                <use href="/img/icons.svg#i-arrow-right"></use>
+              </svg>
+            </h3>
+            <p class="tile__desc">查看网站的最新变化</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="section" id="about">
+        <div class="section__head">
+          <h2 class="section__title">关于我们</h2>
+        </div>
+        <div class="card">
+          <section class="about">
+            <h3 class="about__label">我们是什么</h3>
+            <div class="about__body">
+              <p>
+                「校园信息网」是一个由学生维护的校园信息站，集成了可切换楼层的交互式校园地图、论坛、菜谱评价与更新公告，并配套一套完整的账号与权限系统。
+              </p>
+              <p>
+                我们希望把校园里分散的信息集中到一个简洁、清爽的地方，用最少的视觉干扰，呈现最有用的内容。
+              </p>
+            </div>
+          </section>
+          <section class="about">
+            <h3 class="about__label">发起原因</h3>
+            <div class="about__body">
+              <p>
+                最初它只是一个纯静态的校园地图页面，为了让地图数据便于维护与更新，逐步改造为动态站点，把几何数据抽离出来。
+              </p>
+              <p>
+                此后我们陆续加入账号系统、论坛与回复、菜谱评价、更新公告、学生认证、全站横幅与个人设置等功能，希望让它从一个地图工具成长为一个真正好用的校园信息平台。
+              </p>
+            </div>
+          </section>
+          <section class="about">
+            <h3 class="about__label">联系与反馈</h3>
+            <div class="about__body">
+              <p>
+                遇到问题或有建议？欢迎通过<a href="profile.html#tickets">工单</a
+                >联系网站管理人员。
+              </p>
+            </div>
+          </section>
+        </div>
+      </section>
+    </main>
+    <div id="siteFooter"></div>
+    <script src="/js/ui.js"></script>
+    <script src="/js/page.js"></script>
+
+    <script src="/js/pages/index.js"></script>
+  </body>
 </html>

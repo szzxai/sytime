@@ -1,0 +1,687 @@
+import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
+import os from "node:os";
+import { spawn } from "node:child_process";
+import { chromium } from "playwright";
+import { DatabaseSync } from "node:sqlite";
+
+const root = path.resolve(import.meta.dirname, "..");
+const temp = fs.mkdtempSync(path.join(os.tmpdir(), "szzx-ui-test-"));
+const output = path.join(root, "output/playwright");
+fs.mkdirSync(output, { recursive: true });
+fs.copyFileSync(path.join(root, "server.js"), path.join(temp, "server.js"));
+fs.copyFileSync(path.join(root, "data.json"), path.join(temp, "data.json"));
+// The isolated app uses temporary SQLite/uploads and the current static files.
+fs.symlinkSync(
+  path.join(root, "public"),
+  path.join(temp, "public"),
+  "junction",
+);
+const port = 4319;
+const base = `http://127.0.0.1:${port}`;
+const server = spawn(process.execPath, [path.join(temp, "server.js")], {
+  cwd: temp,
+  env: {
+    ...process.env,
+    NODE_PATH: path.join(root, "node_modules"),
+    PORT: String(port),
+    JWT_SECRET: "ui-test-only-secret",
+  },
+  windowsHide: true,
+  stdio: ["ignore", "pipe", "pipe"],
+});
+let log = "";
+server.stdout.on("data", (x) => {
+  log += x;
+});
+server.stderr.on("data", (x) => {
+  log += x;
+});
+let browser,
+  checks = 0;
+const issues = [];
+function check(name, condition) {
+  assert.ok(condition, name);
+  checks++;
+}
+async function api(url, { token, method = "GET", body } = {}) {
+  const response = await fetch(base + url, {
+    method,
+    headers: {
+      ...(token ? { Authorization: "Bearer " + token } : {}),
+      ...(body ? { "Content-Type": "application/json" } : {}),
+    },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  const data = await response.json();
+  return { status: response.status, data };
+}
+async function account(username) {
+  await api("/api/register", {
+    method: "POST",
+    body: { username, nickname: username, password: "test-password" },
+  });
+  return (
+    await api("/api/login", {
+      method: "POST",
+      body: { username, password: "test-password" },
+    })
+  ).data;
+}
+const axe = fs.readFileSync(
+  path.join(root, "node_modules/axe-core/axe.min.js"),
+  "utf8",
+);
+async function context(login, width = 1280, theme = "light") {
+  const ctx = await browser.newContext({
+    viewport: { width, height: 850 },
+    reducedMotion: "reduce",
+  });
+  await ctx.addInitScript(
+    ({ login, theme }) => {
+      localStorage.setItem("theme", theme);
+      if (login) {
+        localStorage.setItem("token", login.token);
+        localStorage.setItem("user", JSON.stringify(login.user));
+      }
+    },
+    { login, theme },
+  );
+  return ctx;
+}
+async function pageFor(login, url, width = 1280, theme = "light") {
+  const ctx = await context(login, width, theme),
+    page = await ctx.newPage();
+  page.on("pageerror", (error) => issues.push(`${url}: ${error.message}`));
+  await page.goto(base + url, { waitUntil: "networkidle" });
+  return { ctx, page };
+}
+async function audit(page, name) {
+  await page.evaluate(axe);
+  const result = await page.evaluate(async () =>
+    (
+      await axe.run(document, {
+        runOnly: {
+          type: "tag",
+          values: ["wcag2a", "wcag2aa", "wcag21aa", "best-practice"],
+        },
+      })
+    ).violations.map((v) => ({
+      id: v.id,
+      impact: v.impact,
+      nodes: v.nodes.map((n) => n.target),
+    })),
+  );
+  if (result.length) issues.push({ name, axe: result });
+  const layout = await page.evaluate(() => ({
+    scroll: document.documentElement.scrollWidth,
+    width: innerWidth,
+    headers: [...document.querySelectorAll("h1")].filter(
+      (el) => !!el.getClientRects().length,
+    ).length,
+  }));
+  if (layout.scroll > layout.width + 1) issues.push({ name, overflow: layout });
+  if (layout.headers !== 1) issues.push({ name, heading: layout });
+  checks += 3;
+}
+try {
+  for (let i = 0; i < 100; i++) {
+    try {
+      if ((await fetch(base + "/api/settings/banner")).ok) break;
+    } catch {
+      /* Wait for isolated server. */
+    }
+    if (server.exitCode !== null) throw new Error(log);
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+  const admin = await account("developer"),
+    ordinary = await account("campus-user"),
+    banned = await account("banned-user");
+  const post = (
+    await api("/api/forum/posts", {
+      token: ordinary.token,
+      method: "POST",
+      body: {
+        category: "讨论",
+        title: "校园里的新发现",
+        content: "分享一个校园角落。\n<img src=x onerror=window.XSS=true>",
+      },
+    })
+  ).data.post;
+  for (let i = 0; i < 25; i++)
+    await api(`/api/forum/posts/${post.id}/replies`, {
+      token: ordinary.token,
+      method: "POST",
+      body: { content: "第 " + (i + 1) + " 条回复" },
+    });
+  for (let i = 0; i < 22; i++)
+    await api("/api/forum/posts", {
+      token: ordinary.token,
+      method: "POST",
+      body: {
+        category: "讨论",
+        title: "校园讨论 " + i,
+        content: "欢迎交流校园生活。",
+      },
+    });
+  await api("/api/forum/posts", {
+    token: ordinary.token,
+    method: "POST",
+    body: {
+      category: "提问",
+      title: "图书馆几点开放？",
+      content: "想了解开放时间。",
+    },
+  });
+  await api("/api/admin/announcements", {
+    token: admin.token,
+    method: "POST",
+    body: { title: "网站 UI 更新", content: "第一段公告。\n第二段公告。" },
+  });
+  await api("/api/admin/settings/banner", {
+    token: admin.token,
+    method: "PUT",
+    body: { value: "校园信息网新界面测试横幅。" },
+  });
+  await api("/api/student/apply", {
+    token: ordinary.token,
+    method: "POST",
+    body: {
+      student_id: "2026001",
+      class_name: "高一（1）班",
+      real_name: "测试同学",
+    },
+  });
+  await api("/api/tickets", {
+    token: ordinary.token,
+    method: "POST",
+    body: {
+      title: "界面建议",
+      content: "希望查看布局反馈。",
+      visibility: "admin",
+    },
+  });
+  await api("/api/admin/users/ban", {
+    token: admin.token,
+    method: "PUT",
+    body: {
+      userId: banned.user.id,
+      ban_reason: "测试封禁说明",
+      allow_appeal: 1,
+    },
+  });
+  await api("/api/user/appeal", {
+    method: "POST",
+    body: { username: "banned-user", appeal_reason: "测试申诉说明" },
+  });
+  const db = new DatabaseSync(path.join(temp, "data.db"));
+  db.prepare(
+    "INSERT INTO recipes (user_id, username, name, rating, comment) VALUES (?, ?, ?, ?, ?)",
+  ).run(
+    ordinary.user.id,
+    "campus-user",
+    "红烧牛肉",
+    4,
+    "味道不错，欢迎来评价。",
+  );
+  db.close();
+  browser = await chromium.launch({
+    channel: process.platform === "win32" ? "msedge" : undefined,
+    headless: true,
+  });
+  const files = [
+    "index",
+    "login",
+    "register",
+    "student_verify",
+    "announcements",
+    "forum",
+    "post",
+    "recipe",
+    "profile",
+    "admin",
+    "map",
+    "404",
+  ];
+  for (const width of [360, 1280]) {
+    for (const theme of ["light", "dark"]) {
+      for (const file of files) {
+        const login = ["profile", "admin", "student_verify"].includes(file)
+          ? admin
+          : null;
+        const url = `/${file}.html${file === "post" ? "?id=" + post.id : ""}`;
+        const { ctx, page } = await pageFor(login, url, width, theme);
+        await audit(page, `${file}/${width}/${theme}`);
+        if (
+          theme === "light" &&
+          ["index", "forum", "admin", "map", "profile"].includes(file)
+        )
+          await page.screenshot({
+            path: path.join(output, `${file}-${width}.png`),
+            fullPage: file !== "map",
+          });
+        await ctx.close();
+      }
+      console.log(`Page layouts audited: ${width}px / ${theme}`);
+    }
+  }
+  const { ctx, page } = await pageFor(ordinary, "/forum.html", 360);
+  check(
+    "first feed batch has 20 posts",
+    (await page.locator("[data-post-id]").count()) === 20,
+  );
+  await page.locator("#moreBtn").click();
+  check(
+    "remaining feed batch appended",
+    (await page.locator("[data-post-id]").count()) === 23,
+  );
+  await page.locator("#questionBtn").click();
+  await page.waitForFunction(
+    () => document.querySelectorAll("[data-post-id]").length === 1,
+  );
+  check(
+    "category changes fetch matching posts",
+    (await page.locator(".post__title").textContent()) === "图书馆几点开放？",
+  );
+  await page.locator("#newPostBtn").click();
+  await page.locator("#postSubmit").click();
+  check(
+    "empty post is rejected inline",
+    (await page.locator("#title").getAttribute("aria-invalid")) === "true",
+  );
+  await page.locator("#title").fill("测试 UI 发帖");
+  await page.locator("#content").fill("键盘与手机端提交。");
+  await page.locator("#postSubmit").click();
+  await page.waitForFunction(() => !document.getElementById("postDialog").open);
+  check("post dialog closes after creation", true);
+  await page.goto(base + "/post.html?id=" + post.id + "#reply-25", {
+    waitUntil: "networkidle",
+  });
+  check(
+    "reply deep link expands the required batch",
+    (await page.locator("#reply-25").count()) === 1,
+  );
+  check(
+    "user content is escaped",
+    await page.evaluate(
+      () =>
+        !window.XSS &&
+        document
+          .querySelector(".post-detail__body")
+          .textContent.includes("<img"),
+    ),
+  );
+  await page.locator("[data-like]").click();
+  await page.waitForFunction(
+    () => !document.querySelector("[data-like]").disabled,
+  );
+  check(
+    "like is reflected by the server",
+    (await api(`/api/forum/posts/${post.id}`, { token: ordinary.token })).data
+      .post.is_liked,
+  );
+  await page.locator("[data-reply-input]").fill("新的回复");
+  await page.locator('.composer button[type="submit"]').click();
+  await page.waitForFunction(
+    () => document.getElementById("replyTotal").textContent === "26",
+  );
+  check("reply count refreshes", true);
+  await page.goto(base + "/profile.html#tickets", { waitUntil: "networkidle" });
+  await page.locator("#ticketTitle").fill("通过新 UI 提交");
+  await page.locator("#ticketContent").fill("工单正文");
+  await page.locator("#ticketSubmit").click();
+  await page.waitForFunction(
+    () => document.querySelectorAll("#myTicketList article").length === 2,
+  );
+  check("personal ticket form reaches the existing API", true);
+  await page.goto(base + "/profile.html#site", { waitUntil: "networkidle" });
+  await page.locator("#defaultFloor").selectOption("3");
+  await page.locator("#recipeDefaultView").selectOption("weekly");
+  await page.locator("#siteSubmit").click();
+  await page.waitForFunction(
+    () => localStorage.getItem("defaultFloor") === "3",
+  );
+  check(
+    "site settings remain persistent",
+    (await api("/api/user/profile", { token: ordinary.token })).data.user
+      .default_floor === 3,
+  );
+  await ctx.close();
+
+  const adminPage = await pageFor(admin, "/admin.html#review", 360);
+  await adminPage.page.locator("[data-approve]").click();
+  await adminPage.page.waitForFunction(
+    () => !document.querySelector("[data-approve]"),
+  );
+  check(
+    "student application approved through new queue",
+    (await api("/api/user/profile", { token: ordinary.token })).data.user
+      .role === "student",
+  );
+  for (const panel of [
+    "banner",
+    "announce",
+    "weekly",
+    "review",
+    "appeals",
+    "tickets",
+    "users",
+    "invite",
+  ]) {
+    await adminPage.page.locator(`[data-panel="${panel}"]`).click();
+    await adminPage.page.waitForLoadState("networkidle");
+    await audit(adminPage.page, `admin/${panel}/360`);
+  }
+  await adminPage.page.locator('[data-panel="tickets"]').click();
+  await adminPage.page.locator("[data-reply-ticket]").first().click();
+  await adminPage.page.locator("#ticketReplyInput").fill("已收到，谢谢反馈。");
+  await adminPage.page.locator("#ticketConfirm").click();
+  await adminPage.page.waitForFunction(
+    () => !document.getElementById("ticketModal").open,
+  );
+  check(
+    "admin ticket reply reaches the existing API",
+    (
+      await api("/api/tickets/mine", { token: ordinary.token })
+    ).data.tickets.some((t) => t.status === "resolved"),
+  );
+  await adminPage.ctx.close();
+  const denied = await pageFor(ordinary, "/admin.html");
+  check(
+    "ordinary user has a permission state",
+    await denied.page.locator("#denyBox").isVisible(),
+  );
+  await denied.ctx.close();
+  const loggedOut = await pageFor(null, "/login.html?next=%2Fforum.html", 360);
+  await loggedOut.page.locator("#username").fill("banned-user");
+  await loggedOut.page.locator("#password").fill("test-password");
+  await loggedOut.page.locator("#submitBtn").click();
+  await loggedOut.page.waitForFunction(
+    () => !document.getElementById("appealBox").hidden,
+  );
+  check("banned login reveals appeal form", true);
+  await audit(loggedOut.page, "login/banned/360");
+  await loggedOut.ctx.close();
+
+  // Forms and administrative mutations use real endpoints in the temporary app.
+  const fixture = {
+    name: "campus.png",
+    mimeType: "image/png",
+    buffer: Buffer.from(
+      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j6h0AAAAASUVORK5CYII=",
+      "base64",
+    ),
+  };
+  const member = await account("moderated-user");
+  const extra = await pageFor(admin, "/admin.html#users", 360, "dark");
+  const ep = extra.page;
+  for (const panel of [
+    "banner",
+    "announce",
+    "weekly",
+    "review",
+    "appeals",
+    "tickets",
+    "users",
+    "invite",
+  ]) {
+    await ep.locator(`[data-panel="${panel}"]`).click();
+    await ep.waitForLoadState("networkidle");
+    await audit(ep, `admin/${panel}/dark`);
+  }
+  await ep.locator("#inviteCodeInput").fill("CAMPUS-UI");
+  await ep.locator("#inviteMaxInput").fill("3");
+  await ep.locator("#inviteAdd").click();
+  await ep.waitForFunction(() =>
+    document.querySelector("#inviteList").textContent.includes("CAMPUS-UI"),
+  );
+  check("invitation creation works", true);
+  await ep.locator('[data-panel="weekly"]').click();
+  await ep.locator("#weeklyStart").fill("2026-10-01");
+  await ep.locator("#weeklyEnd").fill("2026-10-07");
+  await ep.locator("#weeklyFile").setInputFiles(fixture);
+  check(
+    "weekly upload preview is visible",
+    await ep.locator("#weeklyPreview").isVisible(),
+  );
+  await ep.locator("#weeklyConfirm").click();
+  await ep.waitForFunction(
+    () => !!document.querySelector("#weeklyList [data-zoom]"),
+  );
+  check(
+    "weekly multipart upload works",
+    (await api("/api/weekly-menu")).data.images.length === 1,
+  );
+  await ep.locator("#weeklyList [data-zoom]").click();
+  await audit(ep, "weekly/viewer/dark");
+  await ep.keyboard.press("Escape");
+  await ep.locator('[data-panel="users"]').click();
+  await ep.waitForLoadState("networkidle");
+  await ep
+    .locator(`[data-role-select="${member.user.id}"]`)
+    .selectOption("student");
+  await ep.locator('dialog[open] button[type="submit"]').click();
+  await ep.waitForFunction(
+    (id) =>
+      document.querySelector(`[data-role-select="${id}"]`)?.value ===
+        "student" && !document.querySelector("dialog[open]"),
+    member.user.id,
+  );
+  check(
+    "role confirmation works",
+    (await api("/api/user/profile", { token: member.token })).data.user.role ===
+      "student",
+  );
+  await ep.locator(`[data-perms="${member.user.id}"]`).click();
+  await audit(ep, "admin/permissions/dialog/dark");
+  await ep.locator('#permsList input[value="banner_edit"]').check();
+  await ep.locator("#permsConfirm").click();
+  await ep.waitForFunction(() => !document.getElementById("permsModal").open);
+  check(
+    "special permissions save",
+    (
+      await api("/api/user/profile", { token: member.token })
+    ).data.user.permissions.includes("banner_edit"),
+  );
+  await ep.locator(`[data-ban="${member.user.id}"]`).click();
+  await audit(ep, "admin/ban/dialog/dark");
+  await ep.locator("#banReasonInput").fill("测试理由");
+  await ep.locator("#banImageInput").setInputFiles(fixture);
+  await ep.locator("#banConfirm").click();
+  await ep.waitForFunction(() => !document.getElementById("banModal").open);
+  check(
+    "ban dialog multipart submit works",
+    (await api("/api/admin/users", { token: admin.token })).data.users.find(
+      (u) => u.id === member.user.id,
+    ).status === "banned",
+  );
+  await ep.locator(`[data-unban="${member.user.id}"]`).click();
+  await ep.locator('dialog[open] button[type="submit"]').click();
+  await ep.waitForFunction(
+    (id) => !!document.querySelector(`[data-ban="${id}"]`),
+    member.user.id,
+  );
+  check("unban confirmation works", true);
+  await ep.locator('[data-panel="appeals"]').click();
+  await ep.waitForLoadState("networkidle");
+  await ep.locator("[data-approve-appeal]").click();
+  await ep.locator('dialog[open] button[type="submit"]').click();
+  await ep.waitForFunction(
+    () => !document.querySelector("[data-approve-appeal]"),
+  );
+  check("appeal approval clears queue", true);
+  await ep.locator('[data-panel="tickets"]').click();
+  await ep.waitForLoadState("networkidle");
+  await ep.locator("[data-reply-ticket]").first().click();
+  await audit(ep, "admin/ticket/dialog/dark");
+  await ep.locator("#ticketReplyInput").fill("图片批复");
+  await ep.locator("#ticketImageInput").setInputFiles(fixture);
+  await ep.locator("#ticketConfirm").click();
+  await ep.waitForFunction(() => !document.getElementById("ticketModal").open);
+  check(
+    "ticket image DataURL submit works",
+    (
+      await api("/api/tickets/mine", { token: ordinary.token })
+    ).data.tickets.some((t) => t.reply_image.startsWith("data:image/png;")),
+  );
+  await ep.goto(base + "/map.html", { waitUntil: "networkidle" });
+  await ep.locator("#floor4Btn").click();
+  check(
+    "map floor changes ARIA state",
+    (await ep.locator("#floor4Btn").getAttribute("aria-pressed")) === "true",
+  );
+  await ep.locator("#floor1Btn").click();
+  await ep.locator("#helpBtn").click();
+  check("map help expands", await ep.locator("#helpPanel").isVisible());
+  await ep.locator(".leaflet-interactive").first().dispatchEvent("click");
+  await ep.locator(".map-popup__edit").click();
+  await audit(ep, "map/edit/dialog/dark");
+  await ep.locator("dialog[open] textarea").fill("更新后的校园建筑说明");
+  await ep.locator('dialog[open] button[type="submit"]').click();
+  await ep.waitForFunction(
+    () =>
+      document.querySelector(".map-popup__text")?.textContent ===
+      "更新后的校园建筑说明",
+  );
+  check(
+    "map popup update persists",
+    (await api("/api/map-data")).data.features.some(
+      (f) => f.popup === "更新后的校园建筑说明",
+    ),
+  );
+  await extra.ctx.close();
+  const partial = await pageFor(member, "/admin.html#users");
+  check(
+    "explicit permission filters sidebar",
+    (await partial.page.locator("#adminNav [data-panel]:visible").count()) ===
+      1 && (await partial.page.locator("#view-banner").isVisible()),
+  );
+  await partial.ctx.close();
+  const recipe = await pageFor(ordinary, "/recipe.html", 360);
+  await recipe.page.locator("#allBtn").click();
+  await recipe.page.locator("#writeBtn").click();
+  await audit(recipe.page, "recipe/dialog/360");
+  await recipe.page.locator("#name").fill("清蒸鱼");
+  await recipe.page.locator('label[for="r4"]').click();
+  await recipe.page.locator("#comment").fill("新 UI 的图片评价");
+  await recipe.page.locator("#image").setInputFiles(fixture);
+  await recipe.page.locator("#recipeSubmit").click();
+  await recipe.page.waitForFunction(
+    () => !document.getElementById("reviewDialog").open,
+  );
+  check(
+    "review multipart upload works",
+    (await api("/api/recipes")).data.recipes.some(
+      (r) => r.name === "清蒸鱼" && r.rating === 4 && r.image_url,
+    ),
+  );
+  await recipe.page.locator("#weeklyBtn").click();
+  await recipe.page.waitForLoadState("networkidle");
+  await audit(recipe.page, "recipe/weekly/360");
+  await recipe.ctx.close();
+  const profile = await pageFor(ordinary, "/profile.html", 360);
+  for (const panel of ["profile", "security", "site", "tickets"]) {
+    await profile.page.locator(`[data-panel="${panel}"]`).click();
+    await profile.page.waitForLoadState("networkidle");
+    await audit(profile.page, `profile/${panel}/360`);
+  }
+  await profile.page.locator('[data-panel="profile"]').click();
+  await profile.page.locator("#nickname").fill("校园昵称");
+  await profile.page.locator("#nicknameSubmit").click();
+  await profile.page.waitForFunction(
+    () => document.getElementById("profileName").textContent === "校园昵称",
+  );
+  await profile.page.locator("#avatarFile").setInputFiles(fixture);
+  await profile.page.waitForFunction(
+    () => !!document.querySelector("#avatarBox img"),
+  );
+  check(
+    "nickname and avatar save",
+    !!(await api("/api/user/profile", { token: ordinary.token })).data.user
+      .avatar_url,
+  );
+  await profile.ctx.close();
+  const registration = await pageFor(
+    null,
+    "/register.html?next=%2Fforum.html",
+    360,
+  );
+  for (const [id, value] of [
+    ["username", "ui-registration"],
+    ["nickname", "注册昵称"],
+    ["password", "test-password"],
+    ["confirm", "test-password"],
+  ])
+    await registration.page.locator("#" + id).fill(value);
+  await registration.page.locator("#submitBtn").click();
+  await registration.page.waitForURL("**/forum.html");
+  check(
+    "registration automatically logs in and returns to next",
+    !!(await registration.page.evaluate(() => localStorage.getItem("token"))),
+  );
+  await registration.ctx.close();
+  const retry = await pageFor(null, "/forum.html", 360);
+  await retry.page.route("**/api/forum/posts?*", (route) =>
+    route.fulfill({
+      status: 503,
+      contentType: "application/json",
+      body: JSON.stringify({ error: "server error" }),
+    }),
+  );
+  await retry.page.locator("#questionBtn").click();
+  await retry.page.locator("[data-retry]").waitFor();
+  check("fetch failure provides retry", true);
+  await retry.page.unroute("**/api/forum/posts?*");
+  await retry.page.locator("[data-retry]").click();
+  await retry.page.waitForFunction(
+    () => !!document.querySelector("[data-post-id]"),
+  );
+  check("retry reloads the failed list", true);
+  await retry.ctx.close();
+  const notFound = await fetch(base + "/missing/deep/path");
+  check(
+    "unknown page returns styled 404",
+    notFound.status === 404 &&
+      (await notFound.text()).includes("/css/site.css"),
+  );
+  check(
+    "unknown API remains JSON 404",
+    (await api("/api/missing")).status === 404,
+  );
+  const oldData = JSON.parse(
+    fs.readFileSync(path.join(root, "data.json"), "utf8"),
+  );
+  check("map data matches feature count", oldData.features.length > 200);
+  fs.writeFileSync(
+    path.join(output, "audit.json"),
+    JSON.stringify({ checks, issues }, null, 2),
+  );
+  assert.deepEqual(
+    issues,
+    [],
+    "Browser console, layout and accessibility findings: " +
+      JSON.stringify(issues),
+  );
+  console.log(
+    `${checks} checks passed. Temporary database and uploads isolated from the repository.`,
+  );
+} finally {
+  fs.writeFileSync(
+    path.join(output, "audit.json"),
+    JSON.stringify({ checks, issues }, null, 2),
+  );
+  if (browser) await browser.close();
+  server.kill();
+  await new Promise((resolve) => {
+    if (server.exitCode !== null) resolve();
+    else server.once("exit", resolve);
+  });
+  // Only remove the mkdtemp directory after verifying its resolved parent.
+  if (
+    path.dirname(fs.realpathSync(temp)).toLowerCase() !==
+    fs.realpathSync(os.tmpdir()).toLowerCase()
+  )
+    throw new Error("Unexpected temporary path");
+  fs.rmSync(temp, { recursive: true, force: true });
+}

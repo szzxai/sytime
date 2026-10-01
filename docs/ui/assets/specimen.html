@@ -1,0 +1,604 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>设计样张 · 校园信息网</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="site.css">
+<style>
+  /* 仅样张页使用的展示样式（不属于设计系统） */
+  .sw-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(10.5rem,1fr));gap:.75rem;margin-top:.5rem}
+  .sw{display:grid;grid-template-columns:2.25rem 1fr;grid-template-rows:auto auto;column-gap:.625rem;align-items:center}
+  .sw__chip{grid-row:1/3;width:2.25rem;height:2.25rem;border-radius:8px;box-shadow:inset 0 0 0 1px var(--img-edge)}
+  .sw__name{font:600 .75rem/1.2 var(--font-mono)} .sw__hex{font-size:.6875rem;color:var(--ink-3)}
+  .pv{position:static!important;transform:none!important;animation:none!important}
+  .doc-intro{padding-block:var(--sp-8) 0}
+  .doc-toc{display:flex;flex-wrap:wrap;gap:.5rem;margin-top:1rem}
+</style></head>
+<body data-shell="app">
+<svg xmlns="http://www.w3.org/2000/svg" width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+<!-- 校园信息网 图标库 v1.0 · 24x24 栅格 · 线性 1.75 · 圆角端点。样式由 .icon 提供（fill:none; stroke:currentColor）。
+     注意：外部引用时根节点不能带 display:none（否则 <use> 不渲染）；内联进页面时请包一层 width=0 height=0 position:absolute 的 <svg>。 -->
+
+<!-- 品牌印章：朱底 + 几何“中”字（32x32），颜色取自 CSS 变量 seal 与 ink-inverse（自带回退值） -->
+<symbol id="brand-mark" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="8" style="fill:var(--seal,#B8372B)"/>
+  <g style="fill:none;stroke:var(--ink-inverse,#FFFFFF);stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round">
+    <rect x="8.6" y="10.4" width="14.8" height="11.2" rx="1.6"/>
+    <path d="M16 6.2v19.6"/>
+  </g>
+</symbol>
+
+<!-- 品牌字形（仅笔画，用于首页水印等装饰），颜色取自 CSS 变量 seal -->
+<symbol id="brand-glyph" viewBox="0 0 32 32">
+  <g style="fill:none;stroke:var(--seal,#B8372B);stroke-width:2;stroke-linecap:round;stroke-linejoin:round">
+    <rect x="8.6" y="10.4" width="14.8" height="11.2" rx="1.6"/>
+    <path d="M16 6.2v19.6"/>
+  </g>
+</symbol>
+
+<!-- 导航与操作 -->
+<symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></symbol>
+<symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+<symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></symbol>
+<symbol id="i-chevron-down" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></symbol>
+<symbol id="i-chevron-up" viewBox="0 0 24 24"><path d="M6 15l6-6 6 6"/></symbol>
+<symbol id="i-chevron-left" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></symbol>
+<symbol id="i-chevron-right" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></symbol>
+<symbol id="i-arrow-left" viewBox="0 0 24 24"><path d="M19 12H5M11 6l-6 6 6 6"/></symbol>
+<symbol id="i-arrow-right" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+<symbol id="i-arrow-up" viewBox="0 0 24 24"><path d="M12 19V5M6 11l6-6 6 6"/></symbol>
+<symbol id="i-external" viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9M18 14v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4"/></symbol>
+<symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+<symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
+<symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+<symbol id="i-more" viewBox="0 0 24 24"><path d="M5.5 12h.01M12 12h.01M18.5 12h.01" stroke-width="3"/></symbol>
+<symbol id="i-more-v" viewBox="0 0 24 24"><path d="M12 5.5h.01M12 12h.01M12 18.5h.01" stroke-width="3"/></symbol>
+<symbol id="i-copy" viewBox="0 0 24 24"><rect x="8.5" y="8.5" width="11" height="11" rx="2"/><path d="M15.5 8.5V6.5a2 2 0 0 0-2-2h-7a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h2"/></symbol>
+<symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 11.5A8 8 0 0 0 6 7L4 9M4 4.5V9h4.5"/><path d="M4 12.5A8 8 0 0 0 18 17l2-2M20 19.5V15h-4.5"/></symbol>
+<symbol id="i-link" viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></symbol>
+<symbol id="i-fullscreen" viewBox="0 0 24 24"><path d="M4 9V5.5A1.5 1.5 0 0 1 5.5 4H9M15 4h3.5A1.5 1.5 0 0 1 20 5.5V9M20 15v3.5a1.5 1.5 0 0 1-1.5 1.5H15M9 20H5.5A1.5 1.5 0 0 1 4 18.5V15"/></symbol>
+<symbol id="i-filter" viewBox="0 0 24 24"><path d="M4 5h16l-6.2 7.5V19l-3.6 1.5v-8z"/></symbol>
+<symbol id="i-sort" viewBox="0 0 24 24"><path d="M4 7h16M4 12h11M4 17h6"/></symbol>
+<symbol id="i-send" viewBox="0 0 24 24"><path d="M21 3L10 14M21 3l-6.5 18-4-7-7-4z"/></symbol>
+<symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 15V4M7 9l5-5 5 5"/><path d="M4.5 15v3a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2v-3"/></symbol>
+<symbol id="i-download" viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5"/><path d="M4.5 15v3a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2v-3"/></symbol>
+<symbol id="i-pencil" viewBox="0 0 24 24"><path d="M4 20l1-4L16.5 4.5a2.1 2.1 0 0 1 3 3L8 19z"/><path d="M14.5 6.5l3 3"/></symbol>
+<symbol id="i-trash" viewBox="0 0 24 24"><path d="M4.5 6.5h15M9.5 6.5V4.5h5v2M6.5 6.5l.8 12.2a2 2 0 0 0 2 1.8h5.4a2 2 0 0 0 2-1.8l.8-12.2M10 10.5v6M14 10.5v6"/></symbol>
+<symbol id="i-eye" viewBox="0 0 24 24"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="2.8"/></symbol>
+<symbol id="i-eye-off" viewBox="0 0 24 24"><path d="M3.5 3.5l17 17"/><path d="M10.6 5.7A9.6 9.6 0 0 1 12 5.5c6 0 9.5 6.5 9.5 6.5a16 16 0 0 1-3 3.8M6.6 7.2A16.5 16.5 0 0 0 2.5 12S6 18.5 12 18.5a9.5 9.5 0 0 0 3.6-.7"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></symbol>
+<symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="10.5" width="14" height="10" rx="2"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5M12 14.5v2.5"/></symbol>
+
+<!-- 状态 -->
+<symbol id="i-check-circle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l3 3 5-6"/></symbol>
+<symbol id="i-x-circle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/></symbol>
+<symbol id="i-alert-circle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7.5v5.5M12 16.5h.01"/></symbol>
+<symbol id="i-alert-triangle" viewBox="0 0 24 24"><path d="M10.3 4.2L2.8 17.5A2 2 0 0 0 4.5 20.5h15a2 2 0 0 0 1.7-3L13.7 4.2a2 2 0 0 0-3.4 0z"/><path d="M12 9.5v4M12 17h.01"/></symbol>
+<symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5M12 7.5h.01"/></symbol>
+<symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1 .9-1 1.7M12 17h.01"/></symbol>
+<symbol id="i-ban" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M5.7 5.7l12.6 12.6"/></symbol>
+<symbol id="i-wifi-off" viewBox="0 0 24 24"><path d="M3.5 3.5l17 17"/><path d="M8.7 16.3a4.8 4.8 0 0 1 6.6 0M5.4 12.6a9.4 9.4 0 0 1 3-2M12 20h.01M10.2 5.2A15 15 0 0 1 22 9M2 9a15 15 0 0 1 4-2.6M15.6 9.6a9.4 9.4 0 0 1 3.2 2.9"/></symbol>
+<symbol id="i-image-off" viewBox="0 0 24 24"><path d="M3.5 3.5l17 17"/><path d="M7 4.5h10.5A2.5 2.5 0 0 1 20 7v10.5M4 8v9.5A2.5 2.5 0 0 0 6.5 20H17"/><circle cx="9" cy="9.5" r="1.4"/><path d="M4 17l4-3.5M13 12.5l2.5-2 4.5 3.7"/></symbol>
+
+<!-- 内容与功能 -->
+<symbol id="i-home" viewBox="0 0 24 24"><path d="M4 11l8-6.5 8 6.5"/><path d="M6 9.5v10a1 1 0 0 0 1 1h3.5V15h3v5.5H17a1 1 0 0 0 1-1v-10"/></symbol>
+<symbol id="i-map" viewBox="0 0 24 24"><path d="M9 5L3.5 7v12L9 17l6 2 5.5-2V5L15 7z"/><path d="M9 5v12M15 7v12"/></symbol>
+<symbol id="i-map-pin" viewBox="0 0 24 24"><path d="M12 21s-6.5-5.8-6.5-11a6.5 6.5 0 0 1 13 0c0 5.2-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.3"/></symbol>
+<symbol id="i-layers" viewBox="0 0 24 24"><path d="M12 3.5l9 4.7-9 4.7-9-4.7z"/><path d="M3 12.3l9 4.7 9-4.7M3 16.3l9 4.7 9-4.7"/></symbol>
+<symbol id="i-message" viewBox="0 0 24 24"><path d="M5 5.5h14a1.5 1.5 0 0 1 1.5 1.5v8.5a1.5 1.5 0 0 1-1.5 1.5h-8.5L6.5 20.5V17H5a1.5 1.5 0 0 1-1.5-1.5V7A1.5 1.5 0 0 1 5 5.5z"/></symbol>
+<symbol id="i-utensils" viewBox="0 0 24 24"><path d="M5 3v5a2 2 0 0 0 4 0V3M7 3v18"/><path d="M17.5 21V3s-4 1.4-4 7.5c0 1.6.9 2.5 4 2.5"/></symbol>
+<symbol id="i-megaphone" viewBox="0 0 24 24"><path d="M4 10v4a1 1 0 0 0 1 1h2l8 4V5L7 9H5a1 1 0 0 0-1 1z"/><path d="M18.5 9a4 4 0 0 1 0 6"/><path d="M7 15l1.2 4.5"/></symbol>
+<symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 16v-5a6 6 0 0 1 12 0v5l2 2.5H4z"/><path d="M10 21a2 2 0 0 0 4 0"/></symbol>
+<symbol id="i-mail" viewBox="0 0 24 24"><rect x="3" y="5.5" width="18" height="13" rx="2"/><path d="M3.5 7.5l8.5 6 8.5-6"/></symbol>
+<symbol id="i-inbox" viewBox="0 0 24 24"><path d="M3.5 13.5l2.4-6.8A2 2 0 0 1 7.8 5.4h8.4a2 2 0 0 1 1.9 1.3l2.4 6.8"/><path d="M3.5 13.5V18a2 2 0 0 0 2 2h13a2 2 0 0 0 2-2v-4.5h-5l-1 2.5h-5l-1-2.5z"/></symbol>
+<symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.8"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0"/></symbol>
+<symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8.5" r="3.3"/><path d="M2.8 19.5a6.2 6.2 0 0 1 12.4 0"/><path d="M15.5 5.5a3.3 3.3 0 0 1 0 6M17.5 14.2a6 6 0 0 1 3.7 5.3"/></symbol>
+<symbol id="i-settings" viewBox="0 0 24 24"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></symbol>
+<symbol id="i-logout" viewBox="0 0 24 24"><path d="M9 4.5H6.5a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2H9"/><path d="M15 8l4 4-4 4M19 12H9.5"/></symbol>
+<symbol id="i-login" viewBox="0 0 24 24"><path d="M15 4.5h2.5a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H15"/><path d="M10 8l4 4-4 4M14 12H4.5"/></symbol>
+<symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3.5l7 2.5v5.5c0 4.2-2.9 7.6-7 9-4.1-1.4-7-4.8-7-9V6z"/></symbol>
+<symbol id="i-shield-check" viewBox="0 0 24 24"><path d="M12 3.5l7 2.5v5.5c0 4.2-2.9 7.6-7 9-4.1-1.4-7-4.8-7-9V6z"/><path d="M9 12l2.2 2.2L15.5 10"/></symbol>
+<symbol id="i-graduation" viewBox="0 0 24 24"><path d="M2.5 9.5L12 5l9.5 4.5L12 14z"/><path d="M6.5 11.8v4c0 1 2.5 2.7 5.5 2.7s5.5-1.7 5.5-2.7v-4M21.5 9.5v5"/></symbol>
+<symbol id="i-clipboard" viewBox="0 0 24 24"><rect x="5" y="4.5" width="14" height="16" rx="2"/><path d="M9 4.5V3.7h6v.8M8.5 10h7M8.5 13.5h7M8.5 17h4"/></symbol>
+<symbol id="i-calendar" viewBox="0 0 24 24"><rect x="4" y="5.5" width="16" height="14.5" rx="2.5"/><path d="M4 10h16M8.5 3.5v4M15.5 3.5v4"/></symbol>
+<symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.2 2"/></symbol>
+<symbol id="i-image" viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><circle cx="9" cy="10" r="1.6"/><path d="M4 17l5-4.5 3.5 3 3-2.5 4.5 3.7"/></symbol>
+<symbol id="i-book" viewBox="0 0 24 24"><path d="M12 6.5C10.3 5 7.7 4.5 4.5 4.5v13c3.2 0 5.8.5 7.5 2 1.7-1.5 4.3-2 7.5-2v-13c-3.2 0-5.8.5-7.5 2zM12 6.5v13"/></symbol>
+<symbol id="i-compass" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/></symbol>
+<symbol id="i-columns" viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="15" rx="2"/><path d="M12 4.5v15"/></symbol>
+<symbol id="i-rows" viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="15" rx="2"/><path d="M3.5 10h17"/></symbol>
+<symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.8"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6L7 7M17 17l1.4 1.4M18.4 5.6L17 7M7 17l-1.4 1.4"/></symbol>
+<symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></symbol>
+
+<!-- 美食与榜单 -->
+<symbol id="i-store" viewBox="0 0 24 24"><path d="M4 9l1.2-4.1a1.5 1.5 0 0 1 1.4-1.1h10.8a1.5 1.5 0 0 1 1.4 1.1L20 9"/><path d="M4 9a2.67 2.67 0 0 0 5.33 0 2.67 2.67 0 0 0 5.34 0A2.67 2.67 0 0 0 20 9"/><path d="M5.5 11.5V20h13v-8.5M10 20v-5h4v5"/></symbol>
+<symbol id="i-tag" viewBox="0 0 24 24"><path d="M3.5 12.2V4.5a1 1 0 0 1 1-1h7.7l8.3 8.3a1.5 1.5 0 0 1 0 2.1l-5.6 5.6a1.5 1.5 0 0 1-2.1 0z"/><circle cx="8" cy="8" r="1.3"/></symbol>
+<symbol id="i-route" viewBox="0 0 24 24"><circle cx="6" cy="18.5" r="2"/><circle cx="18" cy="5.5" r="2"/><path d="M8 18.5h8.5a3.5 3.5 0 0 0 0-7h-9a3.5 3.5 0 0 1 0-7H16"/></symbol>
+<symbol id="i-walk" viewBox="0 0 24 24"><circle cx="13.5" cy="4.5" r="1.8"/><path d="M11 21l1.6-6.2-2.6-2.6 1.2-5L8.5 9.8 7 13M12.2 7.2l3.3 2.6 2.5.4M12.8 14.8L15.5 17l.5 4"/></symbol>
+<symbol id="i-star" viewBox="0 0 24 24"><path d="M12 3.2l2.7 5.6 6.1.8-4.5 4.2 1.1 6.1L12 17l-5.4 2.9 1.1-6.1L3.2 9.6l6.1-.8z"/></symbol>
+<symbol id="i-heart" viewBox="0 0 24 24"><path d="M12 20s-7.5-4.6-7.5-10.1A4.4 4.4 0 0 1 12 7.2a4.4 4.4 0 0 1 7.5 2.7C19.5 15.4 12 20 12 20z"/></symbol>
+<symbol id="i-award" viewBox="0 0 24 24"><circle cx="12" cy="9" r="5.5"/><path d="M8.7 13.4L7.5 21l4.5-2.5 4.5 2.5-1.2-7.6"/></symbol>
+<symbol id="i-trophy" viewBox="0 0 24 24"><path d="M8 4.5h8v5a4 4 0 0 1-8 0z"/><path d="M8 6.5H5.5a1 1 0 0 0-1 1V8A3 3 0 0 0 8 11M16 6.5h2.5a1 1 0 0 1 1 1V8A3 3 0 0 1 16 11M12 13.5V17M9 20.5h6M10 17h4"/></symbol>
+<symbol id="i-flag" viewBox="0 0 24 24"><path d="M5 21V4.5M5 5h11.5l-2 3.5 2 3.5H5"/></symbol>
+</svg>
+
+<a class="skip-link" href="#main">跳到正文</a>
+
+<header class="site-header"><div class="site-header__inner container container--wide">
+  <button class="icon-btn site-header__menu" type="button" aria-label="打开菜单"><svg class="icon " aria-hidden="true"><use href="#i-menu"/></svg></button>
+  <a class="brand" href="#"><svg class="brand__mark" aria-hidden="true"><use href="#brand-mark"/></svg><span class="brand__text"><span class="brand__name">校园信息网</span><span class="brand__sub">SZZX · INFO</span></span></a>
+  <nav class="site-nav" aria-label="主导航"><a class="site-nav__link" href="#">地图</a><a class="site-nav__link" href="#" aria-current="page">论坛</a><a class="site-nav__link" href="#">菜谱</a><a class="site-nav__link" href="#">必吃榜</a><a class="site-nav__link" href="#">公告</a></nav>
+  <div class="site-header__actions"><a class="icon-btn" href="#" aria-label="消息，3 条未读"><svg class="icon " aria-hidden="true"><use href="#i-bell"/></svg><span class="count-badge">3</span></a><div class="menu"><button class="avatar-btn" aria-haspopup="menu" aria-expanded="false" aria-label="账户菜单"><span class="avatar avatar--sm" data-hue="teal">小</span></button></div></div>
+</div></header>
+<main id="main" class="main container container--wide">
+  <div class="page-head"><div class="page-head__main"><span class="page-head__eyebrow">Design System · v1.0</span><h1 class="page-head__title">校园信息网 · 设计样张</h1><p class="page-head__desc">黛青 + 朱印 + 宣纸：安静、克制、有书卷气。本页由 site.css 渲染，所有组件均为最终规范。</p></div>
+  <div class="page-head__actions"><button class="btn" id="themeBtn"><svg class="icon " aria-hidden="true"><use href="#i-moon"/></svg>深色</button></div></div>
+  <nav class="filter-bar" aria-label="样张目录" style="margin:calc(var(--sp-4) * -1) 0 var(--sp-6)"><a class="tag tag--outline" href="#tokens">颜色</a><a class="tag tag--outline" href="#type">字体</a><a class="tag tag--outline" href="#shape">间距圆角阴影</a><a class="tag tag--outline" href="#buttons">按钮</a><a class="tag tag--outline" href="#forms">表单</a><a class="tag tag--outline" href="#cards">卡片列表表格</a><a class="tag tag--outline" href="#badges">标签头像评分</a><a class="tag tag--outline" href="#feedback">反馈</a><a class="tag tag--outline" href="#nav">菜单标签折叠</a><a class="tag tag--outline" href="#forum">论坛</a><a class="tag tag--outline" href="#food">菜品店铺评价</a><a class="tag tag--outline" href="#inbox">消息头衔</a><a class="tag tag--outline" href="#viewer">查看器</a><a class="tag tag--outline" href="#pages">页面模式</a><a class="tag tag--outline" href="#demo">交互演示</a></nav>
+  <div class="card card--flush" style="margin-bottom:var(--sp-8)"><div style="padding:var(--sp-3) var(--sp-4);border-bottom:1px solid var(--line);font-size:var(--fs-sm);color:var(--ink-3)">未登录页头</div><div class="site-header" style="position:static;border-bottom:0;background:none;backdrop-filter:none"><div class="site-header__inner container container--wide">
+  <button class="icon-btn site-header__menu" type="button" aria-label="打开菜单"><svg class="icon " aria-hidden="true"><use href="#i-menu"/></svg></button>
+  <a class="brand" href="#"><svg class="brand__mark" aria-hidden="true"><use href="#brand-mark"/></svg><span class="brand__text"><span class="brand__name">校园信息网</span><span class="brand__sub">SZZX · INFO</span></span></a>
+  <nav class="site-nav" aria-label="主导航（未登录示例）"><a class="site-nav__link" href="#">地图</a><a class="site-nav__link" href="#" aria-current="page">论坛</a><a class="site-nav__link" href="#">菜谱</a><a class="site-nav__link" href="#">必吃榜</a><a class="site-nav__link" href="#">公告</a></nav>
+  <div class="site-header__actions"><a class="btn btn--ghost btn--sm" href="#">登录</a><a class="btn btn--primary btn--sm" href="#">注册</a></div>
+</div></div></div>
+
+<section class="section" id="tokens">
+  <div class="section__head"><h2 class="section__title">1 · 颜色令牌</h2></div>
+  <div class="stack stack--lg">
+    <div><div class="eyebrow">纸与墨 Paper &amp; Ink</div><div class="sw-grid">
+      <div class="sw"><span class="sw__chip" style="background:var(--bg)"></span><span class="sw__name">--bg</span><span class="sw__hex">#F5F3EE · 页面底</span></div><div class="sw"><span class="sw__chip" style="background:var(--surface)"></span><span class="sw__name">--surface</span><span class="sw__hex">#FFFFFF · 卡片</span></div><div class="sw"><span class="sw__chip" style="background:var(--surface-2)"></span><span class="sw__name">--surface-2</span><span class="sw__hex">#FAF8F4 · 次级面板</span></div><div class="sw"><span class="sw__chip" style="background:var(--sunken)"></span><span class="sw__name">--sunken</span><span class="sw__hex">#ECE9E1 · 凹陷</span></div>
+      <div class="sw"><span class="sw__chip" style="background:var(--line)"></span><span class="sw__name">--line</span><span class="sw__hex">#E3DFD4 · 发丝线</span></div><div class="sw"><span class="sw__chip" style="background:var(--line-strong)"></span><span class="sw__name">--line-strong</span><span class="sw__hex">#C9C3B3 · 控件边框</span></div>
+      <div class="sw"><span class="sw__chip" style="background:var(--ink)"></span><span class="sw__name">--ink</span><span class="sw__hex">#1B2326 · 正文</span></div><div class="sw"><span class="sw__chip" style="background:var(--ink-2)"></span><span class="sw__name">--ink-2</span><span class="sw__hex">#46535A · 次要</span></div><div class="sw"><span class="sw__chip" style="background:var(--ink-3)"></span><span class="sw__name">--ink-3</span><span class="sw__hex">#5B6872 · 辅助</span></div></div></div>
+    <div><div class="eyebrow">品牌 Brand</div><div class="sw-grid">
+      <div class="sw"><span class="sw__chip" style="background:var(--primary)"></span><span class="sw__name">--primary</span><span class="sw__hex">#24606F · 黛青</span></div><div class="sw"><span class="sw__chip" style="background:var(--primary-hover)"></span><span class="sw__name">--primary-hover</span><span class="sw__hex">#1D4C59</span></div><div class="sw"><span class="sw__chip" style="background:var(--primary-press)"></span><span class="sw__name">--primary-press</span><span class="sw__hex">#163B46</span></div>
+      <div class="sw"><span class="sw__chip" style="background:var(--primary-50)"></span><span class="sw__name">--primary-50</span><span class="sw__hex">#EDF5F6</span></div><div class="sw"><span class="sw__chip" style="background:var(--primary-100)"></span><span class="sw__name">--primary-100</span><span class="sw__hex">#DCEBEE</span></div><div class="sw"><span class="sw__chip" style="background:var(--primary-200)"></span><span class="sw__name">--primary-200</span><span class="sw__hex">#BFD9DE</span></div><div class="sw"><span class="sw__chip" style="background:var(--seal)"></span><span class="sw__name">--seal</span><span class="sw__hex">#B8372B · 朱印</span></div></div></div>
+    <div><div class="eyebrow">语义 Semantic</div><div class="sw-grid">
+      <div class="sw"><span class="sw__chip" style="background:var(--red)"></span><span class="sw__name">--red</span><span class="sw__hex">#B8372B</span></div><div class="sw"><span class="sw__chip" style="background:var(--red-tint)"></span><span class="sw__name">--red-tint</span><span class="sw__hex">#FBECE9</span></div><div class="sw"><span class="sw__chip" style="background:var(--green)"></span><span class="sw__name">--green</span><span class="sw__hex">#2F7D4F</span></div><div class="sw"><span class="sw__chip" style="background:var(--green-tint)"></span><span class="sw__name">--green-tint</span><span class="sw__hex">#E7F3EC</span></div>
+      <div class="sw"><span class="sw__chip" style="background:var(--amber)"></span><span class="sw__name">--amber</span><span class="sw__hex">#8A5A00</span></div><div class="sw"><span class="sw__chip" style="background:var(--amber-tint)"></span><span class="sw__name">--amber-tint</span><span class="sw__hex">#FBF1DC</span></div><div class="sw"><span class="sw__chip" style="background:var(--star)"></span><span class="sw__name">--star</span><span class="sw__hex">#C98400 · 星级</span></div><div class="sw"><span class="sw__chip" style="background:var(--star-empty)"></span><span class="sw__name">--star-empty</span><span class="sw__hex">#D8D2C4</span></div></div></div>
+    <div><div class="eyebrow">分类色 Hues（标签 / 头衔 / 头像）</div><div class="row">
+      <span class="tag" data-hue="teal">teal</span><span class="avatar avatar--sm" data-hue="teal">T</span><span class="tag" data-hue="vermilion">vermilion</span><span class="avatar avatar--sm" data-hue="vermilion">V</span><span class="tag" data-hue="ochre">ochre</span><span class="avatar avatar--sm" data-hue="ochre">O</span><span class="tag" data-hue="bamboo">bamboo</span><span class="avatar avatar--sm" data-hue="bamboo">B</span><span class="tag" data-hue="wisteria">wisteria</span><span class="avatar avatar--sm" data-hue="wisteria">W</span><span class="tag" data-hue="indigo">indigo</span><span class="avatar avatar--sm" data-hue="indigo">I</span><span class="tag" data-hue="rose">rose</span><span class="avatar avatar--sm" data-hue="rose">R</span><span class="tag" data-hue="stone">stone</span><span class="avatar avatar--sm" data-hue="stone">S</span>
+    </div></div>
+  </div>
+</section>
+
+<section class="section" id="type">
+  <div class="section__head"><h2 class="section__title">2 · 字体与排版</h2></div>
+  <div class="card stack">
+    <div style="font-size:var(--fs-5xl);font-weight:700;line-height:1.1">校园信息网 <span style="color:var(--ink-3);font-size:var(--fs-md);font-weight:400">--fs-5xl 52 · Hero</span></div>
+    <div style="font-size:var(--fs-4xl);font-weight:700;line-height:1.15">把校园信息收进一处 <span style="color:var(--ink-3);font-size:var(--fs-md);font-weight:400">--fs-4xl 40</span></div>
+    <div style="font-size:var(--fs-3xl);font-weight:700">页面标题 Page title <span style="color:var(--ink-3);font-size:var(--fs-md);font-weight:400">--fs-3xl 30（桌面 h1）</span></div>
+    <div style="font-size:var(--fs-2xl);font-weight:700">页面标题（手机）<span style="color:var(--ink-3);font-size:var(--fs-md);font-weight:400">--fs-2xl 24</span></div>
+    <div style="font-size:var(--fs-xl);font-weight:700">区块标题 Section <span style="color:var(--ink-3);font-size:var(--fs-md);font-weight:400">--fs-xl 20（h2）</span></div>
+    <div style="font-size:var(--fs-lg);font-weight:700">卡片标题 Card title <span style="color:var(--ink-3);font-size:var(--fs-md);font-weight:400">--fs-lg 17（h3）</span></div>
+    <div>正文 Body 15px：食堂二楼新开了一家面档，红烧牛腩面 12 元，汤底很鲜，下课去人不多。 <span style="color:var(--ink-3)">--fs-md</span></div>
+    <div style="font-size:var(--fs-sm);color:var(--ink-2)">次要说明 13px：发布于 3 小时前 · 12 条回复 <span style="color:var(--ink-3)">--fs-sm</span></div>
+    <div style="font-size:var(--fs-xs);color:var(--ink-3)">辅助 12px：2026-10-01 14:20 · 仅登录用户可见 <span>--fs-xs</span></div>
+    <hr>
+    <p class="prose" style="max-width:var(--w-prose)">长文阅读 Prose（16px / 行高 1.85 / 保留换行）。更新公告和帖子正文使用此样式：行距宽松，段落之间留白，不使用两端对齐，中英文混排时保持自然间距，例如 Node.js 24 与 SQLite。</p>
+  </div>
+</section>
+
+<section class="section" id="shape">
+  <div class="section__head"><h2 class="section__title">3 · 间距 · 圆角 · 阴影</h2></div>
+  <div class="grid grid--sm">
+    <div class="card"><div class="eyebrow">间距 4px 基准</div><div class="stack stack--sm" style="margin-top:.75rem">
+      <div class="row row--sm"><span class="mono" style="width:4.5rem;font-size:var(--fs-xs);color:var(--ink-3)">--sp-1</span><span style="display:block;height:10px;width:var(--sp-1);background:var(--primary);border-radius:2px"></span><span class="num" style="font-size:var(--fs-xs);color:var(--ink-3)">4px</span></div><div class="row row--sm"><span class="mono" style="width:4.5rem;font-size:var(--fs-xs);color:var(--ink-3)">--sp-2</span><span style="display:block;height:10px;width:var(--sp-2);background:var(--primary);border-radius:2px"></span><span class="num" style="font-size:var(--fs-xs);color:var(--ink-3)">8px</span></div><div class="row row--sm"><span class="mono" style="width:4.5rem;font-size:var(--fs-xs);color:var(--ink-3)">--sp-3</span><span style="display:block;height:10px;width:var(--sp-3);background:var(--primary);border-radius:2px"></span><span class="num" style="font-size:var(--fs-xs);color:var(--ink-3)">12px</span></div><div class="row row--sm"><span class="mono" style="width:4.5rem;font-size:var(--fs-xs);color:var(--ink-3)">--sp-4</span><span style="display:block;height:10px;width:var(--sp-4);background:var(--primary);border-radius:2px"></span><span class="num" style="font-size:var(--fs-xs);color:var(--ink-3)">16px</span></div><div class="row row--sm"><span class="mono" style="width:4.5rem;font-size:var(--fs-xs);color:var(--ink-3)">--sp-6</span><span style="display:block;height:10px;width:var(--sp-6);background:var(--primary);border-radius:2px"></span><span class="num" style="font-size:var(--fs-xs);color:var(--ink-3)">24px</span></div><div class="row row--sm"><span class="mono" style="width:4.5rem;font-size:var(--fs-xs);color:var(--ink-3)">--sp-8</span><span style="display:block;height:10px;width:var(--sp-8);background:var(--primary);border-radius:2px"></span><span class="num" style="font-size:var(--fs-xs);color:var(--ink-3)">32px</span></div><div class="row row--sm"><span class="mono" style="width:4.5rem;font-size:var(--fs-xs);color:var(--ink-3)">--sp-12</span><span style="display:block;height:10px;width:var(--sp-12);background:var(--primary);border-radius:2px"></span><span class="num" style="font-size:var(--fs-xs);color:var(--ink-3)">48px</span></div>
+    </div></div>
+    <div class="card"><div class="eyebrow">圆角</div><div class="row" style="margin-top:.75rem;gap:.75rem">
+      <div style="width:3.4rem;height:3.4rem;border:1.5px solid var(--primary);background:var(--primary-50);border-radius:var(--r-1);display:grid;place-items:center;font-size:var(--fs-xs);color:var(--primary-ink)">6</div><div style="width:3.4rem;height:3.4rem;border:1.5px solid var(--primary);background:var(--primary-50);border-radius:var(--r-2);display:grid;place-items:center;font-size:var(--fs-xs);color:var(--primary-ink)">10</div><div style="width:3.4rem;height:3.4rem;border:1.5px solid var(--primary);background:var(--primary-50);border-radius:var(--r-3);display:grid;place-items:center;font-size:var(--fs-xs);color:var(--primary-ink)">14</div><div style="width:3.4rem;height:3.4rem;border:1.5px solid var(--primary);background:var(--primary-50);border-radius:var(--r-4);display:grid;place-items:center;font-size:var(--fs-xs);color:var(--primary-ink)">20</div><div style="width:3.4rem;height:3.4rem;border:1.5px solid var(--primary);background:var(--primary-50);border-radius:var(--r-pill);display:grid;place-items:center;font-size:var(--fs-xs);color:var(--primary-ink)">pill</div>
+    </div></div>
+    <div class="card"><div class="eyebrow">阴影（仅浮层使用）</div><div class="row" style="margin-top:.75rem;gap:1rem">
+      <div style="width:4.2rem;height:3.4rem;background:var(--surface);border-radius:var(--r-2);box-shadow:var(--sh-1);display:grid;place-items:center;font-size:var(--fs-xs);color:var(--ink-3)">轻</div><div style="width:4.2rem;height:3.4rem;background:var(--surface);border-radius:var(--r-2);box-shadow:var(--sh-2);display:grid;place-items:center;font-size:var(--fs-xs);color:var(--ink-3)">中</div><div style="width:4.2rem;height:3.4rem;background:var(--surface);border-radius:var(--r-2);box-shadow:var(--sh-3);display:grid;place-items:center;font-size:var(--fs-xs);color:var(--ink-3)">重</div>
+    </div></div>
+  </div>
+</section>
+
+<section class="section" id="buttons">
+  <div class="section__head"><h2 class="section__title">4 · 按钮</h2></div>
+  <div class="card stack stack--lg">
+    <div class="row">
+      <button class="btn btn--primary"><svg class="icon " aria-hidden="true"><use href="#i-check"/></svg>主按钮 Primary</button>
+      <button class="btn">次要 Secondary</button>
+      <button class="btn btn--ghost">幽灵 Ghost</button>
+      <button class="btn btn--danger"><svg class="icon " aria-hidden="true"><use href="#i-trash"/></svg>危险 Danger</button>
+      <button class="btn btn--danger-quiet">删除</button>
+      <button class="btn btn--link">链接按钮</button>
+    </div>
+    <div class="row">
+      <button class="btn btn--primary btn--lg">大 Large</button>
+      <button class="btn btn--primary">默认 Default</button>
+      <button class="btn btn--primary btn--sm">小 Small</button>
+      <button class="btn btn--icon" aria-label="更多"><svg class="icon " aria-hidden="true"><use href="#i-more"/></svg></button>
+      <button class="btn btn--icon btn--sm" aria-label="关闭"><svg class="icon " aria-hidden="true"><use href="#i-close"/></svg></button>
+    </div>
+    <div class="row">
+      <button class="btn btn--primary" disabled>禁用 Disabled</button>
+      <button class="btn" disabled>禁用</button>
+      <button class="btn btn--primary is-loading" aria-busy="true">提交中</button>
+      <button class="btn is-loading" aria-busy="true">加载中</button>
+    </div>
+    <button class="btn btn--primary btn--block btn--lg">整行按钮 Block</button>
+  </div>
+</section>
+
+<section class="section" id="forms">
+  <div class="section__head"><h2 class="section__title">5 · 表单</h2></div>
+  <div class="grid grid--2">
+    <div class="card"><div class="form">
+      <div class="field"><label class="field__label" for="f1">用户名</label><input class="input" id="f1" placeholder="3–20 位字母或数字"><div class="field__hint">注册后不可修改</div></div>
+      <div class="field"><label class="field__label" for="f2">密码</label>
+        <div class="input-group"><input class="input input--end" id="f2" type="password" value="secret123"><div class="input-group__end"><button class="icon-btn icon-btn--sm" aria-label="显示密码"><svg class="icon " aria-hidden="true"><use href="#i-eye"/></svg></button></div></div></div>
+      <div class="field is-invalid"><label class="field__label" for="f3">邮箱 <span class="field__opt">（选填）</span></label><input class="input" id="f3" value="abc@" aria-invalid="true"><div class="field__error"><svg class="icon " aria-hidden="true"><use href="#i-alert-circle"/></svg><span>请输入完整的邮箱地址</span></div></div>
+      <div class="field"><label class="field__label" for="f4">搜索</label><div class="input-group"><span class="input-group__icon"><svg class="icon " aria-hidden="true"><use href="#i-search"/></svg></span><input class="input input--icon" id="f4" type="search" placeholder="搜索菜品、店铺…"></div></div>
+      <div class="field"><label class="field__label" for="f5">距离</label><div class="input-group"><input class="input input--unit" id="f5" inputmode="numeric" value="420"><span class="input-group__unit">米</span></div></div>
+      <div class="field"><label class="field__label" for="f6">类型</label><select class="select" id="f6"><option>面馆</option><option>小吃</option></select></div>
+      <div class="field"><label class="field__label" for="f7">内容</label><textarea class="textarea" id="f7" placeholder="写下你的想法…"></textarea><div class="field__foot"><span class="field__hint">支持换行</span><span class="field__counter">12 / 2000</span></div></div>
+      <div class="field"><label class="field__label" for="f8">已禁用</label><input class="input" id="f8" value="不可编辑" disabled></div>
+    </div></div>
+    <div class="card stack stack--lg">
+      <div><div class="eyebrow">复选 / 单选 / 开关</div>
+        <label class="check-row"><input type="checkbox" class="check" checked><span class="check-row__text">允许申请解封<span class="check-row__desc">被封用户可在登录页提交申诉</span></span></label>
+        <label class="check-row"><input type="checkbox" class="check"><span>记住我</span></label>
+        <label class="check-row"><input type="radio" class="radio" name="r" checked><span>管理员及以上</span></label>
+        <label class="check-row"><input type="radio" class="radio" name="r"><span>仅开发者</span></label>
+        <div class="switch-row"><div class="switch-row__text"><span class="switch-row__title">评论通知</span><span class="switch-row__desc">有人评论你的帖子时提醒我</span></div><input type="checkbox" class="switch" role="switch" checked aria-label="评论通知"></div>
+        <div class="switch-row"><div class="switch-row__text"><span class="switch-row__title">点赞通知</span><span class="switch-row__desc">有人赞了你的内容时提醒我</span></div><input type="checkbox" class="switch" role="switch" aria-label="点赞通知"></div>
+      </div>
+      <div><div class="eyebrow">胶囊选项 Chips</div><div class="chips" style="margin-top:.5rem">
+        <label class="chip"><input class="chip__input" type="radio" name="shoptype" checked><span class="chip__face">面馆</span></label><label class="chip"><input class="chip__input" type="radio" name="shoptype" ><span class="chip__face">小吃</span></label><label class="chip"><input class="chip__input" type="radio" name="shoptype" ><span class="chip__face">饮品</span></label><label class="chip"><input class="chip__input" type="radio" name="shoptype" ><span class="chip__face">快餐</span></label><label class="chip"><input class="chip__input" type="radio" name="shoptype" ><span class="chip__face">甜点</span></label>
+        <label class="chip"><input class="chip__input" type="radio" name="shoptype"><span class="chip__face"><svg class="icon icon--sm" aria-hidden="true"><use href="#i-plus"/></svg>其他/自定义</span></label></div></div>
+      <div><div class="eyebrow">分段控件 Segmented</div><div style="margin-top:.5rem"><div class="segmented" role="tablist"><button class="segmented__item" role="tab" aria-selected="true">讨论</button><button class="segmented__item" role="tab" aria-selected="false">提问</button></div></div></div>
+      <div><div class="eyebrow">星级输入</div><div style="margin-top:.25rem"><div class="rating-input" role="radiogroup" aria-label="评分">
+        <input type="radio" name="rate" id="rt5" value="5" ><label for="rt5" title="5 分"><svg class="icon " aria-hidden="true"><use href="#i-star"/></svg></label><input type="radio" name="rate" id="rt4" value="4" checked><label for="rt4" title="4 分"><svg class="icon " aria-hidden="true"><use href="#i-star"/></svg></label><input type="radio" name="rate" id="rt3" value="3" ><label for="rt3" title="3 分"><svg class="icon " aria-hidden="true"><use href="#i-star"/></svg></label><input type="radio" name="rate" id="rt2" value="2" ><label for="rt2" title="2 分"><svg class="icon " aria-hidden="true"><use href="#i-star"/></svg></label><input type="radio" name="rate" id="rt1" value="1" ><label for="rt1" title="1 分"><svg class="icon " aria-hidden="true"><use href="#i-star"/></svg></label></div></div></div>
+      <div><div class="eyebrow">选择卡片</div><div class="choice-group choice-group--2" style="margin-top:.5rem">
+        <label class="choice"><input class="choice__input" type="radio" name="lay" checked><span class="choice__body"><span class="choice__title"><svg class="icon " aria-hidden="true"><use href="#i-rows"/></svg>样式一 · 纵向<svg class="icon choice__check" aria-hidden="true"><use href="#i-check-circle"/></svg></span><span class="choice__preview"><i class="is-strong"></i><i></i><i style="width:60%"></i></span><span class="choice__desc">手机友好，菜品与评价上下排列</span></span></label>
+        <label class="choice"><input class="choice__input" type="radio" name="lay"><span class="choice__body"><span class="choice__title"><svg class="icon " aria-hidden="true"><use href="#i-columns"/></svg>样式二 · 双栏<svg class="icon choice__check" aria-hidden="true"><use href="#i-check-circle"/></svg></span><span class="choice__preview"><span class="cols"><i class="is-strong"></i><i class="is-strong"></i></span><span class="cols"><i></i><i></i></span></span><span class="choice__desc">电脑友好，左右并排查看</span></span></label></div></div>
+      <div><div class="eyebrow">图片上传</div><div class="stack stack--sm" style="margin-top:.5rem">
+        <label class="upload" style="position:relative"><span class="upload__icon"><svg class="icon icon--lg" aria-hidden="true"><use href="#i-image"/></svg></span><span class="upload__title">点击选择图片，或拖到这里</span><span class="upload__hint">JPG / PNG，不超过 2 MB</span><input type="file" accept="image/jpeg,image/png"></label>
+        <div class="upload-preview"><span class="upload-preview__img"></span><div class="upload-preview__meta"><div class="upload-preview__name">红烧牛腩面.jpg</div><div class="upload-preview__size">1.2 MB</div></div><button class="icon-btn icon-btn--sm" aria-label="移除"><svg class="icon " aria-hidden="true"><use href="#i-close"/></svg></button></div></div></div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="cards">
+  <div class="section__head"><h2 class="section__title">6 · 卡片 · 面板 · 列表 · 表格</h2></div>
+  <div class="stack stack--lg">
+    <div class="grid">
+      <article class="card card--interactive"><div class="card__head"><h3 class="card__title"><a class="card__link" href="#cards">可点击卡片 Interactive card</a></h3><span class="tag" data-hue="teal">面馆</span></div><p class="card__body">整张卡片都是链接（伪元素铺满），标题是真正的 &lt;a&gt;，键盘与读屏友好。</p><div class="card__foot"><span class="row row--sm" style="font-size:var(--fs-sm);color:var(--ink-3)"><svg class="icon icon--sm" aria-hidden="true"><use href="#i-map-pin"/></svg>三元坊 · 420 米</span></div></article>
+      <article class="card"><div class="card__head"><h3 class="card__title">普通卡片 Card</h3></div><p class="card__body">卡片默认只有 1px 发丝线边框，没有阴影；悬停抬升仅用于可点击卡片。</p></article>
+      <article class="card card--tint"><div class="card__head"><h3 class="card__title">强调卡片 Tint</h3></div><p class="card__body">用于公告、引导或统计，一个页面最多一两张。</p></article>
+    </div>
+    <div class="panel"><div class="panel__head"><h3 class="panel__title">面板 Panel · 昵称</h3><p class="panel__desc">设置类页面的分组块，底部操作栏右对齐。</p></div>
+      <div class="panel__body"><div class="field"><label class="field__label" for="pn">昵称</label><input class="input" id="pn" value="小苏"></div></div>
+      <div class="panel__foot"><span class="status-text is-ok"><svg class="icon icon--sm" aria-hidden="true"><use href="#i-check-circle"/></svg>已保存</span><button class="btn btn--primary">保存</button></div></div>
+    <div class="grid grid--lg">
+      <div class="list"><a class="list__item" href="#cards"><span class="avatar avatar--sm" data-hue="teal">小</span><span class="list__main"><span class="list__title">分隔列表项（链接）</span><span class="list__sub">副标题说明</span></span><svg class="icon icon--sm" aria-hidden="true"><use href="#i-chevron-right"/></svg></a><a class="list__item" href="#cards"><span class="avatar avatar--sm" data-hue="rose">林</span><span class="list__main"><span class="list__title">第二项</span><span class="list__sub">副标题说明</span></span><svg class="icon icon--sm" aria-hidden="true"><use href="#i-chevron-right"/></svg></a><div class="list__item"><span class="list__main"><span class="list__title">纯文本项</span></span><span class="badge badge--ok">正常</span></div></div>
+      <div class="card"><div class="kv"><div class="kv__row"><span class="kv__k">ID</span><span class="kv__v mono">10086</span></div><div class="kv__row"><span class="kv__k">权限等级</span><span class="kv__v">学生</span></div><div class="kv__row"><span class="kv__k">特殊权限</span><span class="kv__v">编辑地图弹窗、管理工单</span></div></div></div>
+    </div>
+    <div class="table-wrap"><table class="table table--stack"><thead><tr><th>ID</th><th>用户名</th><th>角色</th><th>状态</th><th>操作</th></tr></thead><tbody>
+      <tr><td data-label="ID" class="mono">1</td><td data-label="用户名">lirenfei</td><td data-label="角色"><select class="select" aria-label="角色"><option>developer</option></select></td><td data-label="状态"><span class="badge badge--ok">正常</span></td><td data-label="操作"><div class="table__actions"><button class="btn btn--sm">权限</button><button class="btn btn--sm btn--danger-quiet">封号</button></div></td></tr>
+      <tr><td data-label="ID" class="mono">2</td><td data-label="用户名">xiaoming</td><td data-label="角色"><select class="select" aria-label="角色"><option>student</option></select></td><td data-label="状态"><span class="badge badge--danger">已封禁</span></td><td data-label="操作"><div class="table__actions"><button class="btn btn--sm">解封</button></div></td></tr>
+    </tbody></table></div>
+  </div>
+</section>
+
+<section class="section" id="badges">
+  <div class="section__head"><h2 class="section__title">7 · 标签 · 徽标 · 头像 · 用户行 · 评分</h2></div>
+  <div class="card stack stack--lg">
+    <div class="row"><span class="tag">默认标签</span><span class="tag tag--primary">品牌</span><span class="tag tag--outline">描边</span><span class="tag" data-hue="teal">面馆</span><span class="tag" data-hue="vermilion">川湘</span><span class="tag" data-hue="ochre">小吃</span><span class="tag" data-hue="bamboo">轻食</span><span class="tag" data-hue="wisteria">饮品</span><span class="tag" data-hue="indigo">快餐</span><span class="tag" data-hue="rose">甜点</span></div>
+    <div class="row"><span class="badge badge--pending">待处理</span><span class="badge badge--ok">已通过</span><span class="badge badge--danger">已驳回</span><span class="badge badge--info">审核中</span><span class="badge">已关闭</span><span class="role-tag">管理员</span><span class="role-tag">开发者</span></div>
+    <div class="row"><span class="title-badge" data-hue="ochre"><svg class="icon " aria-hidden="true"><use href="#i-award"/></svg><span class="title-badge__text">三元坊老饕</span></span><span class="title-badge" data-hue="teal"><svg class="icon " aria-hidden="true"><use href="#i-award"/></svg><span class="title-badge__text">创站元老</span></span><span class="title-badge" data-hue="wisteria"><svg class="icon " aria-hidden="true"><use href="#i-award"/></svg><span class="title-badge__text">夜读星</span></span><span class="title-badge" data-hue="vermilion"><svg class="icon " aria-hidden="true"><use href="#i-award"/></svg><span class="title-badge__text">官方</span></span><span class="title-badge"><svg class="icon " aria-hidden="true"><use href="#i-award"/></svg><span class="title-badge__text">默认灰色</span></span></div>
+    <div class="row"><span class="avatar avatar--xs" data-hue="teal">苏</span><span class="avatar avatar--sm" data-hue="vermilion">林</span><span class="avatar avatar--md" data-hue="ochre">王</span><span class="avatar avatar--lg" data-hue="bamboo">陈</span><span class="avatar avatar--xl" data-hue="wisteria">周</span></div>
+    <div class="grid grid--sm">
+      <div class="user-line"><span class="avatar avatar--md" data-hue="indigo">张</span><div class="user-line__body"><div class="user-line__top"><span class="user-line__name">张同学</span><span class="title-badge" data-hue="ochre"><svg class="icon " aria-hidden="true"><use href="#i-award"/></svg><span class="title-badge__text">三元坊老饕</span></span></div><span class="user-line__meta">3 小时前</span></div></div>
+      <div class="user-line"><span class="avatar avatar--md" data-hue="rose">管</span><div class="user-line__body"><div class="user-line__top"><span class="user-line__name">管理员小苏</span><span class="role-tag">管理员</span></div><span class="user-line__meta">昨天 21:08</span></div></div>
+    </div>
+    <div class="row row--lg"><span class="rating-line"><span class="stars" style="--rating:4.3" role="img" aria-label="评分 4.3 分，满分 5 分"><span class="stars__row stars__base"><svg class="icon " aria-hidden="true"><use href="#i-star"/></svg><svg class="icon " aria-hidden="true"><use href="#i-star"/></svg><svg class="icon " aria-hidden="true"><use href="#i-star"/></svg><svg class="icon " aria-hidden="true"><use href="#i-star"/></svg><svg class="icon " aria-hidden="true"><use href="#i-star"/></svg></span><span class="stars__fill"><span class="stars__row"><svg class="icon " aria-hidden="true"><use href="#i-star"/></svg><svg class="icon " aria-hidden="true"><use href="#i-star"/></svg><svg class="icon " aria-hidden="true"><use href="#i-star"/></svg><svg class="icon " aria-hidden="true"><use href="#i-star"/></svg><svg class="icon " aria-hidden="true"><use href="#i-star"/></svg></span></span></span><span class="rating-line__num">4.3</span><span>(128)</span></span>
+    <span class="row row--sm"><span class="rank rank--top">1</span><span class="rank rank--top">2</span><span class="rank rank--top">3</span><span class="rank">4</span><span class="rank">10</span></span></div>
+  </div>
+</section>
+
+<section class="section" id="feedback">
+  <div class="section__head"><h2 class="section__title">8 · 反馈 · 空状态 · 加载</h2></div>
+  <div class="stack stack--lg">
+    <div class="grid grid--lg">
+      <div class="alert alert--info"><svg class="icon " aria-hidden="true"><use href="#i-info"/></svg><div class="alert__body"><span class="alert__title">提示</span>每个视图最多一个主按钮，其余用次要或幽灵按钮。</div></div>
+      <div class="alert alert--success"><svg class="icon " aria-hidden="true"><use href="#i-check-circle"/></svg><div class="alert__body"><span class="alert__title">已提交</span>工单已提交，请等待处理。</div></div>
+      <div class="alert alert--warning"><svg class="icon " aria-hidden="true"><use href="#i-alert-triangle"/></svg><div class="alert__body"><span class="alert__title">注意</span>10 分钟内只能提交一次，请 08:32 后再试。</div></div>
+      <div class="alert alert--danger"><svg class="icon " aria-hidden="true"><use href="#i-alert-circle"/></svg><div class="alert__body"><span class="alert__title">账号已被封禁</span>封禁理由：发布违规内容。你可以在下方申请解封。</div></div>
+    </div>
+    <div class="grid grid--lg">
+      <div class="card"><div class="empty empty--compact"><div class="empty__icon"><svg class="icon " aria-hidden="true"><use href="#i-message"/></svg></div><div class="empty__title">还没有帖子</div><div class="empty__desc">来发第一帖吧，分享一下你在校园里的发现。</div><div class="empty__actions"><button class="btn btn--primary">发布帖子</button></div></div></div>
+      <div class="card"><div class="empty empty--compact empty--error"><div class="empty__icon"><svg class="icon " aria-hidden="true"><use href="#i-wifi-off"/></svg></div><div class="empty__title">加载失败</div><div class="empty__desc">网络似乎不太稳定，请检查连接后重试。</div><div class="empty__actions"><button class="btn"><svg class="icon icon--sm" aria-hidden="true"><use href="#i-refresh"/></svg>重试</button></div></div></div>
+      <div class="card"><div class="empty empty--compact empty--lock"><div class="empty__icon"><svg class="icon " aria-hidden="true"><use href="#i-lock"/></svg></div><div class="empty__title">需要学生认证</div><div class="empty__desc">认证为学生后才能添加店铺，只需一分钟。</div><div class="empty__actions"><button class="btn btn--primary">去认证</button></div></div></div>
+    </div>
+    <div class="grid grid--lg">
+      <div class="card stack"><div class="eyebrow">骨架屏 Skeleton</div><div class="row row--top"><span class="skeleton skeleton--avatar"></span><div class="grow"><span class="skeleton skeleton--title"></span><span class="skeleton skeleton--text"></span><span class="skeleton skeleton--text skeleton--short"></span></div></div></div>
+      <div class="card stack"><div class="eyebrow">加载 / 进度</div><div class="loading-block"><span class="spinner spinner--lg"></span>正在加载…</div><div class="progress"><div class="progress__bar" style="--p:62%"></div></div></div>
+    </div>
+    <div class="grid grid--lg">
+      <div class="stack stack--sm"><div class="eyebrow">Toast（深色胶囊，顶部居中）</div>
+        <div class="toast toast--success pv"><svg class="icon toast__icon" aria-hidden="true"><use href="#i-check-circle"/></svg><span class="toast__text">昵称修改成功</span></div>
+        <div class="toast toast--error pv"><svg class="icon toast__icon" aria-hidden="true"><use href="#i-alert-circle"/></svg><span class="toast__text">网络错误，请稍后重试</span><button class="toast__action">重试</button></div></div>
+      <div class="stack stack--sm"><div class="eyebrow">确认对话框 Confirm</div>
+        <div class="dialog dialog--confirm pv" role="presentation" style="position:static;margin:0;width:100%;display:flex;flex-direction:column"><div class="dialog__head"><div class="dialog__icon dialog__icon--danger"><svg class="icon " aria-hidden="true"><use href="#i-trash"/></svg></div><h3 class="dialog__title">删除这条帖子？</h3></div><div class="dialog__body">删除后，帖子及其回复、点赞将一并移除，无法恢复。</div><div class="dialog__foot"><button class="btn">取消</button><button class="btn btn--danger">删除</button></div></div></div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="nav">
+  <div class="section__head"><h2 class="section__title">9 · 菜单 · 标签页 · 折叠</h2></div>
+  <div class="grid grid--lg">
+    <div class="card" style="min-height:17rem"><div class="eyebrow">用户菜单 Menu</div><div class="menu" style="margin-top:.75rem"><div class="menu__panel menu__panel--left pv" style="position:static;display:block;animation:none">
+      <div class="menu__head"><div class="menu__head-name">小苏</div><div class="menu__head-sub">学生 · ID 10086</div></div>
+      <a class="menu__item" href="#nav"><svg class="icon " aria-hidden="true"><use href="#i-user"/></svg>个人中心</a><a class="menu__item" href="#nav"><svg class="icon " aria-hidden="true"><use href="#i-inbox"/></svg>我的消息</a><a class="menu__item" href="#nav"><svg class="icon " aria-hidden="true"><use href="#i-shield"/></svg>管理后台</a><div class="menu__sep"></div><button class="menu__item menu__item--danger"><svg class="icon " aria-hidden="true"><use href="#i-logout"/></svg>退出登录</button></div></div></div>
+    <div class="stack stack--lg">
+      <div class="card"><div class="eyebrow">标签页 Tabs</div><div class="tabs" role="tablist" style="margin-top:.5rem"><button class="tab" role="tab" aria-selected="true">全部<span class="tab__count">24</span></button><button class="tab" role="tab" aria-selected="false">系统</button><button class="tab" role="tab" aria-selected="false">评论与回复<span class="tab__count tab__count--alert">3</span></button><button class="tab" role="tab" aria-selected="false">点赞</button></div></div>
+      <div><div class="eyebrow" style="margin-bottom:.5rem">折叠 Collapse</div>
+        <div class="collapse is-open"><button class="collapse__trigger" aria-expanded="true"><span>2026-09-28 ~ 2026-10-04</span><span class="row row--sm"><span class="badge badge--info">本周</span><svg class="icon collapse__chevron" aria-hidden="true"><use href="#i-chevron-down"/></svg></span></button><div class="collapse__panel"><div class="collapse__inner"><div class="collapse__content"><div class="skeleton skeleton--media"></div></div></div></div></div>
+        <div class="collapse"><button class="collapse__trigger" aria-expanded="false"><span>2026-09-21 ~ 2026-09-27</span><svg class="icon collapse__chevron" aria-hidden="true"><use href="#i-chevron-down"/></svg></button><div class="collapse__panel"><div class="collapse__inner"><div class="collapse__content">内容</div></div></div></div></div>
+    </div>
+  </div>
+</section>
+
+
+<section class="section" id="forum">
+  <div class="section__head"><h2 class="section__title">10 · 论坛（帖子卡 · 回复 · 发布框）</h2></div>
+  <div class="grid grid--2">
+    <div class="stack">
+      <div class="row row--between"><div class="segmented" role="tablist"><button class="segmented__item" role="tab" aria-selected="true">讨论</button><button class="segmented__item" role="tab" aria-selected="false">提问</button></div><button class="btn btn--primary"><svg class="icon " aria-hidden="true"><use href="#i-plus"/></svg>发布帖子</button></div>
+      <article class="card card--interactive post">
+        <header class="post__head"><div class="user-line"><span class="avatar avatar--sm" data-hue="rose">林</span><div class="user-line__body"><div class="user-line__top"><span class="user-line__name">林小满</span><span class="title-badge" data-hue="ochre"><svg class="icon " aria-hidden="true"><use href="#i-award"/></svg><span class="title-badge__text">三元坊老饕</span></span></div><span class="user-line__meta">3 小时前</span></div></div><span class="tag tag--primary">讨论</span><button class="icon-btn icon-btn--sm card__action" aria-label="更多操作"><svg class="icon " aria-hidden="true"><use href="#i-more"/></svg></button></header>
+        <h3 class="post__title"><a class="card__link" href="#forum">食堂二楼新开的面档到底值不值得排队？</a></h3>
+        <p class="post__excerpt">今天中午试了红烧牛腩面，汤底很鲜但面量偏少，加 3 块钱可以加面。队伍不算长，下课后 5 分钟去基本不用等。有没有人试过他们家的葱油拌面？据说是招牌。</p>
+        <footer class="post__foot"><button class="action-btn card__action" aria-pressed="true"><svg class="icon " aria-hidden="true"><use href="#i-heart"/></svg>12</button><button class="action-btn card__action" aria-expanded="false"><svg class="icon " aria-hidden="true"><use href="#i-message"/></svg>5</button></footer>
+      </article>
+      <article class="card card--interactive post">
+        <header class="post__head"><div class="user-line"><span class="avatar avatar--sm" data-hue="indigo">陈</span><div class="user-line__body"><div class="user-line__top"><span class="user-line__name">陈一鸣</span></div><span class="user-line__meta">昨天 21:08</span></div></div><span class="tag" data-hue="vermilion">提问</span></header>
+        <h3 class="post__title"><a class="card__link" href="#forum">高二选科之后还能转班吗？</a></h3>
+        <p class="post__excerpt">想问问学长学姐，选科结果出来之后如果发现不合适，学校有没有调整的机会？</p>
+        <footer class="post__foot"><button class="action-btn card__action" aria-pressed="false"><svg class="icon " aria-hidden="true"><use href="#i-heart"/></svg>0</button><button class="action-btn card__action" aria-expanded="true"><svg class="icon " aria-hidden="true"><use href="#i-message"/></svg>2</button></footer>
+        <div class="post__replies"><ul class="reply-list">
+          <li class="reply"><span class="avatar avatar--sm" data-hue="teal">王</span><div class="reply__body"><div class="reply__meta"><span class="user-line__name">王学长</span><span class="title-badge" data-hue="teal"><svg class="icon " aria-hidden="true"><use href="#i-award"/></svg><span class="title-badge__text">创站元老</span></span><span>昨天 22:10</span><span class="reply__floor">1 楼</span></div><div class="reply__content">一般开学两周内可以申请，要班主任和年级组同意。</div></div></li>
+          <li class="reply"><span class="avatar avatar--sm" data-hue="rose">管</span><div class="reply__body"><div class="reply__meta"><span class="user-line__name">管理员小苏</span><span class="role-tag">管理员</span><span>今天 08:03</span><span class="reply__floor">2 楼</span></div><div class="reply__content">具体以教务处通知为准，可以关注“更新公告”。</div></div></li></ul>
+          <form class="composer u-mt-4"><textarea class="textarea" rows="2" placeholder="写下你的回复…"></textarea><div class="composer__foot"><span class="field__counter">0 / 1000</span><button class="btn btn--primary btn--sm" type="button">发布回复</button></div></form></div>
+      </article>
+    </div>
+    <div class="stack">
+      <div class="card"><a class="back-link" href="#forum"><svg class="icon icon--sm" aria-hidden="true"><use href="#i-arrow-left"/></svg>返回论坛</a>
+        <div class="row"><span class="tag tag--primary">讨论</span></div>
+        <h1 class="post-detail__title u-mt-2">食堂二楼新开的面档到底值不值得排队？</h1>
+        <div class="post-detail__meta"><div class="user-line"><span class="avatar avatar--sm" data-hue="rose">林</span><div class="user-line__body"><div class="user-line__top"><span class="user-line__name">林小满</span><span class="title-badge" data-hue="ochre"><svg class="icon " aria-hidden="true"><use href="#i-award"/></svg><span class="title-badge__text">三元坊老饕</span></span></div><span class="user-line__meta">2026-10-01 12:30</span></div></div></div>
+        <div class="post-detail__body prose">今天中午试了红烧牛腩面，汤底很鲜但面量偏少。
+
+加 3 块钱可以加面。队伍不算长，下课后 5 分钟去基本不用等。</div>
+        <div class="post-detail__actions"><button class="action-btn" aria-pressed="true"><svg class="icon " aria-hidden="true"><use href="#i-heart"/></svg>12</button><button class="action-btn"><svg class="icon " aria-hidden="true"><use href="#i-message"/></svg>5</button><span class="grow"></span><button class="action-btn"><svg class="icon " aria-hidden="true"><use href="#i-trash"/></svg>删除</button></div>
+      </div>
+      <div class="callout"><span class="callout__text">登录后才能参与讨论、点赞和回复。</span><span class="callout__actions"><a class="btn btn--sm" href="#forum">登录</a><a class="btn btn--primary btn--sm" href="#forum">注册</a></span></div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="food">
+  <div class="section__head"><h2 class="section__title">11 · 菜品 · 店铺 · 评价</h2></div>
+  <div class="stack stack--lg">
+    <div><div class="eyebrow u-mb-4">现有“评价卡”（一条评价 = 一张卡）</div><div class="grid">
+      <article class="card card--flush card--interactive review-card"><div class="card__media"><span class="dish__placeholder" style="position:absolute;inset:0;display:grid;place-items:center;background:var(--h-ochre-tint);color:var(--h-ochre-ink)"><svg class="icon icon--xl" aria-hidden="true"><use href="#i-image"/></svg></span></div><div class="review-card__body"><div class="review-card__head"><h3 class="review-card__name">红烧牛腩面</h3><span class="stars" style="--rating:5" role="img" aria-label="评分 5 分，满分 5 分"><span class="stars__row stars__base"><svg class="icon " aria-hidden="true"><use href="#i-star"/></svg><svg class="icon " aria-hidden="true"><use href="#i-star"/></svg><svg class="icon " aria-hidden="true"><use href="#i-star"/></svg><svg class="icon " aria-hidden="true"><use href="#i-star"/></svg><svg class="icon " aria-hidden="true"><use href="#i-star"/></svg></span><span class="stars__fill"><span class="stars__row"><svg class="icon " aria-hidden="true"><use href="#i-star"/></svg><svg class="icon " aria-hidden="true"><use href="#i-star"/></svg><svg class="icon " aria-hidden="true"><use href="#i-star"/></svg><svg class="icon " aria-hidden="true"><use href="#i-star"/></svg><svg class="icon " aria-hidden="true"><use href="#i-star"/></svg></span></span></span></div><p class="review-card__text">汤底很鲜，牛腩软烂，就是面量偏少一点。</p></div><div class="review-card__foot"><div class="user-line"><span class="avatar avatar--xs" data-hue="rose">林</span><div class="user-line__body"><div class="user-line__top"><span class="user-line__name">林小满</span></div><span class="user-line__meta">3 小时前</span></div></div></div></article>
+      <article class="card card--flush card--interactive review-card"><div class="review-card__body"><div class="review-card__head"><h3 class="review-card__name">葱油拌面</h3><span class="stars" style="--rating:4" role="img" aria-label="评分 4 分，满分 5 分"><span class="stars__row stars__base"><svg class="icon " aria-hidden="true"><use href="#i-star"/></svg><svg class="icon " aria-hidden="true"><use href="#i-star"/></svg><svg class="icon " aria-hidden="true"><use href="#i-star"/></svg><svg class="icon " aria-hidden="true"><use href="#i-star"/></svg><svg class="icon " aria-hidden="true"><use href="#i-star"/></svg></span><span class="stars__fill"><span class="stars__row"><svg class="icon " aria-hidden="true"><use href="#i-star"/></svg><svg class="icon " aria-hidden="true"><use href="#i-star"/></svg><svg class="icon " aria-hidden="true"><use href="#i-star"/></svg><svg class="icon " aria-hidden="true"><use href="#i-star"/></svg><svg class="icon " aria-hidden="true"><use href="#i-star"/></svg></span></span></span></div><p class="review-card__text">没有图片的评价：卡片自然收缩，只显示文字。香气足，酱油偏咸，建议少放一点。</p></div><div class="review-card__foot"><div class="user-line"><span class="avatar avatar--xs" data-hue="indigo">陈</span><div class="user-line__body"><div class="user-line__top"><span class="user-line__name">陈一鸣</span></div><span class="user-line__meta">昨天</span></div></div></div></article>
+    </div></div>
+    <div><div class="eyebrow u-mb-4">#5 菜品目录：搜索 + A–Z 分组 + 字母索引</div>
+      <div class="search-bar" style="position:static;padding-block:0 var(--sp-3)"><div class="input-group"><span class="input-group__icon"><svg class="icon " aria-hidden="true"><use href="#i-search"/></svg></span><input class="input input--icon input--end" type="search" value="面" aria-label="搜索菜品"><span class="input-group__end"><button class="icon-btn icon-btn--sm" aria-label="清除"><svg class="icon " aria-hidden="true"><use href="#i-close"/></svg></button></span></div></div>
+      <div class="az-layout" style="position:relative"><div class="az-list">
+        <section class="az-group"><h2 class="az-group__letter">B<span class="az-group__count">2 道</span></h2><div class="card card--flush"><ul class="dish-list">
+          <li class="dish-row"><span class="dish-row__thumb"><span class="dish__placeholder" style="background:var(--h-ochre-tint);color:var(--h-ochre-ink)"><svg class="icon " aria-hidden="true"><use href="#i-utensils"/></svg></span></span><div class="dish-row__main"><span class="dish-row__name"><a href="#food">八宝<mark class="hl">面</mark>筋</a></span><span class="dish-row__meta"><span class="stars" style="--rating:4" role="img" aria-label="评分 4 分，满分 5 分"><span class="stars__row stars__base"><svg class="icon " aria-hidden="true"><use href="#i-star"/></svg><svg class="icon " aria-hidden="true"><use href="#i-star"/></svg><svg class="icon " aria-hidden="true"><use href="#i-star"/></svg><svg class="icon " aria-hidden="true"><use href="#i-star"/></svg><svg class="icon " aria-hidden="true"><use href="#i-star"/></svg></span><span class="stars__fill"><span class="stars__row"><svg class="icon " aria-hidden="true"><use href="#i-star"/></svg><svg class="icon " aria-hidden="true"><use href="#i-star"/></svg><svg class="icon " aria-hidden="true"><use href="#i-star"/></svg><svg class="icon " aria-hidden="true"><use href="#i-star"/></svg><svg class="icon " aria-hidden="true"><use href="#i-star"/></svg></span></span></span> 4.0 · 12 条评价</span></div><svg class="icon icon--sm" aria-hidden="true"><use href="#i-chevron-right"/></svg></li>
+          <li class="dish-row"><span class="dish-row__thumb"><span class="dish__placeholder" style="background:var(--h-bamboo-tint);color:var(--h-bamboo-ink)"><svg class="icon " aria-hidden="true"><use href="#i-utensils"/></svg></span></span><div class="dish-row__main"><span class="dish-row__name"><a href="#food">拌<mark class="hl">面</mark></a></span><span class="dish-row__meta u-muted">暂无评价</span></div><svg class="icon icon--sm" aria-hidden="true"><use href="#i-chevron-right"/></svg></li></ul></div></section>
+        <section class="az-group"><h2 class="az-group__letter">H<span class="az-group__count">1 道</span></h2><div class="card card--flush"><ul class="dish-list">
+          <li class="dish-row"><span class="dish-row__thumb"><span class="dish__placeholder" style="background:var(--h-vermilion-tint);color:var(--h-vermilion-ink)"><svg class="icon " aria-hidden="true"><use href="#i-utensils"/></svg></span></span><div class="dish-row__main"><span class="dish-row__name"><a href="#food">红烧牛腩<mark class="hl">面</mark></a></span><span class="dish-row__meta"><span class="stars" style="--rating:4.6" role="img" aria-label="评分 4.6 分，满分 5 分"><span class="stars__row stars__base"><svg class="icon " aria-hidden="true"><use href="#i-star"/></svg><svg class="icon " aria-hidden="true"><use href="#i-star"/></svg><svg class="icon " aria-hidden="true"><use href="#i-star"/></svg><svg class="icon " aria-hidden="true"><use href="#i-star"/></svg><svg class="icon " aria-hidden="true"><use href="#i-star"/></svg></span><span class="stars__fill"><span class="stars__row"><svg class="icon " aria-hidden="true"><use href="#i-star"/></svg><svg class="icon " aria-hidden="true"><use href="#i-star"/></svg><svg class="icon " aria-hidden="true"><use href="#i-star"/></svg><svg class="icon " aria-hidden="true"><use href="#i-star"/></svg><svg class="icon " aria-hidden="true"><use href="#i-star"/></svg></span></span></span> 4.6 · 23 条评价</span></div><svg class="icon icon--sm" aria-hidden="true"><use href="#i-chevron-right"/></svg></li></ul></div></section>
+      </div><nav class="az-rail" style="position:absolute;top:0;right:0;transform:none;max-height:none" aria-label="字母索引"><a href="#food" class="is-empty ">A</a><a href="#food" class=" is-active">B</a><a href="#food" class="is-empty ">C</a><a href="#food" class="is-empty ">D</a><a href="#food" class="is-empty ">E</a><a href="#food" class="is-empty ">F</a><a href="#food" class="is-empty ">G</a><a href="#food" class=" ">H</a><a href="#food" class="is-empty ">I</a></nav></div>
+    </div>
+    <div><div class="eyebrow u-mb-4">#6 店铺卡片（整卡可点）与 #5/#8 菜品卡片</div><div class="grid">
+      <article class="card card--interactive shop"><div class="shop__top"><span class="rank rank--top">1</span><h3 class="card__title"><a class="card__link" href="#food">老字号朱氏面馆</a></h3><span class="tag" data-hue="teal">面馆</span></div>
+        <p class="shop__addr"><svg class="icon " aria-hidden="true"><use href="#i-map-pin"/></svg><span>三元路 12 号<small>近街口的老树旁</small></span></p>
+        <div class="shop__stats"><span class="stat"><svg class="icon " aria-hidden="true"><use href="#i-route"/></svg><b>420 米</b><small>距苏中</small></span><span class="stat"><svg class="icon " aria-hidden="true"><use href="#i-walk"/></svg><b>6 分钟</b><small>步行</small></span></div></article>
+      <article class="card card--interactive shop"><div class="shop__top"><span class="rank rank--top">2</span><h3 class="card__title"><a class="card__link" href="#food">一碗糖水铺</a></h3><span class="tag" data-hue="wisteria">饮品</span></div>
+        <p class="shop__addr"><svg class="icon " aria-hidden="true"><use href="#i-map-pin"/></svg><span>干将东路 89 号</span></p>
+        <div class="shop__stats"><span class="stat"><svg class="icon " aria-hidden="true"><use href="#i-route"/></svg><b>1.2 公里</b><small>距苏中</small></span><span class="stat"><svg class="icon " aria-hidden="true"><use href="#i-walk"/></svg><b>16 分钟</b><small>步行</small></span></div></article>
+      <article class="card card--flush card--interactive dish"><div class="dish__media"><span class="dish__placeholder" style="background:var(--h-vermilion-tint);color:var(--h-vermilion-ink)"><svg class="icon " aria-hidden="true"><use href="#i-utensils"/></svg></span></div><div class="dish__body"><h3 class="dish__name"><a class="card__link" href="#food">红烧牛腩面</a></h3><div class="rating-line"><span class="stars" style="--rating:4.6" role="img" aria-label="评分 4.6 分，满分 5 分"><span class="stars__row stars__base"><svg class="icon " aria-hidden="true"><use href="#i-star"/></svg><svg class="icon " aria-hidden="true"><use href="#i-star"/></svg><svg class="icon " aria-hidden="true"><use href="#i-star"/></svg><svg class="icon " aria-hidden="true"><use href="#i-star"/></svg><svg class="icon " aria-hidden="true"><use href="#i-star"/></svg></span><span class="stars__fill"><span class="stars__row"><svg class="icon " aria-hidden="true"><use href="#i-star"/></svg><svg class="icon " aria-hidden="true"><use href="#i-star"/></svg><svg class="icon " aria-hidden="true"><use href="#i-star"/></svg><svg class="icon " aria-hidden="true"><use href="#i-star"/></svg><svg class="icon " aria-hidden="true"><use href="#i-star"/></svg></span></span></span><span class="rating-line__num">4.6</span><span>(23)</span></div><span class="dish__meta">老字号朱氏面馆</span></div></article>
+    </div></div>
+    <div><div class="eyebrow u-mb-4">#7 店铺头部信息 + 吸顶分段导航（样式一）</div>
+      <div class="card shop-hero"><div class="row row--top row--between"><div class="grow"><div class="row row--sm u-mb-4"><span class="tag" data-hue="teal">面馆</span></div><h1 class="shop-hero__title">老字号朱氏面馆</h1></div></div>
+        <div class="shop-hero__line"><svg class="icon " aria-hidden="true"><use href="#i-map-pin"/></svg><span>三元路 12 号<small>近街口的老树旁</small></span></div>
+        <div class="shop-hero__stats"><div class="stat-block"><span class="stat-block__num">420<small>米</small></span><span class="stat-block__label"><svg class="icon " aria-hidden="true"><use href="#i-route"/></svg>距苏州中学</span></div><div class="stat-block"><span class="stat-block__num">6<small>分钟</small></span><span class="stat-block__label"><svg class="icon " aria-hidden="true"><use href="#i-walk"/></svg>预计步行</span></div></div></div>
+      <div class="subnav" style="position:static;margin-top:var(--sp-4);border-radius:var(--r-3);border:1px solid var(--line)"><div class="tabs" role="tablist" style="padding-inline:var(--sp-2)"><button class="tab" role="tab" aria-selected="true">菜品<span class="tab__count">8</span></button><button class="tab" role="tab" aria-selected="false">评价<span class="tab__count">23</span></button></div></div>
+      <div class="review-demo card u-mt-4"><div class="review">
+        <div class="review__head"><div class="user-line"><span class="avatar avatar--sm" data-hue="rose">林</span><div class="user-line__body"><div class="user-line__top"><span class="user-line__name">林小满</span><span class="title-badge" data-hue="ochre"><svg class="icon " aria-hidden="true"><use href="#i-award"/></svg><span class="title-badge__text">三元坊老饕</span></span></div><span class="user-line__meta">3 天前</span></div></div><span class="stars" style="--rating:5" role="img" aria-label="评分 5 分，满分 5 分"><span class="stars__row stars__base"><svg class="icon " aria-hidden="true"><use href="#i-star"/></svg><svg class="icon " aria-hidden="true"><use href="#i-star"/></svg><svg class="icon " aria-hidden="true"><use href="#i-star"/></svg><svg class="icon " aria-hidden="true"><use href="#i-star"/></svg><svg class="icon " aria-hidden="true"><use href="#i-star"/></svg></span><span class="stars__fill"><span class="stars__row"><svg class="icon " aria-hidden="true"><use href="#i-star"/></svg><svg class="icon " aria-hidden="true"><use href="#i-star"/></svg><svg class="icon " aria-hidden="true"><use href="#i-star"/></svg><svg class="icon " aria-hidden="true"><use href="#i-star"/></svg><svg class="icon " aria-hidden="true"><use href="#i-star"/></svg></span></span></span></div><p class="review__dish">点了：红烧牛腩面</p><p class="review__text">汤底很鲜，牛腩软烂。下课后去基本不用排队。</p><div class="thumbs"><span class="thumb"><span class="dish__placeholder" style="position:absolute;inset:0;display:grid;place-items:center;background:var(--h-ochre-tint);color:var(--h-ochre-ink)"><svg class="icon " aria-hidden="true"><use href="#i-image"/></svg></span></span><span class="thumb"><span class="dish__placeholder" style="position:absolute;inset:0;display:grid;place-items:center;background:var(--h-bamboo-tint);color:var(--h-bamboo-ink)"><svg class="icon " aria-hidden="true"><use href="#i-image"/></svg></span></span></div></div>
+        <div class="review"><div class="review__head"><div class="user-line"><span class="avatar avatar--sm" data-hue="indigo">陈</span><div class="user-line__body"><div class="user-line__top"><span class="user-line__name">陈一鸣</span></div><span class="user-line__meta">上周</span></div></div><span class="stars" style="--rating:3" role="img" aria-label="评分 3 分，满分 5 分"><span class="stars__row stars__base"><svg class="icon " aria-hidden="true"><use href="#i-star"/></svg><svg class="icon " aria-hidden="true"><use href="#i-star"/></svg><svg class="icon " aria-hidden="true"><use href="#i-star"/></svg><svg class="icon " aria-hidden="true"><use href="#i-star"/></svg><svg class="icon " aria-hidden="true"><use href="#i-star"/></svg></span><span class="stars__fill"><span class="stars__row"><svg class="icon " aria-hidden="true"><use href="#i-star"/></svg><svg class="icon " aria-hidden="true"><use href="#i-star"/></svg><svg class="icon " aria-hidden="true"><use href="#i-star"/></svg><svg class="icon " aria-hidden="true"><use href="#i-star"/></svg><svg class="icon " aria-hidden="true"><use href="#i-star"/></svg></span></span></span></div><p class="review__text">一般，价格偏高。</p></div></div>
+    </div>
+    <div class="grid grid--2"><div><div class="eyebrow u-mb-4">类型筛选条</div><div class="filter-bar"><label class="chip"><input class="chip__input" type="radio" name="ft" checked><span class="chip__face">全部</span></label><label class="chip"><input class="chip__input" type="radio" name="ft" ><span class="chip__face">面馆</span></label><label class="chip"><input class="chip__input" type="radio" name="ft" ><span class="chip__face">小吃</span></label><label class="chip"><input class="chip__input" type="radio" name="ft" ><span class="chip__face">饮品</span></label><label class="chip"><input class="chip__input" type="radio" name="ft" ><span class="chip__face">快餐</span></label><label class="chip"><input class="chip__input" type="radio" name="ft" ><span class="chip__face">甜点</span></label><label class="chip"><input class="chip__input" type="radio" name="ft" ><span class="chip__face">其他</span></label></div></div>
+    <div><div class="eyebrow u-mb-4">加载更多 / 列表尾</div><div class="load-more"><button class="btn">加载更多</button><span>已显示 20 / 48</span></div></div></div>
+  </div>
+</section>
+
+<section class="section" id="inbox">
+  <div class="section__head"><h2 class="section__title">12 · 消息箱 · 头衔</h2></div>
+  <div class="grid grid--2">
+    <div class="stack">
+      <div class="tabs" role="tablist"><button class="tab" role="tab" aria-selected="true">全部<span class="tab__count tab__count--alert">4</span></button><button class="tab" role="tab" aria-selected="false">系统</button><button class="tab" role="tab" aria-selected="false">评论与回复</button><button class="tab" role="tab" aria-selected="false">点赞</button></div>
+      <div class="inbox-toolbar"><label class="check-row" style="padding:0"><input type="checkbox" class="switch" role="switch"><span>只看未读</span></label><div class="row row--sm"><button class="btn btn--sm"><svg class="icon icon--sm" aria-hidden="true"><use href="#i-check"/></svg>全部标为已读</button><a class="btn btn--sm btn--ghost" href="#inbox"><svg class="icon icon--sm" aria-hidden="true"><use href="#i-settings"/></svg>消息设置</a></div></div>
+      <div class="msg-group"><h3 class="msg-group__title">今天</h3><ul class="msg-list">
+        <li class="msg is-unread"><a class="msg__link" href="#inbox"><span class="msg__lead"><span class="avatar avatar--md" data-hue="indigo">张</span><span class="msg__kind" data-hue="teal"><svg class="icon " aria-hidden="true"><use href="#i-message"/></svg></span></span><span class="msg__main"><span class="msg__text"><b>张同学</b> 回复了你的评论</span><span class="msg__quote">我也觉得牛腩面不错，下次试试葱油拌面。</span><span class="msg__time">10 分钟前</span></span><span class="msg__dot" aria-label="未读"></span></a></li>
+        <li class="msg is-unread"><a class="msg__link" href="#inbox"><span class="msg__lead"><span class="avatar avatar--md" data-hue="rose">林</span><span class="msg__kind" data-hue="vermilion"><svg class="icon " aria-hidden="true"><use href="#i-heart"/></svg></span></span><span class="msg__main"><span class="msg__text"><b>林小满、王学长</b> 等 3 人赞了你的帖子《食堂二楼新开的面档……》</span><span class="msg__time">1 小时前</span></span><span class="msg__dot" aria-label="未读"></span></a></li>
+        <li class="msg is-unread" data-hue="ochre"><a class="msg__link" href="#inbox"><span class="msg__lead"><span class="msg__icon"><svg class="icon " aria-hidden="true"><use href="#i-megaphone"/></svg></span></span><span class="msg__main"><span class="msg__title">国庆假期值班安排 <span class="tag tag--outline"><svg class="icon " aria-hidden="true"><use href="#i-lock"/></svg>重要</span></span><span class="msg__body">10 月 1 日至 10 月 7 日，图书馆与食堂开放时间调整，详见更新公告。</span><span class="msg__time">今天 08:00</span></span><span class="msg__dot" aria-label="未读"></span></a></li></ul></div>
+      <div class="msg-group"><h3 class="msg-group__title">更早</h3><ul class="msg-list">
+        <li class="msg"><a class="msg__link" href="#inbox"><span class="msg__lead"><span class="avatar avatar--md" data-hue="bamboo">陈</span><span class="msg__kind" data-hue="teal"><svg class="icon " aria-hidden="true"><use href="#i-message"/></svg></span></span><span class="msg__main"><span class="msg__text"><b>陈一鸣</b> 评论了你的帖子</span><span class="msg__quote">请问选科之后还能转班吗？</span><span class="msg__time">9 月 28 日</span></span><span class="msg__dot"></span></a></li></ul></div>
+    </div>
+    <div class="stack">
+      <div class="panel"><div class="panel__head"><h3 class="panel__title">消息通知</h3><p class="panel__desc">选择你想接收的消息类型。</p></div><div class="panel__body">
+        <div class="switch-row"><div class="switch-row__text"><span class="switch-row__title">系统消息 <svg class="icon icon--sm" aria-hidden="true"><use href="#i-lock"/></svg></span><span class="switch-row__desc">管理员发布的通知。重要通知无法关闭。</span></div><input type="checkbox" class="switch" role="switch" checked disabled aria-label="系统消息"></div>
+        <div class="switch-row"><div class="switch-row__text"><span class="switch-row__title">评论通知</span><span class="switch-row__desc">有人评论你的帖子或评价</span></div><input type="checkbox" class="switch" role="switch" checked aria-label="评论通知"></div>
+        <div class="switch-row"><div class="switch-row__text"><span class="switch-row__title">回复通知</span><span class="switch-row__desc">有人回复你的评论</span></div><input type="checkbox" class="switch" role="switch" checked aria-label="回复通知"></div>
+        <div class="switch-row"><div class="switch-row__text"><span class="switch-row__title">点赞通知</span><span class="switch-row__desc">有人赞了你的内容</span></div><input type="checkbox" class="switch" role="switch" aria-label="点赞通知"></div></div></div>
+      <div class="panel"><div class="panel__head"><h3 class="panel__title">我的头衔</h3><p class="panel__desc">同一时间只能佩戴一个头衔。</p></div><div class="panel__body stack">
+        <div class="title-preview"><span class="title-preview__label">预览</span><div class="user-line"><span class="avatar avatar--sm" data-hue="teal">小</span><div class="user-line__body"><div class="user-line__top"><span class="user-line__name">小苏</span><span class="title-badge" data-hue="ochre"><svg class="icon " aria-hidden="true"><use href="#i-award"/></svg><span class="title-badge__text">三元坊老饕</span></span></div></div></div></div>
+        <div class="choice-group choice-group--2">
+          <label class="choice"><input class="choice__input" type="radio" name="wear"><span class="choice__body"><span class="choice__title">不佩戴<svg class="icon choice__check" aria-hidden="true"><use href="#i-check-circle"/></svg></span><span class="choice__desc">不显示任何头衔</span></span></label>
+          <label class="choice" data-hue="ochre"><input class="choice__input" type="radio" name="wear" checked><span class="choice__body"><span class="choice__badge-row"><span class="title-badge" data-hue="ochre"><svg class="icon " aria-hidden="true"><use href="#i-award"/></svg><span class="title-badge__text">三元坊老饕</span></span><svg class="icon choice__check" aria-hidden="true"><use href="#i-check-circle"/></svg></span><span class="choice__desc">累计推荐 10 家店铺</span><span class="choice__meta">自动获得 · 2026-09-30</span></span></label>
+          <label class="choice" data-hue="teal"><input class="choice__input" type="radio" name="wear"><span class="choice__body"><span class="choice__badge-row"><span class="title-badge" data-hue="teal"><svg class="icon " aria-hidden="true"><use href="#i-award"/></svg><span class="title-badge__text">创站元老</span></span><svg class="icon choice__check" aria-hidden="true"><use href="#i-check-circle"/></svg></span><span class="choice__desc">网站早期用户</span><span class="choice__meta">管理员授予 · 2026-09-01</span></span></label>
+          <label class="choice choice--locked" data-hue="wisteria"><input class="choice__input" type="radio" name="wear" disabled><span class="choice__body"><span class="choice__badge-row"><span class="title-badge" data-hue="wisteria"><svg class="icon " aria-hidden="true"><use href="#i-award"/></svg><span class="title-badge__text">夜读星</span></span><svg class="icon icon--sm" aria-hidden="true"><use href="#i-lock"/></svg></span><span class="choice__desc">连续 7 天登录</span><span class="choice__meta">未获得 · 已连续 3 天</span></span></label>
+        </div></div><div class="panel__foot"><button class="btn btn--primary">保存佩戴</button></div></div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="viewer">
+  <div class="section__head"><h2 class="section__title">13 · 图片查看器（静态预览）</h2></div>
+  <div style="position:relative;height:22rem;border-radius:var(--r-3);overflow:hidden;background:var(--viewer-bg)" class="viewer-demo">
+    <div class="viewer__caption">2026-09-28 ~ 2026-10-04 · 每周食谱</div>
+    <div style="position:absolute;inset:0;display:grid;place-items:center"><div style="width:62%;height:62%;border-radius:var(--r-2);background:var(--surface-2);display:grid;place-items:center;color:var(--ink-3)"><svg class="icon icon--xl" aria-hidden="true"><use href="#i-image"/></svg></div></div>
+    <button class="icon-btn viewer__close" aria-label="关闭"><svg class="icon " aria-hidden="true"><use href="#i-close"/></svg></button>
+    <div class="viewer__bar"><button class="icon-btn" aria-label="缩小"><svg class="icon " aria-hidden="true"><use href="#i-minus"/></svg></button><span class="viewer__zoom">100%</span><button class="icon-btn" aria-label="放大"><svg class="icon " aria-hidden="true"><use href="#i-plus"/></svg></button><button class="icon-btn" aria-label="适应屏幕"><svg class="icon " aria-hidden="true"><use href="#i-fullscreen"/></svg></button></div>
+  </div>
+</section>
+
+
+<section class="section" id="pages">
+  <div class="section__head"><h2 class="section__title">14 · 页面级模式</h2></div>
+  <div class="stack stack--xl">
+
+    <div><div class="eyebrow u-mb-4">首页 Hero + 入口方块</div>
+      <section class="hero"><svg class="hero__mark" aria-hidden="true"><use href="#brand-glyph"/></svg><div class="hero__inner">
+        <span class="hero__eyebrow">苏州中学 · 三元坊</span>
+        <h1 class="hero__title">校园里的信息，<br>收进一个干净的地方</h1>
+        <p class="hero__lead">校园地图、论坛、食堂菜谱、三元坊必吃榜——少一点打扰，多一点有用的内容。</p>
+        <div class="hero__actions"><a class="btn btn--primary btn--lg" href="#pages"><svg class="icon " aria-hidden="true"><use href="#i-map"/></svg>打开校园地图</a><a class="btn btn--lg" href="#pages">逛逛论坛</a></div></div></section>
+      <div class="grid grid--sm u-mt-6">
+        <article class="card card--interactive tile" data-hue="teal"><span class="tile__icon"><svg class="icon icon--lg" aria-hidden="true"><use href="#i-map"/></svg></span><h2 class="tile__title"><a class="card__link" href="#pages">校园地图</a><svg class="icon " aria-hidden="true"><use href="#i-arrow-right"/></svg></h2><p class="tile__desc">楼层切换，点击建筑查看介绍</p></article><article class="card card--interactive tile" data-hue="wisteria"><span class="tile__icon"><svg class="icon icon--lg" aria-hidden="true"><use href="#i-message"/></svg></span><h2 class="tile__title"><a class="card__link" href="#pages">论坛</a><svg class="icon " aria-hidden="true"><use href="#i-arrow-right"/></svg></h2><p class="tile__desc">讨论、提问与回复</p></article><article class="card card--interactive tile" data-hue="ochre"><span class="tile__icon"><svg class="icon icon--lg" aria-hidden="true"><use href="#i-utensils"/></svg></span><h2 class="tile__title"><a class="card__link" href="#pages">菜谱评价</a><svg class="icon " aria-hidden="true"><use href="#i-arrow-right"/></svg></h2><p class="tile__desc">全部菜品与每周食谱</p></article><article class="card card--interactive tile" data-hue="vermilion"><span class="tile__icon"><svg class="icon icon--lg" aria-hidden="true"><use href="#i-store"/></svg></span><h2 class="tile__title"><a class="card__link" href="#pages">三元坊必吃榜</a><svg class="icon " aria-hidden="true"><use href="#i-arrow-right"/></svg></h2><p class="tile__desc">同学们推荐的周边美食</p></article><article class="card card--interactive tile" data-hue="indigo"><span class="tile__icon"><svg class="icon icon--lg" aria-hidden="true"><use href="#i-megaphone"/></svg></span><h2 class="tile__title"><a class="card__link" href="#pages">更新公告</a><svg class="icon " aria-hidden="true"><use href="#i-arrow-right"/></svg></h2><p class="tile__desc">网站动态与通知</p></article>
+      </div>
+    </div>
+
+    <div><div class="eyebrow u-mb-4">关于我们（左标题 · 右正文）</div><div class="card"><section class="about"><h2 class="about__label">发起原因</h2><div class="about__body"><p>最初它只是一个纯静态的校园地图页面，后来逐步改造成动态站点，把几何数据抽离出来便于维护。</p><p>此后陆续加入账号系统、论坛、菜谱评价、公告和学生认证，希望它成长为一个真正好用的校园信息平台。</p></div></section>
+      <section class="about"><h2 class="about__label">联系方式</h2><div class="about__body"><div class="kv"><div class="kv__row"><span class="kv__k">邮箱</span><span class="kv__v">contact@example.com</span></div><div class="kv__row"><span class="kv__k">QQ</span><span class="kv__v">123456789</span></div></div></div></section></div></div>
+
+    <div class="grid grid--2">
+      <div><div class="eyebrow u-mb-4">登录卡片（含封禁提示与申诉）</div>
+        <div class="card auth-card" style="max-width:none"><div class="auth-card__brand"><svg class="brand__mark" aria-hidden="true"><use href="#brand-mark"/></svg></div><h1 class="auth-card__title">欢迎回来</h1><p class="auth-card__desc">登录后即可发帖、评价和管理个人设置</p>
+          <form class="form"><div class="alert alert--danger"><svg class="icon " aria-hidden="true"><use href="#i-ban"/></svg><div class="alert__body"><span class="alert__title">账号已被封禁</span>封禁理由：发布违规内容。</div></div>
+          <div class="field"><label class="field__label" for="lu">用户名</label><input class="input" id="lu" autocomplete="username" value="xiaoming"></div>
+          <div class="field"><label class="field__label" for="lp">密码</label><div class="input-group"><input class="input input--end" id="lp" type="password" value="password" autocomplete="current-password"><div class="input-group__end"><button type="button" class="icon-btn icon-btn--sm" aria-label="显示密码"><svg class="icon " aria-hidden="true"><use href="#i-eye"/></svg></button></div></div></div>
+          <button class="btn btn--primary btn--lg btn--block" type="button">登录</button></form>
+          <div class="auth-card__section stack"><h2 class="form__group-title">申请解封</h2><div class="field"><label class="field__label" for="ap">申诉理由</label><textarea class="textarea" id="ap" placeholder="请说明情况，以便管理员审核"></textarea></div><button class="btn btn--block" type="button">提交申诉</button></div>
+          <p class="auth-card__switch">还没有账号？<a href="#pages">立即注册</a></p></div></div>
+      <div><div class="eyebrow u-mb-4">公告：主从视图（桌面左列表右正文）</div>
+        <div class="master-detail" style="grid-template-columns:13rem minmax(0,1fr);gap:var(--sp-5)">
+          <div class="master-list"><button class="master-item" aria-current="true"><span class="master-item__date">2026-10-01 <span class="tag tag--primary">最新</span></span><span class="master-item__title">国庆假期期间的网站维护通知</span></button><button class="master-item"><span class="master-item__date">2026-09-30</span><span class="master-item__title">10.1 版本更新：新增学生认证与工单</span></button><button class="master-item"><span class="master-item__date">2026-09-24</span><span class="master-item__title">论坛点赞功能上线</span></button></div>
+          <article class="detail-pane"><h2 class="detail-pane__title" style="font-size:var(--fs-2xl)">国庆假期期间的网站维护通知</h2><div class="detail-pane__meta"><svg class="icon icon--sm" aria-hidden="true"><use href="#i-calendar"/></svg>发布于 2026-10-01</div><div class="prose">10 月 1 日至 10 月 7 日期间，网站可能出现短暂的维护中断。
+
+如遇问题请在个人中心提交工单。</div></article>
+        </div></div>
+    </div>
+
+    <div><div class="eyebrow u-mb-4">个人中心 / 后台：侧栏导航 + 面板（桌面）</div>
+      <div class="shell" style="grid-template-columns:15rem minmax(0,1fr)">
+        <nav class="side-nav" aria-label="后台分类" style="position:static;display:grid;margin:0;padding:0;background:none;border:0;overflow:visible;backdrop-filter:none">
+          <span class="side-nav__group" style="display:block;padding-top:0">内容</span>
+          <a class="side-nav__item" href="#pages"><svg class="icon " aria-hidden="true"><use href="#i-megaphone"/></svg>编辑横幅</a><a class="side-nav__item" href="#pages"><svg class="icon " aria-hidden="true"><use href="#i-mail"/></svg>更新公告</a><a class="side-nav__item" href="#pages"><svg class="icon " aria-hidden="true"><use href="#i-utensils"/></svg>每周菜谱</a>
+          <span class="side-nav__group" style="display:block">审核</span>
+          <a class="side-nav__item" href="#pages" aria-current="page"><svg class="icon " aria-hidden="true"><use href="#i-graduation"/></svg>学生认证<span class="side-nav__count">3</span></a><a class="side-nav__item" href="#pages"><svg class="icon " aria-hidden="true"><use href="#i-shield"/></svg>申诉处理</a><a class="side-nav__item" href="#pages"><svg class="icon " aria-hidden="true"><use href="#i-clipboard"/></svg>工单管理<span class="side-nav__count">12</span></a>
+          <span class="side-nav__group" style="display:block">用户</span>
+          <a class="side-nav__item" href="#pages"><svg class="icon " aria-hidden="true"><use href="#i-users"/></svg>用户管理</a><a class="side-nav__item" href="#pages"><svg class="icon " aria-hidden="true"><use href="#i-tag"/></svg>邀请码</a>
+        </nav>
+        <div class="shell__main stack">
+          <div class="page-head" style="margin-bottom:0"><div class="page-head__main"><h2 class="page-head__title" style="font-size:var(--fs-2xl)">学生认证审核</h2><p class="page-head__desc">共 3 条待审核申请</p></div></div>
+          <div class="queue-list">
+            <article class="card queue-item"><div class="queue-item__main"><div class="queue-item__title">林小满</div><div class="queue-item__fields"><span><b>新生号</b>20260312</span><span><b>班级</b>高一（3）班</span><span><b>真实姓名</b>林某某</span><span><b>补充信息</b>需要使用论坛发帖权限</span></div><div class="queue-item__meta">提交于 10 分钟前</div></div><div class="queue-item__actions"><button class="btn btn--primary btn--sm"><svg class="icon icon--sm" aria-hidden="true"><use href="#i-check"/></svg>通过</button><button class="btn btn--sm">拒绝</button></div></article>
+            <article class="card queue-item"><div class="queue-item__main"><div class="queue-item__title">陈一鸣 <span class="badge badge--pending">待批复</span></div><div class="queue-item__fields"><span>地图上的“东红楼”弹窗内容有误，应为……</span></div><div class="queue-item__meta">可见范围：管理员及以上 · 昨天 21:08</div></div><div class="queue-item__actions"><button class="btn btn--primary btn--sm">批复</button></div></article>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div><div class="eyebrow u-mb-4">地图页浮层：楼层切换 · 缩放 · 提示 · 弹窗</div>
+      <div class="map-page" style="height:26rem;border-radius:var(--r-3);overflow:hidden;border:1px solid var(--line)">
+        <div class="map-canvas" style="background:linear-gradient(135deg,var(--map-bg),var(--surface-2))"></div>
+        <div class="map-ui map-ui--tr"><div class="floor-switch" role="group" aria-label="切换楼层"><span class="floor-switch__label">楼层</span><button class="floor-switch__btn" aria-pressed="false">4F</button><button class="floor-switch__btn" aria-pressed="false">3F</button><button class="floor-switch__btn" aria-pressed="true">2F</button><button class="floor-switch__btn" aria-pressed="false">1F</button></div></div>
+        <div class="map-ui map-ui--bl"><button class="icon-btn map-help-btn" aria-label="操作提示"><svg class="icon " aria-hidden="true"><use href="#i-help"/></svg></button></div>
+        <div class="map-ui map-ui--center"><div class="leaflet-popup-content-wrapper" style="padding:0"><div class="leaflet-popup-content"><div class="map-popup"><div class="map-popup__text">东红楼
+高二年级教学楼</div><button class="btn btn--sm map-popup__edit"><svg class="icon icon--sm" aria-hidden="true"><use href="#i-pencil"/></svg>编辑</button></div></div></div></div>
+        <div class="map-ui" style="right:var(--sp-3);bottom:var(--sp-3)"><div class="leaflet-bar leaflet-container" style="background:none;box-shadow:none;border:0;border-radius:0"><div class="leaflet-bar" style="display:grid"><a role="button" href="#pages">+</a><a role="button" href="#pages">−</a></div></div></div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+
+<section class="section" id="demo">
+  <div class="section__head"><h2 class="section__title">15 · 交互演示（由 ui.js 驱动）</h2></div>
+  <div class="grid grid--2">
+    <div class="card stack">
+      <div class="eyebrow">Toast</div>
+      <div class="row">
+        <button class="btn btn--sm" data-demo="toast-success">成功</button>
+        <button class="btn btn--sm" data-demo="toast-error">错误</button>
+        <button class="btn btn--sm" data-demo="toast-warning">警告</button>
+        <button class="btn btn--sm" data-demo="toast-info">信息</button>
+        <button class="btn btn--sm" data-demo="toast-action">带操作</button>
+      </div>
+      <div class="eyebrow">对话框</div>
+      <div class="row">
+        <button class="btn btn--sm" data-demo="confirm">确认</button>
+        <button class="btn btn--sm" data-demo="confirm-danger">危险确认</button>
+        <button class="btn btn--sm" data-demo="prompt">输入框</button>
+        <button class="btn btn--sm" data-demo="alert">提示</button>
+        <button class="btn btn--sm" data-dialog-open="demoSheet">自定义表单（手机为底部面板）</button>
+        <button class="btn btn--sm" data-dialog-open="demoDrawer">抽屉</button>
+      </div>
+      <div class="eyebrow">图片查看器</div>
+      <div class="row"><span class="thumb" data-zoom="./favicon.svg" data-caption="示例图片"><img src="favicon.svg" alt="示例图片"></span><span class="u-muted u-fs-sm">点击缩略图：滚轮 / 双指缩放，拖动平移，双击放大，Esc 关闭</span></div>
+    </div>
+    <div class="card stack">
+      <div class="eyebrow">下拉菜单（键盘：↑↓ 切换，Esc 关闭）</div>
+      <div class="menu" data-menu><button class="btn" data-menu-trigger aria-haspopup="menu" aria-expanded="false"><svg class="icon " aria-hidden="true"><use href="#i-more"/></svg>更多操作</button>
+        <div class="menu__panel menu__panel--left" role="menu" hidden><button class="menu__item" role="menuitem"><svg class="icon " aria-hidden="true"><use href="#i-pencil"/></svg>编辑</button><button class="menu__item" role="menuitem"><svg class="icon " aria-hidden="true"><use href="#i-copy"/></svg>复制链接</button><div class="menu__sep"></div><button class="menu__item menu__item--danger" role="menuitem"><svg class="icon " aria-hidden="true"><use href="#i-trash"/></svg>删除</button></div></div>
+      <div class="eyebrow">表单辅助（计数 / 密码显隐 / 校验提示）</div>
+      <form class="form" id="demoForm" novalidate>
+        <div class="field"><label class="field__label" for="dm1">帖子内容</label><textarea class="textarea" id="dm1" data-counter="30" placeholder="最多 30 字"></textarea><div class="field__foot"><span class="field__hint">试试输入超过 30 字</span><span class="field__counter"></span></div></div>
+        <div class="field"><label class="field__label" for="dm2">密码</label><div class="input-group"><input class="input input--end" id="dm2" type="password" value="secret"><div class="input-group__end"><button type="button" class="icon-btn icon-btn--sm" data-password-toggle aria-label="显示密码"><svg class="icon " aria-hidden="true"><use href="#i-eye"/></svg></button></div></div></div>
+        <div class="field" data-upload data-max-mb="2" data-types="image/jpeg,image/png"><span class="field__label">图片 <span class="field__opt">（选填）</span></span><label class="upload" style="position:relative"><span class="upload__icon"><svg class="icon icon--lg" aria-hidden="true"><use href="#i-image"/></svg></span><span class="upload__title">点击选择或拖入图片</span><span class="upload__hint">JPG / PNG，≤ 2 MB</span><input type="file" accept="image/jpeg,image/png"></label><div class="upload-preview-slot"></div></div>
+        <div class="form__actions"><button type="button" class="btn" id="demoValidate">触发校验错误</button><button type="button" class="btn btn--primary" id="demoBusy">提交（演示加载态）</button></div>
+      </form>
+    </div>
+  </div>
+  <dialog class="dialog dialog--sheet" id="demoSheet" aria-labelledby="demoSheetT"><form class="dialog__form" method="dialog"><div class="dialog__head"><h2 class="dialog__title" id="demoSheetT">封禁用户 lirenfei</h2><button type="button" class="icon-btn icon-btn--sm" data-dialog-close aria-label="关闭"><svg class="icon " aria-hidden="true"><use href="#i-close"/></svg></button></div><div class="dialog__body stack"><div class="field"><label class="field__label" for="bn1">封禁理由 <span class="field__opt">（选填）</span></label><input class="input" id="bn1"></div><label class="check-row"><input class="check" type="checkbox" checked><span>允许申请解封</span></label></div><div class="dialog__foot"><button type="button" class="btn" data-dialog-close>取消</button><button class="btn btn--danger" type="submit">确认封禁</button></div></form></dialog>
+  <dialog class="dialog dialog--drawer" id="demoDrawer" aria-label="抽屉示例"><div class="drawer__head"><span class="brand__name">抽屉</span><button type="button" class="icon-btn" data-dialog-close aria-label="关闭"><svg class="icon " aria-hidden="true"><use href="#i-close"/></svg></button></div><div class="drawer__body"><a class="drawer-link" href="#demo"><svg class="icon " aria-hidden="true"><use href="#i-map"/></svg>校园地图</a><a class="drawer-link" aria-current="page" href="#demo"><svg class="icon " aria-hidden="true"><use href="#i-message"/></svg>论坛</a><a class="drawer-link" href="#demo"><svg class="icon " aria-hidden="true"><use href="#i-utensils"/></svg>菜谱评价</a></div><div class="drawer__foot">校园信息网 · AGPL-3.0</div></dialog>
+</section>
+
+</main>
+<footer class="site-footer"><div class="container container--wide site-footer__inner"><div><div class="site-footer__brand"><svg class="brand__mark" aria-hidden="true"><use href="#brand-mark"/></svg><span>校园信息网</span></div></div><nav class="site-footer__links" aria-label="页脚"><a href="#">关于我们</a><a href="#">更新公告</a><a href="#">提交工单</a></nav><p class="site-footer__note">© 2026 校园信息网 · 以 AGPL-3.0 协议开源</p></div></footer>
+<script src="ui.js"></script>
+<script>
+(function(){
+  UI.config.iconsUrl = '';   // 样张内联了图标库，直接引用本页的 #i-xxx
+  document.addEventListener('click', function(e){
+    var b = e.target.closest('[data-demo]'); if(!b) return;
+    var k = b.getAttribute('data-demo');
+    if (k === 'toast-success') UI.toast.success('昵称修改成功');
+    else if (k === 'toast-error') UI.toast.error('网络错误，请稍后重试');
+    else if (k === 'toast-warning') UI.toast.warning('10 分钟内只能提交一次，请稍后再试');
+    else if (k === 'toast-info') UI.toast.info('草稿已自动保存');
+    else if (k === 'toast-action') UI.toast('帖子已删除', { type: 'info', duration: 6000, action: { label: '撤销', onClick: function(){ UI.toast.success('已恢复'); } } });
+    else if (k === 'confirm') UI.confirm({ title: '确定要修改全站横幅吗？', message: '修改后所有用户将立即看到新的横幅。', confirmText: '确认修改' }).then(function(v){ UI.toast(v ? '已确认' : '已取消'); });
+    else if (k === 'confirm-danger') UI.confirm({ title: '删除这条帖子？', message: '帖子及其回复、点赞将一并删除，无法恢复。', confirmText: '删除', danger: true }).then(function(v){ UI.toast(v ? '已删除（演示）' : '已取消'); });
+    else if (k === 'prompt') UI.prompt({ title: '修改弹窗内容', label: '东红楼', value: '东红楼 · 教学楼', multiline: true, required: true }).then(function(v){ UI.toast(v === null ? '已取消' : '新内容：' + v); });
+    else if (k === 'alert') UI.alert({ title: '提示', message: '操作已完成。' });
+  });
+  document.getElementById('demoValidate').addEventListener('click', function(){
+    var f = document.getElementById('demoForm');
+    UI.form.fieldError(document.getElementById('dm1'), '内容不能为空');
+    UI.form.fieldError(document.getElementById('dm2'), '密码至少 6 位');
+    UI.form.focusFirstInvalid(f);
+  });
+  document.getElementById('demoBusy').addEventListener('click', function(){
+    var b = this; UI.form.busy(b, true); setTimeout(function(){ UI.form.busy(b, false); UI.toast.success('提交成功'); }, 1400);
+  });
+})();
+</script>
+<script>document.getElementById('themeBtn').addEventListener('click',function(){var d=document.documentElement;var dark=d.getAttribute('data-theme')==='dark';d.setAttribute('data-theme',dark?'light':'dark');});</script>
+</body></html>

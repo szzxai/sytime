@@ -1425,6 +1425,18 @@ app.put("/api/admin/map-popup", requirePermission("map_popup_edit"), function (r
   });
 });
 
+app.use("/api", function (req, res) {
+  res.status(404).json({ error: "not found" });
+});
+
+app.use(function (req, res, next) {
+  if (req.method === "GET" && !req.path.startsWith("/uploads/") && !path.extname(req.path)) {
+    res.status(404).sendFile(path.join(__dirname, "public", "404.html"));
+    return;
+  }
+  next();
+});
+
 app.use(function (err, req, res, next) {
   console.error(err);
   res.status(500).json({ error: "server error" });

@@ -1,6 +1,6 @@
 # 校园信息网
 
-一个**黑白极简风格**的校园信息网站，集成了交互式校园地图、论坛、菜谱评价、更新公告、学生认证与个人中心，并配套一套完整的账号系统与后台管理。
+一个采用**宣纸·黛青·朱印 极简风格**的校园信息网站，集成了交互式校园地图、论坛、菜谱评价、更新公告、学生认证与个人中心，并配套一套完整的账号系统与后台管理。
 
 后端基于 **Node.js + Express**，数据库使用 Node 内置的 **`node:sqlite`**（零额外依赖），前端为**原生 JavaScript**（无框架、无构建工具）。
 
@@ -35,7 +35,9 @@
 - **学生认证**：邀请码 / 管理员审核（支持通过、拒绝并填写原因）
 - **个人中心**：个人资料、账号安全、网站设置（默认进入界面 / 默认楼层 / 菜谱默认页）
 - **全站横幅**：可由管理员配置，用户可关闭
-- **导航栏**：Logo 点击回首页、菜单栏可折叠
+- **导航栏**：Logo 点击回首页、手机导航抽屉与账户菜单
+- **统一交互**：表单校验、提交状态、确认对话框、图片查看器、加载与错误重试
+- **工单**：个人中心提交与查看，后台按权限批复文字和图片
 
 ---
 
@@ -67,7 +69,13 @@
 │   ├── admin.html       # 管理后台
 │   ├── student_verify.html
 │   ├── profile.html     # 个人中心
-│   └── auth.js          # 全站共享脚本（登录态 / 导航 / 横幅）
+│   ├── about.html       # 旧关于页入口，跳转到首页关于区
+│   ├── 404.html         # 未知路径提示
+│   ├── css/site.css     # 全站设计令牌、组件与响应式样式
+│   ├── js/              # 共享 UI、页面工具与各页业务脚本
+│   ├── img/             # 图标库与网站图标
+│   ├── vendor/leaflet/  # 本地 Leaflet 1.9.4 与许可证
+│   └── auth.js          # 旧共享脚本的兼容入口
 ├── uploads/             # 上传目录（随仓库提交）
 │   ├── weekly/          # 每周菜谱图片
 │   └── bans/            # 封禁图片
@@ -76,6 +84,12 @@
 ├── server.js            # Express 后端（全部接口）
 ├── package.json
 ├── .env.example         # 环境变量模板
+├── .gitignore           # 依赖、密钥、临时数据和测试产物忽略规则
+├── tests/ui-smoke.mjs    # 浏览器、布局与无障碍回归
+├── docs/ui/             # 组件、逐页规范、场景、文案、参考资产与验收记录
+├── UI.md                # UI 设计总纲
+├── MAP.md               # 当前项目结构、数据流与完整接口索引
+├── PLAN_2026-10-01.md    # 国庆里程碑原始需求快照
 └── progress.md          # 开发进度文档
 ```
 
@@ -123,6 +137,14 @@ npm.cmd start
 
 首次启动会自动创建数据库、数据表、迁移与 `uploads/` 目录。**第一个注册的账号自动成为 developer。**
 
+### UI 回归验证
+
+运行 `npm test`，在临时目录启动独立后端，验证页面布局、无障碍、权限与主要表单操作；不会改动项目的 `data.db` 或 `uploads/`。Windows 默认使用已安装的 Microsoft Edge，其他平台先运行 `npx playwright install chromium`。
+
+截图与扫描结果保存到 `output/playwright/`。设计总纲见 [UI.md](./UI.md)，参考样张见 `docs/ui/assets/specimen.html`。
+
+需求 #4 已完成 12 个现有页面与新增 404 的改版。验收范围、结果及复验方式见 [UI 验收记录](./docs/ui/acceptance.md)；完整项目结构和接口索引见 [MAP.md](./MAP.md)。
+
 ---
 
 ## 角色与权限说明
@@ -145,7 +167,7 @@ npm.cmd start
 - 这是一个**动态站点**（Node 后端 + `/api/*`），**不能**直接部署到 GitHub Pages。
 - 可部署到 Render / Railway / Fly.io 等支持 Node 的平台。
 - 需持久化 `data.db` 与 `uploads/`（建议挂载持久卷，或改用外部存储）。
-- `.gitignore` 仅忽略 `.env`、`node_modules/` 及 SQLite 临时文件（`*.db-journal` / `*.db-wal` / `*.db-shm`）；`data.db` 与 `uploads/` 会随仓库提交（便于保留初始数据与图片）。
+- `.gitignore` 忽略 `.env`、`node_modules/`、SQLite 临时文件和浏览器测试产物；`data.db` 与 `uploads/` 会随仓库提交（便于保留初始数据与图片）。
 - 修改 `server.js` 需重启；修改 `data.json` 无需重启（每次请求实时读取）；`public/` 下的静态资源改动刷新即可。
 
 ---

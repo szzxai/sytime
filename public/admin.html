@@ -1,1735 +1,597 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="zh-CN">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>管理后台 · 校园信息网</title>
-<style>
-  * { box-sizing: border-box; }
-  html, body {
-    margin: 0;
-    padding: 0;
-    background: #ffffff;
-    color: #000000;
-    font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
-  }
-  .header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    border-bottom: 2px solid #000000;
-    padding: 16px 32px;
-  }
-  .logo {
-    font-size: 22px;
-    font-weight: bold;
-    letter-spacing: 2px;
-  }
-  .header-right {
-    display: flex;
-    align-items: center;
-    gap: 24px;
-  }
-  .nav {
-    display: flex;
-    gap: 24px;
-  }
-  .nav a {
-    color: #000000;
-    text-decoration: none;
-    font-size: 16px;
-    padding: 6px 4px;
-    border-bottom: 2px solid transparent;
-  }
-  .nav a:hover { border-bottom: 2px solid #000000; }
-  .auth {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-  .btn {
-    display: inline-block;
-    background: #ffffff;
-    color: #000000;
-    border: 2px solid #000000;
-    border-radius: 0;
-    padding: 8px 14px;
-    font-size: 14px;
-    font-family: inherit;
-    cursor: pointer;
-    text-decoration: none;
-    line-height: 1;
-  }
-  .btn:hover { background: #000000; color: #ffffff; }
-  .layout {
-    display: flex;
-    align-items: stretch;
-    min-height: calc(100vh - 63px);
-  }
-  .sidebar {
-    flex: none;
-    width: 220px;
-    border-right: 2px solid #000000;
-    padding: 20px 0;
-  }
-  .side-title {
-    font-size: 15px;
-    font-weight: bold;
-    letter-spacing: 1px;
-    padding: 0 22px 14px;
-    border-bottom: 2px solid #000000;
-    margin-bottom: 12px;
-  }
-  .menu-item {
-    display: block;
-    position: relative;
-    width: 100%;
-    background: none;
-    border: none;
-    text-align: left;
-    padding: 12px 22px;
-    font-size: 14px;
-    font-family: inherit;
-    color: #000000;
-    cursor: pointer;
-  }
-  .menu-item:hover { background: #f2f2f2; }
-  .menu-item.active { background: #000000; color: #ffffff; }
-  .content {
-    flex: 1;
-    padding: 32px 40px 56px;
-    max-width: 720px;
-  }
-  .view { display: none; }
-  .view.active { display: block; }
-  .view h1 {
-    font-size: 18px;
-    letter-spacing: 1px;
-    margin: 0 0 22px;
-  }
-  .field { margin-bottom: 16px; }
-  .field label {
-    display: block;
-    font-size: 13px;
-    color: #555555;
-    margin-bottom: 6px;
-  }
-  .field input,
-  .field textarea {
-    width: 100%;
-    border: 2px solid #000000;
-    border-radius: 0;
-    padding: 10px 12px;
-    font-size: 14px;
-    font-family: inherit;
-    color: #000000;
-    background: #ffffff;
-    outline: none;
-  }
-  .field textarea { min-height: 180px; resize: vertical; }
-  .submit {
-    background: #000000;
-    color: #ffffff;
-    border: 2px solid #000000;
-    border-radius: 0;
-    padding: 10px 22px;
-    font-size: 14px;
-    font-family: inherit;
-    cursor: pointer;
-  }
-  .submit:hover { background: #ffffff; color: #000000; }
-  .submit:disabled { opacity: 0.5; cursor: default; }
-  .msg { min-height: 18px; font-size: 13px; margin-top: 12px; }
-  .msg.error { color: #cc0000; }
-  .msg.ok { color: #008800; }
-  .hint { font-size: 12px; color: #999999; margin: -6px 0 14px; }
-  .app-item {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 14px;
-    border: 2px solid #000000;
-    padding: 14px 16px;
-    margin-bottom: 12px;
-  }
-  .app-info { font-size: 14px; line-height: 1.8; }
-  .app-meta { font-size: 12px; color: #777777; }
-  .app-actions { display: flex; gap: 8px; flex: none; }
-  .row-actions { display: flex; gap: 6px; flex-wrap: wrap; }
-  .perms-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 6px; }
-  .perms-row { display: flex; align-items: center; gap: 8px; font-size: 14px; }
-  .perms-row input { width: auto; }
-  .app-empty {
-    font-size: 14px;
-    color: #777777;
-    text-align: center;
-    padding: 24px;
-    border: 2px dashed #dddddd;
-  }
-  .section-sub {
-    font-size: 15px;
-    letter-spacing: 1px;
-    margin: 26px 0 14px;
-  }
-  .block {
-    border: 2px solid #000000;
-    padding: 22px;
-    margin-bottom: 22px;
-  }
-  .block h2 {
-    font-size: 15px;
-    letter-spacing: 1px;
-    margin: 0 0 18px;
-  }
-  .weekly-item {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    border: 2px solid #000000;
-    padding: 12px 16px;
-    margin-bottom: 12px;
-  }
-  .weekly-thumb {
-    width: 96px;
-    height: 96px;
-    flex: none;
-    object-fit: cover;
-    border: 2px solid #000000;
-    cursor: zoom-in;
-    display: block;
-    background: #f2f2f2;
-  }
-  .weekly-info { flex: 1; font-size: 14px; line-height: 1.8; }
-  .weekly-dates { font-weight: bold; }
-  .weekly-meta { font-size: 12px; color: #777777; }
-  .lightbox {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    z-index: 5000;
-    background: rgba(0, 0, 0, 0.8);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: zoom-out;
-  }
-  .lightbox img {
-    max-width: 90vw;
-    max-height: 90vh;
-    border: 4px solid #ffffff;
-    background: #ffffff;
-  }
-  input[type="date"] {
-    position: relative;
-    cursor: pointer;
-  }
-  input[type="date"]::-webkit-calendar-picker-indicator {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    width: 100%;
-    height: 100%;
-    opacity: 0;
-    cursor: pointer;
-  }
-  .preview-modal {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    z-index: 6000;
-    background: rgba(0, 0, 0, 0.8);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 18px;
-  }
-  .preview-modal img {
-    max-width: 90vw;
-    max-height: 75vh;
-    border: 4px solid #ffffff;
-    background: #ffffff;
-  }
-  .preview-actions { display: flex; gap: 12px; }
-  .weekly-preview { margin-top: 14px; }
-  .weekly-preview-img {
-    display: block;
-    max-width: 100%;
-    max-height: 320px;
-    border: 2px solid #000000;
-    background: #ffffff;
-    margin-bottom: 12px;
-  }
-  .notice {
-    border: 2px dashed #000000;
-    padding: 24px;
-    text-align: center;
-    font-size: 14px;
-  }
-  .notice a { color: #000000; }
-  .user-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 14px;
-  }
-  .user-table th,
-  .user-table td {
-    border: 1px solid #000000;
-    padding: 8px 10px;
-    text-align: left;
-    vertical-align: middle;
-  }
-  .user-table th {
-    background: #000000;
-    color: #ffffff;
-    font-weight: normal;
-    letter-spacing: 1px;
-  }
-  .user-table select {
-    border: 2px solid #000000;
-    border-radius: 0;
-    padding: 4px 6px;
-    font-size: 13px;
-    font-family: inherit;
-    color: #000000;
-    background: #ffffff;
-    outline: none;
-  }
-  .tag-banned { color: #cc0000; }
-  .appeal-thumb {
-    width: 80px;
-    height: 80px;
-    object-fit: cover;
-    border: 2px solid #000000;
-    cursor: zoom-in;
-    display: block;
-    margin-top: 8px;
-    background: #f2f2f2;
-  }
-  .modal-mask {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    z-index: 7000;
-    background: rgba(0, 0, 0, 0.6);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  .modal-box {
-    width: 420px;
-    max-width: 92vw;
-    background: #ffffff;
-    border: 2px solid #000000;
-    padding: 24px;
-  }
-  .modal-box h2 {
-    font-size: 16px;
-    letter-spacing: 1px;
-    margin: 0 0 18px;
-  }
-  .check-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 14px;
-  }
-  .check-row input { width: auto; }
-  .menu-dot {
-    position: absolute;
-    top: 9px;
-    left: 11px;
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: #cc0000;
-    display: none;
-  }
-  .tag-pending { color: #cc0000; font-size: 12px; margin-left: 8px; }
-  .tag-ok { color: #008800; font-size: 12px; margin-left: 8px; }
-  .ticket-body { margin-top: 6px; font-size: 14px; line-height: 1.7; word-break: break-word; }
-  .ticket-reply {
-    margin-top: 10px;
-    padding: 10px 12px;
-    background: #f2f2f2;
-    font-size: 14px;
-    line-height: 1.7;
-    word-break: break-word;
-  }
-</style>
-</head>
-<body>
-  <header class="header">
-    <div class="logo">校园信息网</div>
-    <div class="header-right">
-      <nav class="nav">
-        <a href="map.html">校园地图</a>
-        <a href="forum.html">论坛</a>
-        <a href="recipe.html">菜谱评价</a>
-        <a href="announcements.html">更新公告</a>
-      </nav>
-      <div class="auth" id="authArea">
-        <a class="btn" href="login.html">登录</a>
-        <a class="btn" href="register.html">注册</a>
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#F5F3EE" />
+    <title>管理后台 · 校园信息网</title>
+    <link rel="icon" href="/img/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/css/site.css" />
+  </head>
+  <body data-shell="app">
+    <noscript
+      ><div class="alert alert--warning">
+        <div class="alert__body">本站需要启用 JavaScript 才能正常使用。</div>
+      </div></noscript
+    >
+    <a class="skip-link" href="#main">跳到正文</a>
+    <div id="siteBanner"></div>
+    <div id="siteHeader"></div>
+    <main id="main" class="main container container--wide">
+      <div class="page-head">
+        <h1 class="page-head__title" id="adminTitle">管理后台</h1>
       </div>
-    </div>
-  </header>
-
-  <div class="layout">
-    <aside class="sidebar">
-      <div class="side-title">管理后台</div>
-      <div id="menuArea">
-        <button type="button" class="menu-item active" data-panel="banner">编辑横幅</button>
-        <button type="button" class="menu-item" data-panel="announce">更新公告</button>
-        <button type="button" class="menu-item" data-panel="review"><span class="menu-dot" data-dot="review"></span>学生认证审核</button>
-        <button type="button" class="menu-item" data-panel="invite">邀请码设置</button>
-        <button type="button" class="menu-item" data-panel="weekly">每周菜谱管理</button>
-        <button type="button" class="menu-item" data-panel="users">用户管理</button>
-        <button type="button" class="menu-item" data-panel="appeals"><span class="menu-dot" data-dot="appeals"></span>申诉处理</button>
-        <button type="button" class="menu-item" data-panel="tickets"><span class="menu-dot" data-dot="tickets"></span>工单管理</button>
+      <div id="adminStatus"></div>
+      <div class="shell" id="adminShell" hidden>
+        <nav class="side-nav" aria-label="后台分类" id="adminNav">
+          <span class="side-nav__group">内容</span
+          ><button
+            type="button"
+            class="side-nav__item"
+            data-panel="banner"
+            hidden
+          >
+            <svg class="icon" aria-hidden="true">
+              <use href="/img/icons.svg#i-megaphone"></use></svg
+            >编辑横幅</button
+          ><button
+            type="button"
+            class="side-nav__item"
+            data-panel="announce"
+            hidden
+          >
+            <svg class="icon" aria-hidden="true">
+              <use href="/img/icons.svg#i-mail"></use></svg
+            >更新公告</button
+          ><button
+            type="button"
+            class="side-nav__item"
+            data-panel="weekly"
+            hidden
+          >
+            <svg class="icon" aria-hidden="true">
+              <use href="/img/icons.svg#i-utensils"></use></svg
+            >每周菜谱管理</button
+          ><span class="side-nav__group">审核</span
+          ><button
+            type="button"
+            class="side-nav__item"
+            data-panel="review"
+            hidden
+          >
+            <svg class="icon" aria-hidden="true">
+              <use href="/img/icons.svg#i-graduation"></use></svg
+            >学生认证审核<span
+              class="side-nav__count"
+              data-count="review"
+              hidden
+            ></span></button
+          ><button
+            type="button"
+            class="side-nav__item"
+            data-panel="appeals"
+            hidden
+          >
+            <svg class="icon" aria-hidden="true">
+              <use href="/img/icons.svg#i-shield"></use></svg
+            >申诉处理<span
+              class="side-nav__count"
+              data-count="appeals"
+              hidden
+            ></span></button
+          ><button
+            type="button"
+            class="side-nav__item"
+            data-panel="tickets"
+            hidden
+          >
+            <svg class="icon" aria-hidden="true">
+              <use href="/img/icons.svg#i-clipboard"></use></svg
+            >工单管理<span
+              class="side-nav__count"
+              data-count="tickets"
+              hidden
+            ></span></button
+          ><span class="side-nav__group">用户</span
+          ><button
+            type="button"
+            class="side-nav__item"
+            data-panel="users"
+            hidden
+          >
+            <svg class="icon" aria-hidden="true">
+              <use href="/img/icons.svg#i-users"></use></svg
+            >用户管理</button
+          ><button
+            type="button"
+            class="side-nav__item"
+            data-panel="invite"
+            hidden
+          >
+            <svg class="icon" aria-hidden="true">
+              <use href="/img/icons.svg#i-tag"></use></svg
+            >邀请码设置
+          </button>
+        </nav>
+        <div class="shell__main" id="contentArea">
+          <section class="view" id="view-banner" hidden>
+            <form id="bannerForm" novalidate>
+              <div class="panel">
+                <div class="panel__head">
+                  <h2 class="panel__title">全站横幅</h2>
+                </div>
+                <div class="panel__body form">
+                  <div class="field">
+                    <label class="field__label" for="bannerInput"
+                      >横幅文本</label
+                    ><input
+                      class="input"
+                      type="text"
+                      id="bannerInput"
+                      name="bannerInput"
+                      data-counter="100"
+                    />
+                    <div class="field__foot">
+                      <span class="field__hint"
+                        >显示在每个页面顶部，留空则不显示。</span
+                      ><span class="field__counter"></span>
+                    </div>
+                  </div>
+                </div>
+                <div class="panel__foot">
+                  <span class="status-text" id="bannerMsg" role="status"></span
+                  ><button type="button" class="btn" id="bannerClear">
+                    取消横幅</button
+                  ><button
+                    type="submit"
+                    class="btn btn--primary"
+                    id="bannerSubmit"
+                  >
+                    确认修改
+                  </button>
+                </div>
+              </div>
+            </form>
+          </section>
+          <section class="view" id="view-announce" hidden>
+            <form id="annForm" novalidate>
+              <div class="panel">
+                <div class="panel__head">
+                  <h2 class="panel__title">发布公告</h2>
+                </div>
+                <div class="panel__body form">
+                  <div class="field">
+                    <label class="field__label" for="annTitle">公告标题</label
+                    ><input
+                      class="input"
+                      type="text"
+                      id="annTitle"
+                      name="annTitle"
+                      required
+                      data-counter="60"
+                    />
+                    <div class="field__foot">
+                      <span class="field__hint"></span
+                      ><span class="field__counter"></span>
+                    </div>
+                  </div>
+                  <div class="field">
+                    <label class="field__label" for="annContent">公告内容</label
+                    ><textarea
+                      class="textarea"
+                      id="annContent"
+                      name="annContent"
+                      required
+                      data-counter="2000"
+                    ></textarea>
+                    <div class="field__foot">
+                      <span class="field__hint"></span
+                      ><span class="field__counter"></span>
+                    </div>
+                  </div>
+                </div>
+                <div class="panel__foot">
+                  <span class="status-text" id="annMsg" role="status"></span
+                  ><button
+                    type="submit"
+                    class="btn btn--primary"
+                    id="annSubmit"
+                  >
+                    发布公告
+                  </button>
+                </div>
+              </div>
+            </form>
+          </section>
+          <section class="view" id="view-weekly" hidden>
+            <form id="weeklyForm" novalidate>
+              <div class="panel">
+                <div class="panel__head">
+                  <h2 class="panel__title">上传菜谱图片</h2>
+                </div>
+                <div class="panel__body form">
+                  <div class="form-grid form-grid--2">
+                    <div class="field">
+                      <label class="field__label" for="weeklyStart"
+                        >第一天</label
+                      ><input
+                        class="input"
+                        type="date"
+                        id="weeklyStart"
+                        name="weeklyStart"
+                        required
+                      />
+                      <div class="field__foot">
+                        <span class="field__hint"></span>
+                      </div>
+                    </div>
+                    <div class="field">
+                      <label class="field__label" for="weeklyEnd"
+                        >最后一天</label
+                      ><input
+                        class="input"
+                        type="date"
+                        id="weeklyEnd"
+                        name="weeklyEnd"
+                        required
+                      />
+                      <div class="field__foot">
+                        <span class="field__hint"></span>
+                      </div>
+                    </div>
+                  </div>
+                  <button type="button" class="btn" id="weeklyChoose">
+                    <svg class="icon" aria-hidden="true">
+                      <use href="/img/icons.svg#i-upload"></use></svg
+                    >选择图片</button
+                  ><input
+                    type="file"
+                    id="weeklyFile"
+                    accept="image/jpeg,image/png"
+                    hidden
+                  />
+                  <div id="weeklyPreview" class="stack" hidden>
+                    <div class="upload-preview">
+                      <img
+                        class="upload-preview__img"
+                        id="weeklyPreviewImg"
+                        alt="食谱预览"
+                      />
+                      <div class="upload-preview__meta">
+                        <div
+                          class="upload-preview__name"
+                          id="weeklyPreviewName"
+                        ></div>
+                        <div
+                          class="upload-preview__size"
+                          id="weeklyPreviewSize"
+                        ></div>
+                      </div>
+                    </div>
+                    <div class="row row--sm">
+                      <button
+                        type="submit"
+                        class="btn btn--primary"
+                        id="weeklyConfirm"
+                      >
+                        确认上传</button
+                      ><button type="button" class="btn" id="weeklyCancel">
+                        取消
+                      </button>
+                    </div>
+                  </div>
+                  <span class="field__hint">JPG / PNG，不超过 5 MB</span>
+                </div>
+              </div>
+            </form>
+            <h2 class="section__title u-mb-4">已上传菜谱</h2>
+            <div id="weeklyList" class="queue-list" aria-live="polite"></div>
+          </section>
+          <section class="view" id="view-review" hidden>
+            <div id="reviewList" class="queue-list" aria-live="polite"></div>
+          </section>
+          <section class="view" id="view-appeals" hidden>
+            <div id="appealList" class="queue-list" aria-live="polite"></div>
+          </section>
+          <section class="view" id="view-tickets" hidden>
+            <div id="ticketList" class="queue-list" aria-live="polite"></div>
+          </section>
+          <section class="view" id="view-users" hidden>
+            <div id="userList"></div>
+          </section>
+          <section class="view" id="view-invite" hidden>
+            <form id="inviteForm" novalidate>
+              <div class="panel">
+                <div class="panel__head">
+                  <h2 class="panel__title">添加邀请码</h2>
+                  <p class="panel__desc">
+                    学生认证时填入有效邀请码可直接通过；次数用完后失效。
+                  </p>
+                </div>
+                <div class="panel__body form">
+                  <div class="form-grid form-grid--2">
+                    <div class="field">
+                      <label class="field__label" for="inviteCodeInput"
+                        >邀请码</label
+                      ><input
+                        class="input"
+                        type="text"
+                        id="inviteCodeInput"
+                        name="inviteCodeInput"
+                        required
+                      />
+                      <div class="field__foot">
+                        <span class="field__hint"></span>
+                      </div>
+                    </div>
+                    <div class="field">
+                      <label class="field__label" for="inviteMaxInput"
+                        >可用次数</label
+                      ><input
+                        class="input"
+                        type="number"
+                        id="inviteMaxInput"
+                        name="inviteMaxInput"
+                        min="0"
+                        step="1"
+                        value="0"
+                      />
+                      <div class="field__foot">
+                        <span class="field__hint">0 为不限</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="panel__foot">
+                  <span class="status-text" id="inviteMsg" role="status"></span
+                  ><button
+                    type="submit"
+                    class="btn btn--primary"
+                    id="inviteAdd"
+                  >
+                    添加
+                  </button>
+                </div>
+              </div>
+            </form>
+            <h2 class="section__title u-mb-4">已有邀请码</h2>
+            <div id="inviteList" class="queue-list" aria-live="polite"></div>
+          </section>
+        </div>
       </div>
-    </aside>
-
-    <main class="content" id="contentArea">
-      <section class="view active" id="view-banner">
-        <h1>编辑横幅</h1>
-        <div class="field">
-          <label for="bannerInput">横幅文本</label>
-          <input type="text" id="bannerInput" placeholder="留空则不显示横幅">
-        </div>
-        <button type="button" class="submit" id="bannerSubmit">确认修改</button>
-        <button type="button" class="btn" id="bannerClear" style="margin-left:10px;">取消横幅</button>
-        <div class="msg" id="bannerMsg"></div>
-      </section>
-
-      <section class="view" id="view-announce">
-        <h1>更新公告</h1>
-        <div class="field">
-          <label for="annTitle">公告标题</label>
-          <input type="text" id="annTitle">
-        </div>
-        <div class="field">
-          <label for="annContent">公告内容</label>
-          <textarea id="annContent"></textarea>
-        </div>
-        <button type="button" class="submit" id="annSubmit">发布公告</button>
-        <div class="msg" id="annMsg"></div>
-      </section>
-
-      <section class="view" id="view-review">
-        <h1>学生认证审核</h1>
-        <div id="reviewList"></div>
-      </section>
-
-      <section class="view" id="view-invite">
-        <h1>邀请码设置</h1>
-        <div class="field">
-          <label for="inviteCodeInput">新增邀请码</label>
-          <input type="text" id="inviteCodeInput" placeholder="输入邀请码">
-        </div>
-        <div class="field">
-          <label for="inviteMaxInput">可用次数（0 表示不限制）</label>
-          <input type="number" id="inviteMaxInput" min="0" value="0">
-        </div>
-        <div class="hint">学生认证时填入有效邀请码可直接通过；次数用完后该邀请码失效。</div>
-        <button type="button" class="submit" id="inviteAdd">添加</button>
-        <div class="msg" id="inviteMsg"></div>
-        <h2 class="section-sub">已有邀请码</h2>
-        <div id="inviteList"></div>
-      </section>
-
-      <section class="view" id="view-weekly">
-        <h1>每周菜谱管理</h1>
-        <div class="block">
-          <h2>上传菜谱图片</h2>
-          <div class="field">
-            <label for="weeklyStart">第一天</label>
-            <input type="date" id="weeklyStart">
+      <div id="denyBox" hidden></div>
+      <dialog
+        class="dialog dialog--sheet dialog--wide"
+        id="banModal"
+        aria-labelledby="banModal-t"
+      >
+        <form class="dialog__form" id="banForm" novalidate>
+          <div class="dialog__head">
+            <h2 class="dialog__title" id="banModal-t">
+              封禁用户 <span id="banTargetName"></span>
+            </h2>
+            <button
+              type="button"
+              class="icon-btn icon-btn--sm"
+              data-dialog-close
+              aria-label="关闭"
+            >
+              <svg class="icon" aria-hidden="true">
+                <use href="/img/icons.svg#i-close"></use>
+              </svg>
+            </button>
           </div>
-          <div class="field">
-            <label for="weeklyEnd">最后一天</label>
-            <input type="date" id="weeklyEnd">
+          <div class="dialog__body stack">
+            <div class="field">
+              <label class="field__label" for="banReasonInput"
+                >封禁理由（选填）</label
+              ><input
+                class="input"
+                type="text"
+                id="banReasonInput"
+                name="banReasonInput"
+                data-counter="100"
+              />
+              <div class="field__foot">
+                <span class="field__hint"></span
+                ><span class="field__counter"></span>
+              </div>
+            </div>
+            <div
+              class="field"
+              data-upload
+              data-max-mb="5"
+              data-types="image/jpeg,image/png"
+            >
+              <span class="field__label">图片（选填）</span
+              ><label class="upload"
+                ><span class="upload__icon"
+                  ><svg class="icon icon--lg" aria-hidden="true">
+                    <use href="/img/icons.svg#i-image"></use></svg></span
+                ><span class="upload__title">点击选择或拖入图片</span
+                ><span class="upload__hint">JPG / PNG，不超过 5 MB</span
+                ><input
+                  type="file"
+                  id="banImageInput"
+                  aria-label="上传图片"
+                  accept="image/jpeg,image/png"
+              /></label>
+              <div class="upload-preview-slot"></div>
+            </div>
+            <label class="check-row"
+              ><input
+                type="checkbox"
+                class="check"
+                id="banAllowAppeal"
+                checked
+              /><span class="check-row__text"
+                >允许申请解封<span class="check-row__desc"
+                  >关闭后该用户只能线下联系超级管理员</span
+                ></span
+              ></label
+            >
           </div>
-          <button type="button" class="submit" id="weeklyChoose">选择图片并上传</button>
-          <input type="file" id="weeklyFile" accept="image/jpeg,image/png" style="display:none;">
-          <div class="weekly-preview" id="weeklyPreview" style="display:none;">
-            <img class="weekly-preview-img" id="weeklyPreviewImg" alt="预览">
-            <div class="preview-actions">
-              <button type="button" class="submit" id="weeklyConfirm">确认上传</button>
-              <button type="button" class="btn" id="weeklyCancel">取消</button>
+          <div class="dialog__foot">
+            <span class="status-text" id="banMsg" role="status"></span
+            ><button type="button" class="btn" data-dialog-close>取消</button
+            ><button type="submit" class="btn btn--danger" id="banConfirm">
+              确认封禁
+            </button>
+          </div>
+        </form>
+      </dialog>
+      <dialog
+        class="dialog dialog--sheet dialog--wide"
+        id="rejectModal"
+        aria-labelledby="rejectModal-t"
+      >
+        <form class="dialog__form" id="rejectForm" novalidate>
+          <div class="dialog__head">
+            <h2 class="dialog__title" id="rejectModal-t">拒绝学生认证</h2>
+            <button
+              type="button"
+              class="icon-btn icon-btn--sm"
+              data-dialog-close
+              aria-label="关闭"
+            >
+              <svg class="icon" aria-hidden="true">
+                <use href="/img/icons.svg#i-close"></use>
+              </svg>
+            </button>
+          </div>
+          <div class="dialog__body stack">
+            <div class="field">
+              <label class="field__label" for="rejectReasonInput"
+                >拒绝原因（选填）</label
+              ><input
+                class="input"
+                type="text"
+                id="rejectReasonInput"
+                name="rejectReasonInput"
+                data-counter="100"
+              />
+              <div class="field__foot">
+                <span class="field__hint"></span
+                ><span class="field__counter"></span>
+              </div>
             </div>
           </div>
-          <div class="msg" id="weeklyMsg"></div>
-        </div>
-        <h2 class="section-sub">已上传菜谱</h2>
-        <div id="weeklyList"></div>
-      </section>
-
-      <section class="view" id="view-users">
-        <h1>用户管理</h1>
-        <div id="userList"></div>
-      </section>
-
-      <section class="view" id="view-appeals">
-        <h1>申诉处理</h1>
-        <div id="appealList"></div>
-      </section>
-
-      <section class="view" id="view-tickets">
-        <h1>工单管理</h1>
-        <div id="ticketList"></div>
-      </section>
+          <div class="dialog__foot">
+            <span class="status-text" id="rejectMsg" role="status"></span
+            ><button type="button" class="btn" data-dialog-close>取消</button
+            ><button type="submit" class="btn btn--primary" id="rejectConfirm">
+              确认拒绝
+            </button>
+          </div>
+        </form>
+      </dialog>
+      <dialog
+        class="dialog dialog--sheet dialog--wide"
+        id="permsModal"
+        aria-labelledby="permsModal-t"
+      >
+        <form class="dialog__form" id="permsForm" novalidate>
+          <div class="dialog__head">
+            <h2 class="dialog__title" id="permsModal-t">
+              设置权限 <span id="permsTargetName"></span>
+            </h2>
+            <button
+              type="button"
+              class="icon-btn icon-btn--sm"
+              data-dialog-close
+              aria-label="关闭"
+            >
+              <svg class="icon" aria-hidden="true">
+                <use href="/img/icons.svg#i-close"></use>
+              </svg>
+            </button>
+          </div>
+          <div class="dialog__body stack">
+            <div id="permsList" class="stack"></div>
+          </div>
+          <div class="dialog__foot">
+            <span class="status-text" id="permsMsg" role="status"></span
+            ><button type="button" class="btn" data-dialog-close>取消</button
+            ><button type="submit" class="btn btn--primary" id="permsConfirm">
+              保存
+            </button>
+          </div>
+        </form>
+      </dialog>
+      <dialog
+        class="dialog dialog--sheet dialog--wide"
+        id="ticketModal"
+        aria-labelledby="ticketModal-t"
+      >
+        <form class="dialog__form" id="ticketReplyForm" novalidate>
+          <div class="dialog__head">
+            <h2 class="dialog__title" id="ticketModal-t">
+              批复工单 <span id="ticketTargetTitle"></span>
+            </h2>
+            <button
+              type="button"
+              class="icon-btn icon-btn--sm"
+              data-dialog-close
+              aria-label="关闭"
+            >
+              <svg class="icon" aria-hidden="true">
+                <use href="/img/icons.svg#i-close"></use>
+              </svg>
+            </button>
+          </div>
+          <div class="dialog__body stack">
+            <div class="field">
+              <label class="field__label" for="ticketReplyInput">批复内容</label
+              ><textarea
+                class="textarea"
+                id="ticketReplyInput"
+                name="ticketReplyInput"
+                required
+                data-counter="2000"
+              ></textarea>
+              <div class="field__foot">
+                <span class="field__hint"></span
+                ><span class="field__counter"></span>
+              </div>
+            </div>
+            <div
+              class="field"
+              data-upload
+              data-max-mb="5"
+              data-types="image/jpeg,image/png"
+            >
+              <span class="field__label">图片（选填）</span
+              ><label class="upload"
+                ><span class="upload__icon"
+                  ><svg class="icon icon--lg" aria-hidden="true">
+                    <use href="/img/icons.svg#i-image"></use></svg></span
+                ><span class="upload__title">点击选择或拖入图片</span
+                ><span class="upload__hint">JPG / PNG，不超过 5 MB</span
+                ><input
+                  type="file"
+                  id="ticketImageInput"
+                  aria-label="上传图片"
+                  accept="image/jpeg,image/png"
+              /></label>
+              <div class="upload-preview-slot"></div>
+            </div>
+          </div>
+          <div class="dialog__foot">
+            <span class="status-text" id="ticketMsg" role="status"></span
+            ><button type="button" class="btn" data-dialog-close>取消</button
+            ><button type="submit" class="btn btn--primary" id="ticketConfirm">
+              提交批复
+            </button>
+          </div>
+        </form>
+      </dialog>
     </main>
-  </div>
 
-  <div class="modal-mask" id="banModal" style="display:none;">
-    <div class="modal-box">
-      <h2>封禁用户 <span id="banTargetName"></span></h2>
-      <div class="field">
-        <label for="banReasonInput">封禁理由（选填）</label>
-        <input type="text" id="banReasonInput">
-      </div>
-      <div class="field">
-        <label>上传图片（选填）</label>
-        <button type="button" class="btn" id="banImageChoose">选择图片</button>
-        <input type="file" id="banImageInput" accept="image/jpeg,image/png" style="display:none;">
-        <span class="hint" id="banImageName" style="margin:0 0 0 10px;"></span>
-      </div>
-      <div class="field">
-        <label class="check-row"><input type="checkbox" id="banAllowAppeal" checked> 允许申请解封</label>
-      </div>
-      <div class="msg" id="banMsg"></div>
-      <div class="preview-actions">
-        <button type="button" class="submit" id="banConfirm">确认封禁</button>
-        <button type="button" class="btn" id="banCancel">取消</button>
-      </div>
-    </div>
-  </div>
-
-  <div class="modal-mask" id="rejectModal" style="display:none;">
-    <div class="modal-box">
-      <h2>拒绝学生认证</h2>
-      <div class="field">
-        <label for="rejectReasonInput">拒绝原因（选填）</label>
-        <input type="text" id="rejectReasonInput">
-      </div>
-      <div class="msg" id="rejectMsg"></div>
-      <div class="preview-actions">
-        <button type="button" class="submit" id="rejectConfirm">确认拒绝</button>
-        <button type="button" class="btn" id="rejectCancel">取消</button>
-      </div>
-    </div>
-  </div>
-
-  <div class="modal-mask" id="permsModal" style="display:none;">
-    <div class="modal-box">
-      <h2>设置权限 <span id="permsTargetName"></span></h2>
-      <div id="permsList" class="perms-list"></div>
-      <div class="msg" id="permsMsg"></div>
-      <div class="preview-actions">
-        <button type="button" class="submit" id="permsConfirm">保存</button>
-        <button type="button" class="btn" id="permsCancel">取消</button>
-      </div>
-    </div>
-  </div>
-
-  <div class="modal-mask" id="ticketModal" style="display:none;">
-    <div class="modal-box">
-      <h2>批复工单 <span id="ticketTargetTitle"></span></h2>
-      <div class="field">
-        <label for="ticketReplyInput">批复内容（必填）</label>
-        <textarea id="ticketReplyInput" style="min-height:120px;"></textarea>
-      </div>
-      <div class="field">
-        <label>上传图片（选填）</label>
-        <button type="button" class="btn" id="ticketImageChoose">选择图片</button>
-        <input type="file" id="ticketImageInput" accept="image/jpeg,image/png" style="display:none;">
-        <span class="hint" id="ticketImageName" style="margin:0 0 0 10px;"></span>
-      </div>
-      <div class="msg" id="ticketMsg"></div>
-      <div class="preview-actions">
-        <button type="button" class="submit" id="ticketConfirm">确认批复</button>
-        <button type="button" class="btn" id="ticketCancel">取消</button>
-      </div>
-    </div>
-  </div>
-
-  <script src="auth.js"></script>
-  <script>
-    var token = localStorage.getItem("token");
-
-    function authHeaders() {
-      return { "Authorization": "Bearer " + token };
-    }
-
-    function handleStatus(status) {
-      if (status === 401) {
-        localStorage.removeItem("token");
-        localStorage.removeItem("user");
-        location.href = "login.html";
-        return true;
-      }
-      return false;
-    }
-
-    function escapeHtml(value) {
-      if (value === null || value === undefined) return "";
-      return String(value)
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#39;");
-    }
-
-    var menuItems = document.querySelectorAll("[data-panel]");
-    for (var i = 0; i < menuItems.length; i++) {
-      menuItems[i].addEventListener("click", function () {
-        var name = this.getAttribute("data-panel");
-        for (var j = 0; j < menuItems.length; j++) {
-          menuItems[j].classList.toggle("active", menuItems[j] === this);
-        }
-        var views = document.querySelectorAll(".view");
-        for (var k = 0; k < views.length; k++) {
-          views[k].classList.toggle("active", views[k].id === "view-" + name);
-        }
-      });
-    }
-
-    document.getElementById("bannerSubmit").addEventListener("click", function () {
-      var msg = document.getElementById("bannerMsg");
-      var submit = document.getElementById("bannerSubmit");
-      var value = document.getElementById("bannerInput").value;
-
-      if (!confirm("确定要修改全站横幅吗？")) {
-        return;
-      }
-
-      msg.className = "msg";
-      msg.textContent = "提交中…";
-      submit.disabled = true;
-      fetch("/api/admin/settings/banner", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token },
-        body: JSON.stringify({ value: value })
-      })
-        .then(function (res) {
-          if (handleStatus(res.status)) throw new Error("unauthorized");
-          return res.json().then(function (data) { return { ok: res.ok, data: data }; });
-        })
-        .then(function (r) {
-          if (!r.ok) {
-            msg.className = "msg error";
-            msg.textContent = r.status === 403 ? "无权限（需要 developer / super_admin）" : (r.data.error || "修改失败");
-            submit.disabled = false;
-            return;
-          }
-          msg.className = "msg ok";
-          msg.textContent = "横幅已更新，刷新页面即可看到";
-          submit.disabled = false;
-        })
-        .catch(function (err) {
-          if (err.message !== "unauthorized") {
-            msg.className = "msg error";
-            msg.textContent = "网络错误：" + err.message;
-            submit.disabled = false;
-          }
-        });
-    });
-
-    document.getElementById("bannerClear").addEventListener("click", function () {
-      var msg = document.getElementById("bannerMsg");
-      var submit = document.getElementById("bannerClear");
-      if (!confirm("确定要取消全站横幅吗？取消后不再展示任何横幅。")) {
-        return;
-      }
-      msg.className = "msg";
-      msg.textContent = "提交中…";
-      submit.disabled = true;
-      fetch("/api/admin/settings/banner", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token },
-        body: JSON.stringify({ value: "" })
-      })
-        .then(function (res) {
-          if (handleStatus(res.status)) throw new Error("unauthorized");
-          return res.json().then(function (data) { return { ok: res.ok, data: data }; });
-        })
-        .then(function (r) {
-          if (!r.ok) {
-            msg.className = "msg error";
-            msg.textContent = r.status === 403 ? "无权限（需要 developer / super_admin）" : (r.data.error || "取消失败");
-            submit.disabled = false;
-            return;
-          }
-          document.getElementById("bannerInput").value = "";
-          msg.className = "msg ok";
-          msg.textContent = "横幅已取消，全站不再显示横幅";
-          submit.disabled = false;
-        })
-        .catch(function (err) {
-          if (err.message !== "unauthorized") {
-            msg.className = "msg error";
-            msg.textContent = "网络错误：" + err.message;
-            submit.disabled = false;
-          }
-        });
-    });
-
-    document.getElementById("annSubmit").addEventListener("click", function () {
-      var msg = document.getElementById("annMsg");
-      var submit = document.getElementById("annSubmit");
-      var title = document.getElementById("annTitle").value.trim();
-      var content = document.getElementById("annContent").value.trim();
-
-      if (!title || !content) {
-        msg.className = "msg error";
-        msg.textContent = "标题和内容不能为空";
-        return;
-      }
-
-      msg.className = "msg";
-      msg.textContent = "发布中…";
-      submit.disabled = true;
-      fetch("/api/admin/announcements", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token },
-        body: JSON.stringify({ title: title, content: content })
-      })
-        .then(function (res) {
-          if (handleStatus(res.status)) throw new Error("unauthorized");
-          return res.json().then(function (data) { return { ok: res.ok, data: data }; });
-        })
-        .then(function (r) {
-          if (!r.ok) {
-            msg.className = "msg error";
-            msg.textContent = r.status === 403 ? "无权限（需要 developer / super_admin）" : (r.data.error || "发布失败");
-            submit.disabled = false;
-            return;
-          }
-          document.getElementById("annTitle").value = "";
-          document.getElementById("annContent").value = "";
-          msg.className = "msg ok";
-          msg.textContent = "公告已发布";
-          submit.disabled = false;
-        })
-        .catch(function (err) {
-          if (err.message !== "unauthorized") {
-            msg.className = "msg error";
-            msg.textContent = "网络错误：" + err.message;
-            submit.disabled = false;
-          }
-        });
-    });
-
-    function loadReview() {
-      var box = document.getElementById("reviewList");
-      box.innerHTML = '<div class="app-empty">加载中…</div>';
-      fetch("/api/admin/student-applications", { headers: authHeaders() })
-        .then(function (res) {
-          if (handleStatus(res.status)) throw new Error("unauthorized");
-          if (res.status === 403) throw new Error("forbidden");
-          return res.json();
-        })
-        .then(function (data) {
-          var list = data.applications || [];
-          if (!list.length) {
-            box.innerHTML = '<div class="app-empty">暂无待审核申请</div>';
-            return;
-          }
-          box.innerHTML = list.map(function (a) {
-            return '<div class="app-item" data-id="' + a.id + '">' +
-              '<div class="app-info">' +
-                '新生号：' + escapeHtml(a.student_id) + '<br>' +
-                '班级：' + escapeHtml(a.class_name) + '<br>' +
-                '真实姓名：' + escapeHtml(a.real_name) + '<br>' +
-                (a.extra_info ? '补充信息：' + escapeHtml(a.extra_info) + '<br>' : '') +
-                '<span class="app-meta">提交人：' + escapeHtml(a.username || ("用户#" + a.user_id)) + '</span>' +
-              '</div>' +
-              '<div class="app-actions">' +
-                '<button type="button" class="submit" data-approve="' + a.id + '">通过</button>' +
-                '<button type="button" class="btn" data-reject="' + a.id + '">拒绝</button>' +
-              '</div>' +
-            '</div>';
-          }).join("");
-        })
-        .catch(function (err) {
-          box.innerHTML = '<div class="app-empty">加载失败：' +
-            escapeHtml(err.message === "forbidden" ? "无权限" : err.message) + '</div>';
-        });
-    }
-
-    document.getElementById("reviewList").addEventListener("click", function (e) {
-      var rej = e.target.closest ? e.target.closest("[data-reject]") : null;
-      if (rej) {
-        openRejectModal(Number(rej.getAttribute("data-reject")));
-        return;
-      }
-      var btn = e.target.closest ? e.target.closest("[data-approve]") : null;
-      if (!btn) return;
-      var id = btn.getAttribute("data-approve");
-      btn.disabled = true;
-      fetch("/api/admin/student-applications/approve", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token },
-        body: JSON.stringify({ id: Number(id) })
-      })
-        .then(function (res) {
-          if (handleStatus(res.status)) throw new Error("unauthorized");
-          return res.json().then(function (data) { return { ok: res.ok, data: data }; });
-        })
-        .then(function (r) {
-          if (!r.ok) {
-            btn.disabled = false;
-            alert(r.status === 403 ? "无权限（需要 developer / super_admin）" : (r.data.error || "操作失败"));
-            return;
-          }
-          var item = document.querySelector('.app-item[data-id="' + id + '"]');
-          if (item) item.parentNode.removeChild(item);
-          if (!document.querySelector(".app-item")) {
-            document.getElementById("reviewList").innerHTML = '<div class="app-empty">暂无待审核申请</div>';
-          }
-          refreshDots();
-        })
-        .catch(function (err) {
-          btn.disabled = false;
-          if (err.message !== "unauthorized") alert("网络错误：" + err.message);
-        });
-    });
-
-    var rejectPendingId = null;
-
-    function openRejectModal(id) {
-      rejectPendingId = id;
-      document.getElementById("rejectReasonInput").value = "";
-      var m = document.getElementById("rejectMsg");
-      m.className = "msg";
-      m.textContent = "";
-      document.getElementById("rejectModal").style.display = "flex";
-    }
-
-    function closeRejectModal() {
-      rejectPendingId = null;
-      document.getElementById("rejectModal").style.display = "none";
-    }
-
-    document.getElementById("rejectCancel").addEventListener("click", closeRejectModal);
-
-    document.getElementById("rejectConfirm").addEventListener("click", function () {
-      if (rejectPendingId === null) return;
-      var msg = document.getElementById("rejectMsg");
-      var btn = document.getElementById("rejectConfirm");
-      msg.className = "msg";
-      msg.textContent = "提交中…";
-      btn.disabled = true;
-      fetch("/api/admin/student-applications/reject", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token },
-        body: JSON.stringify({ id: rejectPendingId, reason: document.getElementById("rejectReasonInput").value.trim() })
-      })
-        .then(function (res) {
-          if (handleStatus(res.status)) throw new Error("unauthorized");
-          return res.json().then(function (data) { return { ok: res.ok, data: data }; });
-        })
-        .then(function (r) {
-          btn.disabled = false;
-          if (!r.ok) {
-            msg.className = "msg error";
-            msg.textContent = r.status === 403 ? "无权限（需要 developer / super_admin）" : (r.data.error || "拒绝失败");
-            return;
-          }
-          var id = rejectPendingId;
-          closeRejectModal();
-          var item = document.querySelector('.app-item[data-id="' + id + '"]');
-          if (item) item.parentNode.removeChild(item);
-          if (!document.querySelector(".app-item")) {
-            document.getElementById("reviewList").innerHTML = '<div class="app-empty">暂无待审核申请</div>';
-          }
-          refreshDots();
-        })
-        .catch(function (err) {
-          btn.disabled = false;
-          if (err.message !== "unauthorized") {
-            msg.className = "msg error";
-            msg.textContent = "网络错误：" + err.message;
-          }
-        });
-    });
-
-    var permsPendingUserId = null;
-
-    function openPermsModal(id) {
-      var u = usersById[id];
-      if (!u) return;
-      permsPendingUserId = id;
-      document.getElementById("permsTargetName").textContent = u.username || ("用户#" + id);
-      var current = u.permissions || [];
-      var box = document.getElementById("permsList");
-      if (!permissionCatalog.length) {
-        box.innerHTML = '<div class="app-empty">权限列表加载中…</div>';
-      } else {
-        box.innerHTML = permissionCatalog.map(function (p) {
-          var checked = current.indexOf(p.key) !== -1 ? " checked" : "";
-          return '<label class="perms-row"><input type="checkbox" value="' + p.key + '"' + checked + '> ' + escapeHtml(p.label) + '</label>';
-        }).join("");
-      }
-      var m = document.getElementById("permsMsg");
-      m.className = "msg";
-      m.textContent = "";
-      document.getElementById("permsModal").style.display = "flex";
-    }
-
-    function closePermsModal() {
-      permsPendingUserId = null;
-      document.getElementById("permsModal").style.display = "none";
-    }
-
-    document.getElementById("permsCancel").addEventListener("click", closePermsModal);
-
-    document.getElementById("permsConfirm").addEventListener("click", function () {
-      if (permsPendingUserId === null) return;
-      var msg = document.getElementById("permsMsg");
-      var btn = document.getElementById("permsConfirm");
-      var checks = document.querySelectorAll("#permsList input:checked");
-      var perms = [];
-      for (var i = 0; i < checks.length; i++) perms.push(checks[i].value);
-      msg.className = "msg";
-      msg.textContent = "提交中…";
-      btn.disabled = true;
-      fetch("/api/admin/users/permissions", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token },
-        body: JSON.stringify({ userId: permsPendingUserId, permissions: perms })
-      })
-        .then(function (res) {
-          if (handleStatus(res.status)) throw new Error("unauthorized");
-          return res.json().then(function (data) { return { ok: res.ok, status: res.status, data: data }; });
-        })
-        .then(function (r) {
-          btn.disabled = false;
-          if (!r.ok) {
-            msg.className = "msg error";
-            msg.textContent = r.status === 403 ? "无权修改该用户权限" : (r.data.error || "保存失败");
-            return;
-          }
-          closePermsModal();
-          loadUsers();
-        })
-        .catch(function (err) {
-          btn.disabled = false;
-          if (err.message !== "unauthorized") {
-            msg.className = "msg error";
-            msg.textContent = "网络错误：" + err.message;
-          }
-        });
-    });
-
-    function loadInvites() {
-      var box = document.getElementById("inviteList");
-      box.innerHTML = '<div class="app-empty">加载中…</div>';
-      fetch("/api/admin/invite-codes", { headers: authHeaders() })
-        .then(function (res) {
-          if (handleStatus(res.status)) throw new Error("unauthorized");
-          if (res.status === 403) throw new Error("forbidden");
-          return res.json();
-        })
-        .then(function (data) {
-          var list = data.invite_codes || [];
-          if (!list.length) {
-            box.innerHTML = '<div class="app-empty">暂无邀请码</div>';
-            return;
-          }
-          box.innerHTML = list.map(function (c) {
-            var limit = c.max_uses > 0
-              ? ("已用 " + c.used_count + " / " + c.max_uses)
-              : ("已用 " + c.used_count + " / 不限");
-            return '<div class="app-item" data-code-id="' + c.id + '">' +
-              '<div class="app-info"><b>' + escapeHtml(c.code) + '</b><br>' +
-                '<span class="app-meta">' + limit + '</span>' +
-              '</div>' +
-              '<button type="button" class="btn" data-delete-code="' + c.id + '">删除</button>' +
-            '</div>';
-          }).join("");
-        })
-        .catch(function (err) {
-          box.innerHTML = '<div class="app-empty">加载失败：' +
-            escapeHtml(err.message === "forbidden" ? "无权限" : err.message) + '</div>';
-        });
-    }
-
-    document.getElementById("inviteAdd").addEventListener("click", function () {
-      var msg = document.getElementById("inviteMsg");
-      var submit = document.getElementById("inviteAdd");
-      var code = document.getElementById("inviteCodeInput").value.trim();
-      var maxUses = parseInt(document.getElementById("inviteMaxInput").value, 10);
-      if (isNaN(maxUses) || maxUses < 0) maxUses = 0;
-      if (!code) {
-        msg.className = "msg error";
-        msg.textContent = "请输入邀请码";
-        return;
-      }
-      msg.className = "msg";
-      msg.textContent = "添加中…";
-      submit.disabled = true;
-      fetch("/api/admin/invite-codes", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token },
-        body: JSON.stringify({ code: code, max_uses: maxUses })
-      })
-        .then(function (res) {
-          if (handleStatus(res.status)) throw new Error("unauthorized");
-          return res.json().then(function (data) { return { ok: res.ok, data: data }; });
-        })
-        .then(function (r) {
-          if (!r.ok) {
-            msg.className = "msg error";
-            msg.textContent = r.status === 409 ? "该邀请码已存在" : (r.status === 403 ? "无权限（需要 developer / super_admin）" : (r.data.error || "添加失败"));
-            submit.disabled = false;
-            return;
-          }
-          document.getElementById("inviteCodeInput").value = "";
-          document.getElementById("inviteMaxInput").value = "0";
-          msg.className = "msg ok";
-          msg.textContent = "邀请码已添加";
-          submit.disabled = false;
-          loadInvites();
-        })
-        .catch(function (err) {
-          if (err.message !== "unauthorized") {
-            msg.className = "msg error";
-            msg.textContent = "网络错误：" + err.message;
-            submit.disabled = false;
-          }
-        });
-    });
-
-    document.getElementById("inviteList").addEventListener("click", function (e) {
-      var btn = e.target.closest ? e.target.closest("[data-delete-code]") : null;
-      if (!btn) return;
-      var id = btn.getAttribute("data-delete-code");
-      if (!confirm("确定删除该邀请码吗？")) return;
-      btn.disabled = true;
-      fetch("/api/admin/invite-codes/" + id, {
-        method: "DELETE",
-        headers: authHeaders()
-      })
-        .then(function (res) {
-          if (handleStatus(res.status)) throw new Error("unauthorized");
-          return res.json().then(function (data) { return { ok: res.ok, data: data }; });
-        })
-        .then(function (r) {
-          if (!r.ok) { btn.disabled = false; alert(r.data.error || "删除失败"); return; }
-          loadInvites();
-        })
-        .catch(function (err) {
-          btn.disabled = false;
-          if (err.message !== "unauthorized") alert("网络错误：" + err.message);
-        });
-    });
-
-    fetch("/api/settings/banner")
-      .then(function (res) { return res.json(); })
-      .then(function (data) {
-        document.getElementById("bannerInput").value = data.banner || "";
-      })
-      .catch(function () {});
-
-    function formatTime(sec) {
-      var d = new Date(Number(sec) * 1000);
-      function p(n) { return n < 10 ? "0" + n : "" + n; }
-      return d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" + p(d.getDate()) + " " + p(d.getHours()) + ":" + p(d.getMinutes());
-    }
-
-    function weeklyDateRange(item) {
-      if (item.menu_start_date === item.menu_end_date) return item.menu_start_date;
-      return item.menu_start_date + " ~ " + item.menu_end_date;
-    }
-
-    function openLightbox(url) {
-      var box = document.createElement("div");
-      box.className = "lightbox";
-      var img = document.createElement("img");
-      img.src = url;
-      box.appendChild(img);
-      box.addEventListener("click", function () {
-        if (box.parentNode) box.parentNode.removeChild(box);
-      });
-      document.body.appendChild(box);
-    }
-
-    function loadWeekly() {
-      var box = document.getElementById("weeklyList");
-      box.innerHTML = '<div class="app-empty">加载中…</div>';
-      fetch("/api/weekly-menu")
-        .then(function (res) { return res.json(); })
-        .then(function (data) {
-          var list = data.images || [];
-          if (!list.length) {
-            box.innerHTML = '<div class="app-empty">暂无菜谱图片</div>';
-            return;
-          }
-          box.innerHTML = list.map(function (it) {
-            return '<div class="weekly-item" data-id="' + it.id + '">' +
-              '<img class="weekly-thumb" src="' + escapeHtml(it.url) + '" alt="菜谱图片" data-zoom="' + escapeHtml(it.url) + '">' +
-              '<div class="weekly-info">' +
-                '<div class="weekly-dates">' + escapeHtml(weeklyDateRange(it)) + '</div>' +
-                '<div class="weekly-meta">上传者：' + escapeHtml(it.username || "未知") + ' · 上传于 ' + formatTime(it.uploaded_at) + '</div>' +
-              '</div>' +
-              '<button type="button" class="btn" data-delete-weekly="' + it.id + '">删除</button>' +
-            '</div>';
-          }).join("");
-        })
-        .catch(function (err) {
-          box.innerHTML = '<div class="app-empty">加载失败：' + escapeHtml(err.message) + '</div>';
-        });
-    }
-
-    document.getElementById("weeklyChoose").addEventListener("click", function () {
-      document.getElementById("weeklyFile").click();
-    });
-
-    var weeklyPendingFile = null;
-
-    function closeWeeklyPreview() {
-      weeklyPendingFile = null;
-      document.getElementById("weeklyPreview").style.display = "none";
-      document.getElementById("weeklyPreviewImg").src = "";
-    }
-
-    function uploadWeeklyFile(file) {
-      var msg = document.getElementById("weeklyMsg");
-      var start = document.getElementById("weeklyStart").value;
-      var end = document.getElementById("weeklyEnd").value;
-      var fd = new FormData();
-      fd.append("menu_start_date", start);
-      fd.append("menu_end_date", end);
-      fd.append("image", file);
-      msg.className = "msg";
-      msg.textContent = "上传中…";
-      fetch("/api/admin/weekly-menu/upload", { method: "POST", headers: authHeaders(), body: fd })
-        .then(function (res) {
-          if (handleStatus(res.status)) throw new Error("unauthorized");
-          return res.json().then(function (data) { return { ok: res.ok, status: res.status, data: data }; });
-        })
-        .then(function (r) {
-          if (!r.ok) {
-            msg.className = "msg error";
-            msg.textContent = r.status === 403 ? "无权限（需要 admin 及以上）" : (r.data.error || "上传失败");
-            return;
-          }
-          msg.className = "msg ok";
-          msg.textContent = "上传成功";
-          loadWeekly();
-        })
-        .catch(function (err) {
-          if (err.message !== "unauthorized") {
-            msg.className = "msg error";
-            msg.textContent = "网络错误：" + err.message;
-          }
-        });
-    }
-
-    function openWeeklyPreview(file) {
-      var msg = document.getElementById("weeklyMsg");
-      var start = document.getElementById("weeklyStart").value;
-      var end = document.getElementById("weeklyEnd").value;
-      if (!start || !end) {
-        msg.className = "msg error";
-        msg.textContent = "请先选择第一天和最后一天";
-        return;
-      }
-      if (file.size > 5 * 1024 * 1024) {
-        msg.className = "msg error";
-        msg.textContent = "图片不能超过 5MB";
-        return;
-      }
-      weeklyPendingFile = file;
-      document.getElementById("weeklyPreviewImg").src = URL.createObjectURL(file);
-      document.getElementById("weeklyPreview").style.display = "block";
-      msg.className = "msg";
-      msg.textContent = "";
-    }
-
-    document.getElementById("weeklyConfirm").addEventListener("click", function () {
-      var f = weeklyPendingFile;
-      closeWeeklyPreview();
-      if (f) uploadWeeklyFile(f);
-    });
-
-    document.getElementById("weeklyCancel").addEventListener("click", closeWeeklyPreview);
-
-    document.getElementById("weeklyFile").addEventListener("change", function () {
-      var fileInput = document.getElementById("weeklyFile");
-      var file = fileInput.files && fileInput.files[0];
-      fileInput.value = "";
-      if (!file) return;
-      openWeeklyPreview(file);
-    });
-
-    document.getElementById("weeklyList").addEventListener("click", function (e) {
-      var zoom = e.target.closest ? e.target.closest("[data-zoom]") : null;
-      if (zoom) {
-        openLightbox(zoom.getAttribute("data-zoom"));
-        return;
-      }
-      var del = e.target.closest ? e.target.closest("[data-delete-weekly]") : null;
-      if (!del) return;
-      var id = del.getAttribute("data-delete-weekly");
-      if (!confirm("确定要删除该菜谱图片吗？")) return;
-      del.disabled = true;
-      fetch("/api/admin/weekly-menu/" + id, { method: "DELETE", headers: authHeaders() })
-        .then(function (res) {
-          if (handleStatus(res.status)) throw new Error("unauthorized");
-          return res.json().then(function (data) { return { ok: res.ok, data: data }; });
-        })
-        .then(function (r) {
-          if (!r.ok) { del.disabled = false; alert(r.data.error || "删除失败"); return; }
-          loadWeekly();
-        })
-        .catch(function (err) {
-          del.disabled = false;
-          if (err.message !== "unauthorized") alert("网络错误：" + err.message);
-        });
-    });
-
-    var dateInputs = document.querySelectorAll('input[type="date"]');
-    for (var di = 0; di < dateInputs.length; di++) {
-      dateInputs[di].addEventListener("click", function () {
-        if (this.showPicker) {
-          try { this.showPicker(); } catch (e) {}
-        }
-      });
-    }
-
-    var ROLE_WEIGHTS = { developer: 6, super_admin: 5, admin: 4, student: 3, user: 2, guest: 1 };
-    var ASSIGNABLE_ROLES = ["user", "student", "admin", "super_admin", "developer"];
-    var currentUserId = null;
-    var currentWeight = 0;
-    var currentPermissions = [];
-    var permissionCatalog = [];
-    var usersById = {};
-
-    var PANEL_PERMS = {
-      banner: { perm: "banner_edit", role: "super_admin" },
-      announce: { perm: "announcement_publish", role: "super_admin" },
-      review: { perm: "student_review", role: "super_admin" },
-      invite: { perm: "invite_manage", role: "super_admin" },
-      weekly: { perm: "weekly_menu_upload", role: "admin" },
-      users: { perm: "user_manage", role: "super_admin" },
-      appeals: { perm: "ban_appeal_review", role: "super_admin" },
-      tickets: { perm: "ticket_manage", role: "admin" }
-    };
-
-    function canAccessPanel(name) {
-      var req = PANEL_PERMS[name];
-      if (!req) return true;
-      if (currentWeight >= (ROLE_WEIGHTS[req.role] || 0)) return true;
-      return currentPermissions.indexOf(req.perm) !== -1;
-    }
-
-    function applyPermissions() {
-      var items = document.querySelectorAll("[data-panel]");
-      var firstAllowed = null;
-      for (var i = 0; i < items.length; i++) {
-        var name = items[i].getAttribute("data-panel");
-        var ok = canAccessPanel(name);
-        items[i].style.display = ok ? "" : "none";
-        if (ok && !firstAllowed) firstAllowed = name;
-      }
-      if (firstAllowed) {
-        for (var j = 0; j < items.length; j++) {
-          items[j].classList.toggle("active", items[j].getAttribute("data-panel") === firstAllowed);
-        }
-        var views = document.querySelectorAll(".view");
-        for (var k = 0; k < views.length; k++) {
-          views[k].classList.toggle("active", views[k].id === "view-" + firstAllowed);
-        }
-      }
-      if (canAccessPanel("review")) loadReview();
-      if (canAccessPanel("invite")) loadInvites();
-      if (canAccessPanel("weekly")) loadWeekly();
-      if (canAccessPanel("users")) { loadPermissionCatalog(); loadUsers(); }
-      if (canAccessPanel("appeals")) loadAppeals();
-      if (canAccessPanel("tickets")) loadTickets();
-      refreshDots();
-    }
-
-    function loadPermissionCatalog() {
-      fetch("/api/admin/permissions", { headers: authHeaders() })
-        .then(function (res) { return res.json(); })
-        .then(function (data) { permissionCatalog = data.permissions || []; })
-        .catch(function () {});
-    }
-
-    function loadUsers() {
-      var box = document.getElementById("userList");
-      box.innerHTML = '<div class="app-empty">加载中…</div>';
-      fetch("/api/admin/users", { headers: authHeaders() })
-        .then(function (res) {
-          if (handleStatus(res.status)) throw new Error("unauthorized");
-          if (res.status === 403) throw new Error("forbidden");
-          return res.json();
-        })
-        .then(function (data) {
-          var list = data.users || [];
-          var selfW = currentWeight;
-          var rows = list.map(function (u) {
-            usersById[u.id] = u;
-            var targetWeight = ROLE_WEIGHTS[u.role] || 0;
-            var editable = u.id !== currentUserId && targetWeight < selfW;
-            var roleCell;
-            if (editable) {
-              var opts = "";
-              for (var i = 0; i < ASSIGNABLE_ROLES.length; i++) {
-                var r = ASSIGNABLE_ROLES[i];
-                var rw = ROLE_WEIGHTS[r];
-                if (rw >= ROLE_WEIGHTS.user && rw <= selfW - 1) {
-                  opts += '<option value="' + r + '"' + (r === u.role ? " selected" : "") + '>' + r + '</option>';
-                }
-              }
-              roleCell = '<select data-role-select="' + u.id + '">' + opts + '</select>';
-            } else {
-              roleCell = escapeHtml(u.role);
-            }
-            var statusCell = u.status === "banned" ? '<span class="tag-banned">已封禁</span>' : "正常";
-            var actionCell = "—";
-            if (editable) {
-              var banBtn = u.status === "banned"
-                ? '<button type="button" class="btn" data-unban="' + u.id + '">解封</button>'
-                : '<button type="button" class="btn" data-ban="' + u.id + '" data-name="' + escapeHtml(u.username) + '">封号</button>';
-              actionCell = '<span class="row-actions">' +
-                '<button type="button" class="btn" data-perms="' + u.id + '">权限</button>' +
-                banBtn +
-              '</span>';
-            }
-            return '<tr><td>' + escapeHtml(u.display_id || String(u.id)) + '</td>' +
-              '<td>' + escapeHtml(u.username) + '</td>' +
-              '<td>' + escapeHtml(u.nickname || "") + '</td>' +
-              '<td>' + roleCell + '</td>' +
-              '<td>' + statusCell + '</td>' +
-              '<td>' + actionCell + '</td></tr>';
-          }).join("");
-          box.innerHTML = '<table class="user-table"><thead><tr>' +
-            '<th>ID</th><th>用户名</th><th>昵称</th><th>角色</th><th>状态</th><th>操作</th>' +
-            '</tr></thead><tbody>' + rows + '</tbody></table>';
-        })
-        .catch(function (err) {
-          box.innerHTML = '<div class="app-empty">加载失败：' +
-            escapeHtml(err.message === "forbidden" ? "无权限" : err.message) + '</div>';
-        });
-    }
-
-    document.getElementById("userList").addEventListener("change", function (e) {
-      var sel = e.target.closest ? e.target.closest("[data-role-select]") : null;
-      if (!sel) return;
-      var id = Number(sel.getAttribute("data-role-select"));
-      var newRole = sel.value;
-      sel.disabled = true;
-      fetch("/api/admin/users/role", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token },
-        body: JSON.stringify({ userId: id, newRole: newRole })
-      })
-        .then(function (res) {
-          if (handleStatus(res.status)) throw new Error("unauthorized");
-          return res.json().then(function (data) { return { ok: res.ok, status: res.status, data: data }; });
-        })
-        .then(function (r) {
-          sel.disabled = false;
-          if (!r.ok) {
-            alert(r.status === 403 ? "无权修改该用户角色" : (r.data.error || "修改失败"));
-            loadUsers();
-            return;
-          }
-          alert("角色已更新为 " + newRole);
-        })
-        .catch(function (err) {
-          sel.disabled = false;
-          if (err.message !== "unauthorized") alert("网络错误：" + err.message);
-        });
-    });
-
-    document.getElementById("userList").addEventListener("click", function (e) {
-      var perms = e.target.closest ? e.target.closest("[data-perms]") : null;
-      if (perms) {
-        openPermsModal(Number(perms.getAttribute("data-perms")));
-        return;
-      }
-      var ban = e.target.closest ? e.target.closest("[data-ban]") : null;
-      if (ban) {
-        openBanModal(Number(ban.getAttribute("data-ban")), ban.getAttribute("data-name"));
-        return;
-      }
-      var unb = e.target.closest ? e.target.closest("[data-unban]") : null;
-      if (!unb) return;
-      if (!confirm("确定要解封该用户吗？")) return;
-      unb.disabled = true;
-      fetch("/api/admin/users/unban", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token },
-        body: JSON.stringify({ userId: Number(unb.getAttribute("data-unban")) })
-      })
-        .then(function (res) {
-          if (handleStatus(res.status)) throw new Error("unauthorized");
-          return res.json().then(function (data) { return { ok: res.ok, status: res.status, data: data }; });
-        })
-        .then(function (r) {
-          unb.disabled = false;
-          if (!r.ok) { alert(r.status === 403 ? "无权解封该用户" : (r.data.error || "解封失败")); return; }
-          loadUsers();
-        })
-        .catch(function (err) {
-          unb.disabled = false;
-          if (err.message !== "unauthorized") alert("网络错误：" + err.message);
-        });
-    });
-
-    var banPendingUserId = null;
-
-    function openBanModal(id, name) {
-      banPendingUserId = id;
-      document.getElementById("banTargetName").textContent = name || ("用户#" + id);
-      document.getElementById("banReasonInput").value = "";
-      document.getElementById("banAllowAppeal").checked = true;
-      document.getElementById("banImageInput").value = "";
-      document.getElementById("banImageName").textContent = "";
-      var m = document.getElementById("banMsg");
-      m.className = "msg";
-      m.textContent = "";
-      document.getElementById("banModal").style.display = "flex";
-    }
-
-    function closeBanModal() {
-      banPendingUserId = null;
-      document.getElementById("banModal").style.display = "none";
-    }
-
-    document.getElementById("banImageChoose").addEventListener("click", function () {
-      document.getElementById("banImageInput").click();
-    });
-
-    document.getElementById("banImageInput").addEventListener("change", function () {
-      var f = this.files && this.files[0];
-      document.getElementById("banImageName").textContent = f ? f.name : "";
-    });
-
-    document.getElementById("banCancel").addEventListener("click", closeBanModal);
-
-    document.getElementById("banConfirm").addEventListener("click", function () {
-      if (banPendingUserId === null) return;
-      var msg = document.getElementById("banMsg");
-      var btn = document.getElementById("banConfirm");
-      var file = document.getElementById("banImageInput").files && document.getElementById("banImageInput").files[0];
-      var fd = new FormData();
-      fd.append("userId", String(banPendingUserId));
-      fd.append("ban_reason", document.getElementById("banReasonInput").value);
-      fd.append("allow_appeal", document.getElementById("banAllowAppeal").checked ? "1" : "0");
-      if (file) fd.append("ban_image", file);
-      msg.className = "msg";
-      msg.textContent = "提交中…";
-      btn.disabled = true;
-      fetch("/api/admin/users/ban", { method: "PUT", headers: authHeaders(), body: fd })
-        .then(function (res) {
-          if (handleStatus(res.status)) throw new Error("unauthorized");
-          return res.json().then(function (data) { return { ok: res.ok, status: res.status, data: data }; });
-        })
-        .then(function (r) {
-          btn.disabled = false;
-          if (!r.ok) {
-            msg.className = "msg error";
-            msg.textContent = r.status === 403 ? "无权封禁该用户" : (r.data.error || "封禁失败");
-            return;
-          }
-          closeBanModal();
-          loadUsers();
-        })
-        .catch(function (err) {
-          btn.disabled = false;
-          if (err.message !== "unauthorized") {
-            msg.className = "msg error";
-            msg.textContent = "网络错误：" + err.message;
-          }
-        });
-    });
-
-    function loadAppeals() {
-      var box = document.getElementById("appealList");
-      box.innerHTML = '<div class="app-empty">加载中…</div>';
-      fetch("/api/admin/ban-appeals", { headers: authHeaders() })
-        .then(function (res) {
-          if (handleStatus(res.status)) throw new Error("unauthorized");
-          if (res.status === 403) throw new Error("forbidden");
-          return res.json();
-        })
-        .then(function (data) {
-          var list = data.appeals || [];
-          if (!list.length) {
-            box.innerHTML = '<div class="app-empty">暂无待处理申诉</div>';
-            return;
-          }
-          box.innerHTML = list.map(function (a) {
-            return '<div class="app-item" data-appeal-id="' + a.id + '">' +
-              '<div class="app-info">' +
-                '用户ID：' + escapeHtml(a.display_id || String(a.user_id)) +
-                '（' + escapeHtml(a.username || "未知") + '）<br>' +
-                '申诉理由：' + escapeHtml(a.appeal_reason) +
-                (a.appeal_image ? '<img class="appeal-thumb" src="' + escapeHtml(a.appeal_image) + '" data-zoom="' + escapeHtml(a.appeal_image) + '" alt="申诉图片">' : '') +
-              '</div>' +
-              '<div class="preview-actions">' +
-                '<button type="button" class="submit" data-approve-appeal="' + a.id + '">通过</button>' +
-                '<button type="button" class="btn" data-reject-appeal="' + a.id + '">驳回</button>' +
-              '</div>' +
-            '</div>';
-          }).join("");
-        })
-        .catch(function (err) {
-          box.innerHTML = '<div class="app-empty">加载失败：' +
-            escapeHtml(err.message === "forbidden" ? "无权限" : err.message) + '</div>';
-        });
-    }
-
-    function reviewAppeal(id, action, btn) {
-      var label = action === "approve" ? "通过" : "驳回";
-      if (!confirm("确定要" + label + "该申诉吗？")) return;
-      btn.disabled = true;
-      fetch("/api/admin/ban-appeals/review", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token },
-        body: JSON.stringify({ appealId: id, action: action })
-      })
-        .then(function (res) {
-          if (handleStatus(res.status)) throw new Error("unauthorized");
-          return res.json().then(function (data) { return { ok: res.ok, status: res.status, data: data }; });
-        })
-        .then(function (r) {
-          if (!r.ok) { btn.disabled = false; alert(r.data.error || "操作失败"); return; }
-          loadAppeals();
-          loadUsers();
-          refreshDots();
-        })
-        .catch(function (err) {
-          btn.disabled = false;
-          if (err.message !== "unauthorized") alert("网络错误：" + err.message);
-        });
-    }
-
-    document.getElementById("appealList").addEventListener("click", function (e) {
-      var zoom = e.target.closest ? e.target.closest("[data-zoom]") : null;
-      if (zoom) {
-        openLightbox(zoom.getAttribute("data-zoom"));
-        return;
-      }
-      var ap = e.target.closest ? e.target.closest("[data-approve-appeal]") : null;
-      if (ap) {
-        reviewAppeal(Number(ap.getAttribute("data-approve-appeal")), "approve", ap);
-        return;
-      }
-      var rj = e.target.closest ? e.target.closest("[data-reject-appeal]") : null;
-      if (rj) reviewAppeal(Number(rj.getAttribute("data-reject-appeal")), "reject", rj);
-    });
-
-    var TICKET_VIS_LABELS = { admin: "管理员及以上", super_admin: "超级管理员及以上", developer: "仅开发者" };
-
-    function loadTickets() {
-      var box = document.getElementById("ticketList");
-      box.innerHTML = '<div class="app-empty">加载中…</div>';
-      fetch("/api/admin/tickets", { headers: authHeaders() })
-        .then(function (res) {
-          if (handleStatus(res.status)) throw new Error("unauthorized");
-          if (res.status === 403) throw new Error("forbidden");
-          return res.json();
-        })
-        .then(function (data) {
-          var list = data.tickets || [];
-          if (!list.length) {
-            box.innerHTML = '<div class="app-empty">暂无工单</div>';
-            return;
-          }
-          box.innerHTML = list.map(function (t) {
-            var statusTag = t.status === "resolved"
-              ? '<span class="tag-ok">已批复</span>'
-              : '<span class="tag-pending">待处理</span>';
-            var vis = TICKET_VIS_LABELS[t.visibility] || t.visibility;
-            var replyHtml = "";
-            if (t.status === "resolved") {
-              replyHtml = '<div class="ticket-reply">批复（' + escapeHtml(t.reply_by || "管理员") +
-                (t.replied_at ? ' · ' + formatTime(t.replied_at) : '') + '）：<br>' +
-                escapeHtml(t.reply_content) +
-                (t.reply_image ? '<img class="appeal-thumb" src="' + escapeHtml(t.reply_image) + '" data-zoom="' + escapeHtml(t.reply_image) + '" alt="批复图片">' : '') +
-                '</div>';
-            }
-            var actionHtml = t.status === "resolved"
-              ? ''
-              : '<div class="app-actions"><button type="button" class="submit" data-reply-ticket="' + t.id + '" data-title="' + escapeHtml(t.title) + '">批复</button></div>';
-            return '<div class="app-item" data-ticket-id="' + t.id + '">' +
-              '<div class="app-info">' +
-                '<b>' + escapeHtml(t.title) + '</b>' + statusTag +
-                '<div class="ticket-body">' + escapeHtml(t.content) + '</div>' +
-                '<span class="app-meta">提交人：' + escapeHtml(t.username || ("用户#" + t.user_id)) + ' · 可见范围：' + escapeHtml(vis) + ' · ' + formatTime(t.created_at) + '</span>' +
-                replyHtml +
-              '</div>' +
-              actionHtml +
-            '</div>';
-          }).join("");
-        })
-        .catch(function (err) {
-          box.innerHTML = '<div class="app-empty">加载失败：' +
-            escapeHtml(err.message === "forbidden" ? "无权限" : err.message) + '</div>';
-        });
-    }
-
-    document.getElementById("ticketList").addEventListener("click", function (e) {
-      var zoom = e.target.closest ? e.target.closest("[data-zoom]") : null;
-      if (zoom) {
-        openLightbox(zoom.getAttribute("data-zoom"));
-        return;
-      }
-      var btn = e.target.closest ? e.target.closest("[data-reply-ticket]") : null;
-      if (!btn) return;
-      openTicketModal(Number(btn.getAttribute("data-reply-ticket")), btn.getAttribute("data-title"));
-    });
-
-    var ticketPendingId = null;
-
-    function openTicketModal(id, title) {
-      ticketPendingId = id;
-      document.getElementById("ticketTargetTitle").textContent = title || ("#" + id);
-      document.getElementById("ticketReplyInput").value = "";
-      document.getElementById("ticketImageInput").value = "";
-      document.getElementById("ticketImageName").textContent = "";
-      var m = document.getElementById("ticketMsg");
-      m.className = "msg";
-      m.textContent = "";
-      document.getElementById("ticketModal").style.display = "flex";
-    }
-
-    function closeTicketModal() {
-      ticketPendingId = null;
-      document.getElementById("ticketModal").style.display = "none";
-    }
-
-    document.getElementById("ticketCancel").addEventListener("click", closeTicketModal);
-
-    document.getElementById("ticketImageChoose").addEventListener("click", function () {
-      document.getElementById("ticketImageInput").click();
-    });
-
-    document.getElementById("ticketImageInput").addEventListener("change", function () {
-      var f = this.files && this.files[0];
-      document.getElementById("ticketImageName").textContent = f ? f.name : "";
-    });
-
-    document.getElementById("ticketConfirm").addEventListener("click", function () {
-      if (ticketPendingId === null) return;
-      var msg = document.getElementById("ticketMsg");
-      var btn = document.getElementById("ticketConfirm");
-      var reply = document.getElementById("ticketReplyInput").value.trim();
-      if (!reply) {
-        msg.className = "msg error";
-        msg.textContent = "请填写批复内容";
-        return;
-      }
-      var file = document.getElementById("ticketImageInput").files && document.getElementById("ticketImageInput").files[0];
-
-      function send(replyImage) {
-        btn.disabled = true;
-        msg.className = "msg";
-        msg.textContent = "提交中…";
-        fetch("/api/admin/tickets/reply", {
-          method: "PUT",
-          headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token },
-          body: JSON.stringify({ id: ticketPendingId, reply: reply, reply_image: replyImage })
-        })
-          .then(function (res) {
-            if (handleStatus(res.status)) throw new Error("unauthorized");
-            return res.json().then(function (data) { return { ok: res.ok, status: res.status, data: data }; });
-          })
-          .then(function (r) {
-            btn.disabled = false;
-            if (!r.ok) {
-              msg.className = "msg error";
-              msg.textContent = r.status === 403 ? "无权限批复该工单" : (r.data.error || "批复失败");
-              return;
-            }
-            closeTicketModal();
-            loadTickets();
-            refreshDots();
-          })
-          .catch(function (err) {
-            btn.disabled = false;
-            if (err.message !== "unauthorized") {
-              msg.className = "msg error";
-              msg.textContent = "网络错误：" + err.message;
-            }
-          });
-      }
-
-      if (!file) { send(""); return; }
-      if (file.size > 5 * 1024 * 1024) {
-        msg.className = "msg error";
-        msg.textContent = "图片不能超过 5MB";
-        return;
-      }
-      var reader = new FileReader();
-      reader.onload = function () { send(reader.result); };
-      reader.onerror = function () {
-        msg.className = "msg error";
-        msg.textContent = "图片读取失败";
-      };
-      reader.readAsDataURL(file);
-    });
-
-    function refreshDots() {
-      fetch("/api/admin/pending-counts", { headers: authHeaders() })
-        .then(function (res) { return res.json(); })
-        .then(function (data) {
-          var counts = (data && data.counts) || {};
-          var map = { review: "student_review", appeals: "ban_appeal_review", tickets: "ticket_manage" };
-          for (var panel in map) {
-            if (!map.hasOwnProperty(panel)) continue;
-            var dot = document.querySelector('[data-dot="' + panel + '"]');
-            if (!dot) continue;
-            dot.style.display = counts[map[panel]] > 0 ? "block" : "none";
-          }
-        })
-        .catch(function () {});
-    }
-
-    function denyAccess(text) {
-      document.getElementById("menuArea").style.display = "none";
-      document.getElementById("contentArea").innerHTML =
-        '<div class="notice">' + text + '　<a href="index.html">返回首页</a></div>';
-    }
-
-    if (!token) {
-      location.href = "login.html";
-    } else {
-      fetch("/api/user/profile", { headers: authHeaders() })
-        .then(function (res) {
-          if (handleStatus(res.status)) throw new Error("unauthorized");
-          return res.json();
-        })
-        .then(function (data) {
-          var user = data.user || {};
-          currentUserId = user.id;
-          currentWeight = ROLE_WEIGHTS[user.role] || 0;
-          currentPermissions = user.permissions || [];
-          if (currentWeight < ROLE_WEIGHTS.admin && currentPermissions.length === 0) {
-            denyAccess("暂无权限访问管理后台");
-            return;
-          }
-          applyPermissions();
-        })
-        .catch(function () {});
-    }
-  </script>
-</body>
+    <script src="/js/ui.js"></script>
+    <script src="/js/page.js"></script>
+    <script src="/js/pages/admin.js"></script>
+  </body>
 </html>
