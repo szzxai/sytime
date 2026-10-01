@@ -64,13 +64,12 @@
   }
   .btn:hover { background: #000000; color: #ffffff; }
   .main {
-    display: flex;
-    justify-content: center;
     padding: 56px 16px;
   }
   .card {
     width: 360px;
     max-width: 100%;
+    margin: 0 auto;
     border: 2px solid #000000;
     padding: 28px;
   }
@@ -124,6 +123,39 @@
     text-align: center;
   }
   .switch a { color: #000000; }
+  .appeal-box {
+    margin-top: 22px;
+    border-top: 2px solid #000000;
+    padding-top: 18px;
+  }
+  .appeal-box h2 {
+    font-size: 16px;
+    letter-spacing: 1px;
+    margin: 0 0 16px;
+  }
+  .appeal-box textarea {
+    width: 100%;
+    border: 2px solid #000000;
+    border-radius: 0;
+    padding: 10px 12px;
+    font-size: 14px;
+    font-family: inherit;
+    color: #000000;
+    background: #ffffff;
+    outline: none;
+    min-height: 80px;
+    resize: vertical;
+  }
+  .appeal-box .hint {
+    font-size: 12px;
+    color: #999999;
+    margin: 0;
+  }
+  .appeal-box .upload-box {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
 </style>
 </head>
 <body>
@@ -131,10 +163,10 @@
     <div class="logo">校园信息网</div>
     <div class="header-right">
       <nav class="nav">
-        <a href="index.html">首页</a>
         <a href="map.html">校园地图</a>
         <a href="forum.html">论坛</a>
         <a href="recipe.html">菜谱评价</a>
+        <a href="announcements.html">更新公告</a>
       </nav>
       <div class="auth" id="authArea">
         <a class="btn" href="login.html">登录</a>
@@ -158,6 +190,24 @@
         <button type="submit" class="submit" id="submitBtn">登录</button>
         <div class="msg" id="msg"></div>
       </form>
+      <div class="appeal-box" id="appealBox" style="display:none;">
+        <h2>申请解封</h2>
+        <div class="field">
+          <label for="appealReason">申诉理由</label>
+          <textarea id="appealReason" placeholder="请说明情况，以便管理员审核"></textarea>
+        </div>
+        <div class="field">
+          <label>上传图片（选填）</label>
+          <div class="upload-box">
+            <button type="button" class="btn" id="appealImageChoose">选择图片</button>
+            <span class="hint" id="appealImageName"></span>
+          </div>
+          <input type="file" id="appealImageInput" accept="image/jpeg,image/png" style="display:none;">
+        </div>
+        <button type="button" class="submit" id="appealSubmit">提交申诉</button>
+        <div class="hint" style="margin-top:8px;text-align:center;">重复提交将覆盖上一次申请；10 分钟内只能提交一次。</div>
+        <div class="msg" id="appealMsg"></div>
+      </div>
       <div class="switch">还没有账号？<a href="register.html">立即注册</a></div>
     </div>
   </main>
@@ -166,6 +216,7 @@
     var form = document.getElementById("loginForm");
     var msg = document.getElementById("msg");
     var submitBtn = document.getElementById("submitBtn");
+    var attemptUsername = "";
 
     form.addEventListener("submit", function (e) {
       e.preventDefault();
@@ -183,11 +234,16 @@
       })
         .then(function (res) {
           return res.json().then(function (data) {
-            return { ok: res.ok, data: data };
+            return { ok: res.ok, status: res.status, data: data };
           });
         })
         .then(function (r) {
           if (!r.ok) {
+            if (r.status === 403 && r.data && r.data.error === "banned") {
+              showBanned(username, r.data);
+              submitBtn.disabled = false;
+              return;
+            }
             msg.className = "msg error";
             msg.textContent = r.data.error === "invalid username or password" ? "用户名或密码错误" : (r.data.error || "登录失败");
             submitBtn.disabled = false;
@@ -204,6 +260,85 @@
           msg.textContent = "网络错误：" + err.message;
           submitBtn.disabled = false;
         });
+    });
+
+    function showBanned(username, data) {
+      var reason = data.ban_reason ? String(data.ban_reason) : "";
+      if (Number(data.allow_appeal) === 1) {
+        attemptUsername = username;
+        msg.className = "msg error";
+        msg.textContent = reason ? ("账号已被封禁。封禁理由：" + reason) : "账号已被封禁。";
+        document.getElementById("appealBox").style.display = "block";
+        return;
+      }
+      msg.className = "msg error";
+      msg.textContent = (reason ? ("账号已被封禁。封禁理由：" + reason + "　") : "账号已被封禁。") +
+        "您已被封禁，如要解封请线下联系超级管理员";
+    }
+
+    document.getElementById("appealImageChoose").addEventListener("click", function () {
+      document.getElementById("appealImageInput").click();
+    });
+
+    document.getElementById("appealImageInput").addEventListener("change", function () {
+      var f = this.files && this.files[0];
+      document.getElementById("appealImageName").textContent = f ? f.name : "";
+    });
+
+    document.getElementById("appealSubmit").addEventListener("click", function () {
+      var amsg = document.getElementById("appealMsg");
+      var btn = document.getElementById("appealSubmit");
+      var reason = document.getElementById("appealReason").value.trim();
+      if (!reason) {
+        amsg.className = "msg error";
+        amsg.textContent = "请填写申诉理由";
+        return;
+      }
+      var file = document.getElementById("appealImageInput").files && document.getElementById("appealImageInput").files[0];
+      btn.disabled = true;
+      amsg.className = "msg";
+      amsg.textContent = "提交中…";
+
+      function send(dataUrl) {
+        fetch("/api/user/appeal", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username: attemptUsername, appeal_reason: reason, appeal_image: dataUrl || "" })
+        })
+          .then(function (res) {
+            return res.json().then(function (data) { return { ok: res.ok, data: data }; });
+          })
+          .then(function (r) {
+            btn.disabled = false;
+            if (!r.ok) {
+              amsg.className = "msg error";
+              amsg.textContent = r.data.message || r.data.error || "提交失败";
+              return;
+            }
+            amsg.className = "msg ok";
+            amsg.textContent = "申诉已提交，请等待管理员审核";
+          })
+          .catch(function (err) {
+            btn.disabled = false;
+            amsg.className = "msg error";
+            amsg.textContent = "网络错误：" + err.message;
+          });
+      }
+
+      if (file) {
+        if (file.size > 2 * 1024 * 1024) {
+          btn.disabled = false;
+          amsg.className = "msg error";
+          amsg.textContent = "图片不能超过 2MB";
+          return;
+        }
+        var reader = new FileReader();
+        reader.onload = function () { send(reader.result); };
+        reader.onerror = function () { send(""); };
+        reader.readAsDataURL(file);
+      } else {
+        send("");
+      }
     });
   </script>
   <script src="auth.js"></script>

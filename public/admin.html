@@ -153,6 +153,11 @@
   }
   .app-info { font-size: 14px; line-height: 1.8; }
   .app-meta { font-size: 12px; color: #777777; }
+  .app-actions { display: flex; gap: 8px; flex: none; }
+  .row-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+  .perms-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 6px; }
+  .perms-row { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+  .perms-row input { width: auto; }
   .app-empty {
     font-size: 14px;
     color: #777777;
@@ -267,6 +272,76 @@
     font-size: 14px;
   }
   .notice a { color: #000000; }
+  .user-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+  }
+  .user-table th,
+  .user-table td {
+    border: 1px solid #000000;
+    padding: 8px 10px;
+    text-align: left;
+    vertical-align: middle;
+  }
+  .user-table th {
+    background: #000000;
+    color: #ffffff;
+    font-weight: normal;
+    letter-spacing: 1px;
+  }
+  .user-table select {
+    border: 2px solid #000000;
+    border-radius: 0;
+    padding: 4px 6px;
+    font-size: 13px;
+    font-family: inherit;
+    color: #000000;
+    background: #ffffff;
+    outline: none;
+  }
+  .tag-banned { color: #cc0000; }
+  .appeal-thumb {
+    width: 80px;
+    height: 80px;
+    object-fit: cover;
+    border: 2px solid #000000;
+    cursor: zoom-in;
+    display: block;
+    margin-top: 8px;
+    background: #f2f2f2;
+  }
+  .modal-mask {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 7000;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .modal-box {
+    width: 420px;
+    max-width: 92vw;
+    background: #ffffff;
+    border: 2px solid #000000;
+    padding: 24px;
+  }
+  .modal-box h2 {
+    font-size: 16px;
+    letter-spacing: 1px;
+    margin: 0 0 18px;
+  }
+  .check-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+  }
+  .check-row input { width: auto; }
 </style>
 </head>
 <body>
@@ -274,10 +349,10 @@
     <div class="logo">校园信息网</div>
     <div class="header-right">
       <nav class="nav">
-        <a href="index.html">首页</a>
         <a href="map.html">校园地图</a>
         <a href="forum.html">论坛</a>
         <a href="recipe.html">菜谱评价</a>
+        <a href="announcements.html">更新公告</a>
       </nav>
       <div class="auth" id="authArea">
         <a class="btn" href="login.html">登录</a>
@@ -295,6 +370,8 @@
         <button type="button" class="menu-item" data-panel="review">学生认证审核</button>
         <button type="button" class="menu-item" data-panel="invite">邀请码设置</button>
         <button type="button" class="menu-item" data-panel="weekly">每周菜谱管理</button>
+        <button type="button" class="menu-item" data-panel="users">用户管理</button>
+        <button type="button" class="menu-item" data-panel="appeals">申诉处理</button>
       </div>
     </aside>
 
@@ -372,7 +449,68 @@
         <h2 class="section-sub">已上传菜谱</h2>
         <div id="weeklyList"></div>
       </section>
+
+      <section class="view" id="view-users">
+        <h1>用户管理</h1>
+        <div id="userList"></div>
+      </section>
+
+      <section class="view" id="view-appeals">
+        <h1>申诉处理</h1>
+        <div id="appealList"></div>
+      </section>
     </main>
+  </div>
+
+  <div class="modal-mask" id="banModal" style="display:none;">
+    <div class="modal-box">
+      <h2>封禁用户 <span id="banTargetName"></span></h2>
+      <div class="field">
+        <label for="banReasonInput">封禁理由（选填）</label>
+        <input type="text" id="banReasonInput">
+      </div>
+      <div class="field">
+        <label>上传图片（选填）</label>
+        <button type="button" class="btn" id="banImageChoose">选择图片</button>
+        <input type="file" id="banImageInput" accept="image/jpeg,image/png" style="display:none;">
+        <span class="hint" id="banImageName" style="margin:0 0 0 10px;"></span>
+      </div>
+      <div class="field">
+        <label class="check-row"><input type="checkbox" id="banAllowAppeal" checked> 允许申请解封</label>
+      </div>
+      <div class="msg" id="banMsg"></div>
+      <div class="preview-actions">
+        <button type="button" class="submit" id="banConfirm">确认封禁</button>
+        <button type="button" class="btn" id="banCancel">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-mask" id="rejectModal" style="display:none;">
+    <div class="modal-box">
+      <h2>拒绝学生认证</h2>
+      <div class="field">
+        <label for="rejectReasonInput">拒绝原因（选填）</label>
+        <input type="text" id="rejectReasonInput">
+      </div>
+      <div class="msg" id="rejectMsg"></div>
+      <div class="preview-actions">
+        <button type="button" class="submit" id="rejectConfirm">确认拒绝</button>
+        <button type="button" class="btn" id="rejectCancel">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-mask" id="permsModal" style="display:none;">
+    <div class="modal-box">
+      <h2>设置权限 <span id="permsTargetName"></span></h2>
+      <div id="permsList" class="perms-list"></div>
+      <div class="msg" id="permsMsg"></div>
+      <div class="preview-actions">
+        <button type="button" class="submit" id="permsConfirm">保存</button>
+        <button type="button" class="btn" id="permsCancel">取消</button>
+      </div>
+    </div>
   </div>
 
   <script src="auth.js"></script>
@@ -567,7 +705,10 @@
                 (a.extra_info ? '补充信息：' + escapeHtml(a.extra_info) + '<br>' : '') +
                 '<span class="app-meta">提交人：' + escapeHtml(a.username || ("用户#" + a.user_id)) + '</span>' +
               '</div>' +
-              '<button type="button" class="submit" data-approve="' + a.id + '">通过</button>' +
+              '<div class="app-actions">' +
+                '<button type="button" class="submit" data-approve="' + a.id + '">通过</button>' +
+                '<button type="button" class="btn" data-reject="' + a.id + '">拒绝</button>' +
+              '</div>' +
             '</div>';
           }).join("");
         })
@@ -578,6 +719,11 @@
     }
 
     document.getElementById("reviewList").addEventListener("click", function (e) {
+      var rej = e.target.closest ? e.target.closest("[data-reject]") : null;
+      if (rej) {
+        openRejectModal(Number(rej.getAttribute("data-reject")));
+        return;
+      }
       var btn = e.target.closest ? e.target.closest("[data-approve]") : null;
       if (!btn) return;
       var id = btn.getAttribute("data-approve");
@@ -606,6 +752,132 @@
         .catch(function (err) {
           btn.disabled = false;
           if (err.message !== "unauthorized") alert("网络错误：" + err.message);
+        });
+    });
+
+    var rejectPendingId = null;
+
+    function openRejectModal(id) {
+      rejectPendingId = id;
+      document.getElementById("rejectReasonInput").value = "";
+      var m = document.getElementById("rejectMsg");
+      m.className = "msg";
+      m.textContent = "";
+      document.getElementById("rejectModal").style.display = "flex";
+    }
+
+    function closeRejectModal() {
+      rejectPendingId = null;
+      document.getElementById("rejectModal").style.display = "none";
+    }
+
+    document.getElementById("rejectCancel").addEventListener("click", closeRejectModal);
+
+    document.getElementById("rejectConfirm").addEventListener("click", function () {
+      if (rejectPendingId === null) return;
+      var msg = document.getElementById("rejectMsg");
+      var btn = document.getElementById("rejectConfirm");
+      msg.className = "msg";
+      msg.textContent = "提交中…";
+      btn.disabled = true;
+      fetch("/api/admin/student-applications/reject", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token },
+        body: JSON.stringify({ id: rejectPendingId, reason: document.getElementById("rejectReasonInput").value.trim() })
+      })
+        .then(function (res) {
+          if (handleStatus(res.status)) throw new Error("unauthorized");
+          return res.json().then(function (data) { return { ok: res.ok, data: data }; });
+        })
+        .then(function (r) {
+          btn.disabled = false;
+          if (!r.ok) {
+            msg.className = "msg error";
+            msg.textContent = r.status === 403 ? "无权限（需要 developer / super_admin）" : (r.data.error || "拒绝失败");
+            return;
+          }
+          var id = rejectPendingId;
+          closeRejectModal();
+          var item = document.querySelector('.app-item[data-id="' + id + '"]');
+          if (item) item.parentNode.removeChild(item);
+          if (!document.querySelector(".app-item")) {
+            document.getElementById("reviewList").innerHTML = '<div class="app-empty">暂无待审核申请</div>';
+          }
+        })
+        .catch(function (err) {
+          btn.disabled = false;
+          if (err.message !== "unauthorized") {
+            msg.className = "msg error";
+            msg.textContent = "网络错误：" + err.message;
+          }
+        });
+    });
+
+    var permsPendingUserId = null;
+
+    function openPermsModal(id) {
+      var u = usersById[id];
+      if (!u) return;
+      permsPendingUserId = id;
+      document.getElementById("permsTargetName").textContent = u.username || ("用户#" + id);
+      var current = u.permissions || [];
+      var box = document.getElementById("permsList");
+      if (!permissionCatalog.length) {
+        box.innerHTML = '<div class="app-empty">权限列表加载中…</div>';
+      } else {
+        box.innerHTML = permissionCatalog.map(function (p) {
+          var checked = current.indexOf(p.key) !== -1 ? " checked" : "";
+          return '<label class="perms-row"><input type="checkbox" value="' + p.key + '"' + checked + '> ' + escapeHtml(p.label) + '</label>';
+        }).join("");
+      }
+      var m = document.getElementById("permsMsg");
+      m.className = "msg";
+      m.textContent = "";
+      document.getElementById("permsModal").style.display = "flex";
+    }
+
+    function closePermsModal() {
+      permsPendingUserId = null;
+      document.getElementById("permsModal").style.display = "none";
+    }
+
+    document.getElementById("permsCancel").addEventListener("click", closePermsModal);
+
+    document.getElementById("permsConfirm").addEventListener("click", function () {
+      if (permsPendingUserId === null) return;
+      var msg = document.getElementById("permsMsg");
+      var btn = document.getElementById("permsConfirm");
+      var checks = document.querySelectorAll("#permsList input:checked");
+      var perms = [];
+      for (var i = 0; i < checks.length; i++) perms.push(checks[i].value);
+      msg.className = "msg";
+      msg.textContent = "提交中…";
+      btn.disabled = true;
+      fetch("/api/admin/users/permissions", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token },
+        body: JSON.stringify({ userId: permsPendingUserId, permissions: perms })
+      })
+        .then(function (res) {
+          if (handleStatus(res.status)) throw new Error("unauthorized");
+          return res.json().then(function (data) { return { ok: res.ok, status: res.status, data: data }; });
+        })
+        .then(function (r) {
+          btn.disabled = false;
+          if (!r.ok) {
+            msg.className = "msg error";
+            msg.textContent = r.status === 403 ? "无权修改该用户权限" : (r.data.error || "保存失败");
+            return;
+          }
+          closePermsModal();
+          loadUsers();
+        })
+        .catch(function (err) {
+          btn.disabled = false;
+          if (err.message !== "unauthorized") {
+            msg.className = "msg error";
+            msg.textContent = "网络错误：" + err.message;
+          }
         });
     });
 
@@ -886,6 +1158,329 @@
       });
     }
 
+    var ROLE_WEIGHTS = { developer: 6, super_admin: 5, admin: 4, student: 3, user: 2, guest: 1 };
+    var ASSIGNABLE_ROLES = ["user", "student", "admin", "super_admin", "developer"];
+    var currentUserId = null;
+    var currentWeight = 0;
+    var currentPermissions = [];
+    var permissionCatalog = [];
+    var usersById = {};
+
+    var PANEL_PERMS = {
+      banner: { perm: "banner_edit", role: "super_admin" },
+      announce: { perm: "announcement_publish", role: "super_admin" },
+      review: { perm: "student_review", role: "super_admin" },
+      invite: { perm: "invite_manage", role: "super_admin" },
+      weekly: { perm: "weekly_menu_upload", role: "admin" },
+      users: { perm: "user_manage", role: "super_admin" },
+      appeals: { perm: "ban_appeal_review", role: "super_admin" }
+    };
+
+    function canAccessPanel(name) {
+      var req = PANEL_PERMS[name];
+      if (!req) return true;
+      if (currentWeight >= (ROLE_WEIGHTS[req.role] || 0)) return true;
+      return currentPermissions.indexOf(req.perm) !== -1;
+    }
+
+    function applyPermissions() {
+      var items = document.querySelectorAll("[data-panel]");
+      var firstAllowed = null;
+      for (var i = 0; i < items.length; i++) {
+        var name = items[i].getAttribute("data-panel");
+        var ok = canAccessPanel(name);
+        items[i].style.display = ok ? "" : "none";
+        if (ok && !firstAllowed) firstAllowed = name;
+      }
+      if (firstAllowed) {
+        for (var j = 0; j < items.length; j++) {
+          items[j].classList.toggle("active", items[j].getAttribute("data-panel") === firstAllowed);
+        }
+        var views = document.querySelectorAll(".view");
+        for (var k = 0; k < views.length; k++) {
+          views[k].classList.toggle("active", views[k].id === "view-" + firstAllowed);
+        }
+      }
+      if (canAccessPanel("review")) loadReview();
+      if (canAccessPanel("invite")) loadInvites();
+      if (canAccessPanel("weekly")) loadWeekly();
+      if (canAccessPanel("users")) { loadPermissionCatalog(); loadUsers(); }
+      if (canAccessPanel("appeals")) loadAppeals();
+    }
+
+    function loadPermissionCatalog() {
+      fetch("/api/admin/permissions", { headers: authHeaders() })
+        .then(function (res) { return res.json(); })
+        .then(function (data) { permissionCatalog = data.permissions || []; })
+        .catch(function () {});
+    }
+
+    function loadUsers() {
+      var box = document.getElementById("userList");
+      box.innerHTML = '<div class="app-empty">加载中…</div>';
+      fetch("/api/admin/users", { headers: authHeaders() })
+        .then(function (res) {
+          if (handleStatus(res.status)) throw new Error("unauthorized");
+          if (res.status === 403) throw new Error("forbidden");
+          return res.json();
+        })
+        .then(function (data) {
+          var list = data.users || [];
+          var selfW = currentWeight;
+          var rows = list.map(function (u) {
+            usersById[u.id] = u;
+            var targetWeight = ROLE_WEIGHTS[u.role] || 0;
+            var editable = u.id !== currentUserId && targetWeight < selfW;
+            var roleCell;
+            if (editable) {
+              var opts = "";
+              for (var i = 0; i < ASSIGNABLE_ROLES.length; i++) {
+                var r = ASSIGNABLE_ROLES[i];
+                var rw = ROLE_WEIGHTS[r];
+                if (rw >= ROLE_WEIGHTS.user && rw <= selfW - 1) {
+                  opts += '<option value="' + r + '"' + (r === u.role ? " selected" : "") + '>' + r + '</option>';
+                }
+              }
+              roleCell = '<select data-role-select="' + u.id + '">' + opts + '</select>';
+            } else {
+              roleCell = escapeHtml(u.role);
+            }
+            var statusCell = u.status === "banned" ? '<span class="tag-banned">已封禁</span>' : "正常";
+            var actionCell = "—";
+            if (editable) {
+              var banBtn = u.status === "banned"
+                ? '<button type="button" class="btn" data-unban="' + u.id + '">解封</button>'
+                : '<button type="button" class="btn" data-ban="' + u.id + '" data-name="' + escapeHtml(u.username) + '">封号</button>';
+              actionCell = '<span class="row-actions">' +
+                '<button type="button" class="btn" data-perms="' + u.id + '">权限</button>' +
+                banBtn +
+              '</span>';
+            }
+            return '<tr><td>' + escapeHtml(u.display_id || String(u.id)) + '</td>' +
+              '<td>' + escapeHtml(u.username) + '</td>' +
+              '<td>' + escapeHtml(u.nickname || "") + '</td>' +
+              '<td>' + roleCell + '</td>' +
+              '<td>' + statusCell + '</td>' +
+              '<td>' + actionCell + '</td></tr>';
+          }).join("");
+          box.innerHTML = '<table class="user-table"><thead><tr>' +
+            '<th>ID</th><th>用户名</th><th>昵称</th><th>角色</th><th>状态</th><th>操作</th>' +
+            '</tr></thead><tbody>' + rows + '</tbody></table>';
+        })
+        .catch(function (err) {
+          box.innerHTML = '<div class="app-empty">加载失败：' +
+            escapeHtml(err.message === "forbidden" ? "无权限" : err.message) + '</div>';
+        });
+    }
+
+    document.getElementById("userList").addEventListener("change", function (e) {
+      var sel = e.target.closest ? e.target.closest("[data-role-select]") : null;
+      if (!sel) return;
+      var id = Number(sel.getAttribute("data-role-select"));
+      var newRole = sel.value;
+      sel.disabled = true;
+      fetch("/api/admin/users/role", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token },
+        body: JSON.stringify({ userId: id, newRole: newRole })
+      })
+        .then(function (res) {
+          if (handleStatus(res.status)) throw new Error("unauthorized");
+          return res.json().then(function (data) { return { ok: res.ok, status: res.status, data: data }; });
+        })
+        .then(function (r) {
+          sel.disabled = false;
+          if (!r.ok) {
+            alert(r.status === 403 ? "无权修改该用户角色" : (r.data.error || "修改失败"));
+            loadUsers();
+            return;
+          }
+          alert("角色已更新为 " + newRole);
+        })
+        .catch(function (err) {
+          sel.disabled = false;
+          if (err.message !== "unauthorized") alert("网络错误：" + err.message);
+        });
+    });
+
+    document.getElementById("userList").addEventListener("click", function (e) {
+      var perms = e.target.closest ? e.target.closest("[data-perms]") : null;
+      if (perms) {
+        openPermsModal(Number(perms.getAttribute("data-perms")));
+        return;
+      }
+      var ban = e.target.closest ? e.target.closest("[data-ban]") : null;
+      if (ban) {
+        openBanModal(Number(ban.getAttribute("data-ban")), ban.getAttribute("data-name"));
+        return;
+      }
+      var unb = e.target.closest ? e.target.closest("[data-unban]") : null;
+      if (!unb) return;
+      if (!confirm("确定要解封该用户吗？")) return;
+      unb.disabled = true;
+      fetch("/api/admin/users/unban", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token },
+        body: JSON.stringify({ userId: Number(unb.getAttribute("data-unban")) })
+      })
+        .then(function (res) {
+          if (handleStatus(res.status)) throw new Error("unauthorized");
+          return res.json().then(function (data) { return { ok: res.ok, status: res.status, data: data }; });
+        })
+        .then(function (r) {
+          unb.disabled = false;
+          if (!r.ok) { alert(r.status === 403 ? "无权解封该用户" : (r.data.error || "解封失败")); return; }
+          loadUsers();
+        })
+        .catch(function (err) {
+          unb.disabled = false;
+          if (err.message !== "unauthorized") alert("网络错误：" + err.message);
+        });
+    });
+
+    var banPendingUserId = null;
+
+    function openBanModal(id, name) {
+      banPendingUserId = id;
+      document.getElementById("banTargetName").textContent = name || ("用户#" + id);
+      document.getElementById("banReasonInput").value = "";
+      document.getElementById("banAllowAppeal").checked = true;
+      document.getElementById("banImageInput").value = "";
+      document.getElementById("banImageName").textContent = "";
+      var m = document.getElementById("banMsg");
+      m.className = "msg";
+      m.textContent = "";
+      document.getElementById("banModal").style.display = "flex";
+    }
+
+    function closeBanModal() {
+      banPendingUserId = null;
+      document.getElementById("banModal").style.display = "none";
+    }
+
+    document.getElementById("banImageChoose").addEventListener("click", function () {
+      document.getElementById("banImageInput").click();
+    });
+
+    document.getElementById("banImageInput").addEventListener("change", function () {
+      var f = this.files && this.files[0];
+      document.getElementById("banImageName").textContent = f ? f.name : "";
+    });
+
+    document.getElementById("banCancel").addEventListener("click", closeBanModal);
+
+    document.getElementById("banConfirm").addEventListener("click", function () {
+      if (banPendingUserId === null) return;
+      var msg = document.getElementById("banMsg");
+      var btn = document.getElementById("banConfirm");
+      var file = document.getElementById("banImageInput").files && document.getElementById("banImageInput").files[0];
+      var fd = new FormData();
+      fd.append("userId", String(banPendingUserId));
+      fd.append("ban_reason", document.getElementById("banReasonInput").value);
+      fd.append("allow_appeal", document.getElementById("banAllowAppeal").checked ? "1" : "0");
+      if (file) fd.append("ban_image", file);
+      msg.className = "msg";
+      msg.textContent = "提交中…";
+      btn.disabled = true;
+      fetch("/api/admin/users/ban", { method: "PUT", headers: authHeaders(), body: fd })
+        .then(function (res) {
+          if (handleStatus(res.status)) throw new Error("unauthorized");
+          return res.json().then(function (data) { return { ok: res.ok, status: res.status, data: data }; });
+        })
+        .then(function (r) {
+          btn.disabled = false;
+          if (!r.ok) {
+            msg.className = "msg error";
+            msg.textContent = r.status === 403 ? "无权封禁该用户" : (r.data.error || "封禁失败");
+            return;
+          }
+          closeBanModal();
+          loadUsers();
+        })
+        .catch(function (err) {
+          btn.disabled = false;
+          if (err.message !== "unauthorized") {
+            msg.className = "msg error";
+            msg.textContent = "网络错误：" + err.message;
+          }
+        });
+    });
+
+    function loadAppeals() {
+      var box = document.getElementById("appealList");
+      box.innerHTML = '<div class="app-empty">加载中…</div>';
+      fetch("/api/admin/ban-appeals", { headers: authHeaders() })
+        .then(function (res) {
+          if (handleStatus(res.status)) throw new Error("unauthorized");
+          if (res.status === 403) throw new Error("forbidden");
+          return res.json();
+        })
+        .then(function (data) {
+          var list = data.appeals || [];
+          if (!list.length) {
+            box.innerHTML = '<div class="app-empty">暂无待处理申诉</div>';
+            return;
+          }
+          box.innerHTML = list.map(function (a) {
+            return '<div class="app-item" data-appeal-id="' + a.id + '">' +
+              '<div class="app-info">' +
+                '用户ID：' + escapeHtml(a.display_id || String(a.user_id)) +
+                '（' + escapeHtml(a.username || "未知") + '）<br>' +
+                '申诉理由：' + escapeHtml(a.appeal_reason) +
+                (a.appeal_image ? '<img class="appeal-thumb" src="' + escapeHtml(a.appeal_image) + '" data-zoom="' + escapeHtml(a.appeal_image) + '" alt="申诉图片">' : '') +
+              '</div>' +
+              '<div class="preview-actions">' +
+                '<button type="button" class="submit" data-approve-appeal="' + a.id + '">通过</button>' +
+                '<button type="button" class="btn" data-reject-appeal="' + a.id + '">驳回</button>' +
+              '</div>' +
+            '</div>';
+          }).join("");
+        })
+        .catch(function (err) {
+          box.innerHTML = '<div class="app-empty">加载失败：' +
+            escapeHtml(err.message === "forbidden" ? "无权限" : err.message) + '</div>';
+        });
+    }
+
+    function reviewAppeal(id, action, btn) {
+      var label = action === "approve" ? "通过" : "驳回";
+      if (!confirm("确定要" + label + "该申诉吗？")) return;
+      btn.disabled = true;
+      fetch("/api/admin/ban-appeals/review", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token },
+        body: JSON.stringify({ appealId: id, action: action })
+      })
+        .then(function (res) {
+          if (handleStatus(res.status)) throw new Error("unauthorized");
+          return res.json().then(function (data) { return { ok: res.ok, status: res.status, data: data }; });
+        })
+        .then(function (r) {
+          if (!r.ok) { btn.disabled = false; alert(r.data.error || "操作失败"); return; }
+          loadAppeals();
+          loadUsers();
+        })
+        .catch(function (err) {
+          btn.disabled = false;
+          if (err.message !== "unauthorized") alert("网络错误：" + err.message);
+        });
+    }
+
+    document.getElementById("appealList").addEventListener("click", function (e) {
+      var zoom = e.target.closest ? e.target.closest("[data-zoom]") : null;
+      if (zoom) {
+        openLightbox(zoom.getAttribute("data-zoom"));
+        return;
+      }
+      var ap = e.target.closest ? e.target.closest("[data-approve-appeal]") : null;
+      if (ap) {
+        reviewAppeal(Number(ap.getAttribute("data-approve-appeal")), "approve", ap);
+        return;
+      }
+      var rj = e.target.closest ? e.target.closest("[data-reject-appeal]") : null;
+      if (rj) reviewAppeal(Number(rj.getAttribute("data-reject-appeal")), "reject", rj);
+    });
+
     function denyAccess(text) {
       document.getElementById("menuArea").style.display = "none";
       document.getElementById("contentArea").innerHTML =
@@ -901,14 +1496,15 @@
           return res.json();
         })
         .then(function (data) {
-          var role = data.user && data.user.role;
-          if (role !== "developer" && role !== "super_admin") {
+          var user = data.user || {};
+          currentUserId = user.id;
+          currentWeight = ROLE_WEIGHTS[user.role] || 0;
+          currentPermissions = user.permissions || [];
+          if (currentWeight < ROLE_WEIGHTS.super_admin && currentPermissions.length === 0) {
             denyAccess("暂无权限访问管理后台");
-          } else {
-            loadReview();
-            loadInvites();
-            loadWeekly();
+            return;
           }
+          applyPermissions();
         })
         .catch(function () {});
     }

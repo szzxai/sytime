@@ -128,7 +128,7 @@
   }
   .login-hint a { color: #000000; }
   .posts { display: flex; flex-direction: column; gap: 14px; }
-  .post { border: 2px solid #000000; padding: 16px; }
+  .post { border: 2px solid #000000; padding: 16px; cursor: pointer; }
   .post-head {
     display: flex;
     align-items: center;
@@ -137,6 +137,8 @@
     margin-bottom: 8px;
   }
   .post-title { font-size: 16px; font-weight: bold; }
+  a.post-title { color: #000000; text-decoration: none; }
+  a.post-title:hover { text-decoration: underline; }
   .tag {
     flex: none;
     font-size: 12px;
@@ -150,7 +152,19 @@
     white-space: pre-wrap;
     word-break: break-word;
   }
-  .post-actions { margin-top: 12px; }
+  .post-actions { margin-top: 12px; display: flex; align-items: center; gap: 16px; }
+  .like-btn {
+    background: #ffffff;
+    color: #000000;
+    border: 2px solid #000000;
+    border-radius: 0;
+    padding: 4px 12px;
+    font-size: 13px;
+    font-family: inherit;
+    cursor: pointer;
+  }
+  .like-btn:hover { background: #000000; color: #ffffff; }
+  .like-btn.active { background: #000000; color: #ffffff; }
   .ctx-menu {
     position: fixed;
     z-index: 3000;
@@ -226,10 +240,10 @@
     <div class="logo">校园信息网</div>
     <div class="header-right">
       <nav class="nav">
-        <a href="index.html">首页</a>
         <a href="map.html">校园地图</a>
         <a href="forum.html">论坛</a>
         <a href="recipe.html">菜谱评价</a>
+        <a href="announcements.html">更新公告</a>
       </nav>
       <div class="auth" id="authArea">
         <a class="btn" href="login.html">登录</a>
@@ -311,7 +325,7 @@
     function loadPosts() {
       var list = document.getElementById("postList");
       list.innerHTML = '<div class="empty">加载中…</div>';
-      fetch("/api/forum/posts?category=" + encodeURIComponent(currentCategory))
+      fetch("/api/forum/posts?category=" + encodeURIComponent(currentCategory), token ? { headers: { "Authorization": "Bearer " + token } } : undefined)
         .then(function (res) { return res.json(); })
         .then(function (data) {
           var posts = data.posts || [];
@@ -329,12 +343,13 @@
               : '<div class="login-hint-sm">请先登录后回复　<a href="login.html">前往登录</a></div>';
             return '<div class="post" data-post-id="' + p.id + '" data-user-id="' + p.user_id + '">' +
               '<div class="post-head">' +
-                '<span class="post-title">' + escapeHtml(p.title) + '</span>' +
+                '<a class="post-title" href="post.html?id=' + p.id + '">' + escapeHtml(p.title) + '</a>' +
                 '<span class="tag">' + escapeHtml(p.category) + '</span>' +
               '</div>' +
               '<div class="post-meta">' + escapeHtml(p.username) + ' · ' + formatTime(p.created_at) + '</div>' +
               '<div class="post-content">' + escapeHtml(p.content) + '</div>' +
               '<div class="post-actions">' +
+                '<button type="button" class="like-btn' + (p.is_liked ? ' active' : '') + '" data-like-toggle>点赞（<span data-like-count>' + (p.like_count || 0) + '</span>）</button>' +
                 '<button type="button" class="link-btn" data-replies-toggle>回复（<span data-reply-count>' + (p.reply_count || 0) + '</span>）</button>' +
               '</div>' +
               '<div class="replies" data-replies style="display:none;">' +
@@ -499,6 +514,10 @@
     document.getElementById("postList").addEventListener("click", function (e) {
       var postEl = e.target.closest ? e.target.closest(".post") : null;
       if (!postEl) return;
+      if (e.target.closest("[data-like-toggle]")) {
+        toggleLike(postEl);
+        return;
+      }
       if (e.target.closest("[data-replies-toggle]")) {
         var replies = postEl.querySelector("[data-replies]");
         var isHidden = replies.style.display === "none";
@@ -507,10 +526,52 @@
           postEl.setAttribute("data-replies-loaded", "1");
           loadReplies(postEl);
         }
-      } else if (e.target.closest("[data-reply-submit]")) {
-        submitReply(postEl);
+        return;
       }
+      if (e.target.closest("[data-reply-submit]")) {
+        submitReply(postEl);
+        return;
+      }
+      if (e.target.closest("a, button, textarea, input, select, .replies")) return;
+      location.href = "post.html?id=" + postEl.getAttribute("data-post-id");
     });
+
+    function toggleLike(postEl) {
+      if (!token) {
+        alert("请先登录");
+        return;
+      }
+      var id = postEl.getAttribute("data-post-id");
+      var btn = postEl.querySelector("[data-like-toggle]");
+      var countEl = postEl.querySelector("[data-like-count]");
+      var liked = btn.classList.contains("active");
+      btn.disabled = true;
+      fetch("/api/forum/posts/" + id + "/like", {
+        method: liked ? "DELETE" : "POST",
+        headers: { "Authorization": "Bearer " + token }
+      })
+        .then(function (res) {
+          return res.json().then(function (data) { return { ok: res.ok, status: res.status, data: data }; });
+        })
+        .then(function (r) {
+          btn.disabled = false;
+          if (!r.ok) {
+            if (r.data && r.data.error === "login required") { alert("请先登录"); return; }
+            alert((r.data && r.data.error) || "操作失败");
+            return;
+          }
+          if (r.data && typeof r.data.like_count === "number") {
+            countEl.textContent = String(r.data.like_count);
+          } else {
+            countEl.textContent = String(Math.max(0, parseInt(countEl.textContent, 10) + (liked ? -1 : 1)));
+          }
+          btn.classList.toggle("active", !liked);
+        })
+        .catch(function (err) {
+          btn.disabled = false;
+          alert("网络错误：" + err.message);
+        });
+    }
 
     function currentUser() {
       var user = null;

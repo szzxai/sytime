@@ -148,10 +148,10 @@
     <div class="logo">校园信息网</div>
     <div class="header-right">
       <nav class="nav">
-        <a href="index.html">首页</a>
         <a href="map.html">校园地图</a>
         <a href="forum.html">论坛</a>
         <a href="recipe.html">菜谱评价</a>
+        <a href="announcements.html">更新公告</a>
       </nav>
       <div class="auth" id="authArea">
         <a class="btn" href="login.html">登录</a>
@@ -528,11 +528,10 @@
         .then(function (res) { return res.ok ? res.json() : null; })
         .then(function (data) {
           currentRole = data && data.user ? data.user.role : "guest";
+          var perms = data && data.user && data.user.permissions ? data.user.permissions : [];
+          canEditPopups = ["admin", "super_admin", "developer"].indexOf(currentRole) !== -1 || perms.indexOf("map_popup_edit") !== -1;
         })
-        .catch(function () { currentRole = "guest"; })
-        .then(function () {
-          canEditPopups = ["admin", "super_admin", "developer"].indexOf(currentRole) !== -1;
-        });
+        .catch(function () { currentRole = "guest"; canEditPopups = false; });
     }
 
     resolvePreferredFloor()

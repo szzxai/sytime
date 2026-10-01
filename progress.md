@@ -34,20 +34,20 @@
 ```
 项目文件夹/                     ← 项目根目录（Git 仓库根）
 ├── node_modules/              ← 已加入 .gitignore
-├── uploads/                   ← 图片上传目录（头像/菜谱；uploads/weekly/ 存每周菜谱图片）（已加入 .gitignore，启动时自动创建）
+├── uploads/                   ← 图片上传目录（头像/菜谱；uploads/weekly/ 每周菜谱图片；uploads/bans/ 封禁图）（已加入 .gitignore，启动时自动创建）
 ├── public/                    ← Express 静态目录
-│   ├── index.html             ← 首页（含默认界面跳转脚本）
+│   ├── index.html             ← 首页（含默认界面跳转脚本）+ 关于我们
 │   ├── map.html               ← 校园地图（fetch 数据动态绘制）
-│   ├── login.html             ← 登录页
+│   ├── login.html             ← 登录页（含封禁申诉表单）
 │   ├── register.html          ← 注册页
-│   ├── forum.html             ← 论坛
-│   ├── recipe.html            ← 菜谱评价
+│   ├── forum.html             ← 论坛（列表 + 点赞）
+│   ├── post.html              ← 帖子详情（正文 + 点赞 + 回复）
+│   ├── recipe.html            ← 菜谱评价（全部 / 每周食谱）
 │   ├── announcements.html     ← 更新公告（左侧公告列表 + 右侧详情）
-│   ├── about.html             ← 关于我们（项目介绍 / 发起原因 / 联系方式）
-│   ├── admin.html             ← 管理后台（编辑横幅 / 更新公告）
+│   ├── admin.html             ← 管理后台（横幅/公告/学生审核/邀请码/每周菜谱/用户管理/申诉处理）
 │   ├── student_verify.html    ← 学生认证（新生号/班级/真实姓名/邀请码）
 │   ├── profile.html           ← 个人中心（设置：个人资料/账号安全/网站设置）
-│   └── auth.js                ← 全站共享脚本（导航头像/登录态、菜单栏折叠）
+│   └── auth.js                ← 全站共享脚本（导航头像/登录态、菜单栏折叠、横幅）
 ├── data.json                  ← 地图数据（几何 + 名称 + 弹窗 + 颜色），约 178 条 feature
 ├── data.db                    ← SQLite 数据库（已加入 .gitignore）
 ├── server.js                  ← Express 后端
@@ -55,6 +55,7 @@
 ├── .env                       ← 端口与密钥（已加入 .gitignore）
 ├── .env.example               ← 环境变量模板
 ├── .gitignore                 ← node_modules/  .env  *.db  *.db-journal  uploads/
+├── README.md                  ← 项目说明（GitHub 用）
 └── progress.md                ← 本文件
 ```
 
@@ -81,6 +82,7 @@ JWT_EXPIRES_IN=7d
 ```sql
 CREATE TABLE users (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
+  display_id TEXT UNIQUE,
   email TEXT UNIQUE,
   password_hash TEXT,
   username TEXT UNIQUE,
@@ -91,6 +93,10 @@ CREATE TABLE users (
   default_page TEXT NOT NULL DEFAULT 'index.html',
   default_floor INTEGER NOT NULL DEFAULT 1,
   recipe_default_view TEXT NOT NULL DEFAULT 'all',
+  status TEXT NOT NULL DEFAULT 'active',
+  ban_reason TEXT NOT NULL DEFAULT '',
+  ban_image TEXT NOT NULL DEFAULT '',
+  allow_appeal INTEGER NOT NULL DEFAULT 1,
   created_at INTEGER NOT NULL DEFAULT (strftime('%s','now'))
 );
 
@@ -111,6 +117,22 @@ CREATE TABLE forum_replies (
   username TEXT NOT NULL,
   content TEXT NOT NULL,
   created_at INTEGER NOT NULL DEFAULT (strftime('%s','now'))
+);
+
+CREATE TABLE post_likes (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  post_id INTEGER NOT NULL,
+  user_id INTEGER NOT NULL,
+  created_at INTEGER NOT NULL DEFAULT (strftime('%s','now')),
+  UNIQUE (post_id, user_id)
+);
+
+CREATE TABLE user_permissions (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL,
+  permission TEXT NOT NULL,
+  created_at INTEGER NOT NULL DEFAULT (strftime('%s','now')),
+  UNIQUE (user_id, permission)
 );
 
 CREATE TABLE recipes (
@@ -144,6 +166,7 @@ CREATE TABLE student_applications (
   class_name TEXT NOT NULL,
   real_name TEXT NOT NULL,
   extra_info TEXT,
+  reject_reason TEXT,
   status TEXT NOT NULL DEFAULT 'pending',
   created_at INTEGER NOT NULL DEFAULT (strftime('%s','now'))
 );
@@ -165,12 +188,24 @@ CREATE TABLE weekly_menu_images (
   uploaded_at INTEGER NOT NULL DEFAULT (strftime('%s','now'))
 );
 
+CREATE TABLE ban_appeals (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL,
+  appeal_reason TEXT NOT NULL,
+  appeal_image TEXT NOT NULL DEFAULT '',
+  status TEXT NOT NULL DEFAULT 'pending',
+  created_at INTEGER NOT NULL DEFAULT (strftime('%s','now'))
+);
+
 CREATE INDEX idx_forum_category ON forum_posts(category);
 CREATE INDEX idx_forum_replies_post ON forum_replies(post_id);
 CREATE INDEX idx_recipes_weekly ON recipes(is_weekly);
 CREATE INDEX idx_announcements_date ON announcements(publish_date);
 CREATE INDEX idx_student_applications_user ON student_applications(user_id);
+CREATE INDEX idx_ban_appeals_status ON ban_appeals(status);
 ```
+
+迁移：启动时 `migrateUserSettings()` 会为旧库补齐 `default_page / default_floor / recipe_default_view / display_id / status / ban_reason / ban_image / allow_appeal` 列，并**批量回填旧用户 `display_id = CAST(id AS TEXT)`**。
 
 初始化时执行 `INSERT OR IGNORE` 写入 `banner`（默认「欢迎来到校园信息网」）、`banner_version`（默认 `0`）与 `student_invite_code`（默认空字符串）三条设置；`banner_version` 每次更新横幅自增，用于「同一账号关闭横幅后，直到下次更新才再显示」。
 
@@ -183,17 +218,18 @@ CREATE INDEX idx_student_applications_user ON student_applications(user_id);
 中间件：`cors()`、`express.json()`、`express.static(public/)`、`express.static(uploads/) → /uploads`，以及末尾统一的 JSON 错误处理。
 
 **账号**
-- `POST /api/register` — body `{ username, nickname, password }`；用户名重复 409；**第一个用户 role='developer'**，其余 'user'；bcrypt 哈希。
-- `POST /api/login` — body `{ username, password }`；成功返回 `{ token, user }`；**JWT payload = { id, role, username }**。
+- `POST /api/register` — body `{ username, nickname, password }`；用户名重复 409；**第一个用户 role='developer'**，其余 'user'；bcrypt 哈希。**注册后自动生成 `display_id`（= 自增 `id` 的字符串，如 `'1'`、`'2'`），返回 `{ id, display_id, username, nickname, role }`**。
+- `POST /api/login` — body `{ username, password }`；成功返回 `{ token, user }`；**JWT payload = { id, role, username }**。**若用户 `status='banned'` 返回 403**，body `{ error:"banned", ban_reason, allow_appeal }`（`allow_appeal` 为 1/0）。
 - `GET /api/me`、`GET /api/admin/ping`（示例权限接口）。
 
 **权限中间件**
 - `ROLE_WEIGHTS = { developer:6, super_admin:5, admin:4, student:3, user:2, guest:1 }`
 - `checkRole(requiredRole)`：解析 `Authorization: Bearer <token>`；无/无效 token **不报 401**，而是 `req.user = { id:null, role:'guest', username:null }` 放行；若指定了 requiredRole，则按权重比较，不足返回 **403**。token 缺 `username` 时按 id 回查数据库补全。
 - `requireLogin`：基于 `checkRole()`，未登录返回 **401** `{ error:"login required" }`。
+- **特殊权限（`user_permissions` 表 + `requirePermission(perm)`）**：在角色之外可给单个用户授予细粒度权限。`hasPermission` 判定 = **角色权重 ≥ 该权限默认要求**（`PERMISSION_REQUIRES`）**或**在 `user_permissions` 中有显式授权。权限键：`banner_edit`(super_admin)、`announcement_publish`(super_admin)、`student_review`(super_admin)、`invite_manage`(super_admin)、`user_manage`(super_admin)、`ban_appeal_review`(super_admin)、`weekly_menu_upload`(admin)、`map_popup_edit`(admin)。`requirePermission` 未登录 401、无权限 403。`GET /api/me` 与 `GET /api/user/profile` 均返回 `permissions` 数组。
 
 **个人资料**（均需登录）
-- `GET /api/user/profile` — 返回 `{ user: { id, username, nickname, avatar_url, signature, role, default_page, default_floor, recipe_default_view } }`
+- `GET /api/user/profile` — 返回 `{ user: { id, display_id, username, nickname, avatar_url, signature, role, default_page, default_floor, recipe_default_view, status } }`
 - `POST /api/user/avatar` — multer 字段名 `avatar`，限 2MB、仅 jpg/png，存 `uploads/`，返回 `{ avatar_url }`
 - `PUT /api/user/nickname` — body `{ nickname }`
 - `PUT /api/user/signature` — body `{ signature }`
@@ -201,9 +237,12 @@ CREATE INDEX idx_student_applications_user ON student_applications(user_id);
 - `PUT /api/user/password` — body `{ oldPassword, newPassword }`（兼容 `old_password`/`new_password`）；旧密码错误 400
 
 **论坛**
-- `GET /api/forum/posts?category=讨论` — 按 `created_at DESC`；返回附带 `reply_count`
+- `GET /api/forum/posts?category=讨论`（`checkRole()` 放行未登录）— 按 `created_at DESC`；每条附带 `reply_count`、`like_count`（总点赞数）与 `is_liked`（当前登录用户是否已赞，未登录为 `false`）
+- `GET /api/forum/posts/:id`（`checkRole()` 放行未登录）— 返回单条帖子完整信息（含 `id, user_id, username, category, title, content, created_at`）以及 `like_count`、`is_liked`；`id` 非法 400、不存在 **404**
 - `POST /api/forum/posts` — 需登录；body `{ category ∈ {讨论,提问}, title, content }`
-- `DELETE /api/forum/posts/:id` — 需登录；仅**帖子作者**或**管理员（权重 ≥ admin）**可删，删除时级联删除其回复；无权限 403、不存在 404
+- `DELETE /api/forum/posts/:id` — 需登录；仅**帖子作者**或**管理员（权重 ≥ admin）**可删，删除时级联删除其回复与点赞；无权限 403、不存在 404
+- `POST /api/forum/posts/:id/like` — 需登录；已点赞返回 **400 `{ error:"已点赞" }`**，否则写入 `post_likes`，返回 `{ ok, liked:true, like_count }`
+- `DELETE /api/forum/posts/:id/like` — 需登录；删除当前用户对该帖的点赞，返回 `{ ok, liked:false, like_count }`
 - `GET /api/forum/posts/:id/replies` — 按时间正序；帖子不存在 404、id 非法 400
 - `POST /api/forum/posts/:id/replies` — 需登录；body `{ content }`
 
@@ -228,6 +267,7 @@ CREATE INDEX idx_student_applications_user ON student_applications(user_id);
 - `PUT /api/admin/settings/banner` — body `{ value }`（兼容 `banner`），更新全站横幅并自增 `banner_version`；传空字符串即「取消横幅」（全站不再显示）
 - `GET /api/admin/student-applications` — 返回所有 `pending` 申请（附带提交人 `username`）
 - `PUT /api/admin/student-applications/approve` — body `{ id }`，状态改 `approved` 并将对应用户升级为 `student`
+- `PUT /api/admin/student-applications/reject` — body `{ id, reason? }`，状态改 `rejected` 并记录可选 `reject_reason`（不影响用户角色）
 - `GET /api/admin/settings/invite-code` — 返回 `{ invite_code }`（旧的单邀请码，保留兼容）
 - `PUT /api/admin/settings/invite-code` — body `{ invite_code }`（旧的单邀请码，保留兼容）
 - `GET /api/admin/invite-codes` — 返回所有邀请码（含 `max_uses`、`used_count`）
@@ -235,11 +275,24 @@ CREATE INDEX idx_student_applications_user ON student_applications(user_id);
 - `DELETE /api/admin/invite-codes/:id` — 删除邀请码
 - `GET /api/admin/ping` — 权限探测示例
 
+**用户管理（`checkRole("super_admin")`，仅权重 ≥ 5 可用）**
+- `GET /api/admin/users` — 返回所有用户 `{ id, display_id, username, nickname, role, status, permissions }`（按 id 升序）
+- `GET /api/admin/permissions` — 返回可分配权限目录 `{ permissions: [{ key, label }] }`
+- `PUT /api/admin/users/permissions` — body `{ userId, permissions: [key...] }`；**不能改自己或权重 ≥ 自己的人**（403）；只接受合法权限键，先清空再写入，返回 `{ ok, permissions }`
+- `PUT /api/admin/users/role` — body `{ userId, newRole }`。**不能改自己**；**不能改权重 ≥ 自己的人**；新角色权重须 `∈ [user(2), 自身权重 - 1]`（即不得 ≥ 自身等级）；违规 403，用户不存在 404
+- `PUT /api/admin/users/ban` — body（multipart 或 JSON）`{ userId, ban_reason, allow_appeal }` + 可选图片字段 `ban_image`（限 5MB、仅 jpg/png，存 `uploads/bans/`）；将 `status='banned'` 并记录 `ban_reason / ban_image / allow_appeal`（默认 1）；不能封禁自己或权重 ≥ 自己者（403）
+- `PUT /api/admin/users/unban` — body `{ userId }`；`status='active'`，清空 `ban_reason / ban_image`，`allow_appeal=1`
+
+**封禁申诉**
+- `POST /api/user/appeal`（**公开，无需登录**）— body `{ username, appeal_reason, appeal_image? }`；用户不存在 404、未被封禁 400；**限频：距上次申诉不足 10 分钟返回 429 `{ error:"rate_limited", message, retry_after }`；允许提交时先删除该用户旧申诉（覆盖上一次）再写入**，写入 `ban_appeals`（`status='pending'`），返回 `{ id, status }`
+- `GET /api/admin/ban-appeals`（`checkRole("super_admin")`）— 返回所有 `pending` 申诉，附带用户 `username`、`display_id`
+- `PUT /api/admin/ban-appeals/review`（`checkRole("super_admin")`）— body `{ appealId, action ∈ {approve, reject} }`；`approve` 将申诉置 `approved` 且用户解封（`status='active'`、清空封禁信息），`reject` 置 `rejected`
+
 **设置（公开）**
 - `GET /api/settings/banner` — 返回 `{ banner, version }`，供全站横幅使用
 
 **学生认证**
-- `POST /api/student/apply`（需登录）— body `{ student_id, class_name, real_name, invite_code?, extra_info? }`；先查 `invite_codes` 表：**存在且未超过 `max_uses`（0=不限）**则 `used_count` 自增并把当前用户角色升级为 `student`（不会降级更高角色），返回 `{ status:"approved", role:"student" }`；否则再回退匹配旧的单邀请码 `settings.student_invite_code`；都不通过则写入 `student_applications`（`status='pending'`，含可选 `extra_info`），返回 `{ status:"pending" }`。缺少必填字段 400，未登录 401。
+- `POST /api/student/apply`（需登录）— body `{ student_id, class_name, real_name, invite_code?, extra_info? }`；先查 `invite_codes` 表：**存在且未超过 `max_uses`（0=不限）**则 `used_count` 自增并把当前用户角色升级为 `student`（不会降级更高角色），返回 `{ status:"approved", role:"student" }`；否则再回退匹配旧的单邀请码 `settings.student_invite_code`；都不通过则写入 `student_applications`（`status='pending'`，含可选 `extra_info`），返回 `{ status:"pending" }`。**限频：距上次申请不足 10 分钟返回 429 `{ error:"rate_limited", message, retry_after }`；允许提交时会先删除该用户旧申请（覆盖上一次）再写入，保证每人仅一条待审记录**。缺少必填字段 400，未登录 401。
 
 ---
 
@@ -280,25 +333,26 @@ CREATE INDEX idx_student_applications_user ON student_applications(user_id);
 ## 8. 前端页面
 
 ### 8.1 公共导航（各页顶部 header）
-- 左侧 Logo「校园信息网」为**可点击按钮**（`auth.js` 注入 `logo-caret` 与 `.logo-menu` 下拉），悬停或点击时在下方弹出「更新公告」（`announcements.html`）与「关于我们」（`about.html`）；右侧导航：**首页 / 校园地图 / 论坛 / 菜谱评价**；最右为登录态区域（`.auth#authArea`）。
+- 左侧 Logo「校园信息网」：**悬停时文字加下划线**；**点击任意页面 Logo 均跳回 `index.html`**（Logo 已无下拉菜单）。右侧导航：**校园地图 / 论坛 / 菜谱评价 / 更新公告**（**已移除「首页」，并新增「更新公告」**）；最右为登录态区域（`.auth#authArea`）。
 - **共享脚本 `public/auth.js`** 负责：
   1. **登录态渲染**：读 `localStorage.token` → 调 `GET /api/user/profile` → 已登录显示**圆形头像**（点击跳 `profile.html`，无头像显示昵称首字），未登录显示「登录 / 注册」；401 自动清理。
   2. **菜单栏折叠**：在菜单栏**正下方右下角外侧**注入小三角按钮（44×22，紧贴下边框的凸片），点击后带动画收起菜单栏；收起后在右上角显示同尺寸的展开三角。状态存 `localStorage.navCollapsed`。
   3. **全站横幅**：加载时调 `GET /api/settings/banner`，将文本渲染为导航栏上方全宽黑底白字横幅（空则不显示），并把高度写入 CSS 变量 `--banner-h` 以修正首页/地图布局位移。横幅右侧有 **×** 关闭按钮：关闭后按账号记录 `bannerDismissed:<username>` = 当前 `version`，该账号在 `version` 未变化前不再显示；横幅更新（version 自增）后重新显示。
-  4. **管理后台入口**：`GET /api/user/profile` 返回 `role`，当角色为 developer / super_admin 时，在导航右侧注入「管理后台」按钮（跳 `admin.html`）。
+  4. **管理后台入口**：`GET /api/user/profile` 返回 `role` 与 `permissions`，**当角色权重 ≥ `super_admin`（5）或拥有任意授予权限时**，在导航右侧注入「管理后台」按钮（跳 `admin.html`）；否则不显示。
   5. **学生认证入口**：登录后（任意角色）在导航右侧注入「学生认证」按钮（跳 `student_verify.html`）。
   6. 全局注入相关样式（头像、横幅、折叠、地图/首页随折叠位移）。
-  7. **Logo 下拉菜单**：把 `.logo` 变为可点击按钮并注入下拉（更新公告 / 关于我们），悬停或点击展开，点击外部关闭；对应 CSS/JS 均在 `auth.js`。
+  7. **Logo 交互**：为 `.logo` 注入悬停下划线；**点击 Logo 跳转 `index.html`**。Logo 已**取消下拉菜单**（原「更新公告」改到顶部导航）。对应 CSS/JS 均在 `auth.js`；各页导航「首页」按钮已移除并统一由 Logo 承担回首页。
 
 ### 8.2 各页面
-- **index.html**：首页。`<head>` 内脚本：访问根路径 `/` 时，若已登录则先调 `GET /api/user/profile` 取 `default_page` 跳转，否则按 `localStorage.defaultPage` 跳转（仅根路径，避免循环）。
-- **map.html**：Leaflet 地图（`CRS.Simple`，右下缩放控件）；`labelsPane`(z650) 承载所有文字；`baseLayer` 常显 + `floorGroups[1..4]` 切换；右上 1F–4F 按钮（间距已下移避开折叠按钮）。进入时若已登录优先用账号 `default_floor`，否则用 `localStorage.defaultFloor` 选择默认楼层。WASD/方向键平移。
-- **login.html / register.html**：账号表单；成功后 token+user 存 `localStorage` 并跳转首页；register 成功自动登录。
-- **forum.html**：讨论/提问切换；**独立「发布帖子」按钮**点击后展开面板（未登录点按提示“请先登录”），面板底部有「收起」按钮；在提问版块点发布默认分类为「提问」。帖子列表带 `reply_count`，「回复（n）」展开回复列表并可发布回复（已登录）。**右键帖子卡片弹出上下文菜单**，作者本人或管理员可「删除帖子」（二次确认后删除并刷新列表）。
+- **index.html**：首页。`<head>` 内脚本：访问根路径 `/` 时，若已登录则先调 `GET /api/user/profile` 取 `default_page` 跳转，否则按 `localStorage.defaultPage` 跳转（仅根路径，避免循环）。`<main>` 内直接展示「关于我们 / 发起原因 / 联系方式」（原 `about.html` 已合并至此并删除）。
+- **map.html**：Leaflet 地图（`CRS.Simple`，右下缩放控件）；`labelsPane`(z650) 承载所有文字；`baseLayer` 常显 + `floorGroups[1..4]` 切换；右上 1F–4F 按钮（间距已下移避开折叠按钮）。进入时若已登录优先用账号 `default_floor`，否则用 `localStorage.defaultFloor` 选择默认楼层。WASD/方向键平移。**弹窗编辑权限**：角色为 admin/super_admin/developer **或**拥有 `map_popup_edit` 授予权限时 `canEditPopups=true`（依据 `/api/me` 返回的 `permissions`）。
+- **login.html / register.html**：账号表单；成功后 token+user 存 `localStorage` 并跳转首页；register 成功自动登录。**login.html 处理封禁**：登录返回 403 且 `error='banned'` 时显示封禁理由；`allow_appeal=1` 时展开内嵌「申请解封」表单（申诉理由 + 选填图片，图片转 DataURL），提交 `POST /api/user/appeal`，成功后提示「申诉已提交，请等待管理员审核」（**表单下方提示「重复提交将覆盖上一次申请；10 分钟内只能提交一次」，限频时展示 429 提示**）；`allow_appeal=0` 时提示「您已被封禁，如要解封请线下联系超级管理员」。
+- **forum.html**：讨论/提问切换；**独立「发布帖子」按钮**点击后展开面板（未登录点按提示“请先登录”），面板底部有「收起」按钮；在提问版块点发布默认分类为「提问」。帖子列表带 `reply_count`，「回复（n）」展开回复列表并可发布回复（已登录）。**每条帖子底部有「点赞（n）」按钮**：`is_liked` 为真时按钮高亮（黑底白字），点击按状态调 `POST/DELETE /api/forum/posts/:id/like`，成功后本地更新计数并切换高亮、不刷新页面；**未登录点击提示「请先登录」且不发请求**。**右键帖子卡片弹出上下文菜单**，作者本人或管理员可「删除帖子」（二次确认后删除并刷新列表）。**点击帖子卡片任意空白处（标题、正文区域）均跳转 `post.html?id=<id>` 详情页；点标题链接、点赞/回复按钮、回复框、右键菜单等交互元素不触发跳转**。
+- **post.html**：帖子详情页。解析 `?id=`，调 `GET /api/forum/posts/:id` 展示标题/分类/作者/时间/正文（不存在显示「帖子不存在或已删除」）；正文下方「👍 点赞（n）」按钮（逻辑同列表页，已赞高亮，未登录提示「请先登录」）；点赞按钮旁有「回复」按钮，**进入详情页默认展开回复界面（回复列表 + 输入框），点「回复」按钮可收起/展开**；调 `GET /api/forum/posts/:id/replies` 按时间正序展示回复；已登录可提交回复，未登录显示「请先登录后回复」。顶部导航与 `auth.js` 同其他页面；有「← 返回论坛」链接。
 - **recipe.html**：全部（A-Z）/每周食谱切换；发布评价表单仅登录可见（菜名/评分1-5/评论/图片），图文卡片列表。**默认显示标签优先读账号 `recipe_default_view`，其次 `localStorage.recipeDefaultView`，再回退「全部」**。「每周食谱」标签**不显示评价表单**，改为调 `GET /api/weekly-menu`，每条上方一个**日期（起始-结束）按钮**用于展开/收起大图（不直接展示图片），大图下方左下角另有「收起」按钮（同一功能，均极简黑白风格）；点击大图可打开缩放层（**滚轮缩放、拖动、单击空白处关闭**，白底）；**仅上传者本人或 super_admin 及以上**时图片右上角显示「删除」（二次确认）；无数据显示「暂未上传本周食谱」。
 - **announcements.html**：更新公告。左侧侧边栏列出公告日期 + 标题概览（点击切换），右侧主区域显示选中公告的标题、发布日期与正文；加载时 fetch `/api/announcements` 并默认选中最新一条。
-- **admin.html**：管理后台（仅 developer / super_admin）。左侧菜单「编辑横幅 / 更新公告 / 学生认证审核 / 邀请码设置 / 每周菜谱管理」；编辑横幅读取 `GET /api/settings/banner`，点「确认修改」**先 `confirm()` 二次确认**再 `PUT /api/admin/settings/banner`；另有「取消横幅」按钮（二次确认后将横幅置空，全站不再显示）。更新公告填写标题/内容后 `POST /api/admin/announcements`。学生认证审核列出待审核申请（新生号/班级/真实姓名/提交人/补充信息），每条「通过」调用审核接口并移除。邀请码设置支持**多条邀请码**：输入邀请码与可用次数（0=不限）后「添加」，下方列出已有邀请码及「已用 x / y」并可删除。每周菜谱管理：选第一天与最后一天日期（点整框弹出日历）+ 「选择图片并上传」，**选图后在上传栏内显示大图预览与「确认上传 / 取消」按钮（不单独弹出界面）**，下方按日期倒序列出已上传图片（显示上传者用户名、缩略图点击可放大、可删除并二次确认）。非管理员进入会显示无权限提示。
-- **student_verify.html**：学生认证。加载时查当前角色，若已是 student 或更高则显示「你已认证为学生」并隐藏表单；否则显示表单（新生号/班级/真实姓名/邀请码选填/**补充更多信息选填**，含提示），提交 `POST /api/student/apply` 后提示「认证成功」或「已提交，等待管理员审核」。
+- **admin.html**：管理后台（**进入条件：权重 ≥ super_admin 或拥有任意授予权限**；左侧菜单按 `PANEL_PERMS` 过滤，仅显示有权限的项，并默认激活第一个可用项）。左侧菜单「编辑横幅 / 更新公告 / 学生认证审核 / 邀请码设置 / 每周菜谱管理 / 用户管理 / 申诉处理」；编辑横幅读取 `GET /api/settings/banner`，点「确认修改」**先 `confirm()` 二次确认**再 `PUT /api/admin/settings/banner`；另有「取消横幅」按钮（二次确认后将横幅置空，全站不再显示）。更新公告填写标题/内容后 `POST /api/admin/announcements`。学生认证审核列出待审核申请（新生号/班级/真实姓名/提交人/补充信息），每条有「通过」与「拒绝」：「通过」调审核接口并移除；「拒绝」弹**自定义遮罩层**填写**选填的拒绝原因**后调拒绝接口并移除。邀请码设置支持**多条邀请码**：输入邀请码与可用次数（0=不限）后「添加」，下方列出已有邀请码及「已用 x / y」并可删除。每周菜谱管理：选第一天与最后一天日期（点整框弹出日历）+ 「选择图片并上传」，**选图后在上传栏内显示大图预览与「确认上传 / 取消」按钮（不单独弹出界面）**，下方按日期倒序列出已上传图片（显示上传者用户名、缩略图点击可放大、可删除并二次确认）。**用户管理**：表格列出所有用户（ID/用户名/昵称/角色/状态/操作）；对**非自己且权重低于自己**的用户，角色用下拉框（选项权重 ∈ [user, 自身-1]）选中即调 `PUT /api/admin/users/role`；「权限」按钮弹出**自定义遮罩层**（按 `GET /api/admin/permissions` 目录列出勾选项，默认勾选该用户已有权限），保存调 `PUT /api/admin/users/permissions`；「封号」弹**自定义遮罩层**（封禁理由选填 + 上传图片选填 + 「允许申请解封」默认勾选），确认调 `PUT /api/admin/users/ban`（FormData）；已封禁用户在同位置显示「解封」（二次确认调 unban）；对自己或权重 ≥ 自己的用户不显示任何修改控件。**申诉处理**：列表展示待处理申诉（用户ID/用户名/申诉理由/申诉图片可点击放大），每条「通过 / 驳回」调 `PUT /api/admin/ban-appeals/review` 并刷新。非管理员进入会显示无权限提示。
+- **student_verify.html**：学生认证。加载时查当前角色，若已是 student 或更高则显示「你已认证为学生」并隐藏表单；否则显示表单（新生号/班级/真实姓名/邀请码选填/**补充更多信息选填**，含提示），提交 `POST /api/student/apply` 后提示「认证成功」或「已提交，等待管理员审核」；**表单下方提示「重复提交将覆盖上一次申请；10 分钟内只能提交一次」**，限频时展示后端 429 提示。
 - **profile.html**：个人中心（设置）。左侧菜单栏：可折叠的「设置」→ 子项 **个人资料 / 账号安全 / 网站设置**；底部「退出登录」。
   - 个人资料：用户名（只读）、头像、昵称、个性签名（除用户名外均可改）。
   - 账号安全：修改密码。
@@ -343,6 +397,28 @@ CREATE INDEX idx_student_applications_user ON student_applications(user_id);
     - `admin.html` 上传改为**上传栏内预览 + 「确认上传 / 取消」**（不再单独弹窗），预览图白底；上传列表显示上传者用户名。
     - `recipe.html`「每周食谱」每条改为**上方日期（起始-结束）按钮**展开/收起大图（不直接显示图片），**大图下方左下角另加「收起」按钮**，日期与收起均极简黑白风格；大图白底、点击打开缩放层（滚轮缩放/拖动/点空白关闭）。
     - `GET /api/weekly-menu` 关联 `users` 返回上传者 `username`；`PUT /api/user/settings` 校验 `recipe_default_view`（`all`/`weekly`）。
+27. **账号系统升级（展示ID / 权限 / 封禁 / 申诉，后端）**：
+    - `users` 新增 `display_id`（唯一，= 主键 id 的字符串）并**批量回填旧用户**；注册自动生成；`GET /api/user/profile` 返回。
+    - 管理后台入口收紧：`auth.js` 的「管理后台」按钮改为**仅权重 ≥ super_admin(5)** 显示，`admin` 不再显示。
+    - `users` 新增 `status`（默认 `active`，可为 `banned`）、`ban_reason`、`ban_image`、`allow_appeal`（默认 1）。
+    - 新增用户管理接口：`GET /api/admin/users`、`PUT /api/admin/users/role`（不能改自己/同级以上，新角色权重 ≤ 自身 - 1 且 ≥ user）、`PUT /api/admin/users/ban`（multer 存 `uploads/bans/`）、`PUT /api/admin/users/unban`。
+    - `POST /api/login` 对被封用户返回 403 并带 `ban_reason`、`allow_appeal`。
+    - 新增 `ban_appeals` 表与申诉接口：`POST /api/user/appeal`（公开）、`GET /api/admin/ban-appeals`、`PUT /api/admin/ban-appeals/review`（approve=解封 / reject）。
+28. **账号系统升级（前端界面）**：
+    - `admin.html` 新增「用户管理」「申诉处理」两个菜单与面板：用户表格 + 角色下拉（选中即改）+ 自定义遮罩层封号（理由/图片/允许申诉）+ 解封二次确认；对自己或权限 ≥ 自己者隐藏所有修改控件。
+    - `login.html` 处理封禁：显示封禁理由；允许申诉时展开内嵌申诉表单（理由 + 选填图片，转 DataURL）提交 `POST /api/user/appeal`；不允许时提示线下联系超级管理员。
+    - 管理后台入口与页面访问均限定权限 ≥ super_admin（developer / super_admin）。
+29. **提交限频与覆盖**：学生认证（`POST /api/student/apply`）与申请解封（`POST /api/user/appeal`）均改为**同一用户 10 分钟内只能提交一次**（不足 10 分钟返回 429），且**允许提交时先删除该用户旧记录再写入（覆盖上一次）**，避免管理端出现重复申请。`student_verify.html` 与 `login.html`（申诉表单）均新增提示「重复提交将覆盖上一次申请；10 分钟内只能提交一次。」，并展示后端返回的限频提示。
+30. **合并「关于我们」到首页**：将原 `about.html` 的正文（关于我们 / 发起原因 / 联系方式）并入 `index.html` 的 `<main>`（`.main` 改为 `min-height` 以免内容被裁切），删除 `about.html`；`auth.js` Logo 下拉的「关于我们」改指向 `index.html`。
+31. **导航栏精简与 Logo 交互**：删除全部页面的「首页」导航按钮（共 10 个 HTML）；Logo 下拉仅保留「更新公告」（移除「关于我们」）；Logo 增加悬停下划线，点击 Logo 跳转 `index.html`（下拉内部链接除外）。
+32. **更新公告上移到顶部导航**：把「更新公告」从 Logo 下拉移到顶部导航（各页导航变为 校园地图 / 论坛 / 菜谱评价 / 更新公告）；Logo 彻底取消下拉菜单（移除 caret/menu 相关 CSS/JS），仅保留悬停下划线与点击回首页。
+33. **论坛点赞**：新增 `post_likes` 表（`UNIQUE(post_id,user_id)`）；`GET /api/forum/posts` 改为 `checkRole()` 放行并附带 `like_count`、`is_liked`；新增 `POST /api/forum/posts/:id/like`（已赞返回 400「已点赞」）与 `DELETE /api/forum/posts/:id/like`；删帖时级联清理点赞。`forum.html` 每条帖子底部加「点赞（n）」按钮，`is_liked` 时高亮，点击按状态切换点赞/取消并本地更新计数（未登录提示「请先登录」且不发请求）。
+34. **论坛详情页**：新增 `GET /api/forum/posts/:id`（含 `like_count`、`is_liked`，不存在 404）；`forum.html` 帖子**卡片整体可点击**（标题/正文/空白处）跳 `post.html?id=<id>`（点赞、回复、回复框、右键菜单等交互区不触发）；新建 `post.html` 详情页（正文 + 点赞；**进入默认展开回复界面**，可用「回复」按钮收起/展开）。
+35. **修复点赞状态丢失**：`forum.html` 列表与 `post.html` 详情的 GET 请求此前未带 token，导致服务端始终返回 `is_liked:false`（离开再返回后点赞不高亮、且再点因「已点赞」400 无法取消）。现两处请求均在已登录时附带 `Authorization` 头，点赞高亮与取消恢复正常。
+36. **学生认证拒绝 + 清理遗留申请**：`student_applications` 新增 `reject_reason`（自动迁移）；新增 `PUT /api/admin/student-applications/reject`（body `{ id, reason? }`，状态改 `rejected` 并记录原因，不改角色）；`admin.html` 审核项新增「拒绝」按钮 + 自定义遮罩层填选填原因。同时**清空历史遗留的学生认证申请**（11 条测试数据）并重置其自增序列。
+37. **用户主键去空号**：将现存用户按顺序重排主键（`test2: 13 → 3`），同步更新所有 `user_id` 引用表，重置 `sqlite_sequence`，使 `users` 为连续的 1/2/3。
+38. **特殊权限系统**：新增 `user_permissions` 表与 `requirePermission(perm)` 中间件（判定=角色权重达标 **或** 显式授权）。9 个管理接口改用细粒度权限（公告/横幅/邀请码/学生审核/用户管理/申诉 → super_admin；菜谱上传/地图弹窗 → admin）。`GET /api/me`、`GET /api/user/profile` 返回 `permissions`；`GET /api/admin/users` 附带每人 `permissions`；新增 `GET /api/admin/permissions` 与 `PUT /api/admin/users/permissions`（不能改自己或 ≥ 自己的人）。`admin.html` 菜单按权限过滤、用户管理新增「权限」勾选弹窗；`auth.js` 有任意授予权限即可显示「管理后台」入口；`map.html` 授予 `map_popup_edit` 即可编辑弹窗。
+39. **文档**：新增 `README.md`（面向 GitHub 的项目说明）；`progress.md` 同步目录结构与最新功能。
 
 ---
 

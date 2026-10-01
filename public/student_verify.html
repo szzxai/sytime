@@ -145,10 +145,10 @@
     <div class="logo">校园信息网</div>
     <div class="header-right">
       <nav class="nav">
-        <a href="index.html">首页</a>
         <a href="map.html">校园地图</a>
         <a href="forum.html">论坛</a>
         <a href="recipe.html">菜谱评价</a>
+        <a href="announcements.html">更新公告</a>
       </nav>
       <div class="auth" id="authArea">
         <a class="btn" href="login.html">登录</a>
@@ -191,6 +191,7 @@
             <div class="hint">补充更多信息可提高通过率</div>
           </div>
           <button type="submit" class="submit" id="submitBtn">提交认证</button>
+          <div class="hint">重复提交将覆盖上一次申请；10 分钟内只能提交一次。</div>
           <div class="msg" id="msg"></div>
         </form>
       </div>
@@ -261,12 +262,12 @@
       })
         .then(function (res) {
           if (handleStatus(res.status)) throw new Error("unauthorized");
-          return res.json().then(function (data) { return { ok: res.ok, data: data }; });
+          return res.json().then(function (data) { return { ok: res.ok, status: res.status, data: data }; });
         })
         .then(function (r) {
           if (!r.ok) {
             msg.className = "msg error";
-            msg.textContent = r.data.error === "login required" ? "请先登录" : (r.data.error || "提交失败");
+            msg.textContent = r.data.message || (r.data.error === "login required" ? "请先登录" : (r.data.error || "提交失败"));
             submit.disabled = false;
             return;
           }

@@ -48,16 +48,7 @@
       ".header-expand{position:fixed;top:var(--banner-h,0px);display:none;}" +
       "body.nav-collapsed .header-expand{display:flex;}" +
       ".logo{position:relative;cursor:pointer;user-select:none;}" +
-      ".logo-caret{display:inline-block;width:0;height:0;margin-left:6px;vertical-align:middle;" +
-      "border-left:5px solid transparent;border-right:5px solid transparent;border-top:6px solid #000000;}" +
-      ".logo-menu{position:absolute;top:100%;left:0;min-width:150px;background:#ffffff;" +
-      "border:2px solid #000000;display:none;flex-direction:column;z-index:2000;}" +
-      ".logo.open .logo-menu{display:flex;}" +
-      ".logo-menu a{color:#000000;text-decoration:none;padding:10px 16px;font-size:14px;" +
-      "border-bottom:1px solid #eeeeee;white-space:nowrap;}" +
-      ".logo-menu a:last-child{border-bottom:none;}" +
-      ".logo-menu a:hover{background:#000000;color:#ffffff;}" +
-      ".header.logo-open{overflow:visible;}";
+      ".logo:hover{text-decoration:underline;}";
     document.head.appendChild(style);
   }
 
@@ -95,49 +86,9 @@
 
   function setupLogoMenu() {
     var logo = document.querySelector(".logo");
-    if (!logo || logo.querySelector(".logo-menu")) return;
-
-    var caret = document.createElement("span");
-    caret.className = "logo-caret";
-    logo.appendChild(caret);
-
-    var menu = document.createElement("div");
-    menu.className = "logo-menu";
-    menu.innerHTML = '<a href="announcements.html">更新公告</a><a href="about.html">关于我们</a>';
-    logo.appendChild(menu);
-
-    logo.setAttribute("role", "button");
-    logo.setAttribute("tabindex", "0");
-
-    var header = logo.closest ? logo.closest(".header") : null;
-
-    function open() {
-      logo.classList.add("open");
-      if (header) header.classList.add("logo-open");
-    }
-    function close() {
-      logo.classList.remove("open");
-      if (header) header.classList.remove("logo-open");
-    }
-    function toggle() {
-      if (logo.classList.contains("open")) close(); else open();
-    }
-
-    logo.addEventListener("mouseenter", open);
-    logo.addEventListener("mouseleave", close);
-    logo.addEventListener("click", function (e) {
-      if (e.target.closest && e.target.closest(".logo-menu")) return;
-      e.preventDefault();
-      toggle();
-    });
-    logo.addEventListener("keydown", function (e) {
-      if (e.key === "Enter" || e.key === " ") {
-        e.preventDefault();
-        toggle();
-      }
-    });
-    document.addEventListener("click", function (e) {
-      if (!logo.contains(e.target)) close();
+    if (!logo) return;
+    logo.addEventListener("click", function () {
+      location.href = "index.html";
     });
   }
 
@@ -146,7 +97,10 @@
   }
 
   function adminLink(user) {
-    if (user && (user.role === "developer" || user.role === "super_admin")) {
+    if (!user) return "";
+    var weight = ROLE_WEIGHTS[user.role] || 0;
+    var hasPerms = user.permissions && user.permissions.length > 0;
+    if (weight >= ROLE_WEIGHTS.super_admin || hasPerms) {
       return '<a class="btn" href="admin.html">管理后台</a>';
     }
     return "";

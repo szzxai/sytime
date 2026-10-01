@@ -20,6 +20,7 @@ const db = new DatabaseSync(DB_PATH);
 db.exec(`
 CREATE TABLE IF NOT EXISTS users (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
+  display_id TEXT UNIQUE,
   email TEXT UNIQUE,
   password_hash TEXT,
   username TEXT UNIQUE,
@@ -30,6 +31,10 @@ CREATE TABLE IF NOT EXISTS users (
   default_page TEXT NOT NULL DEFAULT 'index.html',
   default_floor INTEGER NOT NULL DEFAULT 1,
   recipe_default_view TEXT NOT NULL DEFAULT 'all',
+  status TEXT NOT NULL DEFAULT 'active',
+  ban_reason TEXT NOT NULL DEFAULT '',
+  ban_image TEXT NOT NULL DEFAULT '',
+  allow_appeal INTEGER NOT NULL DEFAULT 1,
   created_at INTEGER NOT NULL DEFAULT (strftime('%s','now'))
 );
 `);
@@ -41,6 +46,7 @@ CREATE TABLE IF NOT EXISTS users (
   db.exec(`
     CREATE TABLE users (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
+      display_id TEXT UNIQUE,
       email TEXT UNIQUE,
       password_hash TEXT,
       username TEXT UNIQUE,
@@ -51,6 +57,10 @@ CREATE TABLE IF NOT EXISTS users (
       default_page TEXT NOT NULL DEFAULT 'index.html',
       default_floor INTEGER NOT NULL DEFAULT 1,
       recipe_default_view TEXT NOT NULL DEFAULT 'all',
+      status TEXT NOT NULL DEFAULT 'active',
+      ban_reason TEXT NOT NULL DEFAULT '',
+      ban_image TEXT NOT NULL DEFAULT '',
+      allow_appeal INTEGER NOT NULL DEFAULT 1,
       created_at INTEGER NOT NULL DEFAULT (strftime('%s','now'))
     );
   `);
@@ -72,6 +82,22 @@ CREATE TABLE IF NOT EXISTS users (
   if (cols.indexOf("recipe_default_view") === -1) {
     db.exec("ALTER TABLE users ADD COLUMN recipe_default_view TEXT NOT NULL DEFAULT 'all'");
   }
+  if (cols.indexOf("display_id") === -1) {
+    db.exec("ALTER TABLE users ADD COLUMN display_id TEXT");
+  }
+  if (cols.indexOf("status") === -1) {
+    db.exec("ALTER TABLE users ADD COLUMN status TEXT NOT NULL DEFAULT 'active'");
+  }
+  if (cols.indexOf("ban_reason") === -1) {
+    db.exec("ALTER TABLE users ADD COLUMN ban_reason TEXT NOT NULL DEFAULT ''");
+  }
+  if (cols.indexOf("ban_image") === -1) {
+    db.exec("ALTER TABLE users ADD COLUMN ban_image TEXT NOT NULL DEFAULT ''");
+  }
+  if (cols.indexOf("allow_appeal") === -1) {
+    db.exec("ALTER TABLE users ADD COLUMN allow_appeal INTEGER NOT NULL DEFAULT 1");
+  }
+  db.exec("UPDATE users SET display_id = CAST(id AS TEXT) WHERE display_id IS NULL OR display_id = ''");
 })();
 
 db.exec("DROP TABLE IF EXISTS verify_codes;");
@@ -111,6 +137,26 @@ CREATE TABLE IF NOT EXISTS forum_replies (
 
 CREATE INDEX IF NOT EXISTS idx_forum_category ON forum_posts(category);
 CREATE INDEX IF NOT EXISTS idx_forum_replies_post ON forum_replies(post_id);
+
+CREATE TABLE IF NOT EXISTS post_likes (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  post_id INTEGER NOT NULL,
+  user_id INTEGER NOT NULL,
+  created_at INTEGER NOT NULL DEFAULT (strftime('%s','now')),
+  UNIQUE (post_id, user_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_post_likes_post ON post_likes(post_id);
+
+CREATE TABLE IF NOT EXISTS user_permissions (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL,
+  permission TEXT NOT NULL,
+  created_at INTEGER NOT NULL DEFAULT (strftime('%s','now')),
+  UNIQUE (user_id, permission)
+);
+
+CREATE INDEX IF NOT EXISTS idx_user_permissions_user ON user_permissions(user_id);
 CREATE INDEX IF NOT EXISTS idx_recipes_weekly ON recipes(is_weekly);
 
 CREATE TABLE IF NOT EXISTS announcements (
@@ -138,6 +184,7 @@ CREATE TABLE IF NOT EXISTS student_applications (
   class_name TEXT NOT NULL,
   real_name TEXT NOT NULL,
   extra_info TEXT,
+  reject_reason TEXT,
   status TEXT NOT NULL DEFAULT 'pending',
   created_at INTEGER NOT NULL DEFAULT (strftime('%s','now'))
 );
@@ -162,6 +209,18 @@ CREATE TABLE IF NOT EXISTS weekly_menu_images (
 );
 
 CREATE INDEX IF NOT EXISTS idx_weekly_menu_dates ON weekly_menu_images(menu_start_date, menu_end_date);
+
+CREATE TABLE IF NOT EXISTS ban_appeals (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL,
+  appeal_reason TEXT NOT NULL,
+  appeal_image TEXT NOT NULL DEFAULT '',
+  status TEXT NOT NULL DEFAULT 'pending',
+  created_at INTEGER NOT NULL DEFAULT (strftime('%s','now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_ban_appeals_status ON ban_appeals(status);
+CREATE INDEX IF NOT EXISTS idx_ban_appeals_user ON ban_appeals(user_id);
 `);
 
 (function migrateInviteCode() {
@@ -176,6 +235,9 @@ CREATE INDEX IF NOT EXISTS idx_weekly_menu_dates ON weekly_menu_images(menu_star
   const cols = db.prepare("PRAGMA table_info(student_applications)").all().map(function (c) { return c.name; });
   if (cols.indexOf("extra_info") === -1) {
     db.exec("ALTER TABLE student_applications ADD COLUMN extra_info TEXT");
+  }
+  if (cols.indexOf("reject_reason") === -1) {
+    db.exec("ALTER TABLE student_applications ADD COLUMN reject_reason TEXT");
   }
 })();
 
@@ -238,6 +300,31 @@ const weeklyUpload = multer({
 
 const ROLE_WEIGHTS = { developer: 6, super_admin: 5, admin: 4, student: 3, user: 2, guest: 1 };
 
+const BANS_DIR = path.join(UPLOAD_DIR, "bans");
+if (!fs.existsSync(BANS_DIR)) {
+  fs.mkdirSync(BANS_DIR);
+}
+
+const banUpload = multer({
+  storage: multer.diskStorage({
+    destination: function (req, file, cb) {
+      cb(null, BANS_DIR);
+    },
+    filename: function (req, file, cb) {
+      const ext = path.extname(file.originalname).toLowerCase();
+      cb(null, Date.now() + "-" + Math.round(Math.random() * 1e9) + ext);
+    }
+  }),
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: function (req, file, cb) {
+    if (file.mimetype === "image/jpeg" || file.mimetype === "image/png") {
+      cb(null, true);
+    } else {
+      cb(new Error("only jpg/png images are allowed"));
+    }
+  }
+});
+
 function checkRole(requiredRole) {
   return function (req, res, next) {
     req.user = { id: null, role: "guest", username: null };
@@ -284,8 +371,61 @@ function requireLogin(req, res, next) {
   });
 }
 
+const PERMISSIONS = {
+  banner_edit: "编辑横幅",
+  announcement_publish: "发布更新公告",
+  student_review: "学生认证审核",
+  invite_manage: "邀请码管理",
+  weekly_menu_upload: "每周菜谱上传",
+  map_popup_edit: "地图弹窗编辑",
+  user_manage: "用户管理",
+  ban_appeal_review: "申诉处理"
+};
+
+const PERMISSION_REQUIRES = {
+  banner_edit: "super_admin",
+  announcement_publish: "super_admin",
+  student_review: "super_admin",
+  invite_manage: "super_admin",
+  user_manage: "super_admin",
+  ban_appeal_review: "super_admin",
+  weekly_menu_upload: "admin",
+  map_popup_edit: "admin"
+};
+
+function userPermissionList(userId) {
+  return db
+    .prepare("SELECT permission FROM user_permissions WHERE user_id = ?")
+    .all(userId)
+    .map(function (row) { return row.permission; });
+}
+
+function hasPermission(req, perm) {
+  if (!req.user || req.user.id === null || req.user.id === undefined) return false;
+  const needed = ROLE_WEIGHTS[PERMISSION_REQUIRES[perm]] || 0;
+  if ((ROLE_WEIGHTS[req.user.role] || 0) >= needed) return true;
+  const row = db.prepare("SELECT id FROM user_permissions WHERE user_id = ? AND permission = ?").get(req.user.id, perm);
+  return !!row;
+}
+
+function requirePermission(perm) {
+  return function (req, res, next) {
+    checkRole()(req, res, function () {
+      if (!req.user || req.user.id === null || req.user.id === undefined) {
+        res.status(401).json({ error: "login required" });
+        return;
+      }
+      if (!hasPermission(req, perm)) {
+        res.status(403).json({ error: "forbidden" });
+        return;
+      }
+      next();
+    });
+  };
+}
+
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: "8mb" }));
 app.use(express.static(path.join(__dirname, "public")));
 app.use("/uploads", express.static(UPLOAD_DIR));
 
@@ -309,8 +449,12 @@ app.post("/api/register", function (req, res) {
   const info = db
     .prepare("INSERT INTO users (username, nickname, password_hash, role, avatar_url) VALUES (?, ?, ?, ?, '')")
     .run(username, nickname, passwordHash, role);
+  const newId = Number(info.lastInsertRowid);
+  const displayId = String(newId);
+  db.prepare("UPDATE users SET display_id = ? WHERE id = ?").run(displayId, newId);
   res.status(201).json({
-    id: Number(info.lastInsertRowid),
+    id: newId,
+    display_id: displayId,
     username: username,
     nickname: nickname,
     role: role
@@ -330,6 +474,14 @@ app.post("/api/login", function (req, res) {
     res.status(401).json({ error: "invalid username or password" });
     return;
   }
+  if (user.status === "banned") {
+    res.status(403).json({
+      error: "banned",
+      ban_reason: user.ban_reason || "",
+      allow_appeal: Number(user.allow_appeal) === 1 ? 1 : 0
+    });
+    return;
+  }
   const token = jwt.sign({ id: user.id, role: user.role, username: user.username }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
   res.json({
     token: token,
@@ -338,14 +490,15 @@ app.post("/api/login", function (req, res) {
 });
 
 app.get("/api/me", checkRole(), function (req, res) {
-  res.json({ user: req.user });
+  const perms = req.user && req.user.id !== null && req.user.id !== undefined ? userPermissionList(req.user.id) : [];
+  res.json({ user: Object.assign({}, req.user, { permissions: perms }) });
 });
 
 app.get("/api/admin/ping", checkRole("super_admin"), function (req, res) {
   res.json({ ok: true, user: req.user });
 });
 
-app.post("/api/admin/announcements", checkRole("super_admin"), function (req, res) {
+app.post("/api/admin/announcements", requirePermission("announcement_publish"), function (req, res) {
   const body = req.body || {};
   const title = body.title;
   const content = body.content;
@@ -377,7 +530,7 @@ app.get("/api/settings/banner", function (req, res) {
   });
 });
 
-app.put("/api/admin/settings/banner", checkRole("super_admin"), function (req, res) {
+app.put("/api/admin/settings/banner", requirePermission("banner_edit"), function (req, res) {
   const body = req.body || {};
   let value = null;
   if (body.value !== undefined) value = body.value;
@@ -429,17 +582,31 @@ app.post("/api/student/apply", requireLogin, function (req, res) {
     return;
   }
 
+  const now = Math.floor(Date.now() / 1000);
+  const lastApplication = db
+    .prepare("SELECT created_at FROM student_applications WHERE user_id = ? ORDER BY created_at DESC, id DESC LIMIT 1")
+    .get(req.user.id);
+  if (lastApplication && now - Number(lastApplication.created_at) < 600) {
+    res.status(429).json({
+      error: "rate_limited",
+      message: "10 分钟内只能提交一次，请稍后再试",
+      retry_after: 600 - (now - Number(lastApplication.created_at))
+    });
+    return;
+  }
+
+  db.prepare("DELETE FROM student_applications WHERE user_id = ?").run(req.user.id);
   db.prepare("INSERT INTO student_applications (user_id, student_id, class_name, real_name, extra_info, status) VALUES (?, ?, ?, ?, ?, 'pending')")
     .run(req.user.id, studentId, className, realName, extraInfo);
   res.json({ status: "pending" });
 });
 
-app.get("/api/admin/settings/invite-code", checkRole("super_admin"), function (req, res) {
+app.get("/api/admin/settings/invite-code", requirePermission("invite_manage"), function (req, res) {
   const row = db.prepare("SELECT value FROM settings WHERE key = 'student_invite_code'").get();
   res.json({ invite_code: row && row.value ? row.value : "" });
 });
 
-app.put("/api/admin/settings/invite-code", checkRole("super_admin"), function (req, res) {
+app.put("/api/admin/settings/invite-code", requirePermission("invite_manage"), function (req, res) {
   const body = req.body || {};
   let value = null;
   if (body.invite_code !== undefined) value = body.invite_code;
@@ -453,12 +620,12 @@ app.put("/api/admin/settings/invite-code", checkRole("super_admin"), function (r
   res.json({ invite_code: value });
 });
 
-app.get("/api/admin/invite-codes", checkRole("super_admin"), function (req, res) {
+app.get("/api/admin/invite-codes", requirePermission("invite_manage"), function (req, res) {
   const rows = db.prepare("SELECT * FROM invite_codes ORDER BY created_at DESC, id DESC").all();
   res.json({ invite_codes: rows });
 });
 
-app.post("/api/admin/invite-codes", checkRole("super_admin"), function (req, res) {
+app.post("/api/admin/invite-codes", requirePermission("invite_manage"), function (req, res) {
   const body = req.body || {};
   const code = body.code === undefined || body.code === null ? "" : String(body.code).trim();
   let maxUses = parseInt(body.max_uses, 10);
@@ -477,7 +644,7 @@ app.post("/api/admin/invite-codes", checkRole("super_admin"), function (req, res
   res.status(201).json({ invite_code: row });
 });
 
-app.delete("/api/admin/invite-codes/:id", checkRole("super_admin"), function (req, res) {
+app.delete("/api/admin/invite-codes/:id", requirePermission("invite_manage"), function (req, res) {
   const id = parseInt(req.params.id, 10);
   if (isNaN(id)) {
     res.status(400).json({ error: "invalid id" });
@@ -487,7 +654,7 @@ app.delete("/api/admin/invite-codes/:id", checkRole("super_admin"), function (re
   res.json({ deleted: info.changes });
 });
 
-app.get("/api/admin/student-applications", checkRole("super_admin"), function (req, res) {
+app.get("/api/admin/student-applications", requirePermission("student_review"), function (req, res) {
   const rows = db
     .prepare(
       "SELECT a.*, u.username FROM student_applications a LEFT JOIN users u ON u.id = a.user_id WHERE a.status = 'pending' ORDER BY a.created_at DESC, a.id DESC"
@@ -496,7 +663,7 @@ app.get("/api/admin/student-applications", checkRole("super_admin"), function (r
   res.json({ applications: rows });
 });
 
-app.put("/api/admin/student-applications/approve", checkRole("super_admin"), function (req, res) {
+app.put("/api/admin/student-applications/approve", requirePermission("student_review"), function (req, res) {
   const id = parseInt((req.body || {}).id, 10);
   if (isNaN(id)) {
     res.status(400).json({ error: "id is required" });
@@ -515,15 +682,230 @@ app.put("/api/admin/student-applications/approve", checkRole("super_admin"), fun
   res.json({ ok: true });
 });
 
+app.put("/api/admin/student-applications/reject", requirePermission("student_review"), function (req, res) {
+  const body = req.body || {};
+  const id = parseInt(body.id, 10);
+  if (isNaN(id)) {
+    res.status(400).json({ error: "id is required" });
+    return;
+  }
+  const application = db.prepare("SELECT * FROM student_applications WHERE id = ?").get(id);
+  if (!application) {
+    res.status(404).json({ error: "application not found" });
+    return;
+  }
+  const reason = body.reason === undefined || body.reason === null ? "" : String(body.reason);
+  db.prepare("UPDATE student_applications SET status = 'rejected', reject_reason = ? WHERE id = ?").run(reason, id);
+  res.json({ ok: true });
+});
+
+app.get("/api/admin/users", requirePermission("user_manage"), function (req, res) {
+  const rows = db
+    .prepare("SELECT id, display_id, username, nickname, role, status FROM users ORDER BY id ASC")
+    .all();
+  const users = rows.map(function (u) {
+    return Object.assign({}, u, { permissions: userPermissionList(u.id) });
+  });
+  res.json({ users: users });
+});
+
+app.get("/api/admin/permissions", requirePermission("user_manage"), function (req, res) {
+  const list = Object.keys(PERMISSIONS).map(function (key) {
+    return { key: key, label: PERMISSIONS[key] };
+  });
+  res.json({ permissions: list });
+});
+
+app.put("/api/admin/users/role", requirePermission("user_manage"), function (req, res) {
+  const body = req.body || {};
+  const userId = parseInt(body.userId, 10);
+  const newRole = body.newRole;
+  if (isNaN(userId) || !newRole || ROLE_WEIGHTS[newRole] === undefined || newRole === "guest") {
+    res.status(400).json({ error: "userId and a valid newRole are required" });
+    return;
+  }
+  const selfWeight = ROLE_WEIGHTS[req.user.role] || 0;
+  if (userId === req.user.id) {
+    res.status(403).json({ error: "cannot change your own role" });
+    return;
+  }
+  const target = db.prepare("SELECT id, role FROM users WHERE id = ?").get(userId);
+  if (!target) {
+    res.status(404).json({ error: "user not found" });
+    return;
+  }
+  const targetWeight = ROLE_WEIGHTS[target.role] || 0;
+  if (targetWeight >= selfWeight) {
+    res.status(403).json({ error: "cannot modify a user with equal or higher role" });
+    return;
+  }
+  const newWeight = ROLE_WEIGHTS[newRole];
+  if (newWeight < ROLE_WEIGHTS.user || newWeight > selfWeight - 1) {
+    res.status(403).json({ error: "new role out of allowed range" });
+    return;
+  }
+  db.prepare("UPDATE users SET role = ? WHERE id = ?").run(newRole, userId);
+  res.json({ ok: true, id: userId, role: newRole });
+});
+
+app.put("/api/admin/users/ban", requirePermission("user_manage"), function (req, res) {
+  banUpload.single("ban_image")(req, res, function (err) {
+    if (err) {
+      res.status(400).json({ error: err.message });
+      return;
+    }
+    const body = req.body || {};
+    const userId = parseInt(body.userId, 10);
+    if (isNaN(userId)) {
+      res.status(400).json({ error: "userId is required" });
+      return;
+    }
+    const selfWeight = ROLE_WEIGHTS[req.user.role] || 0;
+    if (userId === req.user.id) {
+      res.status(403).json({ error: "cannot ban yourself" });
+      return;
+    }
+    const target = db.prepare("SELECT id, role FROM users WHERE id = ?").get(userId);
+    if (!target) {
+      res.status(404).json({ error: "user not found" });
+      return;
+    }
+    if ((ROLE_WEIGHTS[target.role] || 0) >= selfWeight) {
+      res.status(403).json({ error: "cannot ban a user with equal or higher role" });
+      return;
+    }
+    const banReason = body.ban_reason === undefined || body.ban_reason === null ? "" : String(body.ban_reason);
+    let allowAppeal = 1;
+    if (body.allow_appeal !== undefined) {
+      allowAppeal = body.allow_appeal === "0" || body.allow_appeal === 0 || body.allow_appeal === false ? 0 : 1;
+    }
+    const banImage = req.file ? "/uploads/bans/" + req.file.filename : body.ban_image ? String(body.ban_image) : "";
+    db.prepare("UPDATE users SET status = 'banned', ban_reason = ?, ban_image = ?, allow_appeal = ? WHERE id = ?")
+      .run(banReason, banImage, allowAppeal, userId);
+    res.json({ ok: true, id: userId, status: "banned", ban_reason: banReason, ban_image: banImage, allow_appeal: allowAppeal });
+  });
+});
+
+app.put("/api/admin/users/unban", requirePermission("user_manage"), function (req, res) {
+  const userId = parseInt((req.body || {}).userId, 10);
+  if (isNaN(userId)) {
+    res.status(400).json({ error: "userId is required" });
+    return;
+  }
+  const target = db.prepare("SELECT id FROM users WHERE id = ?").get(userId);
+  if (!target) {
+    res.status(404).json({ error: "user not found" });
+    return;
+  }
+  db.prepare("UPDATE users SET status = 'active', ban_reason = '', ban_image = '', allow_appeal = 1 WHERE id = ?").run(userId);
+  res.json({ ok: true, id: userId, status: "active" });
+});
+
+app.put("/api/admin/users/permissions", requirePermission("user_manage"), function (req, res) {
+  const body = req.body || {};
+  const userId = parseInt(body.userId, 10);
+  if (isNaN(userId)) {
+    res.status(400).json({ error: "userId is required" });
+    return;
+  }
+  const selfWeight = ROLE_WEIGHTS[req.user.role] || 0;
+  const target = db.prepare("SELECT id, role FROM users WHERE id = ?").get(userId);
+  if (!target) {
+    res.status(404).json({ error: "user not found" });
+    return;
+  }
+  if (userId === req.user.id || (ROLE_WEIGHTS[target.role] || 0) >= selfWeight) {
+    res.status(403).json({ error: "cannot modify this user" });
+    return;
+  }
+  let perms = body.permissions;
+  if (!Array.isArray(perms)) perms = [];
+  perms = perms.filter(function (p) { return Object.prototype.hasOwnProperty.call(PERMISSIONS, p); });
+  db.prepare("DELETE FROM user_permissions WHERE user_id = ?").run(userId);
+  const stmt = db.prepare("INSERT OR IGNORE INTO user_permissions (user_id, permission) VALUES (?, ?)");
+  perms.forEach(function (p) { stmt.run(userId, p); });
+  res.json({ ok: true, permissions: userPermissionList(userId) });
+});
+
+app.post("/api/user/appeal", function (req, res) {
+  const body = req.body || {};
+  const username = body.username;
+  const appealReason = body.appeal_reason;
+  const appealImage = body.appeal_image ? String(body.appeal_image) : "";
+  if (!username || !appealReason) {
+    res.status(400).json({ error: "username and appeal_reason are required" });
+    return;
+  }
+  const user = db.prepare("SELECT id, status FROM users WHERE username = ?").get(username);
+  if (!user) {
+    res.status(404).json({ error: "user not found" });
+    return;
+  }
+  if (user.status !== "banned") {
+    res.status(400).json({ error: "user is not banned" });
+    return;
+  }
+  const now = Math.floor(Date.now() / 1000);
+  const lastAppeal = db
+    .prepare("SELECT created_at FROM ban_appeals WHERE user_id = ? ORDER BY created_at DESC, id DESC LIMIT 1")
+    .get(user.id);
+  if (lastAppeal && now - Number(lastAppeal.created_at) < 600) {
+    res.status(429).json({
+      error: "rate_limited",
+      message: "10 分钟内只能提交一次，请稍后再试",
+      retry_after: 600 - (now - Number(lastAppeal.created_at))
+    });
+    return;
+  }
+
+  db.prepare("DELETE FROM ban_appeals WHERE user_id = ?").run(user.id);
+  const info = db
+    .prepare("INSERT INTO ban_appeals (user_id, appeal_reason, appeal_image, status) VALUES (?, ?, ?, 'pending')")
+    .run(user.id, String(appealReason), appealImage);
+  res.status(201).json({ id: Number(info.lastInsertRowid), status: "pending" });
+});
+
+app.get("/api/admin/ban-appeals", requirePermission("ban_appeal_review"), function (req, res) {
+  const rows = db
+    .prepare(
+      "SELECT a.*, u.username, u.display_id FROM ban_appeals a LEFT JOIN users u ON u.id = a.user_id WHERE a.status = 'pending' ORDER BY a.created_at DESC, a.id DESC"
+    )
+    .all();
+  res.json({ appeals: rows });
+});
+
+app.put("/api/admin/ban-appeals/review", requirePermission("ban_appeal_review"), function (req, res) {
+  const body = req.body || {};
+  const appealId = parseInt(body.appealId, 10);
+  const action = body.action;
+  if (isNaN(appealId) || (action !== "approve" && action !== "reject")) {
+    res.status(400).json({ error: "appealId and action (approve/reject) are required" });
+    return;
+  }
+  const appeal = db.prepare("SELECT * FROM ban_appeals WHERE id = ?").get(appealId);
+  if (!appeal) {
+    res.status(404).json({ error: "appeal not found" });
+    return;
+  }
+  if (action === "approve") {
+    db.prepare("UPDATE ban_appeals SET status = 'approved' WHERE id = ?").run(appealId);
+    db.prepare("UPDATE users SET status = 'active', ban_reason = '', ban_image = '', allow_appeal = 1 WHERE id = ?").run(appeal.user_id);
+    res.json({ ok: true, status: "approved" });
+    return;
+  }
+  db.prepare("UPDATE ban_appeals SET status = 'rejected' WHERE id = ?").run(appealId);
+  res.json({ ok: true, status: "rejected" });
+});
+
 app.get("/api/user/profile", requireLogin, function (req, res) {
   const user = db
-    .prepare("SELECT id, username, nickname, avatar_url, signature, role, default_page, default_floor, recipe_default_view FROM users WHERE id = ?")
+    .prepare("SELECT id, display_id, username, nickname, avatar_url, signature, role, default_page, default_floor, recipe_default_view, status FROM users WHERE id = ?")
     .get(req.user.id);
   if (!user) {
     res.status(404).json({ error: "user not found" });
     return;
   }
-  res.json({ user: user });
+  res.json({ user: Object.assign({}, user, { permissions: userPermissionList(req.user.id) }) });
 });
 
 app.put("/api/user/settings", requireLogin, function (req, res) {
@@ -592,17 +974,48 @@ app.put("/api/user/password", requireLogin, function (req, res) {
   res.json({ ok: true });
 });
 
-app.get("/api/forum/posts", function (req, res) {
+app.get("/api/forum/posts", checkRole(), function (req, res) {
   const category = req.query.category;
   const base =
-    "SELECT p.*, (SELECT COUNT(*) FROM forum_replies r WHERE r.post_id = p.id) AS reply_count FROM forum_posts p";
+    "SELECT p.*, (SELECT COUNT(*) FROM forum_replies r WHERE r.post_id = p.id) AS reply_count, (SELECT COUNT(*) FROM post_likes l WHERE l.post_id = p.id) AS like_count FROM forum_posts p";
   let rows;
   if (category) {
     rows = db.prepare(base + " WHERE p.category = ? ORDER BY p.created_at DESC, p.id DESC").all(category);
   } else {
     rows = db.prepare(base + " ORDER BY p.created_at DESC, p.id DESC").all();
   }
-  res.json({ posts: rows });
+  const likedSet = {};
+  if (req.user && req.user.id !== null && req.user.id !== undefined) {
+    const liked = db.prepare("SELECT post_id FROM post_likes WHERE user_id = ?").all(req.user.id);
+    liked.forEach(function (row) { likedSet[row.post_id] = true; });
+  }
+  const posts = rows.map(function (p) {
+    return Object.assign({}, p, { is_liked: likedSet[p.id] === true });
+  });
+  res.json({ posts: posts });
+});
+
+app.get("/api/forum/posts/:id", checkRole(), function (req, res) {
+  const id = parseInt(req.params.id, 10);
+  if (isNaN(id)) {
+    res.status(400).json({ error: "invalid post id" });
+    return;
+  }
+  const post = db
+    .prepare(
+      "SELECT p.*, (SELECT COUNT(*) FROM post_likes l WHERE l.post_id = p.id) AS like_count FROM forum_posts p WHERE p.id = ?"
+    )
+    .get(id);
+  if (!post) {
+    res.status(404).json({ error: "post not found" });
+    return;
+  }
+  let isLiked = false;
+  if (req.user && req.user.id !== null && req.user.id !== undefined) {
+    const row = db.prepare("SELECT id FROM post_likes WHERE post_id = ? AND user_id = ?").get(id, req.user.id);
+    isLiked = !!row;
+  }
+  res.json({ post: Object.assign({}, post, { is_liked: isLiked }) });
 });
 
 app.post("/api/forum/posts", requireLogin, function (req, res) {
@@ -643,8 +1056,46 @@ app.delete("/api/forum/posts/:id", requireLogin, function (req, res) {
     return;
   }
   db.prepare("DELETE FROM forum_replies WHERE post_id = ?").run(id);
+  db.prepare("DELETE FROM post_likes WHERE post_id = ?").run(id);
   db.prepare("DELETE FROM forum_posts WHERE id = ?").run(id);
   res.json({ ok: true });
+});
+
+app.post("/api/forum/posts/:id/like", requireLogin, function (req, res) {
+  const postId = parseInt(req.params.id, 10);
+  if (isNaN(postId)) {
+    res.status(400).json({ error: "invalid post id" });
+    return;
+  }
+  const post = db.prepare("SELECT id FROM forum_posts WHERE id = ?").get(postId);
+  if (!post) {
+    res.status(404).json({ error: "post not found" });
+    return;
+  }
+  const existing = db.prepare("SELECT id FROM post_likes WHERE post_id = ? AND user_id = ?").get(postId, req.user.id);
+  if (existing) {
+    res.status(400).json({ error: "已点赞" });
+    return;
+  }
+  db.prepare("INSERT INTO post_likes (post_id, user_id) VALUES (?, ?)").run(postId, req.user.id);
+  const count = db.prepare("SELECT COUNT(*) AS n FROM post_likes WHERE post_id = ?").get(postId).n;
+  res.json({ ok: true, liked: true, like_count: Number(count) });
+});
+
+app.delete("/api/forum/posts/:id/like", requireLogin, function (req, res) {
+  const postId = parseInt(req.params.id, 10);
+  if (isNaN(postId)) {
+    res.status(400).json({ error: "invalid post id" });
+    return;
+  }
+  const post = db.prepare("SELECT id FROM forum_posts WHERE id = ?").get(postId);
+  if (!post) {
+    res.status(404).json({ error: "post not found" });
+    return;
+  }
+  db.prepare("DELETE FROM post_likes WHERE post_id = ? AND user_id = ?").run(postId, req.user.id);
+  const count = db.prepare("SELECT COUNT(*) AS n FROM post_likes WHERE post_id = ?").get(postId).n;
+  res.json({ ok: true, liked: false, like_count: Number(count) });
 });
 
 app.get("/api/forum/posts/:id/replies", function (req, res) {
@@ -754,7 +1205,7 @@ app.get("/api/weekly-menu", function (req, res) {
   });
 });
 
-app.post("/api/admin/weekly-menu/upload", checkRole("admin"), function (req, res) {
+app.post("/api/admin/weekly-menu/upload", requirePermission("weekly_menu_upload"), function (req, res) {
   weeklyUpload.single("image")(req, res, function (err) {
     if (err) {
       res.status(400).json({ error: err.message });
@@ -822,7 +1273,7 @@ app.get("/api/map-data", function (req, res) {
   });
 });
 
-app.put("/api/admin/map-popup", checkRole("admin"), function (req, res) {
+app.put("/api/admin/map-popup", requirePermission("map_popup_edit"), function (req, res) {
   const body = req.body || {};
   const name = body.name;
   if (!name) {
