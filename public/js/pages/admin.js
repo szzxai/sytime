@@ -11,6 +11,7 @@
   var panelPerms = {
     banner: ["banner_edit", "super_admin"],
     announce: ["announcement_publish", "super_admin"],
+    notify: ["announcement_publish", "super_admin"],
     weekly: ["weekly_menu_upload", "admin"],
     review: ["student_review", "super_admin"],
     appeals: ["ban_appeal_review", "super_admin"],
@@ -22,6 +23,8 @@
   };
   var loaders = {
     banner: loadBanner,
+    announce: function () {},
+    notify: loadNotify,
     weekly: loadWeekly,
     review: loadReview,
     appeals: loadAppeals,
@@ -193,6 +196,21 @@
       },
       "公告已发布",
     );
+    if (r && r.ok) P.reset(this);
+  });
+  function loadNotify() {
+    P.el("ntMsg").textContent = "";
+  }
+  P.el("notifyForm").addEventListener("submit", async function (e) {
+    e.preventDefault();
+    var btn = P.el("ntSubmit");
+    if (btn.disabled || !P.validate(this, [["ntTitle", "请填写标题"], ["ntBody", "请填写正文"]])) return;
+    var ok = await UI.confirm({ title: "向全体用户发送这条通知？", message: "发送后不可撤回。", confirmText: "确认发送" });
+    if (!ok) return;
+    var r = await P.request(btn, "/api/admin/notifications", {
+      method: "POST",
+      body: { title: P.value("ntTitle"), body: P.value("ntBody"), important: P.el("ntImportant").checked },
+    }, "已发送");
     if (r && r.ok) P.reset(this);
   });
   function loadReview() {

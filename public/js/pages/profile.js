@@ -101,6 +101,32 @@
   }
   P.panels(P.el("profileNav"), function (name) {
     if (name === "tickets") loadTickets();
+    if (name === "messages") loadPrefs();
+  });
+  async function loadPrefs() {
+    var r = await UI.api("/api/user/preferences");
+    if (!r.ok) return;
+    P.el("prefComment").checked = !!r.data.comment;
+    P.el("prefReply").checked = !!r.data.reply;
+    P.el("prefLike").checked = !!r.data.like;
+  }
+  ["prefComment", "prefReply", "prefLike"].forEach(function (id) {
+    var key = id.replace("pref", "").toLowerCase();
+    P.el(id).addEventListener("change", async function () {
+      var input = this,
+        body = {};
+      body[key] = input.checked;
+      var r = await UI.api("/api/user/preferences", {
+        method: "PUT",
+        body: body,
+        on401: false,
+      });
+      if (r && r.ok) UI.toast.success("偏好已保存");
+      else {
+        input.checked = !input.checked;
+        UI.toast.error(r ? UI.errorText(r) : "保存失败，请稍后再试");
+      }
+    });
   });
   P.el("chooseAvatar").addEventListener("click", function () {
     P.el("avatarFile").click();

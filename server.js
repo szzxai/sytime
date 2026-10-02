@@ -100,6 +100,15 @@ CREATE TABLE IF NOT EXISTS users (
   if (cols.indexOf("allow_appeal") === -1) {
     db.exec("ALTER TABLE users ADD COLUMN allow_appeal INTEGER NOT NULL DEFAULT 1");
   }
+  if (cols.indexOf("pref_comment") === -1) {
+    db.exec("ALTER TABLE users ADD COLUMN pref_comment INTEGER NOT NULL DEFAULT 1");
+  }
+  if (cols.indexOf("pref_reply") === -1) {
+    db.exec("ALTER TABLE users ADD COLUMN pref_reply INTEGER NOT NULL DEFAULT 1");
+  }
+  if (cols.indexOf("pref_like") === -1) {
+    db.exec("ALTER TABLE users ADD COLUMN pref_like INTEGER NOT NULL DEFAULT 1");
+  }
   db.exec("UPDATE users SET display_id = CAST(id AS TEXT) WHERE display_id IS NULL OR display_id = ''");
 })();
 
@@ -242,6 +251,25 @@ CREATE TABLE IF NOT EXISTS tickets (
 
 CREATE INDEX IF NOT EXISTS idx_tickets_status ON tickets(status);
 CREATE INDEX IF NOT EXISTS idx_tickets_user ON tickets(user_id);
+
+CREATE TABLE IF NOT EXISTS messages (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL,
+  type TEXT NOT NULL,
+  actors TEXT NOT NULL DEFAULT '[]',
+  count INTEGER NOT NULL DEFAULT 1,
+  target_kind TEXT NOT NULL DEFAULT '',
+  target_id INTEGER,
+  title TEXT NOT NULL DEFAULT '',
+  body TEXT NOT NULL DEFAULT '',
+  snippet TEXT NOT NULL DEFAULT '',
+  important INTEGER NOT NULL DEFAULT 0,
+  read_at INTEGER,
+  created_at INTEGER NOT NULL DEFAULT (strftime('%s','now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_messages_user ON messages(user_id, read_at);
+CREATE INDEX IF NOT EXISTS idx_messages_created ON messages(user_id, created_at);
 `);
 
 (function migrateInviteCode() {
@@ -446,6 +474,57 @@ function requirePermission(perm) {
       next();
     });
   };
+}
+
+const MESSAGE_TYPE_FILTERS = { system: ["system"], interact: ["comment", "reply"], like: ["like"] };
+
+function actorInfo(userId) {
+  const row = db.prepare("SELECT id, username, nickname, avatar_url FROM users WHERE id = ?").get(userId);
+  if (!row) return { id: userId, username: "", nickname: "", avatar_url: "" };
+  return { id: row.id, username: row.username, nickname: row.nickname || "", avatar_url: row.avatar_url || "" };
+}
+
+function notifyComment(post, actorId, content) {
+  if (!post || post.user_id === actorId) return;
+  const author = db.prepare("SELECT id, pref_comment FROM users WHERE id = ?").get(post.user_id);
+  if (!author || !author.pref_comment) return;
+  db.prepare("INSERT INTO messages (user_id, type, actors, count, target_kind, target_id, snippet) VALUES (?, 'comment', ?, 1, 'post', ?, ?)")
+    .run(post.user_id, JSON.stringify([actorInfo(actorId)]), post.id, String(content).slice(0, 200));
+}
+
+function notifyLike(postId, actorId) {
+  const post = db.prepare("SELECT id, user_id FROM forum_posts WHERE id = ?").get(postId);
+  if (!post || post.user_id === actorId) return;
+  const author = db.prepare("SELECT pref_like FROM users WHERE id = ?").get(post.user_id);
+  if (!author || !author.pref_like) return;
+  const existing = db
+    .prepare("SELECT id, actors FROM messages WHERE user_id = ? AND type = 'like' AND target_kind = 'post' AND target_id = ?")
+    .get(post.user_id, postId);
+  if (existing) {
+    let actors = [];
+    try { actors = JSON.parse(existing.actors) || []; } catch (e) { actors = []; }
+    if (actors.some(function (a) { return a.id === actorId; })) return;
+    actors.push(actorInfo(actorId));
+    db.prepare("UPDATE messages SET actors = ?, count = ?, read_at = NULL, created_at = ? WHERE id = ?")
+      .run(JSON.stringify(actors), actors.length, Math.floor(Date.now() / 1000), existing.id);
+  } else {
+    db.prepare("INSERT INTO messages (user_id, type, actors, count, target_kind, target_id) VALUES (?, 'like', ?, 1, 'post', ?)")
+      .run(post.user_id, JSON.stringify([actorInfo(actorId)]), postId);
+  }
+}
+
+function removeLikeNotify(postId, actorId) {
+  const post = db.prepare("SELECT id, user_id FROM forum_posts WHERE id = ?").get(postId);
+  if (!post) return;
+  const existing = db
+    .prepare("SELECT id, actors FROM messages WHERE user_id = ? AND type = 'like' AND target_kind = 'post' AND target_id = ?")
+    .get(post.user_id, postId);
+  if (!existing) return;
+  let actors = [];
+  try { actors = JSON.parse(existing.actors) || []; } catch (e) { actors = []; }
+  actors = actors.filter(function (a) { return a.id !== actorId; });
+  if (!actors.length) db.prepare("DELETE FROM messages WHERE id = ?").run(existing.id);
+  else db.prepare("UPDATE messages SET actors = ?, count = ? WHERE id = ?").run(JSON.stringify(actors), actors.length, existing.id);
 }
 
 app.use(cors());
@@ -1170,6 +1249,7 @@ app.delete("/api/forum/posts/:id", requireLogin, function (req, res) {
   }
   db.prepare("DELETE FROM forum_replies WHERE post_id = ?").run(id);
   db.prepare("DELETE FROM post_likes WHERE post_id = ?").run(id);
+  db.prepare("DELETE FROM messages WHERE target_kind = 'post' AND target_id = ?").run(id);
   db.prepare("DELETE FROM forum_posts WHERE id = ?").run(id);
   res.json({ ok: true });
 });
@@ -1191,6 +1271,7 @@ app.post("/api/forum/posts/:id/like", requireLogin, function (req, res) {
     return;
   }
   db.prepare("INSERT INTO post_likes (post_id, user_id) VALUES (?, ?)").run(postId, req.user.id);
+  notifyLike(postId, req.user.id);
   const count = db.prepare("SELECT COUNT(*) AS n FROM post_likes WHERE post_id = ?").get(postId).n;
   res.json({ ok: true, liked: true, like_count: Number(count) });
 });
@@ -1207,6 +1288,7 @@ app.delete("/api/forum/posts/:id/like", requireLogin, function (req, res) {
     return;
   }
   db.prepare("DELETE FROM post_likes WHERE post_id = ? AND user_id = ?").run(postId, req.user.id);
+  removeLikeNotify(postId, req.user.id);
   const count = db.prepare("SELECT COUNT(*) AS n FROM post_likes WHERE post_id = ?").get(postId).n;
   res.json({ ok: true, liked: false, like_count: Number(count) });
 });
@@ -1234,7 +1316,7 @@ app.post("/api/forum/posts/:id/replies", requireLogin, function (req, res) {
     res.status(400).json({ error: "invalid post id" });
     return;
   }
-  const post = db.prepare("SELECT id FROM forum_posts WHERE id = ?").get(postId);
+  const post = db.prepare("SELECT id, user_id FROM forum_posts WHERE id = ?").get(postId);
   if (!post) {
     res.status(404).json({ error: "post not found" });
     return;
@@ -1247,6 +1329,7 @@ app.post("/api/forum/posts/:id/replies", requireLogin, function (req, res) {
   const info = db
     .prepare("INSERT INTO forum_replies (post_id, user_id, username, content) VALUES (?, ?, ?, ?)")
     .run(postId, req.user.id, req.user.username, content);
+  notifyComment(post, req.user.id, content);
   const reply = db.prepare("SELECT * FROM forum_replies WHERE id = ?").get(Number(info.lastInsertRowid));
   res.status(201).json({ reply: reply });
 });
@@ -1428,9 +1511,113 @@ app.put("/api/admin/map-popup", requirePermission("map_popup_edit"), function (r
   });
 });
 
+app.get("/api/messages/unread-count", requireLogin, function (req, res) {
+  const row = db.prepare("SELECT COUNT(*) AS n FROM messages WHERE user_id = ? AND read_at IS NULL").get(req.user.id);
+  res.json({ count: Number(row.n) });
+});
+
+app.put("/api/messages/read-all", requireLogin, function (req, res) {
+  const info = db.prepare("UPDATE messages SET read_at = ? WHERE user_id = ? AND read_at IS NULL").run(Math.floor(Date.now() / 1000), req.user.id);
+  res.json({ ok: true, changed: info.changes });
+});
+
+app.put("/api/messages/:id/read", requireLogin, function (req, res) {
+  const id = parseInt(req.params.id, 10);
+  if (isNaN(id)) {
+    res.status(400).json({ error: "invalid message id" });
+    return;
+  }
+  const info = db.prepare("UPDATE messages SET read_at = ? WHERE id = ? AND user_id = ? AND read_at IS NULL")
+    .run(Math.floor(Date.now() / 1000), id, req.user.id);
+  res.json({ ok: true, changed: info.changes });
+});
+
+app.get("/api/messages", requireLogin, function (req, res) {
+  const pageSize = Math.min(50, Math.max(1, parseInt(req.query.page_size, 10) || 20));
+  const type = req.query.type;
+  const unreadOnly = req.query.unread === "1" || req.query.unread === "true";
+  const before = parseInt(req.query.before, 10);
+  const clauses = ["m.user_id = ?"];
+  const params = [req.user.id];
+  const typeList = type && MESSAGE_TYPE_FILTERS[type] ? MESSAGE_TYPE_FILTERS[type] : type && ["system", "comment", "reply", "like"].indexOf(type) !== -1 ? [type] : null;
+  if (typeList) {
+    clauses.push("m.type IN (" + typeList.map(function () { return "?"; }).join(",") + ")");
+    typeList.forEach(function (t) { params.push(t); });
+  }
+  if (unreadOnly) clauses.push("m.read_at IS NULL");
+  if (!isNaN(before)) {
+    clauses.push("m.id < ?");
+    params.push(before);
+  }
+  const sql =
+    "SELECT m.*, p.title AS target_title FROM messages m LEFT JOIN forum_posts p ON (m.target_kind = 'post' AND p.id = m.target_id) WHERE " +
+    clauses.join(" AND ") +
+    " ORDER BY m.created_at DESC, m.id DESC LIMIT ?";
+  params.push(pageSize + 1);
+  const rows = db.prepare(sql).all(...params);
+  const hasMore = rows.length > pageSize;
+  const messages = rows.slice(0, pageSize).map(function (m) {
+    let actors = [];
+    try { actors = JSON.parse(m.actors) || []; } catch (e) { actors = []; }
+    const target = m.target_kind === "post" && m.target_id
+      ? { kind: "post", id: m.target_id, url: "post.html?id=" + m.target_id, title: m.target_title || "", snippet: m.snippet || "" }
+      : null;
+    return {
+      id: m.id,
+      type: m.type,
+      actors: actors,
+      count: m.count,
+      target: target,
+      title: m.title || null,
+      body: m.body || null,
+      important: !!m.important,
+      read: m.read_at !== null && m.read_at !== undefined,
+      created_at: m.created_at
+    };
+  });
+  const counts = { all: 0, system: 0, comment: 0, reply: 0, like: 0 };
+  db.prepare("SELECT type, COUNT(*) AS n FROM messages WHERE user_id = ? AND read_at IS NULL GROUP BY type").all(req.user.id).forEach(function (c) {
+    if (counts[c.type] !== undefined) counts[c.type] = Number(c.n);
+    counts.all += Number(c.n);
+  });
+  res.json({ messages: messages, has_more: hasMore, counts: counts });
+});
+
+app.get("/api/user/preferences", requireLogin, function (req, res) {
+  const u = db.prepare("SELECT pref_comment, pref_reply, pref_like FROM users WHERE id = ?").get(req.user.id);
+  res.json({ comment: !!(u && u.pref_comment), reply: !!(u && u.pref_reply), like: !!(u && u.pref_like) });
+});
+
+app.put("/api/user/preferences", requireLogin, function (req, res) {
+  const body = req.body || {};
+  const u = db.prepare("SELECT pref_comment, pref_reply, pref_like FROM users WHERE id = ?").get(req.user.id);
+  function pick(key, current) {
+    return Object.prototype.hasOwnProperty.call(body, key) ? (body[key] ? 1 : 0) : current;
+  }
+  const comment = pick("comment", u ? u.pref_comment : 1);
+  const reply = pick("reply", u ? u.pref_reply : 1);
+  const like = pick("like", u ? u.pref_like : 1);
+  db.prepare("UPDATE users SET pref_comment = ?, pref_reply = ?, pref_like = ? WHERE id = ?").run(comment, reply, like, req.user.id);
+  res.json({ comment: !!comment, reply: !!reply, like: !!like });
+});
+
+app.post("/api/admin/notifications", requirePermission("announcement_publish"), function (req, res) {
+  const body = req.body || {};
+  const title = body.title === undefined || body.title === null ? "" : String(body.title).trim();
+  const text = body.body === undefined || body.body === null ? "" : String(body.body).trim();
+  const important = body.important ? 1 : 0;
+  if (!title || !text) {
+    res.status(400).json({ error: "title and body are required" });
+    return;
+  }
+  const recipients = db.prepare("SELECT id FROM users").all();
+  const stmt = db.prepare("INSERT INTO messages (user_id, type, title, body, important) VALUES (?, 'system', ?, ?, ?)");
+  recipients.forEach(function (u) { stmt.run(u.id, title, text, important); });
+  res.status(201).json({ ok: true, recipients: recipients.length });
+});
+
 const menuService = new MenuService(db, __dirname);
 mountMenuRoutes(app, db, menuService, checkRole());
-
 app.use("/api", function (req, res) {
   res.status(404).json({ error: "not found" });
 });

@@ -151,8 +151,9 @@ flowchart LR
 | `login.html` | 用户名/密码登录；封禁错误展示；允许申诉时提交理由及可选图片 | `/api/login`、`/api/user/appeal` |
 | `register.html` | 用户名/昵称/密码及重复密码校验；注册后调用登录 | `/api/register`、`/api/login` |
 | `student_verify.html` | 已达到学生角色时隐藏表单；否则填写新生号、班级、真实姓名，可填邀请码及补充信息 | `/api/user/profile`、`/api/student/apply` |
-| `profile.html` | 展示 ID/角色/额外权限；修改头像、昵称、签名、密码；保存三项网站设置；提交与查看本人工单 | `/api/user/*`、`/api/tickets`、`/api/tickets/mine` |
-| `admin.html` | 横幅、公告、学生审核、邀请码、每周菜谱、用户管理、申诉、工单、developer 菜单同步和三种管理角色的 JSON 手动导入；待办红点 | `/api/admin/*`，菜单接口见 [运维文档](./docs/menu-sync.md) |
+| `profile.html` | 展示 ID/角色/额外权限；修改头像、昵称、签名、密码；保存三项网站设置；提交与查看本人工单；消息通知偏好（系统/评论/回复/点赞） | `/api/user/*`、`/api/tickets`、`/api/tickets/mine`、`/api/user/preferences` |
+| `inbox.html` | 消息箱：按天分组、四类标签过滤、只看未读、全部标为已读、点击标记已读并跳转；页头消息铃显示未读数 | `/api/messages`、`/api/messages/unread-count`、`/api/messages/:id/read`、`/api/messages/read-all` |
+| `admin.html` | 横幅、公告、发送系统通知、学生审核、邀请码、每周菜谱、用户管理、申诉、工单、developer 菜单同步和三种管理角色的 JSON 手动导入；待办红点 | `/api/admin/*`，菜单接口见 [运维文档](./docs/menu-sync.md) |
 | `404.html` | 404 提示、返回首页与返回上一页 | 无 |
 | `js/ui.js` | 公共导航/页脚、账户菜单、手机抽屉、横幅、用户信息与全站交互组件 | `/api/user/profile`、`/api/settings/banner` |
 
@@ -160,7 +161,7 @@ flowchart LR
 
 ## 5. 后端 API 全量索引
 
-以下 53 个原有显式路由位于 [server.js](./server.js)。菜单新增 10 个方法/路径组合位于 [lib/menu/routes.js](./lib/menu/routes.js)，索引见 [菜单同步接口](./docs/menu-sync.md#接口)。表中“公开”表示没有强制登录；帖子读取可带 token 获取点赞状态。
+以下显式路由位于 [server.js](./server.js)。菜单新增的方法/路径组合位于 [lib/menu/routes.js](./lib/menu/routes.js)，索引见 [菜单同步接口](./docs/menu-sync.md#接口)。表中“公开”表示没有强制登录；帖子读取可带 token 获取点赞状态。
 
 ### 5.1 账号、个人资料与设置
 
@@ -222,7 +223,7 @@ flowchart LR
 | POST | `/api/admin/weekly-menu/upload` | weekly_menu_upload | 上传日期范围内的每周食谱图片 |
 | DELETE | `/api/admin/weekly-menu/:id` | 登录，上传者或 super_admin 及以上 | 删除食谱记录及图片文件 |
 
-### 5.4 申诉与工单
+### 5.4 申诉、工单与消息
 
 | 方法 | 路径 | 访问条件 | 作用 |
 | --- | --- | --- | --- |
@@ -234,6 +235,13 @@ flowchart LR
 | GET | `/api/admin/tickets` | ticket_manage，按角色再过滤 | 当前管理者可见的工单 |
 | PUT | `/api/admin/tickets/reply` | ticket_manage，按工单可见级别再校验 | 批复正文及可选 DataURL 图片 |
 | GET | `/api/admin/pending-counts` | 登录，按权限和工单范围统计 | 学生认证、申诉、工单待办数量 |
+| GET | `/api/messages` | 登录 | 消息列表；支持 type(system/interact/like)、unread、before 游标与 page_size |
+| GET | `/api/messages/unread-count` | 登录 | 未读总数（页头消息铃轮询） |
+| PUT | `/api/messages/:id/read` | 登录，限本人 | 单条标记已读 |
+| PUT | `/api/messages/read-all` | 登录 | 全部标记已读 |
+| GET | `/api/user/preferences` | 登录 | 评论/回复/点赞通知开关 |
+| PUT | `/api/user/preferences` | 登录 | 保存通知开关（系统消息始终接收） |
+| POST | `/api/admin/notifications` | announcement_publish | 向全体用户发送系统通知（标题/正文/重要性） |
 
 ## 6. 角色与权限模型
 
@@ -262,11 +270,11 @@ flowchart LR
 
 ### 7.1 SQLite
 
-以下 13 张原有业务表保留；启动另外创建 8 张菜单表，迁移与种子导入位于 `lib/menu/store.js`。另有内部表 sqlite_sequence；本轮验证使用临时数据库，没有改写仓库 data.db。
+以下 14 张业务表保留；启动另外创建 8 张菜单表，迁移与种子导入位于 `lib/menu/store.js`。另有内部表 sqlite_sequence；本轮验证使用临时数据库，没有改写仓库 data.db。
 
 | 表 | 主要字段/约束 | 关联与用途 |
 | --- | --- | --- |
-| users | id、display_id、username、nickname、password_hash、avatar_url、signature、role、三项默认设置、status、封禁字段；username/email 唯一 | 账号与偏好；email 为兼容字段，现有注册不使用邮箱 |
+| users | id、display_id、username、nickname、password_hash、avatar_url、signature、role、三项默认设置、status、封禁字段、三条通知偏好（pref_comment/pref_reply/pref_like）；username/email 唯一 | 账号与偏好；email 为兼容字段，现有注册不使用邮箱 |
 | user_permissions | user_id、permission；二者联合唯一 | 用户显式授权 |
 | forum_posts | user_id、username、category、title、content、created_at；category 只允许讨论/提问 | 论坛帖子 |
 | forum_replies | post_id、user_id、username、content、created_at | 平铺帖子回复；没有父评论 ID |
@@ -279,6 +287,7 @@ flowchart LR
 | invite_codes | code 唯一、max_uses、used_count | 多邀请码及次数限制 |
 | ban_appeals | user_id、appeal_reason、appeal_image、status | 解封审核；pending/approved/rejected |
 | tickets | user_id、username、title、content、visibility、status、reply_content、reply_image、reply_by、replied_at | 工单；pending/resolved |
+| messages | user_id、type、actors(JSON)、count、target_kind/target_id、title/body/snippet、important、read_at | 消息箱；system/comment/reply/like，点赞按目标聚合 |
 | dishes | id、name、唯一 name_key、initial、pinyin、pinyin_initials、sort_key | 独立稳定 ID 菜品 |
 | menu_sources | 来源 ID、可空 article_id、kind、publication_origin、revision、title/url、日期/摘要/计数/错误 | 官网队列与独立手动批次 |
 | menu_records | source_id/record_key 联合主键、dish_id、日期/餐次/地点/档口/价格/辣椒 | 供应记录，明确外键 |
@@ -365,7 +374,7 @@ JWT_EXPIRES_IN=7d
 | [#6 三元坊必吃榜](https://github.com/szzxvc/szzx-info/issues/6) | 导航、server.js 鉴权与数据初始化 | 店铺列表/上传/详情入口、店铺模型、最低上传角色、地图查询后录入字段 |
 | [#7 三元坊必吃榜 UI适配](https://github.com/szzxvc/szzx-info/issues/7) | profile.html、用户默认设置的保存模式 | 店铺详情页的两种布局、粘性导航与持久布局设置 |
 | [#8 三元坊必吃榜菜谱上传](https://github.com/szzxvc/szzx-info/issues/8) | student 角色、multer 存储器、现有评价模型 | 菜品与店铺关联、学生上传权限、图片、去重及异常数据处理 |
-| [#9 消息箱](https://github.com/szzxvc/szzx-info/issues/9) | 论坛回复/点赞接口、profile.html、js/ui.js | 消息模型、事件通知、已读状态、未读数、通知偏好与发送权限 |
+| [#9 消息箱](https://github.com/szzxvc/szzx-info/issues/9) | inbox.html、messages 表、论坛回复/点赞通知、profile.html 通知偏好、admin.html 发送系统通知、ui.js 消息铃 | 已实现：系统/评论/回复/点赞消息、聚合点赞、已读与未读计数、按天分组、类型过滤、通知偏好、super_admin 发送系统通知 |
 | [#10 头衔系统](https://github.com/szzxvc/szzx-info/issues/10) | 用户资料、后台用户管理、各用户内容渲染处 | 头衔目录/拥有关系/佩戴状态、授予撤销、自动规则、统一用户展示 |
 
-菜品目录开关已开启；店铺、消息箱和头衔仍未实现。#4/#5 的验证见 [acceptance.md](./docs/ui/acceptance.md)，原始需求见里程碑快照，#5 当前约定见实施计划。
+菜品目录与消息箱开关已开启；店铺和头衔仍未实现。#4/#5 的验证见 [acceptance.md](./docs/ui/acceptance.md)，原始需求见里程碑快照，#5 当前约定见实施计划。

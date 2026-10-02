@@ -1,6 +1,6 @@
 # 校园信息网 · 进度文档（progress.md）
 
-> 更新日期：2026-10-01。当前实现 #4 全站 UI 与 #5 独立菜品目录、网站内菜单同步。#5 配置/备份/故障处理见 [菜单同步](./docs/menu-sync.md)，用户确认的范围见 [实施计划](./docs/issue-5-plan.md)。完整结构及接口见 [MAP.md](./MAP.md)，验证见 [验收记录](./docs/ui/acceptance.md)。历史章节按当时实现保留。
+> 更新日期：2026-10-02。当前实现 #4 全站 UI 与 #5 独立菜品目录、网站内菜单同步。#5 配置/备份/故障处理见 [菜单同步](./docs/menu-sync.md)，用户确认的范围见 [实施计划](./docs/issue-5-plan.md)。完整结构及接口见 [MAP.md](./MAP.md)，验证见 [验收记录](./docs/ui/acceptance.md)。历史章节按当时实现保留。
 
 ---
 
@@ -454,12 +454,15 @@ CREATE INDEX idx_tickets_user ON tickets(user_id);
 45. **需求 #4 全站 UI 改版**：统一 12 个现有页面及新增 404，采用「宣纸·黛青·朱印」令牌、组件和响应式布局；抽出共享及各页脚本；本地化 Leaflet 并调整配色和缩放，保留 227 个地图对象。原有账号、论坛、菜谱、认证、后台权限和工单流程保持原 API。新增浏览器回归，264 项检查通过，明暗主题与 360px/1280px 扫描零违规；参考组件 101 项通过。同步 UI 手册、项目结构、使用说明、里程碑快照及验收记录。
 46. **需求 #5 独立菜品与网站内同步**：导入十篇历史种子（1,243 菜品、5,874 供应记录），统一 Node 拼音排序，菜品页改为目录/评价/每周食谱三个页签。developer 可配置提供商、加密 Key、视觉模型和每日北京时间；Node worker 直接抓官网、识别、复核及原子发布，支持进度、诊断、停止、重试和补图。13 项后端、295 项浏览器及全新 Node 生产安装通过；三张真实菜单抽核中发现的模型不一致由完整性门禁拦截，详情见 docs/menu-validation.md。生产无需 Python 或第二个服务。
 47. **菜单 JSON 人工导入与复测**：三种管理角色可粘贴数组、新建批次、编辑已发布记录及失败识图候选、查看受限原图。增加严格预览、修改失效、整篇原子替换、版本/同步冲突检查与审计，18 项后端、331 项浏览器、技能包校验及全新生产安装通过。根 menu-json-rules.md 详述八字段规则，skills/szzx-menu 与 szzx-menu.skill 提供直接图片转 JSON 技能及离线格式验证。当前 vision-catalog-v2、openai/gpt-6-luna 三图实测无缓存，抽样四字段匹配 27/30，完整自动导入 0/3；诊断复核也存在误读，未把格式通过视为准确率保证。
+48. **菜单同步审查修复**：① `lib/menu/config.js` —— 编辑 AI 设置（提供商/地址/模型/Key）时忽略前端提交的 `enabled:true`，一律保存为停用草稿。原逻辑仅在未提交 `enabled` 时才停用，导致自动同步开启状态下勾选保存会被整体拒绝、且新配置不落库；已补回归断言。② `public/js/pages/menu-admin.js` —— 针对单轮最多识别 10 篇的截断，任务列表在终态且 `total > processed` 时显示「仍有 N 篇待同步，可再次点击立即同步」提示，避免误以为已全部完成。
+49. **修复图片查看器放大发虚**：`public/css/site.css` 的 `.viewer__img` 移除 `will-change: transform`。该属性使浏览器在缩放前按显示尺寸（长图约 210px 宽）预栅格化并缓存，随后 `transform: scale()` 放大会拉伸低分辨率纹理导致模糊；移除后浏览器按缩放后的尺寸重新栅格化，与旧版 `.zoom-img`（无该属性）行为一致。
+50. **需求 #9 消息箱**：新增 `messages` 表（type/actors(JSON)/count/target/title/body/snippet/important/read_at）与 `users` 三条通知偏好列（`pref_comment`/`pref_reply`/`pref_like`，自动迁移）。论坛回复触发评论通知、点赞触发按目标聚合的点赞通知（取消点赞回退聚合），帖子删除级联清理消息。新增接口：`GET /api/messages`（type/unread/before 游标 + 每类未读计数）、`GET /api/messages/unread-count`、`PUT /api/messages/:id/read`、`PUT /api/messages/read-all`、`GET|PUT /api/user/preferences`、`POST /api/admin/notifications`（`announcement_publish`，向全体用户发送系统通知）。前端：新增 `inbox.html` + `public/js/pages/inbox.js`（按天分组、四类标签、只看未读、全部已读、点击已读并跳转、系统长文折叠、聚合点赞文案），`ui.js` 开启 `features.inbox` 并启用页头消息铃未读数轮询，`profile.html` 新增「消息通知」偏好面板，`admin.html` 新增「发送系统通知」面板。空环境（无 `.env`）下服务器用默认密钥，端到端与浏览器冒烟均通过、控制台零报错。
 
 ---
 
 ## 10. 已知事项 / 待办
 
-- #5 独立菜品目录和网站内同步已实现，developer 需保存提供商/Key/模型、通过测试并自行选择每日时间后开启。#6–#10 店铺、消息箱及头衔仍待实施，相关开关关闭。
+- #5 独立菜品目录和网站内同步已实现，developer 需保存提供商/Key/模型、通过测试并自行选择每日时间后开启。#9 消息箱已实现（`UI.config.features.inbox` 已开启）。#6–#8 店铺与 #10 头衔仍待实施，相关开关关闭。
 - 地图部分建筑说明仍是简短介绍，可按需补充真实内容；地图数据方向与几何约定保持不变。
 - 主题切换入口是手册 P2 能力，当前未开启。
 - 回归测试可用 `npm.cmd test` 重跑，在系统临时目录中运行，不修改项目数据库或上传数据；输出在被忽略的 `output/playwright/`。

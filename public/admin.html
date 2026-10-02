@@ -49,6 +49,15 @@
           ><button
             type="button"
             class="side-nav__item"
+            data-panel="notify"
+            hidden
+          >
+            <svg class="icon" aria-hidden="true">
+              <use href="/img/icons.svg#i-bell"></use></svg
+            >发送系统通知</button
+          ><button
+            type="button"
+            class="side-nav__item"
             data-panel="weekly"
             hidden
           >
@@ -237,6 +246,63 @@
                     id="annSubmit"
                   >
                     发布公告
+                  </button>
+                </div>
+              </div>
+            </form>
+          </section>
+          <section class="view" id="view-notify" hidden>
+            <form id="notifyForm" novalidate>
+              <div class="panel">
+                <div class="panel__head">
+                  <h2 class="panel__title">发送系统通知</h2>
+                  <p class="panel__desc">将出现在全体用户的消息箱中。</p>
+                </div>
+                <div class="panel__body form">
+                  <div class="field">
+                    <label class="field__label" for="ntTitle">标题</label
+                    ><input
+                      class="input"
+                      type="text"
+                      id="ntTitle"
+                      required
+                      data-counter="40"
+                    />
+                    <div class="field__foot">
+                      <span class="field__hint"></span
+                      ><span class="field__counter"></span>
+                    </div>
+                  </div>
+                  <div class="field">
+                    <label class="field__label" for="ntBody">正文</label
+                    ><textarea
+                      class="textarea"
+                      id="ntBody"
+                      required
+                      data-counter="500"
+                    ></textarea>
+                    <div class="field__foot">
+                      <span class="field__hint"></span
+                      ><span class="field__counter"></span>
+                    </div>
+                  </div>
+                  <label class="check-row"
+                    ><input type="checkbox" class="check" id="ntImportant" /><span
+                      class="check-row__text"
+                      >标记为重要<span class="check-row__desc"
+                        >显示「重要」标记；用户的系统消息接收始终包含此类</span
+                      ></span
+                    ></label
+                  >
+                </div>
+                <div class="panel__foot">
+                  <span class="status-text" id="ntMsg" role="status"></span
+                  ><button
+                    type="submit"
+                    class="btn btn--primary"
+                    id="ntSubmit"
+                  >
+                    发送
                   </button>
                 </div>
               </div>

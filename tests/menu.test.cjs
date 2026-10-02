@@ -62,6 +62,9 @@ test("config encryption, masked output, time-only validation and stale revisions
   config.save({daily_time: "11:30", api_key: ""});
   assert.equal(config.public().model_tested, true); assert.equal(config.public().enabled, true);
   assert.equal(config.raw().schedule_effective_at, now);
+  config.save({model: "another-vision", enabled: true});
+  assert.equal(config.public().model, "another-vision");
+  assert.equal(config.public().enabled, false); assert.equal(config.public().model_tested, false);
   assert.throws(() => config.save({revision: 0}), error => error.status === 409);
   assert.throws(() => config.save({provider: "compatible", base_url: "http://localhost/v1", api_key: "new"}), /HTTPS/);
   assert.throws(() => config.save({provider: "compatible", base_url: "https://example.com/v1"}), /重新填写/);

@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#F5F3EE" />
+    <title>消息箱 · 校园信息网</title>
+    <link rel="icon" href="/img/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/css/site.css" />
+  </head>
+  <body>
+    <noscript
+      ><div class="alert alert--warning">
+        <div class="alert__body">本站需要启用 JavaScript 才能正常使用。</div>
+      </div></noscript
+    >
+    <a class="skip-link" href="#main">跳到正文</a>
+    <div id="siteBanner"></div>
+    <div id="siteHeader"></div>
+    <main id="main" class="main container container--prose">
+      <div class="page-head">
+        <div class="page-head__main">
+          <span class="page-head__eyebrow">Inbox</span>
+          <h1 class="page-head__title">消息箱</h1>
+        </div>
+      </div>
+      <div class="stack stack--md">
+        <div class="tabs" role="tablist" aria-label="消息类型">
+          <button type="button" class="tab" role="tab" data-tab="all" aria-selected="true">
+            全部<span class="tab__count tab__count--alert" id="cntAll" hidden></span>
+          </button>
+          <button type="button" class="tab" role="tab" data-tab="system" aria-selected="false">系统</button>
+          <button type="button" class="tab" role="tab" data-tab="interact" aria-selected="false">评论与回复</button>
+          <button type="button" class="tab" role="tab" data-tab="like" aria-selected="false">点赞</button>
+        </div>
+        <div class="inbox-toolbar">
+          <label class="check-row">
+            <input type="checkbox" class="switch" role="switch" id="unreadOnly" />
+            <span>只看未读</span>
+          </label>
+          <div class="row row--sm">
+            <button type="button" class="btn btn--sm" id="readAllBtn">
+              <svg class="icon icon--sm" aria-hidden="true"><use href="/img/icons.svg#i-check"></use></svg>
+              全部标为已读
+            </button>
+            <a class="btn btn--sm btn--ghost" href="profile.html#messages">
+              <svg class="icon icon--sm" aria-hidden="true"><use href="/img/icons.svg#i-settings"></use></svg>
+              消息设置
+            </a>
+          </div>
+        </div>
+        <div id="inboxList" aria-live="polite"></div>
+        <div class="load-more" id="loadMore" hidden>
+          <button type="button" class="btn" id="moreBtn">加载更多</button>
+          <span id="moreInfo"></span>
+        </div>
+      </div>
+    </main>
+    <div id="siteFooter"></div>
+    <script src="/js/ui.js"></script>
+    <script src="/js/page.js"></script>
+    <script src="/js/pages/inbox.js"></script>
+  </body>
+</html>

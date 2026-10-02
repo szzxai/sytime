@@ -41,6 +41,10 @@
             ><svg class="icon" aria-hidden="true">
               <use href="/img/icons.svg#i-clipboard"></use></svg
             >工单</a
+          ><a class="side-nav__item" href="#messages" data-panel="messages"
+            ><svg class="icon" aria-hidden="true">
+              <use href="/img/icons.svg#i-bell"></use></svg
+            >消息通知</a
           ><button type="button" class="side-nav__item" data-logout>
             <svg class="icon" aria-hidden="true">
               <use href="/img/icons.svg#i-logout"></use></svg
@@ -417,6 +421,75 @@
                 aria-live="polite"
               ></div>
             </section>
+          </section>
+          <section class="view" id="view-messages" hidden>
+            <div class="panel">
+              <div class="panel__head">
+                <h2 class="panel__title">消息通知</h2>
+                <p class="panel__desc">
+                  关闭后不再产生对应的新消息；已收到的消息不受影响。
+                </p>
+              </div>
+              <div class="panel__body">
+                <div class="switch-row">
+                  <div class="switch-row__text">
+                    <span class="switch-row__title">系统消息</span
+                    ><span class="switch-row__desc"
+                      >管理员发布的通知。其中「重要」通知无法关闭。</span
+                    >
+                  </div>
+                  <input
+                    type="checkbox"
+                    class="switch"
+                    role="switch"
+                    checked
+                    disabled
+                    aria-label="系统消息"
+                  />
+                </div>
+                <div class="switch-row">
+                  <div class="switch-row__text">
+                    <span class="switch-row__title">评论通知</span
+                    ><span class="switch-row__desc">有人评论你的帖子</span>
+                  </div>
+                  <input
+                    type="checkbox"
+                    class="switch"
+                    role="switch"
+                    id="prefComment"
+                    checked
+                    aria-label="评论通知"
+                  />
+                </div>
+                <div class="switch-row">
+                  <div class="switch-row__text">
+                    <span class="switch-row__title">回复通知</span
+                    ><span class="switch-row__desc">有人回复你的评论</span>
+                  </div>
+                  <input
+                    type="checkbox"
+                    class="switch"
+                    role="switch"
+                    id="prefReply"
+                    checked
+                    aria-label="回复通知"
+                  />
+                </div>
+                <div class="switch-row">
+                  <div class="switch-row__text">
+                    <span class="switch-row__title">点赞通知</span
+                    ><span class="switch-row__desc">有人赞了你的内容</span>
+                  </div>
+                  <input
+                    type="checkbox"
+                    class="switch"
+                    role="switch"
+                    id="prefLike"
+                    aria-label="点赞通知"
+                  />
+                </div>
+              </div>
+            </div>
           </section>
         </div>
       </div>

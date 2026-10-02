@@ -2098,7 +2098,6 @@ dialog .toast-host { position: absolute; top: var(--sp-3); }
   user-select: none;
   -webkit-user-drag: none;
   transform-origin: center;
-  will-change: transform;
 }
 .viewer__close { position: absolute; top: calc(var(--sp-3) + var(--safe-top)); right: var(--sp-3); color: var(--viewer-ink); background: var(--viewer-chip); }
 .viewer__close:hover { background: var(--viewer-chip-hover); color: var(--viewer-ink); }

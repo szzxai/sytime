@@ -1,4 +1,4 @@
-/* ==========================================================================
+﻿/* ==========================================================================
    校园信息网 · ui.js  (交互层参考实现 v1.0)
    - 唯一全局：window.UI。无依赖、无构建，需配合 site.css 与 img/icons.svg。
    - 页面里只做三件事：引入本文件 → 写 <body data-nav="..."> → 用 UI.* 工具函数。
@@ -16,7 +16,7 @@
       features: {
         shops: false,    // #6 三元坊必吃榜上线后改 true
         dishes: true,    // #5 菜品目录已上线；详情与店铺关联后续实现
-        inbox: false,    // #9 消息箱上线后改 true
+        inbox: true,     // #9 消息箱已上线
         titles: false,   // #10 头衔上线后改 true
         theme: false     // 深色主题（P2）
       },
@@ -1100,3 +1100,5 @@
   // 兼容旧页面脚本里的 renderAuth()
   window.renderAuth = function () { return UI.shell.refreshAuth(); };
 })();
+
+
