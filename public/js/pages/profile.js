@@ -16,6 +16,21 @@
     map_popup_edit: "admin",
     ticket_manage: "admin",
   };
+  var SHOP_SORTS = ["campus", "az", "metro", "likes", "reviews", "rating", "new"];
+  async function loadShopTypeOptions(current) {
+    var select = P.el("shopDefaultType");
+    if (!select) return;
+    var meta = await UI.api("/api/shops/meta", { on401: false });
+    var types = (meta.ok && meta.data.types && meta.data.types.all) || [];
+    select.innerHTML =
+      '<option value="">全部</option>' +
+      types
+        .map(function (t) {
+          return '<option value="' + UI.esc(t) + '">' + UI.esc(t) + "</option>";
+        })
+        .join("");
+    select.value = types.indexOf(current) !== -1 ? current : "";
+  }
   async function loadProfile() {
     main.setAttribute("aria-busy", "true");
     UI.qsa('form button[type="submit"], #chooseAvatar', main).forEach(
@@ -63,11 +78,27 @@
       me.default_floor || localStorage.getItem("defaultFloor"),
     );
     P.el("defaultFloor").value = floor >= 1 && floor <= 4 ? String(floor) : "1";
-    P.el("recipeDefaultView").value =
-      (me.recipe_default_view || localStorage.getItem("recipeDefaultView")) ===
-      "weekly"
-        ? "weekly"
-        : "all";
+    var recipeView =
+      me.recipe_default_view || localStorage.getItem("recipeDefaultView");
+    if (["all", "reviews", "weekly"].indexOf(recipeView) === -1) recipeView = "all";
+    P.el("recipeDefaultView").value = recipeView;
+    if (UI.config.features.shops) {
+      P.el("shopPrefFields").hidden = false;
+      var shopSort =
+        me.shop_default_sort || localStorage.getItem("shopDefaultSort") || "campus";
+      if (SHOP_SORTS.indexOf(shopSort) === -1) shopSort = "campus";
+      P.el("shopDefaultSort").value = shopSort;
+      await loadShopTypeOptions(
+        me.shop_default_type || localStorage.getItem("shopDefaultType") || "",
+      );
+      var shopLayout =
+        me.shop_layout || localStorage.getItem("shopLayout") || "stacked";
+      if (shopLayout !== "split") shopLayout = "stacked";
+      var layoutInput = main.querySelector(
+        'input[name="shopLayout"][value="' + shopLayout + '"]',
+      );
+      if (layoutInput) layoutInput.checked = true;
+    }
     UI.qsa("[data-counter]", main).forEach(function (input) {
       input.dispatchEvent(new Event("input", { bubbles: true }));
     });
@@ -216,10 +247,16 @@
   });
   P.el("siteForm").addEventListener("submit", async function (e) {
     e.preventDefault();
+    var layoutChoice = main.querySelector(
+      'input[name="shopLayout"]:checked',
+    );
     var body = {
       default_page: P.value("defaultPage"),
       default_floor: Number(P.value("defaultFloor")),
       recipe_default_view: P.value("recipeDefaultView"),
+      shop_default_sort: P.value("shopDefaultSort"),
+      shop_default_type: P.value("shopDefaultType"),
+      shop_layout: layoutChoice ? layoutChoice.value : "stacked",
     };
     var r = await P.request(
       P.el("siteSubmit"),
@@ -231,6 +268,10 @@
       localStorage.setItem("defaultPage", body.default_page);
       localStorage.setItem("defaultFloor", body.default_floor);
       localStorage.setItem("recipeDefaultView", body.recipe_default_view);
+      if (body.shop_default_sort)
+        localStorage.setItem("shopDefaultSort", body.shop_default_sort);
+      localStorage.setItem("shopDefaultType", body.shop_default_type || "");
+      localStorage.setItem("shopLayout", body.shop_layout);
       UI.session.patch(body);
     }
   });

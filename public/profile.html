@@ -333,8 +333,91 @@
                       name="recipeDefaultView"
                     >
                       <option value="all">全部菜品</option>
+                      <option value="reviews">菜品评价</option>
                       <option value="weekly">每周食谱</option></select
                     ><span class="field__hint"></span>
+                  </div>
+                  <div id="shopPrefFields" hidden>
+                    <div class="field">
+                      <label class="field__label" for="shopDefaultSort"
+                        >必吃榜默认排序</label
+                      ><select
+                        class="select"
+                        id="shopDefaultSort"
+                        name="shopDefaultSort"
+                      >
+                        <option value="campus">距苏州中学本部最近</option>
+                        <option value="az">A–Z</option>
+                        <option value="metro">距地铁最近</option>
+                        <option value="likes">按点赞数</option>
+                        <option value="reviews">按评价数</option>
+                        <option value="rating">按评分</option>
+                        <option value="new">最新添加</option></select
+                      ><span class="field__hint"
+                        >进入三元坊必吃榜时默认使用的排序</span
+                      >
+                    </div>
+                    <div class="field">
+                      <label class="field__label" for="shopDefaultType"
+                        >必吃榜默认餐食类型</label
+                      ><select
+                        class="select"
+                        id="shopDefaultType"
+                        name="shopDefaultType"
+                      >
+                        <option value="">全部</option></select
+                      ><span class="field__hint"
+                        >进入三元坊必吃榜时默认筛选的店铺类型</span
+                      >
+                    </div>
+                    <div class="field">
+                      <span class="field__label">店铺详情页样式</span>
+                      <div class="choice-group choice-group--2" id="shopLayoutChoices">
+                        <label class="choice">
+                          <input
+                            class="choice__input"
+                            type="radio"
+                            name="shopLayout"
+                            value="stacked"
+                          /><span class="choice__body"
+                            ><span class="choice__title"
+                              >样式一 · 纵向<svg
+                                class="icon choice__check"
+                                aria-hidden="true"
+                              >
+                                <use
+                                  href="/img/icons.svg#i-check-circle"
+                                ></use></svg></span
+                            ><span class="choice__desc"
+                              >手机友好，菜品与评价上下排列</span
+                            ></span
+                          >
+                        </label>
+                        <label class="choice">
+                          <input
+                            class="choice__input"
+                            type="radio"
+                            name="shopLayout"
+                            value="split"
+                          /><span class="choice__body"
+                            ><span class="choice__title"
+                              >样式二 · 双栏<svg
+                                class="icon choice__check"
+                                aria-hidden="true"
+                              >
+                                <use
+                                  href="/img/icons.svg#i-check-circle"
+                                ></use></svg></span
+                            ><span class="choice__desc"
+                              >电脑友好，左右并排查看</span
+                            ></span
+                          >
+                        </label>
+                      </div>
+                      <span class="field__hint"
+                        >浏览三元坊必吃榜店铺详情时默认使用的布局</span
+                      >
+                    </div>
                   </div>
                 </div>
                 <div class="panel__foot">

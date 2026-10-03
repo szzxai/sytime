@@ -124,8 +124,11 @@
   </div>
   <div class="panel__foot"><span class="status-text" id="annMsg"></span><button type="button" class="btn btn--primary" id="annSubmit">发布公告</button></div>
 </div>
+<h2 class="section__title u-mt-6 u-mb-4">已发布公告</h2>
+<div id="annList" class="queue-list" aria-live="polite"></div>
 ```
-校验：标题/内容空 → 内联；成功 toast「公告已发布」+ 清空。
+校验：标题/内容空 → 内联；成功 toast「公告已发布」+ 清空，并刷新下方列表。
+列表：`GET /api/announcements` 倒序；每条显示标题、发布日期与内容摘要，删除按钮 `data-delete-announce` 经确认后 `DELETE /api/admin/announcements/:id` 并刷新。
 
 ## 面板 3 · 学生认证审核（#view-review）
 
@@ -365,7 +368,7 @@ data 属性钩子：
 
 ## 接口与存储（保留清单）
 
-- 接口：GET /api/settings/banner、GET /api/user/profile、POST /api/admin/announcements、PUT /api/admin/settings/banner、GET/POST /api/admin/invite-codes、DELETE /api/admin/invite-codes/、GET /api/admin/permissions、GET /api/admin/student-applications、PUT /api/admin/student-applications/approve、PUT /api/admin/student-applications/reject、GET /api/admin/users、PUT /api/admin/users/role、PUT /api/admin/users/ban、PUT /api/admin/users/unban、PUT /api/admin/users/permissions、GET /api/weekly-menu、POST /api/admin/weekly-menu/upload、DELETE /api/admin/weekly-menu/、GET /api/admin/ban-appeals、PUT /api/admin/ban-appeals/review、GET /api/admin/tickets、PUT /api/admin/tickets/reply、GET /api/admin/pending-counts。
+- 接口：GET /api/settings/banner、GET /api/user/profile、GET /api/announcements、POST /api/admin/announcements、DELETE /api/admin/announcements/、PUT /api/admin/settings/banner、GET/POST /api/admin/invite-codes、DELETE /api/admin/invite-codes/、GET /api/admin/permissions、GET /api/admin/student-applications、PUT /api/admin/student-applications/approve、PUT /api/admin/student-applications/reject、GET /api/admin/users、PUT /api/admin/users/role、PUT /api/admin/users/ban、PUT /api/admin/users/unban、PUT /api/admin/users/permissions、GET /api/weekly-menu、POST /api/admin/weekly-menu/upload、DELETE /api/admin/weekly-menu/、GET /api/admin/ban-appeals、PUT /api/admin/ban-appeals/review、GET /api/admin/tickets、PUT /api/admin/tickets/reply、GET /api/admin/pending-counts。
 - localStorage：token、user（经 UI.session）；navCollapsed 废弃。
 
 ## 对话框钩子

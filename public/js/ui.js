@@ -907,7 +907,6 @@
 
   function accountLinks(user) {
     var links = [{ href: 'profile.html', icon: 'user', label: '个人中心' }];
-    if (UI.config.features.inbox) links.push({ href: 'inbox.html', icon: 'inbox', label: '我的消息' });
     if (UI.session.weight(user) < UI.ROLE_WEIGHTS.student) links.push({ href: 'student_verify.html', icon: 'graduation', label: '学生认证' });
     var hasPerms = user.permissions && user.permissions.length > 0;
     if (UI.session.weight(user) >= UI.ROLE_WEIGHTS.admin || hasPerms) links.push({ href: 'admin.html', icon: 'shield', label: '管理后台' });
@@ -1071,7 +1070,7 @@
 
   UI.guardUnsaved = function (form) {
     var dirty = false;
-    form.addEventListener('input', function () { dirty = true; });
+    form.addEventListener('input', function (e) { if (e.isTrusted) dirty = true; });
     window.addEventListener('beforeunload', function (e) { if (dirty) { e.preventDefault(); e.returnValue = ''; } });
     return { clean: function () { dirty = false; } };
   };

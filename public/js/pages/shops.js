@@ -12,9 +12,7 @@
   var live = page.el("shopLive");
   var filterBox = page.el("typeFilter");
   var sortSelect = page.el("sortSelect");
-  var loadMore = page.el("loadMore");
-  var moreBtn = page.el("moreBtn");
-  var moreInfo = page.el("moreInfo");
+  var pager = page.el("pager");
   var createAction = page.el("createAction");
   var addHint = page.el("addHint");
   var addHintText = page.el("addHintText");
@@ -36,7 +34,16 @@
   var NAME_COLLATOR;
   try { NAME_COLLATOR = new Intl.Collator("zh-CN-u-co-pinyin", { sensitivity: "base", numeric: true }); }
   catch (err) { NAME_COLLATOR = new Intl.Collator("zh-CN", { sensitivity: "base", numeric: true }); }
-  var state = { shops: [], meta: null, type: "", sort: "campus", q: "", distanceMin: "", distanceMax: "", walkMin: "", walkMax: "", likesMin: "", likesMax: "", reviewsMin: "", reviewsMax: "", ratingMin: "", ratingMax: "", shown: 0, map: null, mapFailed: false, requestSeq: 0 };
+  var ALLOWED_SORTS = ["campus", "az", "metro", "likes", "reviews", "rating", "new"];
+  var state = { shops: [], meta: null, type: "", sort: "campus", q: "", distanceMin: "", distanceMax: "", walkMin: "", walkMax: "", likesMin: "", likesMax: "", reviewsMin: "", reviewsMax: "", ratingMin: "", ratingMax: "", page: 1, map: null, mapFailed: false, requestSeq: 0 };
+
+  function savedSort() {
+    var s = localStorage.getItem("shopDefaultSort") || "campus";
+    return ALLOWED_SORTS.indexOf(s) === -1 ? "campus" : s;
+  }
+  function savedType() {
+    return localStorage.getItem("shopDefaultType") || "";
+  }
 
   function queryNumber(params, key, max) {
     var raw = params.get(key);
@@ -57,9 +64,11 @@
     var type = params.get("type") || "";
     var sort = params.get("sort") || "campus";
     if (sort === "north" || sort === "east") sort = "campus";
-    if (["campus", "az", "metro", "likes", "reviews", "rating", "new"].indexOf(sort) === -1) sort = "campus";
+    if (ALLOWED_SORTS.indexOf(sort) === -1) sort = "campus";
     return {
-      type: type, sort: sort, q: (params.get("q") || "").slice(0, 80),
+      type: type, sort: sort, hasType: params.has("type"), hasSort: params.has("sort"),
+      page: Math.max(1, parseInt(params.get("page"), 10) || 1),
+      q: (params.get("q") || "").slice(0, 80),
       distanceMin: queryNumber(params, "distance_min_m", 50000),
       distanceMax: queryNumber(params, "distance_max_m", 50000),
       walkMin: queryNumber(params, "walk_min", 240),
@@ -88,6 +97,7 @@
     if (state.reviewsMax) query.push("reviews_max=" + encodeURIComponent(state.reviewsMax));
     if (state.ratingMin) query.push("rating_min=" + encodeURIComponent(state.ratingMin));
     if (state.ratingMax) query.push("rating_max=" + encodeURIComponent(state.ratingMax));
+    if (state.page > 1) query.push("page=" + encodeURIComponent(state.page));
     history.replaceState(null, "", location.pathname + (query.length ? "?" + query.join("&") : ""));
   }
 
@@ -259,9 +269,36 @@
     renderMap();
   }
 
+  function pageList(total, current) {
+    var pages = [1];
+    for (var p = current - 2; p <= current + 2; p++) if (p > 1 && p < total && pages.indexOf(p) === -1) pages.push(p);
+    if (total > 1 && pages.indexOf(total) === -1) pages.push(total);
+    pages.sort(function (a, b) { return a - b; });
+    var out = [];
+    pages.forEach(function (p, i) {
+      if (i > 0 && p - pages[i - 1] > 1) out.push("gap");
+      out.push(p);
+    });
+    return out;
+  }
+  function renderPager(totalPages) {
+    if (!pager) return;
+    if (totalPages <= 1) { pager.hidden = true; pager.innerHTML = ""; return; }
+    pager.hidden = false;
+    var html = "";
+    html += '<button type="button" class="btn btn--sm" data-page="' + (state.page - 1) + '"' + (state.page <= 1 ? " disabled" : "") + ' aria-label="上一页">' + UI.icon("chevron-left", "icon--sm") + "</button>";
+    pageList(totalPages, state.page).forEach(function (p) {
+      if (p === "gap") html += '<span class="pager__gap" aria-hidden="true">…</span>';
+      else html += '<button type="button" class="btn btn--sm' + (p === state.page ? " btn--primary" : "") + '" data-page="' + p + '"' + (p === state.page ? ' aria-current="page"' : "") + ">" + p + "</button>";
+    });
+    html += '<button type="button" class="btn btn--sm" data-page="' + (state.page + 1) + '"' + (state.page >= totalPages ? " disabled" : "") + ' aria-label="下一页">' + UI.icon("chevron-right", "icon--sm") + "</button>";
+    pager.innerHTML = html;
+  }
   function renderList() {
     var total = state.shops.length;
-    state.shown = Math.min(total, PAGE_SIZE);
+    var totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+    if (state.page > totalPages) state.page = totalPages;
+    if (state.page < 1) state.page = 1;
     if (!total) {
       var hasSearchFilters = !!(state.q || state.distanceMin || state.distanceMax || state.walkMin || state.walkMax || state.likesMin || state.likesMax || state.reviewsMin || state.reviewsMax || state.ratingMin || state.ratingMax);
       if (state.type || hasSearchFilters) {
@@ -279,15 +316,16 @@
           actions: state.meta && state.meta.can_create ? [{ label: "添加店铺", href: "shop-new.html", primary: true, icon: "plus" }] : []
         });
       }
-    } else {
-      grid.innerHTML = state.shops.slice(0, state.shown).map(shopCard).join("");
+      summary.textContent = "";
+      live.textContent = "没有符合条件的店铺";
+      renderPager(1);
+      return;
     }
-    summary.textContent = total
-      ? "共 " + total + " 家店铺" + (state.type ? "（" + state.type + "）" : "") + "，已显示 " + state.shown + " 家"
-      : "";
-    live.textContent = total ? "已加载 " + total + " 家店铺" + (state.type ? "，分类 " + state.type : "") : "没有符合条件的店铺";
-    loadMore.hidden = total <= state.shown;
-    moreInfo.textContent = total > state.shown ? "已显示 " + state.shown + " / " + total : "";
+    var start = (state.page - 1) * PAGE_SIZE;
+    grid.innerHTML = state.shops.slice(start, start + PAGE_SIZE).map(shopCard).join("");
+    summary.textContent = "共 " + total + " 家店铺" + (state.type ? "（" + state.type + "）" : "") + "，第 " + state.page + " / " + totalPages + " 页";
+    live.textContent = "第 " + state.page + " 页，共 " + total + " 家店铺" + (state.type ? "，分类 " + state.type : "");
+    renderPager(totalPages);
   }
 
   function load() {
@@ -340,6 +378,7 @@
   }
 
   function readSearchControls() {
+    state.page = 1;
     state.q = searchInput.value.trim().slice(0, 80);
     state.distanceMin = distanceMinInput.value.trim();
     state.distanceMax = distanceMaxInput.value.trim();
@@ -376,6 +415,7 @@
     state.ratingMin = "";
     state.ratingMax = "";
     state.sort = "campus";
+    state.page = 1;
     filterBox.querySelectorAll('input[name="type"]').forEach(function (input) { input.checked = input.value === ""; });
     sortSelect.value = "campus";
     searchInput.value = "";
@@ -396,17 +436,30 @@
   filterBox.addEventListener("change", function (e) {
     if (!e.target || e.target.name !== "type") return;
     state.type = e.target.value;
+    state.page = 1;
     syncUrl();
     load();
   });
   sortSelect.addEventListener("change", function () {
     state.sort = sortSelect.value;
+    state.page = 1;
     syncUrl();
     load();
   });
-  moreBtn.addEventListener("click", function () {
-    state.shown = Math.min(state.shops.length, state.shown + PAGE_SIZE);
+  pager.addEventListener("click", function (e) {
+    var btn = e.target.closest && e.target.closest("[data-page]");
+    if (!btn || btn.disabled) return;
+    var next = Number(btn.getAttribute("data-page"));
+    if (!next || next === state.page) return;
+    state.page = next;
+    syncUrl();
     renderList();
+    if (summary && summary.scrollIntoView) {
+      summary.scrollIntoView({
+        behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+        block: "start",
+      });
+    }
   });
   grid.addEventListener("click", function (e) {
     var reset = e.target.closest && e.target.closest("#resetFilter");
@@ -420,8 +473,9 @@
   });
 
   var initial = readUrl();
-  state.type = initial.type;
-  state.sort = initial.sort;
+  state.type = initial.hasType ? initial.type : savedType();
+  state.sort = initial.hasSort ? initial.sort : savedSort();
+  state.page = initial.page;
   state.q = initial.q;
   state.distanceMin = initial.distanceMin;
   state.distanceMax = initial.distanceMax;
@@ -433,7 +487,7 @@
   state.reviewsMax = initial.reviewsMax;
   state.ratingMin = initial.ratingMin;
   state.ratingMax = initial.ratingMax;
-  sortSelect.value = initial.sort;
+  sortSelect.value = state.sort;
   searchInput.value = state.q;
   distanceMinInput.value = state.distanceMin;
   distanceMaxInput.value = state.distanceMax;
@@ -445,7 +499,24 @@
   reviewsMaxInput.value = state.reviewsMax;
   ratingMinInput.value = state.ratingMin;
   ratingMaxInput.value = state.ratingMax;
+
+  async function applyAccountDefaults() {
+    if (!UI.session.token()) return;
+    var needSort = !initial.hasSort;
+    var needType = !initial.hasType;
+    if (!needSort && !needType) return;
+    var r = await UI.api("/api/user/profile", { on401: false });
+    if (!r.ok || !r.data.user) return;
+    var u = r.data.user;
+    if (needSort) {
+      var s = u.shop_default_sort || savedSort();
+      if (ALLOWED_SORTS.indexOf(s) === -1) s = "campus";
+      state.sort = s;
+      sortSelect.value = s;
+    }
+    if (needType) state.type = u.shop_default_type || savedType();
+  }
   UI.ready(function () {
-    load();
+    applyAccountDefaults().then(load);
   });
 })();

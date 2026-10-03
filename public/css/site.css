@@ -1540,6 +1540,11 @@ dialog .toast-host { position: absolute; top: var(--sp-3); }
 /* 加载更多 / 列表尾 */
 .load-more { display: grid; justify-items: center; gap: var(--sp-2); padding: var(--sp-6) 0 0; color: var(--ink-3); font-size: var(--fs-sm); }
 
+/* 分页 */
+.pager { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: var(--sp-2); padding: var(--sp-6) 0 0; }
+.pager .btn { min-width: 2.5rem; }
+.pager__gap { padding: 0 var(--sp-1); color: var(--ink-3); }
+
 /* 网络离线条（ui.js 在 offline 事件时插入页顶） */
 .offline-bar {
   position: sticky;
@@ -2103,13 +2108,16 @@ dialog .toast-host { position: absolute; top: var(--sp-3); }
 .shop-review-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-3); }
 .shop-review-form:not([hidden]) { display: grid; gap: var(--sp-3); }
 .shop-rating-fieldset { margin: 0; padding: 0; border: 0; }
-.shop-rating-choices { display: flex; gap: var(--sp-1); }
-.shop-rating-choice { position: relative; display: inline-grid; min-width: 2.5rem; min-height: 2.5rem; place-items: center; border-radius: var(--r-2); cursor: pointer; }
-.shop-rating-choice input { position: absolute; width: 1px; height: 1px; opacity: 0; }
-.shop-rating-choice > span:first-of-type { color: var(--ink-3); font-size: 1.55rem; line-height: 1; }
-.shop-rating-choice input:checked + span,
-.shop-rating-choice:has(input:checked) > span:first-of-type { color: var(--h-ochre-solid); }
-.shop-rating-choice:focus-within { outline: 2px solid var(--primary); outline-offset: 2px; }
+/* 选项按 5→1 写在 DOM 里，用 row-reverse 显示为 1→5；主轴的 flex-end 使其左对齐 */
+.shop-rating-choices { display: flex; flex-direction: row-reverse; justify-content: flex-end; gap: var(--sp-1); }
+.shop-rating-input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.shop-rating-choice { position: relative; display: inline-grid; min-width: 2.5rem; min-height: 2.5rem; place-items: center; border-radius: var(--r-2); cursor: pointer; color: var(--ink-3); font-size: 1.55rem; line-height: 1; }
+/* 选中/悬停的星及其左侧（row-reverse 下的 DOM 后续兄弟）一起点亮 */
+.shop-rating-input:checked + .shop-rating-choice,
+.shop-rating-input:checked ~ .shop-rating-choice,
+.shop-rating-choice:hover,
+.shop-rating-choice:hover ~ .shop-rating-choice { color: var(--h-ochre-solid); }
+.shop-rating-input:focus-visible + .shop-rating-choice { outline: 2px solid var(--primary); outline-offset: 2px; }
 .shop-review-textarea { min-height: 6rem; resize: vertical; }
 .shop-review-form[hidden], #likeShopButton[hidden] { display: none !important; }
 .review-list { display: grid; }

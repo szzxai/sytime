@@ -36,6 +36,9 @@ CREATE TABLE IF NOT EXISTS users (
   default_page TEXT NOT NULL DEFAULT 'index.html',
   default_floor INTEGER NOT NULL DEFAULT 1,
   recipe_default_view TEXT NOT NULL DEFAULT 'all',
+  shop_default_sort TEXT NOT NULL DEFAULT 'campus',
+  shop_default_type TEXT NOT NULL DEFAULT '',
+  shop_layout TEXT NOT NULL DEFAULT 'stacked',
   status TEXT NOT NULL DEFAULT 'active',
   ban_reason TEXT NOT NULL DEFAULT '',
   ban_image TEXT NOT NULL DEFAULT '',
@@ -62,6 +65,9 @@ CREATE TABLE IF NOT EXISTS users (
       default_page TEXT NOT NULL DEFAULT 'index.html',
       default_floor INTEGER NOT NULL DEFAULT 1,
       recipe_default_view TEXT NOT NULL DEFAULT 'all',
+      shop_default_sort TEXT NOT NULL DEFAULT 'campus',
+      shop_default_type TEXT NOT NULL DEFAULT '',
+      shop_layout TEXT NOT NULL DEFAULT 'stacked',
       status TEXT NOT NULL DEFAULT 'active',
       ban_reason TEXT NOT NULL DEFAULT '',
       ban_image TEXT NOT NULL DEFAULT '',
@@ -86,6 +92,15 @@ CREATE TABLE IF NOT EXISTS users (
   }
   if (cols.indexOf("recipe_default_view") === -1) {
     db.exec("ALTER TABLE users ADD COLUMN recipe_default_view TEXT NOT NULL DEFAULT 'all'");
+  }
+  if (cols.indexOf("shop_default_sort") === -1) {
+    db.exec("ALTER TABLE users ADD COLUMN shop_default_sort TEXT NOT NULL DEFAULT 'campus'");
+  }
+  if (cols.indexOf("shop_default_type") === -1) {
+    db.exec("ALTER TABLE users ADD COLUMN shop_default_type TEXT NOT NULL DEFAULT ''");
+  }
+  if (cols.indexOf("shop_layout") === -1) {
+    db.exec("ALTER TABLE users ADD COLUMN shop_layout TEXT NOT NULL DEFAULT 'stacked'");
   }
   if (cols.indexOf("display_id") === -1) {
     db.exec("ALTER TABLE users ADD COLUMN display_id TEXT");
@@ -480,11 +495,8 @@ function isVerifiedStudent(req) {
   if (!req.user || req.user.id === null || req.user.id === undefined) return false;
   const account = db.prepare("SELECT role, status FROM users WHERE id = ?").get(req.user.id);
   if (!account || account.status !== "active") return false;
-  // The student role is assigned only after certification; elevated roles count only
-  // if the account still has an explicitly approved student application.
-  if (account.role === "student") return true;
-  if ((ROLE_WEIGHTS[account.role] || 0) < ROLE_WEIGHTS.student) return false;
-  return !!db.prepare("SELECT 1 FROM student_applications WHERE user_id = ? AND status = 'approved' LIMIT 1").get(req.user.id);
+  // 学生及以上角色（student / admin / super_admin / developer）均可点赞和评价。
+  return (ROLE_WEIGHTS[account.role] || 0) >= ROLE_WEIGHTS.student;
 }
 
 function requirePermission(perm) {
@@ -649,6 +661,21 @@ app.post("/api/admin/announcements", requirePermission("announcement_publish"), 
   }
   const announcement = db.prepare("SELECT * FROM announcements WHERE id = ?").get(Number(info.lastInsertRowid));
   res.status(201).json({ announcement: announcement });
+});
+
+app.delete("/api/admin/announcements/:id", requirePermission("announcement_publish"), function (req, res) {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id <= 0) {
+    res.status(400).json({ error: "invalid id" });
+    return;
+  }
+  const row = db.prepare("SELECT id FROM announcements WHERE id = ?").get(id);
+  if (!row) {
+    res.status(404).json({ error: "announcement not found" });
+    return;
+  }
+  db.prepare("DELETE FROM announcements WHERE id = ?").run(id);
+  res.json({ ok: true });
 });
 
 app.get("/api/settings/banner", function (req, res) {
@@ -1118,7 +1145,7 @@ app.get("/api/admin/pending-counts", requireLogin, function (req, res) {
 
 app.get("/api/user/profile", requireLogin, function (req, res) {
   const user = db
-    .prepare("SELECT id, display_id, username, nickname, avatar_url, signature, role, default_page, default_floor, recipe_default_view, status FROM users WHERE id = ?")
+    .prepare("SELECT id, display_id, username, nickname, avatar_url, signature, role, default_page, default_floor, recipe_default_view, shop_default_sort, shop_default_type, shop_layout, status FROM users WHERE id = ?")
     .get(req.user.id);
   if (!user) {
     res.status(404).json({ error: "user not found" });
@@ -1129,16 +1156,43 @@ app.get("/api/user/profile", requireLogin, function (req, res) {
 
 app.put("/api/user/settings", requireLogin, function (req, res) {
   const body = req.body || {};
+  const current = db
+    .prepare("SELECT default_page, default_floor, recipe_default_view, shop_default_sort, shop_default_type, shop_layout FROM users WHERE id = ?")
+    .get(req.user.id);
+  if (!current) {
+    res.status(404).json({ error: "user not found" });
+    return;
+  }
   const allowedPages = ["index.html", "map.html", "forum.html", "recipe.html"];
-  let defaultPage = body.default_page;
-  if (allowedPages.indexOf(defaultPage) === -1) defaultPage = "index.html";
-  let defaultFloor = parseInt(body.default_floor, 10);
-  if (isNaN(defaultFloor) || defaultFloor < 1 || defaultFloor > 4) defaultFloor = 1;
-  let recipeView = body.recipe_default_view;
-  if (recipeView !== "weekly") recipeView = "all";
-  db.prepare("UPDATE users SET default_page = ?, default_floor = ?, recipe_default_view = ? WHERE id = ?")
-    .run(defaultPage, defaultFloor, recipeView, req.user.id);
-  res.json({ default_page: defaultPage, default_floor: defaultFloor, recipe_default_view: recipeView });
+  let defaultPage = current.default_page;
+  if (body.default_page !== undefined) {
+    defaultPage = allowedPages.indexOf(body.default_page) === -1 ? "index.html" : body.default_page;
+  }
+  let defaultFloor = current.default_floor;
+  if (body.default_floor !== undefined) {
+    const floor = parseInt(body.default_floor, 10);
+    defaultFloor = isNaN(floor) || floor < 1 || floor > 4 ? 1 : floor;
+  }
+  let recipeView = current.recipe_default_view;
+  if (body.recipe_default_view !== undefined) {
+    recipeView = ["all", "reviews", "weekly"].indexOf(body.recipe_default_view) === -1 ? "all" : body.recipe_default_view;
+  }
+  const allowedShopSorts = ["campus", "az", "metro", "likes", "reviews", "rating", "new"];
+  let shopSort = current.shop_default_sort;
+  if (body.shop_default_sort !== undefined) {
+    shopSort = allowedShopSorts.indexOf(body.shop_default_sort) === -1 ? "campus" : body.shop_default_sort;
+  }
+  let shopType = current.shop_default_type;
+  if (body.shop_default_type !== undefined) {
+    shopType = typeof body.shop_default_type === "string" ? body.shop_default_type.trim().slice(0, 20) : "";
+  }
+  let shopLayout = current.shop_layout;
+  if (body.shop_layout !== undefined) {
+    shopLayout = body.shop_layout === "split" ? "split" : "stacked";
+  }
+  db.prepare("UPDATE users SET default_page = ?, default_floor = ?, recipe_default_view = ?, shop_default_sort = ?, shop_default_type = ?, shop_layout = ? WHERE id = ?")
+    .run(defaultPage, defaultFloor, recipeView, shopSort, shopType, shopLayout, req.user.id);
+  res.json({ default_page: defaultPage, default_floor: defaultFloor, recipe_default_view: recipeView, shop_default_sort: shopSort, shop_default_type: shopType, shop_layout: shopLayout });
 });
 
 app.post("/api/user/avatar", requireLogin, function (req, res) {

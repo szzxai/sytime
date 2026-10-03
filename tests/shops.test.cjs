@@ -178,11 +178,15 @@ test("上传权限：未登录 401，普通用户 403，学生 201（前端隐�
   createdShopId = ok.data.shop.id;
 });
 
-test("仅认证学生可点赞和评价；评分计数、平均分与更新正确", async () => {
+test("学生及以上可点赞和评价；评分计数、平均分与更新正确", async () => {
   assert.equal((await api("/api/shops/" + createdShopId + "/like", { method: "POST", body: {} })).status, 401);
   assert.equal((await api("/api/shops/" + createdShopId + "/like", { token: plainUser.token, method: "POST", body: {} })).status, 403);
   assert.equal((await api("/api/shops/" + createdShopId + "/reviews", { token: plainUser.token, method: "POST", body: { rating: 5, content: "普通用户不能评价" } })).status, 403);
-  assert.equal((await api("/api/shops/" + createdShopId + "/like", { token: developer.token, method: "POST", body: {} })).status, 403, "未获学生认证的 developer 角色也不能评价/点赞");
+  const devLike = await api("/api/shops/" + createdShopId + "/like", { token: developer.token, method: "POST", body: {} });
+  assert.equal(devLike.status, 200, "学生及以上的 developer 角色可点赞/评价");
+  assert.equal(devLike.data.liked, true);
+  const devUnlike = await api("/api/shops/" + createdShopId + "/like", { token: developer.token, method: "POST", body: {} });
+  assert.equal(devUnlike.data.liked, false);
 
   const liked = await api("/api/shops/" + createdShopId + "/like", { token: studentUser.token, method: "POST", body: {} });
   assert.equal(liked.status, 200);

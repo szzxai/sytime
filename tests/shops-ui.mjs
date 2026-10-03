@@ -177,7 +177,7 @@ try {
   await ordinaryDetail.page.waitForSelector("#reviewsPanel");
   check("普通用户不能点赞", await ordinaryDetail.page.$eval("#likeShopButton", (el) => el.hidden));
   check("普通用户不能评价", await ordinaryDetail.page.$eval("#reviewForm", (el) => el.hidden));
-  check("普通用户看到认证提示", (await ordinaryDetail.page.textContent("#reviewAccess")).includes("仅认证学生"));
+  check("普通用户看到权限提示", (await ordinaryDetail.page.textContent("#reviewAccess")).includes("学生及以上"));
   await ordinaryDetail.ctx.close();
 
   const studentDetail = await context(student);
@@ -187,7 +187,7 @@ try {
   await studentDetail.page.click("#likeShopButton");
   await studentDetail.page.waitForFunction(() => document.getElementById("likeShopButton").textContent.includes("已点赞"));
   check("点赞后计数与状态更新", (await studentDetail.page.textContent("#detailEngagementStats")).includes("1"));
-  await studentDetail.page.locator(".shop-rating-choice:has(input[value='5'])").click();
+  await studentDetail.page.locator('.shop-rating-choice[for="shopRating5"]').click();
   await studentDetail.page.fill("#reviewContent", "用餐环境整洁，值得推荐");
   await studentDetail.page.click("#reviewSubmit");
   await studentDetail.page.waitForSelector(".shop-review-item");

@@ -387,6 +387,12 @@ try {
     await adminPage.page.waitForLoadState("networkidle");
     await audit(adminPage.page, `admin/${panel}/360`);
   }
+  await adminPage.page.locator('[data-panel="announce"]').click();
+  await adminPage.page.waitForSelector("#annList .queue-item");
+  check(
+    "published announcements listed in admin",
+    (await adminPage.page.locator("#annList [data-delete-announce]").count()) >= 1,
+  );
   await adminPage.page.locator('[data-panel="menu"]').click();
   await adminPage.page.locator("#menuDailyTime").fill("10:35");
   await adminPage.page.locator("#menuSave").click();

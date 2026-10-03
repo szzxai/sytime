@@ -286,7 +286,13 @@
         defaultView = r.data.user.recipe_default_view || fallback;
     }
     if (!selected)
-      tabs.select(defaultView === "weekly" ? "weeklyBtn" : "allBtn");
+      tabs.select(
+        defaultView === "weekly"
+          ? "weeklyBtn"
+          : defaultView === "reviews"
+            ? "reviewsBtn"
+            : "allBtn",
+      );
   }
   list.innerHTML = UI.html.skeleton("row", 3);
   initial();

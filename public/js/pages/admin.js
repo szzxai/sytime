@@ -23,7 +23,7 @@
   };
   var loaders = {
     banner: loadBanner,
-    announce: function () {},
+    announce: loadAnnounce,
     notify: loadNotify,
     weekly: loadWeekly,
     review: loadReview,
@@ -196,7 +196,45 @@
       },
       "公告已发布",
     );
-    if (r && r.ok) P.reset(this);
+    if (r && r.ok) {
+      P.reset(this);
+      loadAnnounce();
+    }
+  });
+  function loadAnnounce() {
+    return queue(
+      "annList",
+      "/api/announcements",
+      "announcements",
+      function (a) {
+        var content = (a.content || "").length > 120 ? a.content.slice(0, 120) + "…" : a.content || "";
+        return (
+          '<article class="card queue-item"><div class="queue-item__main"><h2 class="queue-item__title">' +
+          UI.esc(a.title) +
+          '</h2><span class="queue-item__meta">发布于 ' +
+          UI.esc(a.publish_date || "") +
+          '</span><p class="prose">' +
+          UI.esc(content) +
+          '</p></div><button type="button" class="btn btn--sm btn--danger-quiet" data-delete-announce="' +
+          UI.esc(a.id) +
+          '">删除</button></article>'
+        );
+      },
+      "暂无公告",
+    );
+  }
+  P.el("annList").addEventListener("click", function (e) {
+    var btn = e.target.closest("[data-delete-announce]");
+    if (!btn) return;
+    confirmedAction(
+      btn,
+      "删除这条公告吗？",
+      "/api/admin/announcements/" + btn.dataset.deleteAnnounce,
+      null,
+      "已删除",
+      loadAnnounce,
+      true,
+    );
   });
   function loadNotify() {
     P.el("ntMsg").textContent = "";

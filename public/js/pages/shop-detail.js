@@ -9,6 +9,7 @@
   var meta = null;
   var currentShop = null;
   var currentCanInteract = false;
+  var currentMyReview = null;
 
   function statBlock(icon, value, unit, label) {
     return (
@@ -43,8 +44,16 @@
   function hero(shop) {
     return (
       '<article class="card shop-hero">' +
+      '<div class="row row--between row--top">' +
+      '<div class="grow">' +
       '<div class="row row--sm u-mb-2"><span class="tag" data-hue="' + ShopsMap.hue(shop.type) + '">' + UI.esc(shop.type) + "</span></div>" +
       '<h1 class="shop-hero__title">' + UI.esc(shop.name) + "</h1>" +
+      "</div>" +
+      '<div class="segmented" role="group" aria-label="店铺详情页布局" id="layoutSwitch">' +
+      '<button type="button" class="segmented__item" data-layout="stacked" aria-pressed="true">' + UI.icon("rows", "icon--sm") + "纵向</button>" +
+      '<button type="button" class="segmented__item" data-layout="split" aria-pressed="false">' + UI.icon("columns", "icon--sm") + "双栏</button>" +
+      "</div>" +
+      "</div>" +
       '<div class="shop-hero__line">' + UI.icon("map-pin") + "<span>" + UI.esc(shop.address) +
       (shop.location_note ? "<small>" + UI.esc(shop.location_note) + "</small>" : "") +
       "</span></div>" +
@@ -62,9 +71,8 @@
     );
   }
 
-  function detail(shop) {
+  function mapCard(shop) {
     return (
-      hero(shop) +
       '<section class="card" aria-labelledby="mapTitle">' +
       '<div class="shop-section__head"><h2 class="section__title" id="mapTitle">位置与路线</h2></div>' +
       '<div class="shop-map shop-map--detail" id="detailMap" role="region" aria-label="店铺位置地图">' +
@@ -73,19 +81,49 @@
       distanceRow("距苏州中学本部", shop.campus_distance_m, shop.campus_walk_min) +
       distanceRow("最近地铁 " + shop.metro_station + " " + shop.metro_exit, shop.metro_distance_m, shop.metro_walk_min) +
       "</div>" +
-      "</section>" +
-      reviewSection()
+      "</section>"
+    );
+  }
+
+  function subnav() {
+    return (
+      '<nav class="subnav" id="shopSubnav" aria-label="店铺分区">' +
+      '<div class="tabs" role="tablist" aria-label="内容分区">' +
+      '<button type="button" class="tab" role="tab" data-target="shopDishes" aria-selected="true">菜品<span class="tab__count" id="dishTabCount">0</span></button>' +
+      '<button type="button" class="tab" role="tab" data-target="reviewsPanel" aria-selected="false">评价<span class="tab__count" id="reviewTabCount">0</span></button>' +
+      "</div></nav>"
+    );
+  }
+
+  function dishesSection() {
+    return (
+      '<section class="card shop-section shop-col--sticky" id="shopDishes" aria-labelledby="dishesTitle">' +
+      '<div class="shop-section__head"><h2 class="section__title" id="dishesTitle">菜品</h2></div>' +
+      UI.html.empty({ icon: "utensils", title: "这家店还没有菜品", desc: "暂无菜品信息。", compact: true }) +
+      "</section>"
+    );
+  }
+
+  function detail(shop) {
+    return (
+      hero(shop) +
+      mapCard(shop) +
+      subnav() +
+      '<div class="shop-layout" id="shopLayout">' +
+      dishesSection() +
+      reviewSection() +
+      "</div>"
     );
   }
 
   function reviewSection() {
     return (
-      '<section class="card shop-review-card" id="reviewsPanel" aria-labelledby="reviewsTitle">' +
+      '<section class="card shop-review-card shop-section" id="reviewsPanel" aria-labelledby="reviewsTitle">' +
       '<div class="shop-section__head"><div><h2 class="section__title" id="reviewsTitle">同学评价</h2><p class="u-muted u-fs-sm" id="reviewSummary" role="status"></p></div></div>' +
       '<div class="shop-review-actions"><button type="button" class="btn btn--sm" id="likeShopButton" hidden></button><span class="u-muted u-fs-sm" id="reviewAccess"></span></div>' +
       '<form class="shop-review-form" id="reviewForm" hidden>' +
       '<fieldset class="shop-rating-fieldset"><legend class="field__label">评分（必选）</legend><div class="shop-rating-choices" role="radiogroup" aria-label="评分 1 到 5 星">' +
-      [5, 4, 3, 2, 1].map(function (value) { return '<label class="shop-rating-choice"><input type="radio" name="rating" value="' + value + '"><span aria-hidden="true">★</span><span class="sr-only">' + value + ' 星</span></label>'; }).join("") +
+      [5, 4, 3, 2, 1].map(function (value) { return '<input class="shop-rating-input" type="radio" name="rating" id="shopRating' + value + '" value="' + value + '"><label class="shop-rating-choice" for="shopRating' + value + '"><span class="sr-only">' + value + ' 星</span><span aria-hidden="true">★</span></label>'; }).join("") +
       '</div></fieldset>' +
       '<label class="field__label" for="reviewContent">评价内容 <span class="field__opt">（选填，500 字以内）</span></label>' +
       '<textarea class="input shop-review-textarea" id="reviewContent" maxlength="500" rows="4" placeholder="分享口味、价格或排队情况"></textarea>' +
@@ -158,15 +196,70 @@
       likeButton.setAttribute("aria-pressed", shop.user_liked ? "true" : "false");
       likeButton.innerHTML = UI.icon("heart") + (shop.user_liked ? "已点赞" : "点赞") + " · " + UI.esc(shop.likes_count || 0);
     }
+    var reviewTab = page.el("reviewTabCount");
+    if (reviewTab) reviewTab.textContent = String(shop.reviews_count || 0);
   }
 
-  function reviewCard(review) {
+  var LAYOUTS = ["stacked", "split"];
+  function setLayoutMode(mode, persist) {
+    var split = mode === "split";
+    var layout = page.el("shopLayout");
+    if (layout) layout.classList.toggle("shop-layout--split", split);
+    body.classList.toggle("shop-wrap--split", split);
+    var sw = page.el("layoutSwitch");
+    if (sw) {
+      UI.qsa("[data-layout]", sw).forEach(function (btn) {
+        btn.setAttribute("aria-pressed", btn.getAttribute("data-layout") === mode ? "true" : "false");
+      });
+    }
+    try { localStorage.setItem("shopLayout", mode); } catch (e) { /* ignore */ }
+    if (persist && UI.session.token()) {
+      UI.api("/api/user/settings", { method: "PUT", body: { shop_layout: mode }, on401: false });
+    }
+  }
+  function wireLayout() {
+    var sw = page.el("layoutSwitch");
+    if (sw) {
+      sw.addEventListener("click", function (e) {
+        var btn = e.target.closest("[data-layout]");
+        if (!btn) return;
+        var mode = btn.getAttribute("data-layout");
+        if (mode === "split" && window.innerWidth < 900)
+          UI.toast.info("屏幕较窄，已使用纵向布局");
+        setLayoutMode(mode, true);
+      });
+    }
+    var sub = page.el("shopSubnav");
+    if (sub) UI.scrollSpy(sub, [page.el("shopDishes"), page.el("reviewsPanel")]);
+    function localMode() {
+      var stored = localStorage.getItem("shopLayout");
+      return LAYOUTS.indexOf(stored) !== -1
+        ? stored
+        : window.innerWidth >= 900
+          ? "split"
+          : "stacked";
+    }
+    if (UI.session.token()) {
+      UI.api("/api/user/profile", { on401: false }).then(function (r) {
+        var account = r.ok && r.data.user ? r.data.user.shop_layout : null;
+        setLayoutMode(LAYOUTS.indexOf(account) !== -1 ? account : localMode(), false);
+      });
+    } else {
+      setLayoutMode(localMode(), false);
+    }
+  }
+
+  function reviewCard(review, isMine) {
     var timestamp = Number(review.updated_at || review.created_at);
     var date = isFinite(timestamp) ? new Date(timestamp * 1000).toLocaleDateString("zh-CN") : "";
     var stars = "★".repeat(Number(review.rating) || 0) + "☆".repeat(5 - (Number(review.rating) || 0));
     return (
       '<article class="shop-review-item">' +
-      '<div class="shop-review-item__head"><strong>' + UI.esc(review.author || "同学") + '</strong><span class="shop-review-item__stars" aria-label="' + UI.esc(review.rating) + ' 星">' + stars + '</span><time>' + UI.esc(date) + "</time></div>" +
+      '<div class="shop-review-item__head"><strong>' + UI.esc(review.author || "同学") + '</strong><span class="shop-review-item__stars" aria-label="' + UI.esc(review.rating) + ' 星">' + stars + '</span><time>' + UI.esc(date) + "</time>" +
+      (isMine
+        ? '<button type="button" class="btn btn--danger-quiet btn--sm" data-delete-my-review>' + UI.icon("trash", "icon--sm") + "删除</button>"
+        : "") +
+      "</div>" +
       '<p class="shop-review-item__content">' + (review.content ? UI.esc(review.content) : '<span class="u-muted">仅评分，未写文字</span>') + "</p>" +
       "</article>"
     );
@@ -178,9 +271,17 @@
         page.el("reviewList").innerHTML = '<p class="u-muted u-fs-sm">评价暂时无法加载。</p>';
         return;
       }
+      currentMyReview = r.data.my_review || null;
       page.el("reviewList").innerHTML = (r.data.reviews || []).length
-        ? r.data.reviews.map(reviewCard).join("")
-        : '<p class="u-muted u-fs-sm">还没有同学评价，认证学生可以写下第一条。</p>';
+        ? r.data.reviews
+            .map(function (review) {
+              return reviewCard(
+                review,
+                !!(currentMyReview && String(review.id) === String(currentMyReview.id)),
+              );
+            })
+            .join("")
+        : '<p class="u-muted u-fs-sm">还没有同学评价，学生及以上可以写下第一条。</p>';
       var myReview = r.data.my_review;
       if (currentCanInteract && myReview) {
         var rating = page.el("reviewForm").querySelector('input[name="rating"][value="' + Number(myReview.rating) + '"]');
@@ -189,6 +290,40 @@
         page.el("reviewSubmit").textContent = "更新我的评价";
       }
       updateEngagement(currentShop);
+    });
+  }
+
+  function deleteMyReview() {
+    if (!currentCanInteract || !currentMyReview) return;
+    UI.confirm({
+      title: "删除这条评价？",
+      message: "删除后无法恢复。",
+      confirmText: "删除",
+      danger: true,
+    }).then(function (ok) {
+      if (!ok) return;
+      UI.api("/api/shops/" + encodeURIComponent(paramId) + "/reviews/me", {
+        method: "DELETE",
+      })
+        .then(function (r) {
+          if (!r.ok) {
+            UI.toast.error(UI.errorText(r));
+            return;
+          }
+          currentShop = r.data.shop;
+          currentMyReview = null;
+          var form = page.el("reviewForm");
+          if (form) {
+            form.reset();
+            page.el("reviewSubmit").textContent = "提交评价";
+          }
+          updateEngagement(currentShop);
+          UI.toast.success(r.data.message || "评价已删除");
+          return refreshReviews();
+        })
+        .catch(function () {
+          UI.toast.error("删除失败，请稍后重试");
+        });
     });
   }
 
@@ -202,13 +337,13 @@
     if (currentCanInteract) {
       likeButton.hidden = false;
       form.hidden = false;
-      notice.textContent = "认证学生可点赞；每位学生可提交或更新一条 1–5 星评价。";
+      notice.textContent = "学生及以上可点赞；每人可提交或更新一条 1–5 星评价。";
     } else {
       likeButton.hidden = true;
       form.hidden = true;
       notice.innerHTML = UI.session.token()
-        ? '仅认证学生可点赞或评价。 <a href="student_verify.html">去完成学生认证</a>'
-        : '仅认证学生可点赞或评价。 <a href="' + UI.esc(page.loginUrl()) + '">登录后认证</a>';
+        ? '学生及以上可点赞或评价。 <a href="student_verify.html">去完成学生认证</a>'
+        : '学生及以上可点赞或评价。 <a href="' + UI.esc(page.loginUrl()) + '">登录后认证</a>';
     }
     likeButton.addEventListener("click", function () {
       if (!currentCanInteract) return;
@@ -241,6 +376,9 @@
         UI.toast.error("评价提交失败，请稍后重试");
       }).then(function () { submit.disabled = false; });
     });
+    page.el("reviewList").addEventListener("click", function (e) {
+      if (e.target.closest("[data-delete-my-review]")) deleteMyReview();
+    });
     refreshReviews();
   }
 
@@ -263,6 +401,7 @@
       document.title = shop.name + " · 三元坊必吃榜 · 校园信息网";
       body.innerHTML = detail(shop);
       configureInteractions(shop, r.data.can_interact || shop.can_interact);
+      wireLayout();
       UI.api("/api/shops/meta", { on401: false }).then(function (m) {
         meta = m.ok ? m.data : null;
         renderMap(shop);
