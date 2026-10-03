@@ -248,11 +248,11 @@ CREATE INDEX idx_tickets_user ON tickets(user_id);
 - **特殊权限（`user_permissions` 表 + `requirePermission(perm)`）**：在角色之外可给单个用户授予细粒度权限。`hasPermission` 判定 = **角色权重 ≥ 该权限默认要求**（`PERMISSION_REQUIRES`）**或**在 `user_permissions` 中有显式授权。权限键：`banner_edit`(super_admin)、`announcement_publish`(super_admin)、`student_review`(super_admin)、`invite_manage`(super_admin)、`user_manage`(super_admin)、`ban_appeal_review`(super_admin)、`weekly_menu_upload`(admin)、`map_popup_edit`(admin)、`ticket_manage`(admin)。`requirePermission` 未登录 401、无权限 403。`GET /api/me` 与 `GET /api/user/profile` 均返回 `permissions` 数组。
 
 **个人资料**（均需登录）
-- `GET /api/user/profile` — 返回 `{ user: { id, display_id, username, nickname, avatar_url, signature, role, default_page, default_floor, recipe_default_view, status } }`
+- `GET /api/user/profile` — 返回 `{ user: { id, display_id, username, nickname, avatar_url, signature, role, default_page, default_floor, recipe_default_view, shop_default_sort, shop_default_type, shop_layout, status } }`
 - `POST /api/user/avatar` — multer 字段名 `avatar`，限 2MB、仅 jpg/png，存 `uploads/`，返回 `{ avatar_url }`
 - `PUT /api/user/nickname` — body `{ nickname }`
 - `PUT /api/user/signature` — body `{ signature }`
-- `PUT /api/user/settings` — body `{ default_page, default_floor, recipe_default_view }`；页面仅允许 index/map/forum/recipe，楼层 1–4，菜谱默认页 all/weekly，非法值回退默认，更新当前用户记录
+- `PUT /api/user/settings` — body 为可选项 `{ default_page, default_floor, recipe_default_view, shop_default_sort, shop_default_type, shop_layout }`，按传入字段部分更新；页面仅允许 index/map/forum/recipe，楼层 1–4，菜谱默认页 all/reviews/weekly，店铺样式 stacked/split，非法值拒绝，更新当前用户记录
 - `PUT /api/user/password` — body `{ oldPassword, newPassword }`（兼容 `old_password`/`new_password`）；旧密码错误 400
 
 **论坛**
@@ -469,11 +469,13 @@ CREATE INDEX idx_tickets_user ON tickets(user_id);
 
 56. **必吃榜地图交互与近邻聚合**：静态图代理 `/api/shops/map-image` 接受中心点/缩放参数，中心限于姑苏区边界外扩 0.06°，缩放限制 9–18，并缓存最近 32 个视图。新增 `shops-map-interactive.js`：桌面拖动/滚轮/双击缩放，移动端拖动/双指缩放，缩放按钮与全域复位；近邻店铺以屏幕距离聚成数量徽标，点击后以聚合中心放大。底图仍走同源服务端 Key，不需浏览器 JS Key。真实页面冒烟验证 5,567 家、聚合点击、缩放、拖动动态底图成功；后端 13 项、浏览器 58 项通过。
 
+57. **必吃榜详情双布局与一批修复（#7）**：店铺详情页提供「纵向 / 双栏」两种布局（分段切换、个人中心设默认、窄屏自动纵向并提示），评价区支持作者删除本人评价（`DELETE /api/shops/:id/reviews/me`）。个人中心网站设置新增「菜品与食谱默认页 → 菜品评价」「必吃榜默认排序」「必吃榜默认餐食类型」；`PUT /api/user/settings` 改为按字段部分更新。更新公告详情对有发布权限者显示「删除公告」+ 二次确认，无公告时空态居中；管理后台「更新公告」面板在发布表单下列出已发布公告并可逐条删除。学生认证已认证态移除「去论坛」按钮与解锁说明。必吃榜列表由「加载更多」改为分页器（每页 20 条，首页/末页/当前页 ±2/上一页/下一页，筛选、排序、搜索回到第 1 页）。修复：进入消息箱/后台或离开个人中心时误报「是否离开此网站」；后台「已上传菜谱」「已有邀请码」标题与上方表单过近；详情页仅学生可评价；上传评分与所选评分不符；选择评分时仅所选星亮起（改为选中星及左侧同亮）。
+
 ---
 
 ## 10. 已知事项 / 待办
 
-- #5 独立菜品目录与同步、#6 姑苏区全域店铺榜首期及交互地图、#9 消息箱已实现；当前有 5,567 条通过校验的高德餐饮 POI。采集源可能漏掉未被高德收录或检索返回的实际店铺；未通过地址/营业状态/路线/名称校验及同名项未导入。交互地图使用同源服务器端静态图代理，无需浏览器 JS Key。#7/#8 店铺详情适配和菜品关联、#10 头衔仍待实施。菜谱同步仍需 developer 配置提供商/Key/模型并开启。
+- #5 独立菜品目录与同步、#6 姑苏区全域店铺榜首期及交互地图、#9 消息箱已实现；当前有 5,567 条通过校验的高德餐饮 POI。采集源可能漏掉未被高德收录或检索返回的实际店铺；未通过地址/营业状态/路线/名称校验及同名项未导入。交互地图使用同源服务器端静态图代理，无需浏览器 JS Key。#7 店铺详情双布局与评价删除已实现；#8 店铺菜品关联与 #10 头衔仍待实施。菜谱同步仍需 developer 配置提供商/Key/模型并开启。
 - 地图部分建筑说明仍是简短介绍，可按需补充真实内容；地图数据方向与几何约定保持不变。
 - 主题切换入口是手册 P2 能力，当前未开启。
 - 回归测试可用 `npm.cmd test` 重跑，在系统临时目录中运行，不修改项目数据库或上传数据；输出在被忽略的 `output/playwright/`。

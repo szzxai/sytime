@@ -100,6 +100,10 @@ function renderDetail(a) {
     '<h2 class="detail-pane__title">' + UI.esc(a.title) + '</h2>' +
     '<div class="detail-pane__meta"><svg class="icon icon--sm" aria-hidden="true"><use href="img/icons.svg#i-calendar"></use></svg>发布于 ' + UI.esc(a.publish_date) + '</div>' +
     '<div class="prose">' + UI.esc(a.content) + '</div>' +
+    (canManage
+      ? '<div class="row row--sm u-mt-4"><button type="button" class="btn btn--danger-quiet btn--sm" id="annDelete">' +
+        UI.icon('trash', 'icon--sm') + '删除公告</button></div>'
+      : '') +
     '<a class="back-link u-hide-desktop" href="announcements.html"><svg class="icon icon--sm" aria-hidden="true"><use href="img/icons.svg#i-arrow-left"></use></svg>返回公告列表</a>';
   root.classList.add("is-detail");
   window.scrollTo(0, 0);
@@ -122,7 +126,9 @@ window.addEventListener("hashchange", function () {
 - 手机两步导航：`selectItem` 加 `is-detail`；返回键 = 浏览器返回（hash 从 `#id` 变空触发 hashchange 收起详情）。返回列表链接同时提供（`u-hide-desktop`）。
 - URL hash 深链：`announcements.html#3` 打开指定公告（旧版无此能力，新增）。
 - **打印**：详情区可打印（全局 print 样式已藏按钮/页头）。
-- 「最新」标签 = 首条（按发布日期倒序的第一条）与首条同日期的所有项。
+- 「最新」标签 = 列表首条（按发布日期倒序的第一条）。
+- **删除公告**：进入页面时以 `announcement_publish`（或 `super_admin`）判断 `canManage`；有权用户详情底部显示「删除公告」按钮，`UI.confirm`（危险色）二次确认后 `DELETE /api/admin/announcements/:id`；成功「已删除」、404（`announcement not found`）提示「该公告已不存在，已为你刷新列表」，随后重载列表。
+- **空态居中**：无公告时移除 `master-detail` 类再渲染空态，使提示在页面居中。
 
 ## JS 钩子清单（旧 → 新）
 
@@ -153,6 +159,8 @@ window.addEventListener("hashchange", function () {
 | 正常（手机） | <900 | 先列表；点开详情 is-detail；返回键/返回链接回列表 |
 | hash 无效 | `#999` 不存在 | 忽略 → 显示首条 |
 | 单条公告 | 仅 1 条 | 正常显示；「最新」标签显示 |
+| 删除公告 | 有权用户点删除 | 危险确认 → 成功「已删除」并重载；404 提示已不存在并刷新 |
+| 无删除权限 | 游客/普通用户 | 详情不显示删除按钮 |
 
 ## 响应式
 
@@ -179,5 +187,6 @@ window.addEventListener("hashchange", function () {
 - [ ] 桌面双列 + sticky 列表；手机两步 + 返回键可用。
 - [ ] hash 深链 `#<id>` 直达；无效 hash 回首条。
 - [ ] 空/加载失败（含重试）状态正确。
-- [ ] 「最新」标签只在首条（或同日期组）。
+- [ ] 「最新」标签只在首条。
+- [ ] 有发布权限者可在详情删除公告（危险确认 + 404 兜底并刷新）；无权限不显示按钮。
 - [ ] 无 alert/confirm；零报错；360/900 正常。

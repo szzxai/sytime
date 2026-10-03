@@ -48,8 +48,6 @@
     <div id="alreadyBox" class="empty empty--compact" hidden>
       <div class="empty__icon"><svg class="icon" aria-hidden="true"><use href="img/icons.svg#i-graduation"></use></svg></div>
       <div class="empty__title">你已认证为学生</div>
-      <div class="empty__desc">无需再次提交。发帖、评价等功能已解锁。</div>
-      <div class="empty__actions"><a class="btn" href="forum.html">去论坛</a></div>
     </div>
 
     <div id="formBox">
@@ -171,7 +169,7 @@ UI.qsa('[data-counter]').forEach(UI.form.counter);
 | 状态 | 触发 | 界面 |
 | --- | --- | --- |
 | 未登录 | 无 token | `UI.goLogin()`（带 next） |
-| 已认证 | role ≥ student | 成功态（空态块：图标+标题+说明+去论坛） |
+| 已认证 | role ≥ student | 成功态（空态块：图标 + 「你已认证为学生」标题，无操作按钮） |
 | 表单默认 | 正常 | 认证表单 |
 | 提交中 | submit | busy |
 | 直通成功 | status=approved | toast「认证成功」→ 成功态 |

@@ -116,10 +116,21 @@
   <div class="panel__body"><select class="select" id="defaultFloor" aria-label="默认楼层"><option value="1">1F</option>…<option value="4">4F</option></select></div>
 </div>
 <div class="panel">
-  <div class="panel__head"><h2 class="panel__title">菜谱评价默认页</h2><p class="panel__desc">进入菜谱评价页时默认显示的标签</p></div>
-  <div class="panel__body"><select class="select" id="recipeDefaultView" aria-label="菜谱默认页"><option value="all">全部菜品</option><option value="weekly">每周食谱</option></select></div>
+  <div class="panel__head"><h2 class="panel__title">菜品与食谱默认页</h2><p class="panel__desc">进入菜品与食谱页时默认显示的标签</p></div>
+  <div class="panel__body"><select class="select" id="recipeDefaultView" aria-label="菜品与食谱默认页"><option value="all">全部菜品</option><option value="reviews">菜品评价</option><option value="weekly">每周食谱</option></select></div>
 </div>
-<!-- P1 #7：店铺详情页样式 -->
+<!-- P1 #7：必吃榜偏好与店铺详情页样式（features.shops 时由脚本显示） -->
+<div class="panel" id="shopSortPanel" hidden>
+  <div class="panel__head"><h2 class="panel__title">必吃榜默认排序</h2><p class="panel__desc">进入三元坊必吃榜时默认使用的排序</p></div>
+  <div class="panel__body"><select class="select" id="shopDefaultSort" aria-label="必吃榜默认排序">
+    <option value="campus">距苏州中学本部最近</option><option value="az">A–Z</option><option value="metro">距地铁最近</option>
+    <option value="likes">按点赞数</option><option value="reviews">按评价数</option><option value="rating">按评分</option><option value="new">最新添加</option>
+  </select></div>
+</div>
+<div class="panel" id="shopTypePanel" hidden>
+  <div class="panel__head"><h2 class="panel__title">必吃榜默认餐食类型</h2><p class="panel__desc">进入三元坊必吃榜时默认筛选的店铺类型</p></div>
+  <div class="panel__body"><select class="select" id="shopDefaultType" aria-label="必吃榜默认餐食类型"><option value="">全部</option></select></div>
+</div>
 <div class="panel" id="shopLayoutPanel" hidden>
   <div class="panel__head"><h2 class="panel__title">店铺详情页样式</h2><p class="panel__desc">浏览三元坊必吃榜店铺详情时使用的布局</p></div>
   <div class="panel__body">
@@ -137,7 +148,7 @@
 <div class="panel__foot"><span class="status-text" id="siteMsg"></span><button type="button" class="btn btn--primary" id="siteSubmit">保存</button></div>
 ```
 
-设置保存：请求体 `{default_page, default_floor, recipe_default_view}` + （#7 时）`shop_layout`；成功后同步 localStorage 键（defaultPage/defaultFloor/recipeDefaultView/shopLayout）+ toast「网站设置已保存到账号」。shopLayout 面板在 `features.shops` 时显示。
+设置保存：请求体 `{default_page, default_floor, recipe_default_view}` +（#7 时）`shop_default_sort`、`shop_default_type`、`shop_layout`；后端按传入字段部分更新。成功后同步 localStorage 键（defaultPage/defaultFloor/recipeDefaultView/shopDefaultSort/shopDefaultType/shopLayout）+ toast「网站设置已保存到账号」。必吃榜偏好与样式面板在 `features.shops` 时显示；`shopDefaultType` 的选项由 `/api/shops/meta` 的分类动态填充。
 
 ### #view-security 账号安全
 
@@ -204,6 +215,7 @@ function ticketHtml(t) {
 | #signature/#signatureSubmit/#signatureMsg | 签名 | 同 ID | 保留 |
 | #oldPassword/#newPassword/#confirmPassword/#passwordSubmit/#passwordMsg | 密码 | 同 ID + 显隐按钮 | 保留 |
 | #defaultPage/#defaultFloor/#recipeDefaultView/#siteSubmit/#siteMsg | 网站设置 | 同 ID | 保留 |
+| #shopDefaultSort/#shopDefaultType/#shopLayoutChoices | 必吃榜偏好与店铺详情页样式 | 同 ID（features.shops 时显示） | 新增 |
 | #ticketTitle/#ticketContent/#ticketVisibility/#ticketSubmit/#ticketSubmitMsg/#myTicketList | 工单 | 同 ID（SubmitMsg → toast） | 保留 |
 | #logoutBtn | 退出 | 侧栏底部 `data-logout` 按钮（ui.js 委托） | 迁移 |
 | ROLE_LABELS/ROLE_WEIGHTS/PERMISSION_* | 工具 | `UI.ROLE_* / UI.session` | 替换 |
@@ -239,7 +251,7 @@ function ticketHtml(t) {
 ## 接口与存储（保留清单）
 
 - 接口：GET /api/user/profile；PUT /api/user/settings；POST /api/user/avatar；PUT /api/user/nickname；PUT /api/user/signature；PUT /api/user/password；POST /api/tickets；GET /api/tickets/mine。
-- localStorage：token、user、defaultPage、defaultFloor、recipeDefaultView（保存成功后同步写入）；P1 增加 shopLayout。
+- localStorage：token、user、defaultPage、defaultFloor、recipeDefaultView（保存成功后同步写入）；P1 增加 shopDefaultSort、shopDefaultType、shopLayout。
 
 ## 响应式
 

@@ -52,6 +52,9 @@
       <option value="campus">距苏州中学本部最近</option>
       <option value="az">A–Z（按中文拼音）</option>
       <option value="metro">距地铁出口最近</option>
+      <option value="likes">按点赞数</option>
+      <option value="reviews">按评价数</option>
+      <option value="rating">按评分</option>
       <option value="new">最新添加</option>
     </select>
   </div>
@@ -59,7 +62,7 @@
 ```
 
 - 筛选/排序写入 URL：`?type=面馆&q=十全街&distance_min_m=300&walk_max=12&sort=az`；载入读取，非法值回退默认。
-- 排序实现：campus = 本部步行距离升序；az = 前端中文拼音顺序；metro = 最近出口步行距离升序；new = `created_at` 降序；距离排序 tie-break id。关键词范围包括 name/address/location_note/type/metro 字段，距离和时间支持上下限。
+- 排序实现：campus = 本部步行距离升序；az = 前端中文拼音顺序；metro = 最近出口步行距离升序；likes = 点赞数降序；reviews = 评价数降序；rating = 平均评分降序；new = `created_at` 降序；距离排序 tie-break id。关键词范围包括 name/address/location_note/type/metro 字段，距离和时间支持上下限。
 - 目前没有榜单序号 `.rank`，默认不显示排名。
 
 ### 1.3 店铺卡（整卡可点）
@@ -96,12 +99,12 @@ function shopCard(s) {
 - 骨架：`UI.html.skeleton('card', 6)`（网格中）。
 - 空：`UI.html.empty({icon:'store', title:'三元坊还没有店铺', desc:'第一个推荐周边美食的人就是你。', actions: 有权限 ? [添加店铺] : []})`。
 - 失败：loadError + 重试。
-- 加载更多：20/批（`已显示 X / Y`）。
+- 分页：每页 20 条，页码器含首页/末页与当前页 ±2、上一页/下一页与省略号；筛选、排序或搜索后回到第 1 页。当前页通过 URL `?page=` 保留。
 - 类型筛选空结果：`empty`（icon 'filter'，title「没有{{类型}}类的店铺」，desc「换个分类看看，或切换回全部。」，action「查看全部」重置筛选）。
 
 ## 2. shops.html 页面骨架（简）
 
-同标准页面模板：`data-nav="shops"`、`container`、main 内 = page-head + 筛选排序行 + `<div class="grid" id="shopGrid">` + loadMore。数据源 `GET /api/shops`（建议路径）。
+同标准页面模板：`data-nav="shops"`、`container`、main 内 = page-head + 筛选排序行 + `<div class="grid" id="shopGrid">` + 分页器 `#pager`。数据源 `GET /api/shops`。
 
 ## 3. shop-new.html · 添加店铺
 
@@ -234,7 +237,7 @@ UI.guardUnsaved(document.getElementById("shopForm"));
 
 ## 8. 验收清单
 
-- [ ] 列表：骨架/空/失败/分批；筛选与排序 + URL 同步 + 非法回退。
+- [ ] 列表：骨架/空/失败/分页；筛选与排序 + URL 同步 + 非法回退。
 - [ ] 店铺卡五要素 + 整卡可点 + 类型色正确；rank 规则正确。
 - [ ] 权限：student 可见入口；user/guest 不可见；后端 403 有文案。
 - [ ] 添加页全字段校验（含地址正则、数字范围、自定义类型）；409 处理。
