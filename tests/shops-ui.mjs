@@ -189,9 +189,22 @@ try {
   check("点赞后计数与状态更新", (await studentDetail.page.textContent("#detailEngagementStats")).includes("1"));
   await studentDetail.page.locator('.shop-rating-choice[for="shopRating5"]').click();
   await studentDetail.page.fill("#reviewContent", "用餐环境整洁，值得推荐");
+  /* 人数与总价：自动计算人均预览，带图提交 */
+  await studentDetail.page.fill("#reviewGuests", "3");
+  await studentDetail.page.fill("#reviewTotalPrice", "120");
+  await studentDetail.page.waitForFunction(() => !document.getElementById("reviewPerPerson").hidden);
+  check("人均价自动计算预览", (await studentDetail.page.textContent("#reviewPerPerson")).includes("¥40"));
+  await studentDetail.page.check("#reviewHasImage");
+  check("勾选带图后显示上传区", !(await studentDetail.page.$eval("#reviewUploadField", (el) => el.hidden)));
+  await studentDetail.page.setInputFiles("#reviewUploadField input[type=file]", path.join(root, "tests", "fixtures", "review-shot.png"));
   await studentDetail.page.click("#reviewSubmit");
   await studentDetail.page.waitForSelector(".shop-review-item");
   check("评价带星级和文字显示", (await studentDetail.page.textContent("#reviewList")).includes("用餐环境整洁，值得推荐") && (await studentDetail.page.textContent("#reviewList")).includes("★★★★★"));
+  check("评价显示人数与人均价", (await studentDetail.page.textContent("#reviewList")).includes("3 人") && (await studentDetail.page.textContent("#reviewList")).includes("人均 ¥40"));
+  check("评价显示配图", (await studentDetail.page.$("#reviewList .shop-review-thumb img")) !== null);
+  await studentDetail.page.waitForFunction(() => document.getElementById("reviewSubmit").textContent.includes("更新"));
+  check("更新评价时回填人数与总价", (await studentDetail.page.inputValue("#reviewGuests")) === "3" && (await studentDetail.page.inputValue("#reviewTotalPrice")) === "120");
+  check("更新评价时回填带图状态", await studentDetail.page.$eval("#reviewHasImage", (el) => el.checked));
   check("评价数与评分汇总更新", (await studentDetail.page.textContent("#reviewSummary")).includes("1 条评价") && (await studentDetail.page.textContent("#reviewSummary")).includes("5.0 / 5"));
   await audit(studentDetail.page, "shop.html 认证学生互动");
   check("互动页无控制台报错", studentDetail.page.consoleErrors.length === 0);

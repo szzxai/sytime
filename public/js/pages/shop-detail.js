@@ -10,6 +10,54 @@
   var currentShop = null;
   var currentCanInteract = false;
   var currentMyReview = null;
+  var reviewImageState = { existingUrl: "", removed: false };
+
+  function formatMoney(n) {
+    return "¥" + (Number.isInteger(Number(n)) ? String(Number(n)) : Number(n).toFixed(2));
+  }
+
+  function updatePerPersonPreview() {
+    var box = page.el("reviewPerPerson");
+    if (!box) return;
+    var guests = Number(page.el("reviewGuests").value);
+    var total = Number(page.el("reviewTotalPrice").value);
+    if (guests >= 1 && isFinite(total) && page.el("reviewTotalPrice").value !== "") {
+      box.textContent = "人均约 " + formatMoney(Math.round((total / guests) * 100) / 100) + "（" + guests + " 人 · 合计 " + formatMoney(total) + "）";
+      box.hidden = false;
+    } else {
+      box.hidden = true;
+      box.textContent = "";
+    }
+  }
+
+  function renderExistingReviewImage() {
+    var slot = UI.qs("#reviewUploadField .upload-preview-slot");
+    if (!slot) return;
+    var url = reviewImageState.removed ? "" : UI.safeUrl(reviewImageState.existingUrl);
+    if (!url) { slot.innerHTML = ""; return; }
+    slot.innerHTML = '<div class="upload-preview"><img class="upload-preview__img" alt="" src="' + UI.esc(url) + '">' +
+      '<div class="upload-preview__meta"><div class="upload-preview__name">当前评价配图</div>' +
+      '<div class="upload-preview__size">更换可重新选择，移除后提交将删除原图</div></div>' +
+      '<button type="button" class="icon-btn icon-btn--sm" aria-label="移除当前配图" data-remove-existing-image>' + UI.icon("close") + '</button></div>' +
+      '<button type="button" class="btn btn--danger-quiet btn--sm" data-remove-existing-image>' + UI.icon("trash", "icon--sm") + "移除配图</button>";
+  }
+
+  function syncUploadVisibility() {
+    var field = page.el("reviewUploadField");
+    if (!field) return;
+    var on = page.el("reviewHasImage").checked;
+    field.hidden = !on;
+    if (on && !reviewImageState.removed && reviewImageState.existingUrl) renderExistingReviewImage();
+    if (!on) {
+      UI.upload.clear(field);
+      slotIfNew(field);
+    }
+  }
+  // 未选新图时恢复旧图预览（被 UI.upload 渲染覆盖后）
+  function slotIfNew(field) {
+    var slot = field.querySelector(".upload-preview-slot");
+    if (slot && !slot.children.length && !reviewImageState.removed && reviewImageState.existingUrl) renderExistingReviewImage();
+  }
 
   function statBlock(icon, value, unit, label) {
     return (
@@ -127,6 +175,23 @@
       '</div></fieldset>' +
       '<label class="field__label" for="reviewContent">评价内容 <span class="field__opt">（选填，500 字以内）</span></label>' +
       '<textarea class="input shop-review-textarea" id="reviewContent" maxlength="500" rows="4" placeholder="分享口味、价格或排队情况"></textarea>' +
+      '<div class="shop-review-numbers">' +
+      '<label class="field shop-review-numbers__field" for="reviewGuests"><span class="field__label">就餐人数 <span class="field__opt">（选填）</span></span>' +
+      '<input class="input" type="number" id="reviewGuests" min="1" max="99" step="1" inputmode="numeric" placeholder="例如 3"></label>' +
+      '<label class="field shop-review-numbers__field" for="reviewTotalPrice"><span class="field__label">总价（元） <span class="field__opt">（选填）</span></span>' +
+      '<input class="input" type="number" id="reviewTotalPrice" min="0" max="100000" step="0.01" inputmode="decimal" placeholder="例如 128"></label>' +
+      '<p class="shop-review-perperson" id="reviewPerPerson" role="status" hidden></p>' +
+      '</div>' +
+      '<label class="check-row" for="reviewHasImage">' +
+      '<input class="check" type="checkbox" id="reviewHasImage">' +
+      '<span class="check-row__text"><span class="check-row__title">评价带图</span><span class="check-row__desc">选填一张实拍照片（JPG / PNG，不超过 2 MB）</span></span>' +
+      '</label>' +
+      '<div class="field shop-review-upload" id="reviewUploadField" data-upload data-max-mb="2" data-types="image/jpeg,image/png" hidden>' +
+      '<label class="upload"><span class="upload__icon"><svg class="icon icon--lg" aria-hidden="true"><use href="/img/icons.svg#i-image"></use></svg></span>' +
+      '<span class="upload__title">点击选择或拖入图片</span><span class="upload__hint">JPG / PNG，不超过 2 MB</span>' +
+      '<input aria-label="上传评价配图" type="file" accept="image/jpeg,image/png"></label>' +
+      '<div class="upload-preview-slot"></div>' +
+      '</div>' +
       '<button type="submit" class="btn btn--primary btn--sm" id="reviewSubmit">提交评价</button>' +
       '</form>' +
       '<div class="review-list" id="reviewList" aria-live="polite"></div>' +
@@ -249,6 +314,16 @@
     }
   }
 
+  function priceLine(review) {
+    var guests = review.guests === null || review.guests === undefined ? null : Number(review.guests);
+    var per = review.per_person;
+    if (!guests && (per === null || per === undefined)) return "";
+    return '<p class="shop-review-item__price">' + UI.icon("coins", "icon--sm") +
+      (guests ? "" + UI.esc(guests) + " 人" : "") +
+      (per !== null && per !== undefined ? (guests ? " · " : "") + "人均 ¥" + UI.esc(Number(per).toFixed(2).replace(/\.00$/, "")) : "") +
+      "</p>";
+  }
+
   function reviewCard(review, isMine) {
     var timestamp = Number(review.updated_at || review.created_at);
     var date = isFinite(timestamp) ? new Date(timestamp * 1000).toLocaleDateString("zh-CN") : "";
@@ -261,8 +336,16 @@
         : "") +
       "</div>" +
       '<p class="shop-review-item__content">' + (review.content ? UI.esc(review.content) : '<span class="u-muted">仅评分，未写文字</span>') + "</p>" +
+      priceLine(review) +
+      reviewMedia(review) +
       "</article>"
     );
+  }
+
+  function reviewMedia(review) {
+    var url = UI.safeUrl(review.image_url);
+    if (!url) return "";
+    return page.picture(url, "评价配图", "shop-review-thumb");
   }
 
   function refreshReviews() {
@@ -287,6 +370,12 @@
         var rating = page.el("reviewForm").querySelector('input[name="rating"][value="' + Number(myReview.rating) + '"]');
         if (rating) rating.checked = true;
         page.el("reviewContent").value = myReview.content || "";
+        page.el("reviewGuests").value = myReview.guests === null || myReview.guests === undefined ? "" : myReview.guests;
+        page.el("reviewTotalPrice").value = myReview.total_price === null || myReview.total_price === undefined ? "" : myReview.total_price;
+        reviewImageState = { existingUrl: myReview.image_url || "", removed: false };
+        page.el("reviewHasImage").checked = !!myReview.image_url;
+        syncUploadVisibility();
+        updatePerPersonPreview();
         page.el("reviewSubmit").textContent = "更新我的评价";
       }
       updateEngagement(currentShop);
@@ -315,6 +404,10 @@
           var form = page.el("reviewForm");
           if (form) {
             form.reset();
+            reviewImageState = { existingUrl: "", removed: false };
+            UI.upload.clear(page.el("reviewUploadField"));
+            page.el("reviewUploadField").hidden = true;
+            updatePerPersonPreview();
             page.el("reviewSubmit").textContent = "提交评价";
           }
           updateEngagement(currentShop);
@@ -337,7 +430,7 @@
     if (currentCanInteract) {
       likeButton.hidden = false;
       form.hidden = false;
-      notice.textContent = "学生及以上可点赞；每人可提交或更新一条 1–5 星评价。";
+      notice.textContent = "学生及以上可点赞；每人可提交或更新一条 1–5 星评价，可选填人数与总价自动算人均，也可带一张实拍图。";
     } else {
       likeButton.hidden = true;
       form.hidden = true;
@@ -356,17 +449,47 @@
         UI.toast.error("点赞失败，请稍后重试");
       }).then(function () { likeButton.disabled = false; });
     });
+    var uploadField = page.el("reviewUploadField");
+    UI.upload.bind(uploadField, { onChange: function (file) { if (!file) slotIfNew(uploadField); } });
+    page.el("reviewHasImage").addEventListener("change", syncUploadVisibility);
+    page.el("reviewGuests").addEventListener("input", updatePerPersonPreview);
+    page.el("reviewTotalPrice").addEventListener("input", updatePerPersonPreview);
+    page.el("reviewList").addEventListener("click", function (e) {
+      if (e.target.closest("[data-delete-my-review]")) deleteMyReview();
+      if (e.target.closest("[data-remove-existing-image]")) {
+        reviewImageState.removed = true;
+        UI.upload.clear(uploadField);
+        page.el("reviewHasImage").checked = false;
+        syncUploadVisibility();
+      }
+    });
     form.addEventListener("submit", function (e) {
       e.preventDefault();
       if (!currentCanInteract) return;
       var selected = form.querySelector('input[name="rating"]:checked');
       if (!selected) { UI.toast.error("请先选择 1–5 星评分"); return; }
+      var guestsRaw = page.el("reviewGuests").value.trim();
+      var totalRaw = page.el("reviewTotalPrice").value.trim();
+      if (guestsRaw !== "") {
+        var guestsNum = Number(guestsRaw);
+        if (!Number.isInteger(guestsNum) || guestsNum < 1 || guestsNum > 99) { UI.toast.error("就餐人数须为 1–99 的整数"); return; }
+      }
+      if (totalRaw !== "") {
+        var totalNum = Number(totalRaw);
+        if (!isFinite(totalNum) || totalNum < 0 || totalNum > 100000) { UI.toast.error("总价须为 0–100000 的数字"); return; }
+      }
+      var data = new FormData();
+      data.append("rating", selected.value);
+      data.append("content", page.el("reviewContent").value.trim());
+      if (guestsRaw !== "") data.append("guests", guestsRaw);
+      if (totalRaw !== "") data.append("total_price", totalRaw);
+      var withImage = page.el("reviewHasImage").checked;
+      var file = UI.upload.get(uploadField);
+      if (withImage && file) data.append("image", file);
+      if (!withImage || reviewImageState.removed) data.append("remove_image", "1");
       var submit = page.el("reviewSubmit");
       submit.disabled = true;
-      UI.api("/api/shops/" + encodeURIComponent(paramId) + "/reviews", {
-        method: "POST",
-        body: { rating: Number(selected.value), content: page.el("reviewContent").value.trim() }
-      }).then(function (r) {
+      UI.api("/api/shops/" + encodeURIComponent(paramId) + "/reviews", { method: "POST", form: data }).then(function (r) {
         if (!r.ok) { UI.toast.error(UI.errorText(r)); return; }
         currentShop = r.data.shop;
         updateEngagement(currentShop);
@@ -375,9 +498,6 @@
       }).catch(function () {
         UI.toast.error("评价提交失败，请稍后重试");
       }).then(function () { submit.disabled = false; });
-    });
-    page.el("reviewList").addEventListener("click", function (e) {
-      if (e.target.closest("[data-delete-my-review]")) deleteMyReview();
     });
     refreshReviews();
   }

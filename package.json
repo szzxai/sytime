@@ -7,7 +7,7 @@
     "start": "node server.js",
     "test": "npm run test:menu && npm run test:shops && npm run test:shops:ui && npm run test:ui",
     "test:menu": "node --test tests/menu.test.cjs",
-    "test:shops": "node --test tests/shops.test.cjs",
+    "test:shops": "node --test tests/shops.test.cjs tests/review-image.test.cjs",
     "test:shops:ui": "node tests/shops-ui.mjs",
     "test:ui": "node tests/ui-smoke.mjs",
     "test:menu:live": "node tests/menu-live.cjs",
