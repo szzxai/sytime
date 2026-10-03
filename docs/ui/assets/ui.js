@@ -883,7 +883,7 @@
       var dark = m === 'dark' || (m === 'auto' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
       document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
       var meta = document.querySelector('meta[name="theme-color"]');
-      if (meta) meta.setAttribute('content', dark ? '#101517' : '#F5F3EE');
+      if (meta) meta.setAttribute('content', dark ? '#103A22' : '#085628');
     },
     set: function (m) { try { localStorage.setItem('theme', m); } catch (e) { /* ignore */ } UI.theme.apply(); }
   };

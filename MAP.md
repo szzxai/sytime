@@ -1,6 +1,6 @@
 # szzx-info 项目地图
 
-> 更新日期：2026-10-02。本文描述 #4 UI 改版及 #5 菜品目录、网站内菜单同步与人工导入的代码。
+> 更新日期：2026-10-02。本文描述 #4 UI 改版、#5 菜品目录与菜单同步，以及 #6 三元坊必吃榜的代码。
 >
 > 本文依据实际文件、后端代码、全部前端页面、地图 JSON、SQLite 表结构及依赖清单整理。设计规范见 [UI.md](./UI.md)，验收记录见 [docs/ui/acceptance.md](./docs/ui/acceptance.md)，原始里程碑快照见 [PLAN_2026-10-01.md](./PLAN_2026-10-01.md)。
 
@@ -12,7 +12,7 @@
 | --- | --- | --- |
 | 服务端 | CommonJS、Node.js、Express 5；原有业务及网站内菜单 worker 模块 | [server.js](./server.js)、[lib/menu/](./lib/menu/) |
 | 数据库 | Node 内置 `node:sqlite` 的同步 `DatabaseSync`；13 张原有表及 8 张菜单表 | [data.db](./data.db)、[lib/menu/store.js](./lib/menu/store.js) |
-| 前端 | 12 个现有页面及新增 404，统一外部 CSS 与页面脚本；原生 JavaScript，无构建流程 | [public/](./public/) |
+| 前端 | 16 个功能页面及 404，统一外部 CSS 与页面脚本；原生 JavaScript，无构建流程 | [public/](./public/) |
 | 共享前端逻辑 | 导航壳、登录态、用户展示、横幅、表单、对话框、上传、图片查看器及页面工具 | [public/js/ui.js](./public/js/ui.js)、[public/js/page.js](./public/js/page.js) |
 | 地图 | 本地 Leaflet 1.9.4；自定义平面坐标数据，保留原有几何与楼层关系 | [public/vendor/leaflet/](./public/vendor/leaflet/)、[data.json](./data.json) |
 | 文件存储 | 本地图片文件，通过 `/uploads` 静态提供 | [uploads/](./uploads/) |
@@ -54,8 +54,11 @@ szzx-info/
 ├── szzx-menu.skill               可直接导入 AI 客户端的技能 ZIP 包
 ├── skills/szzx-menu/             SKILL.md、references/menu-json-rules.md、scripts/validate_menu.py
 ├── .private/                     运行时主密钥、原图、补图、诊断及缓存（忽略）
-├── data.db                       随仓库提交的 SQLite 数据库
+├── data.db                       随仓库提交的 SQLite 数据库（启动迁移 shops 表）
 ├── data.json                     校园地图几何、楼层、文字和配色
+├── data/shops-config.json        高德地图中心、苏州中学参考点、姑苏区边界多边形（GCJ-02）
+├── lib/shops/store.js            shops 表、路线字段校验、列表/详情与地理围栏
+├── lib/shops/routes.js           店铺公开读取与带权限的创建 API
 ├── MAP.md                        项目结构与实现地图（本文）
 ├── PLAN_2026-10-01.md             国庆里程碑与全部 issue 的原始快照
 ├── UI.md                         全站 UI 设计总纲
@@ -68,6 +71,8 @@ szzx-info/
 │   ├── implementation.md         实施步骤与可复现验证方法
 │   └── acceptance.md             #4 实施范围及验收记录
 ├── tests/
+│   ├── shops.test.cjs            店铺 API、字段校验、覆盖区域、角色/显式权限测试
+│   ├── shops-ui.mjs              店铺列表/详情/创建与权限浏览器回归
 │   ├── menu.test.cjs             菜单数据/调度/提供商/队列/权限测试
 │   ├── menu-live.cjs             可选真实模型与三张菜单检查
 │   ├── node-deploy.cjs           全新 Node 生产依赖安装检查
@@ -81,6 +86,9 @@ szzx-info/
 │   ├── forum.html                讨论/提问列表、发帖、回复、点赞、删帖
 │   ├── post.html                 单帖详情，通过 ?id=<帖子 ID> 访问
 │   ├── recipe.html               A–Z 菜品目录、评价与每周食谱三个页签
+│   ├── shops.html                三元坊必吃榜、高德地图与分类筛选
+│   ├── shop.html                 店铺步行路线和坐标详情
+│   ├── shop-new.html             权限校验后的店铺创建表单
 │   ├── announcements.html        更新公告列表与正文
 │   ├── login.html                登录与被封账号的解封申诉
 │   ├── register.html             注册并自动登录
@@ -94,7 +102,8 @@ szzx-info/
 │   │   ├── ui.js                 全站交互、导航壳与统一 API 客户端
 │   │   ├── page.js               页面表单、请求、权限、面板和工单工具
 │   │   ├── forum.js              论坛及详情共用的点赞、回复与删除逻辑
-│   │   └── pages/                各页业务脚本、menu-admin.js 同步和 menu-import.js 人工导入
+│   │   ├── shops-map.js          高德地图加载、标记、路线查询与外链
+│   │   └── pages/                各页业务脚本、菜单同步/导入及店铺列表/创建/详情
 │   ├── vendor/leaflet/           Leaflet JS、CSS、图片与上游 LICENSE
 │   └── auth.js                   加载 ui.js 的旧调用兼容入口
 └── uploads/
@@ -147,6 +156,9 @@ flowchart LR
 | `forum.html` | 讨论/提问切换；发帖对话框；每批 20 条；卡片跳转详情；回复展开、发布；点赞及失败回滚；更多菜单删帖 | `/api/forum/posts` 及其回复、点赞、删除路由 |
 | `post.html` | 按查询参数 `id` 加载正文与点赞状态；默认展开回复 | `/api/forum/posts/:id` 及其回复、点赞路由 |
 | `recipe.html` | A–Z 菜品目录与搜索；评价卡与发布对话框；每周食谱折叠、放大及授权删除 | `/api/dishes`、`/api/recipes`、`/api/weekly-menu`、`/api/user/profile` |
+| `shops.html` | 三元坊必吃榜；可拖动/缩放的高德地图，附近店铺按屏幕距离聚合为带数量的点，点击聚合点居中放大；分类、拼音 A–Z、道路/商场、距离/时间、点赞/评价/评分筛选 | `/api/shops`、`/api/shops/meta`、`/api/shops/map-image` |
+| `shop.html` | 地址、路线、本部/地铁出口距离、点赞/评价/评分汇总；认证学生可点赞、提交/更新 1–5 星评价 | `/api/shops/:id`、`/api/shops/:id/reviews`、互动写接口 |
+| `shop-new.html` | 最低角色提示；店铺、地址、自定义类型、可选大众点评链接、GCJ-02 坐标和本部/地铁两组步行路线表单；高德步行路线测算 | `/api/shops/meta`、`POST /api/shops`、高德 AMap.Walking |
 | `announcements.html` | 桌面主从列表；手机先看列表，选择后显示正文并可返回 | `/api/announcements` |
 | `login.html` | 用户名/密码登录；封禁错误展示；允许申诉时提交理由及可选图片 | `/api/login`、`/api/user/appeal` |
 | `register.html` | 用户名/昵称/密码及重复密码校验；注册后调用登录 | `/api/register`、`/api/login` |
@@ -196,6 +208,15 @@ flowchart LR
 | GET | `/api/weekly-menu` | 公开 | 每周食谱日期、图片 URL 和上传者 |
 | GET | `/api/settings/banner` | 公开 | 当前横幅及版本 |
 | GET | `/api/map-data` | 公开 | 每次从磁盘读取 data.json |
+| GET | `/api/shops` | 公开 | 店铺列表；支持 `type`、`q`、本部距离/时间及点赞/评价/评分范围过滤，`sort=campus/metro/likes/reviews/rating/new` 排序；拼音 A–Z 在前端排序 |
+| GET | `/api/shops/meta` | 公开 | 浏览器端 JS Key（仅另配时返回）、静态地图是否可用、坐标/范围配置、分类和当前用户创建权限；不返回 Web 服务 Key |
+| GET | `/api/shops/map-image?lat=..&lng=..&zoom=..` | 公开、同源代理 | 服务器端用 `AMAP_SERVICE_KEY` 按当前视图获取并缓存底图；中心限制在姑苏区边界外扩范围内，缩放级别限制为 9–18，不向浏览器暴露 Key |
+| GET | `/api/shops/:id` | 公开 | 店铺详情，含路线、互动计数、平均评分与评分数 |
+| GET | `/api/shops/:id/reviews` | 公开 | 评价列表和总数；只回传当前用户自己的评价内容供编辑 |
+| POST | `/api/shops/:id/like` | 登录 + 当前认证学生 | 切换点赞状态；后端重新核验当前角色/状态 |
+| POST | `/api/shops/:id/reviews` | 登录 + 当前认证学生 | 创建或更新本人的评价；评分必填 1–5，文字最多 500 字 |
+| DELETE | `/api/shops/:id/reviews/me` | 登录 + 当前认证学生 | 删除本人的评价并重算统计 |
+| POST | `/api/shops` | 登录 + `shop_create`；默认 student 及以上 | 后端验证地址、分类、GCJ-02 坐标、路线字段与已配置覆盖多边形；同名返回 409 |
 | PUT | `/api/admin/map-popup` | map_popup_edit | 按 feature.name 更新所有同名对象的 popup，回写 data.json |
 
 ### 5.3 学生认证、后台内容与用户管理
@@ -265,12 +286,13 @@ flowchart LR
 | weekly_menu_upload | admin | 每周食谱上传 |
 | map_popup_edit | admin | 地图弹窗编辑 |
 | ticket_manage | admin | 工单管理 |
+| shop_create | student（由 `SHOP_CREATE_MIN_ROLE` 可配置） | 添加店铺；也可在用户显式权限中单独授权 |
 
 ## 7. 数据模型与文件存储
 
 ### 7.1 SQLite
 
-以下 14 张业务表保留；启动另外创建 8 张菜单表，迁移与种子导入位于 `lib/menu/store.js`。另有内部表 sqlite_sequence；本轮验证使用临时数据库，没有改写仓库 data.db。
+原有 14 张业务表保留；启动迁移另创建 `shops`、`shop_likes`、`shop_reviews` 三张店铺表和 8 张菜单表。店铺 schema 在 `lib/shops/store.js`，菜单迁移与种子导入位于 `lib/menu/store.js`。另有内部表 sqlite_sequence；测试使用临时数据库。
 
 | 表 | 主要字段/约束 | 关联与用途 |
 | --- | --- | --- |
@@ -288,6 +310,9 @@ flowchart LR
 | ban_appeals | user_id、appeal_reason、appeal_image、status | 解封审核；pending/approved/rejected |
 | tickets | user_id、username、title、content、visibility、status、reply_content、reply_image、reply_by、replied_at | 工单；pending/resolved |
 | messages | user_id、type、actors(JSON)、count、target_kind/target_id、title/body/snippet、important、read_at | 消息箱；system/comment/reply/like，点赞按目标聚合 |
+| shops | name 唯一、address、location_note、可选 `dianping_url`、type、GCJ-02 lat/lng、本部/最近地铁出口 distance_m 与 walk_min、metro_station/metro_exit、created_by/created_at | 三元坊必吃榜；列表可按本部、地铁及互动统计排序筛选 |
+| shop_likes | shop_id、user_id 唯一、created_at | 每名认证学生每店一个点赞；重复点击取消 |
+| shop_reviews | shop_id、user_id 唯一、rating 1–5、content、created_at/updated_at | 每名认证学生每店一条评价，可更新；汇总评价数、评分数和平均星级 |
 | dishes | id、name、唯一 name_key、initial、pinyin、pinyin_initials、sort_key | 独立稳定 ID 菜品 |
 | menu_sources | 来源 ID、可空 article_id、kind、publication_origin、revision、title/url、日期/摘要/计数/错误 | 官网队列与独立手动批次 |
 | menu_records | source_id/record_key 联合主键、dish_id、日期/餐次/地点/档口/价格/辣椒 | 供应记录，明确外键 |
@@ -311,6 +336,8 @@ flowchart LR
 | style | outline、labelColor、fillOpacity、palette；建筑/绿地/水体/白色/无填充分类 |
 | features | 227 个对象：153 条 polyline、48 个 polygon、26 个 label |
 | layers | base=始终显示；数字 1–4=所在楼层；同一对象可以出现在多层 |
+店铺地图使用服务器端高德静态图代理与前端自绘交互层，无需浏览器 JS Key；`data/shops-config.json` 坐标为 GCJ-02：`center` 为初始地图中心，`anchors.campus` 为苏中本部步行路线起点，`area.polygon` 为 `[纬度,经度]` 多边形。Web 服务 Key 放在被 `.gitignore` 排除的 `.env`（`AMAP_SERVICE_KEY`），仅服务器端使用且不下发。前端支持拖动、滚轮/双指缩放、缩放按钮及回到全域；店铺按当前视图的屏幕距离聚合，圆点显示数量，点击后以聚合中心放大。底图接口只允许姑苏区边界外扩范围内的中心点、缩放 9–18，并缓存近期视图。源码、测试和文档不含实际 Key。地图初始中心/缩放与本部路线起点分别来自配置的中心点和高德 POI「江苏省苏州中学本部」（120.622380, 31.295509）。地理围栏只有在多边形至少 3 个有效点时才生效；范围配置为空时后端无法判定区域。店铺初始化不使用虚构坐标或路线。
+
 | 几何字段 | points 为 `[x,y]` 点数组；fill/stroke/dash/weight 控制路径 |
 | 文字字段 | text、x1/y1/x2/y2、scale 控制区域文字；name/popup 控制名称与弹窗 |
 
@@ -371,10 +398,10 @@ JWT_EXPIRES_IN=7d
 | --- | --- | --- |
 | [#4 修改UI](https://github.com/szzxvc/szzx-info/issues/4) | public HTML、css/site.css、js/、本地 Leaflet、UI.md 与 docs/ui/ | 已完成全站改版及浏览器验收，保留现有业务接口 |
 | [#5 全部菜品](https://github.com/szzxvc/szzx-info/issues/5) | recipe.html、lib/menu、data 种子、离线工具、开发者后台 | 独立目录、统一拼音搜索、网站内识别、每日自定时间与运维文档 |
-| [#6 三元坊必吃榜](https://github.com/szzxvc/szzx-info/issues/6) | 导航、server.js 鉴权与数据初始化 | 店铺列表/上传/详情入口、店铺模型、最低上传角色、地图查询后录入字段 |
+| [#6 三元坊必吃榜](https://github.com/szzxvc/szzx-info/issues/6) | `shops.html`、`shop.html`、`shop-new.html`、`lib/shops/`、`data/shops-config.json`、高德 AMap JS API | 已实现：公开列表/分类筛选/搜索、拼音 A–Z、互动统计/排序/筛选、单一学校本部步行距离与地铁出口路线、自定义类型、认证学生互动和后端权限复验。围栏为高德姑苏区 adcode 320508 的完整 323 点 GCJ-02 边界；全区检索 5,942 条 POI，校验后导入 5,567 家，62 条同名记录跳过；未导入候选与高德检索范围限制见 README。静态地图使用服务器代理，Web 服务 Key 不下发浏览器。 |
 | [#7 三元坊必吃榜 UI适配](https://github.com/szzxvc/szzx-info/issues/7) | profile.html、用户默认设置的保存模式 | 店铺详情页的两种布局、粘性导航与持久布局设置 |
 | [#8 三元坊必吃榜菜谱上传](https://github.com/szzxvc/szzx-info/issues/8) | student 角色、multer 存储器、现有评价模型 | 菜品与店铺关联、学生上传权限、图片、去重及异常数据处理 |
 | [#9 消息箱](https://github.com/szzxvc/szzx-info/issues/9) | inbox.html、messages 表、论坛回复/点赞通知、profile.html 通知偏好、admin.html 发送系统通知、ui.js 消息铃 | 已实现：系统/评论/回复/点赞消息、聚合点赞、已读与未读计数、按天分组、类型过滤、通知偏好、super_admin 发送系统通知 |
 | [#10 头衔系统](https://github.com/szzxvc/szzx-info/issues/10) | 用户资料、后台用户管理、各用户内容渲染处 | 头衔目录/拥有关系/佩戴状态、授予撤销、自动规则、统一用户展示 |
 
-菜品目录与消息箱开关已开启；店铺和头衔仍未实现。#4/#5 的验证见 [acceptance.md](./docs/ui/acceptance.md)，原始需求见里程碑快照，#5 当前约定见实施计划。
+菜品目录、消息箱与必吃榜开关已开启。#6 姑苏区全域边界取自高德行政区 adcode 320508（GCJ-02、323 点），范围文案/地图/服务端地理围栏共用该多边形。全区分块检索得到 5,942 条高德餐饮 POI，地址及步行路线补全后 5,629 条通过初筛；正式导入 5,567 条，62 条同名项跳过。其余候选因地址格式、明确停业标记、名称长度或缺少最近地铁步行路线未导入（原因可能重叠）；数据代表高德可检索 POI，不保证涵盖所有实际店铺。数据库店铺均通过区界校验。页面具备可拖动/缩放的同源高德底图与近邻聚合点（显示店数、点击居中放大）、拼音 A–Z、店名/道路/商场搜索及本部距离/时间和互动指标筛选；地图代理不向浏览器泄漏 Web 服务 Key。后端 13 项、浏览器 58 项测试通过。#7/#8 店铺详情布局和店铺菜品关联、#10 头衔仍未实现。

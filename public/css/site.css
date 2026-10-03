@@ -31,15 +31,15 @@
   --ink-3: #5B6872;         /* 辅助文字（时间、提示） */
   --ink-inverse: #FFFFFF;   /* 实色底（主按钮、红徽标）上的文字 */
 
-  /* 品牌：黛青 + 朱印 */
-  --primary: #24606F;
-  --primary-hover: #1D4C59;
-  --primary-press: #163B46;
-  --primary-50: #EDF5F6;
-  --primary-100: #DCEBEE;
-  --primary-200: #BFD9DE;
-  --primary-ink: #1D4C59;   /* 浅色底上的品牌色文字 */
-  --seal: #B8372B;          /* 朱印：仅用于 Logo 与榜单序号 */
+  /* 品牌：深绿主色 */
+  --primary: #085628;
+  --primary-hover: #06451F;
+  --primary-press: #043717;
+  --primary-50: #EEF6F0;
+  --primary-100: #D8EBDD;
+  --primary-200: #B7D6C0;
+  --primary-ink: #06451F;   /* 浅色底上的品牌色文字 */
+  --seal: #085628;          /* 品牌标识与榜单序号 */
 
   /* 语义色 */
   --red: #B8372B;    --red-tint: #FBECE9;    --red-ink: #9A2D22;    --red-line: #E8B9B2;
@@ -48,7 +48,7 @@
   --star: #C98400;   --star-empty: #D8D2C4;
 
   /* 分类色（标签、头衔、头像底色）：solid=实色底(配白字)，tint=浅底，ink=浅底上的字 */
-  --h-teal-solid: #24606F;      --h-teal-tint: #E3EFF1;      --h-teal-ink: #1D4C59;
+  --h-teal-solid: #085628;      --h-teal-tint: #EEF6F0;      --h-teal-ink: #06451F;
   --h-vermilion-solid: #B8372B; --h-vermilion-tint: #FBE8E4; --h-vermilion-ink: #9A2D22;
   --h-ochre-solid: #8A5A00;     --h-ochre-tint: #F8EBCF;     --h-ochre-ink: #7A5200;
   --h-bamboo-solid: #2F7D4F;    --h-bamboo-tint: #E2F0E5;    --h-bamboo-ink: #215A36;
@@ -65,7 +65,7 @@
   --toast-ok: #7ED6A0;
   --toast-err: #FF9F94;
   --toast-warn: #F2C467;
-  --toast-info: #8FD0DE;
+  --toast-info: #085628;
   --img-edge: rgba(27, 35, 38, 0.08);   /* 图片内描边 */
   --map-bg: #F2EFE8;                    /* 地图画布底色 */
   --viewer-bg: rgba(14, 19, 21, 0.92);  /* 图片查看器背景 */
@@ -1948,6 +1948,11 @@ dialog .toast-host { position: absolute; top: var(--sp-3); }
 .shop__addr .icon { margin-top: 0.125rem; color: var(--ink-3); width: 1rem; height: 1rem; }
 .shop__addr small { display: block; color: var(--ink-3); font-size: var(--fs-xs); }
 .shop__stats { display: flex; flex-wrap: wrap; gap: var(--sp-2) var(--sp-5); margin-top: auto; padding-top: var(--sp-3); border-top: 1px solid var(--line); }
+.shop__dianping { position: relative; z-index: 2; display: inline-flex; align-items: center; gap: var(--sp-1); width: fit-content; color: var(--primary-ink); font-size: var(--fs-xs); text-decoration: underline; }
+.shop__engagement { display: flex; flex-wrap: wrap; gap: var(--sp-2) var(--sp-5); padding-top: var(--sp-2); border-top: 1px solid var(--line); color: var(--ink-2); }
+.shop__engagement > span { display: inline-flex; align-items: center; gap: 0.3rem; font-size: var(--fs-xs); }
+.shop__engagement .icon { width: 0.9rem; height: 0.9rem; color: var(--primary); }
+.shop__engagement small { color: var(--ink-3); }
 
 /* 店铺详情：头部信息卡 */
 .shop-hero { display: grid; gap: var(--sp-4); }
@@ -1990,6 +1995,152 @@ dialog .toast-host { position: absolute; top: var(--sp-3); }
 .filter-bar { display: flex; gap: var(--sp-2); overflow-x: auto; padding-bottom: var(--sp-1); scrollbar-width: none; }
 .filter-bar::-webkit-scrollbar { display: none; }
 .filter-bar .chip { flex: none; }
+
+/* 必吃榜地图与标记信息窗（#6 三元坊必吃榜） */
+.shop-map {
+  position: relative;
+  height: 20rem;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--r-3);
+  background: var(--surface-2);
+}
+@media (min-width: 768px) { .shop-map { height: 26rem; } }
+/* Interactive, touch-friendly shop map and clustered markers */
+.shop-map--static.shop-map--interactive { position: relative; width: 100%; height: auto; min-height: 0; padding: 0; aspect-ratio: 25 / 14; overflow: hidden; border: 1px solid var(--line, #d9e1d9); border-radius: var(--r-lg, 18px); background: #edf2e9; }
+.shop-map--interactive .shop-static-map--interactive { position: relative; width: 100%; height: 100%; overflow: hidden; background: #edf2e9; }
+.shop-map__viewport { position: absolute; inset: 0; overflow: hidden; touch-action: none; cursor: grab; user-select: none; -webkit-user-select: none; }
+.shop-map__viewport.is-dragging { cursor: grabbing; }
+.shop-map__surface { position: absolute; inset: 0; transform-origin: 0 0; will-change: transform; }
+.shop-static-map--interactive .shop-static-map__image { position: absolute; inset: 0; display: block; width: 100%; height: 100%; object-fit: fill; pointer-events: none; user-select: none; }
+.shop-static-map--interactive .shop-static-map__area { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
+.shop-static-map--interactive .shop-static-map__area polygon { fill: rgba(8,86,40,.09); stroke: #085628; stroke-width: 2.2; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+.shop-map__markers { position: absolute; inset: 0; pointer-events: none; }
+.shop-map__pin, .shop-map__cluster { position: absolute; z-index: 2; display: flex; align-items: center; justify-content: center; transform: translate(-50%,-50%); pointer-events: auto; cursor: pointer; }
+.shop-map__pin { width: 18px; height: 18px; border: 2px solid #fff; border-radius: 50%; background: #085628; box-shadow: 0 1px 5px rgba(0,0,0,.35); text-decoration: none; }
+.shop-map__pin span { width: 6px; height: 6px; border-radius: 50%; background: #fff; }
+.shop-map__cluster { min-width: 38px; height: 38px; padding: 0 7px; border: 2px solid #fff; border-radius: 999px; color: #fff; background: #085628; box-shadow: 0 2px 9px rgba(0,0,0,.28); font: 700 14px/1 var(--font-sans, system-ui, sans-serif); white-space: nowrap; transition: transform .12s ease, box-shadow .12s ease; }
+.shop-map__cluster:hover, .shop-map__cluster:focus-visible { z-index: 3; transform: translate(-50%,-50%) scale(1.12); box-shadow: 0 3px 13px rgba(0,0,0,.36); outline: 2px solid rgba(8,86,40,.3); outline-offset: 2px; }
+.shop-map__controls { position: absolute; z-index: 5; top: 12px; right: 12px; display: grid; gap: 6px; }
+.shop-map__controls button { width: 40px; height: 40px; padding: 0; border: 1px solid rgba(20,50,30,.16); border-radius: 12px; color: #173a25; background: rgba(255,255,255,.96); box-shadow: 0 2px 8px rgba(0,0,0,.16); font-size: 23px; font-weight: 600; cursor: pointer; }
+.shop-map__controls button:hover { background: #f1f7f1; }
+.shop-map__hint, .shop-map__status, .shop-map__zoom-label, .shop-map__attribution, .shop-map__loading { position: absolute; z-index: 4; border-radius: 999px; background: rgba(255,255,255,.93); box-shadow: 0 1px 5px rgba(0,0,0,.13); color: #33443a; font-size: 12px; line-height: 1.35; }
+.shop-map__hint { top: 12px; left: 12px; padding: 7px 11px; pointer-events: none; }
+.shop-map__status { bottom: 12px; left: 12px; padding: 7px 10px; pointer-events: none; }
+.shop-map__zoom-label { bottom: 42px; left: 12px; padding: 6px 9px; pointer-events: none; }
+.shop-map__attribution { right: 12px; bottom: 12px; padding: 5px 8px; font-size: 10px; pointer-events: none; }
+.shop-map__loading { top: 50%; left: 50%; padding: 9px 13px; transform: translate(-50%,-50%); pointer-events: none; }
+.shop-map__loading[hidden] { display: none; }
+.shop-map__viewport:focus-visible { outline: 3px solid rgba(8,86,40,.35); outline-offset: -3px; }
+@media (max-width: 560px) {
+  .shop-map--static.shop-map--interactive { min-height: 210px; aspect-ratio: 25 / 14; }
+  .shop-map__controls { top: 8px; right: 8px; gap: 5px; }
+  .shop-map__controls button { width: 38px; height: 38px; border-radius: 11px; }
+  .shop-map__hint { top: 8px; left: 8px; max-width: calc(100% - 64px); padding: 6px 8px; font-size: 11px; }
+  .shop-map__status { bottom: 8px; left: 8px; max-width: calc(100% - 96px); padding: 6px 8px; font-size: 10px; }
+  .shop-map__zoom-label { bottom: 34px; left: 8px; font-size: 10px; }
+  .shop-map__attribution { right: 8px; bottom: 8px; padding: 5px 6px; font-size: 9px; }
+  .shop-map__cluster { min-width: 34px; height: 34px; font-size: 12px; }
+  .shop-map__pin { width: 16px; height: 16px; }
+}
+
+.shop-map__state {
+  display: flex;
+  height: 100%;
+  padding: var(--sp-4);
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-size: var(--fs-sm);
+}
+.shop-search { padding: var(--sp-4); }
+.shop-search__grid { display: grid; grid-template-columns: minmax(14rem, 1.7fr) repeat(2, minmax(13rem, 1fr)) auto; gap: var(--sp-4); align-items: end; }
+.shop-search__text { margin: 0; min-width: 0; }
+.shop-search__range { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: var(--sp-2); align-items: center; min-width: 0; margin: 0; padding: 0; border: 0; }
+.shop-search__range legend { margin-bottom: var(--sp-2); font-size: var(--fs-sm); font-weight: 600; color: var(--ink-2); }
+.shop-search__range .input { min-width: 0; }
+.shop-search__clear { white-space: nowrap; }
+@media (max-width: 900px) { .shop-search__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .shop-search__text { grid-column: 1 / -1; } }
+@media (max-width: 520px) { .shop-search__grid { grid-template-columns: minmax(0, 1fr); } .shop-search__text { grid-column: auto; } .shop-search__clear { width: 100%; } }
+.shop-map--static { height: auto; padding: 0; aspect-ratio: 25 / 14; }
+.shop-static-map { position: relative; width: 100%; height: 100%; overflow: hidden; }
+.shop-static-map__image { display: block; width: 100%; height: 100%; object-fit: fill; }
+.shop-static-map__area { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.shop-static-map__area polygon { fill: rgba(8, 86, 40, 0.08); stroke: #085628; stroke-width: 2; vector-effect: non-scaling-stroke; }
+.shop-static-map__markers { position: absolute; inset: 0; }
+.shop-static-map__marker {
+  position: absolute;
+  z-index: 2;
+  display: block;
+  width: 20px;
+  height: 20px;
+  transform: translate(-50%, -50%);
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  text-decoration: none;
+  cursor: pointer;
+}
+.shop-static-map__marker > span:first-child {
+  display: block;
+  width: 14px;
+  height: 14px;
+  margin: 3px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: var(--marker-color, #5B6468);
+  box-shadow: 0 1px 4px rgba(18, 31, 37, 0.65);
+}
+.shop-static-map__marker:hover,
+.shop-static-map__marker:focus-visible { z-index: 5; transform: translate(-50%, -50%) scale(1.35); }
+.shop-static-map__marker--campus > span:first-child { background: #122E3A; border-radius: 3px; transform: rotate(45deg); }
+.shop-map--fallback { height: auto; padding: var(--sp-4); }
+.shop-map--detail { height: 16rem; }
+.shop-detail__engagement { display: flex; flex-wrap: wrap; gap: var(--sp-3) var(--sp-6); padding: var(--sp-3) 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.shop-detail__engagement > span { display: inline-flex; align-items: center; gap: var(--sp-2); color: var(--ink-2); font-size: var(--fs-sm); }
+.shop-detail__engagement .icon { color: var(--primary); }
+.shop-review-card { display: grid; gap: var(--sp-4); }
+.shop-review-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-3); }
+.shop-review-form:not([hidden]) { display: grid; gap: var(--sp-3); }
+.shop-rating-fieldset { margin: 0; padding: 0; border: 0; }
+.shop-rating-choices { display: flex; gap: var(--sp-1); }
+.shop-rating-choice { position: relative; display: inline-grid; min-width: 2.5rem; min-height: 2.5rem; place-items: center; border-radius: var(--r-2); cursor: pointer; }
+.shop-rating-choice input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.shop-rating-choice > span:first-of-type { color: var(--ink-3); font-size: 1.55rem; line-height: 1; }
+.shop-rating-choice input:checked + span,
+.shop-rating-choice:has(input:checked) > span:first-of-type { color: var(--h-ochre-solid); }
+.shop-rating-choice:focus-within { outline: 2px solid var(--primary); outline-offset: 2px; }
+.shop-review-textarea { min-height: 6rem; resize: vertical; }
+.shop-review-form[hidden], #likeShopButton[hidden] { display: none !important; }
+.review-list { display: grid; }
+.shop-review-item { padding: var(--sp-3) 0; border-top: 1px solid var(--line); }
+.shop-review-item__head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2); }
+.shop-review-item__stars { color: var(--h-ochre-solid); letter-spacing: 0.04em; }
+.shop-review-item__head time { margin-left: auto; color: var(--ink-3); font-size: var(--fs-xs); }
+.shop-review-item__content { margin: var(--sp-2) 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.shop-map-legend { display: flex; flex-wrap: wrap; gap: var(--sp-2) var(--sp-4); }
+.shop-map-legend__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: var(--fs-sm);
+  color: var(--ink-2);
+}
+.shop-map-legend__dot {
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.14);
+}
+/* 百度 InfoWindow 内容（渲染在地图容器内） */
+.map-info { display: grid; gap: 0.375rem; font-size: var(--fs-sm); color: var(--ink); }
+.map-info__head { display: flex; align-items: center; gap: var(--sp-2); }
+.map-info__title { font-size: var(--fs-lg); }
+.map-info__addr { color: var(--ink-3); }
+.map-info__row { display: flex; justify-content: space-between; gap: var(--sp-3); }
+.map-info__label { color: var(--ink-3); }
+.map-info__value { font-variant-numeric: tabular-nums; }
+.map-info__link { color: var(--primary-ink); text-decoration: underline; }
 
 
 /* ---------- 13. 消息箱 / 头衔 / 图片查看器 Inbox · Titles · Viewer ---------- */
@@ -2436,21 +2587,21 @@ html[data-theme="dark"] {
   --ink-3: #8E9BA0;
   --ink-inverse: #0B1A1F;
 
-  --primary: #6FB3C2;
-  --primary-hover: #8CC5D1;
-  --primary-press: #A6D3DC;
-  --primary-50: #16262B;
-  --primary-100: #1B3138;
-  --primary-200: #24444D;
-  --primary-ink: #9CCDD8;
-  --seal: #E5736A;
+  --primary: #62B879;
+  --primary-hover: #73C587;
+  --primary-press: #84D197;
+  --primary-50: #16261D;
+  --primary-100: #1B3324;
+  --primary-200: #264B34;
+  --primary-ink: #A7D9B3;
+  --seal: #62B879;
 
   --red: #E5736A;    --red-tint: #2F1B19;    --red-ink: #F0958D;    --red-line: #5A2E2A;
   --green: #6CC08B;  --green-tint: #16261D;  --green-ink: #8ED2A6;  --green-line: #264A33;
   --amber: #E3A93B;  --amber-tint: #2B2210;  --amber-ink: #EBBE6A;  --amber-line: #55421C;
   --star: #E3A93B;   --star-empty: #3A4651;
 
-  --h-teal-solid: #6FB3C2;      --h-teal-tint: #16262B;      --h-teal-ink: #9CCDD8;
+  --h-teal-solid: #62B879;      --h-teal-tint: #17281E;      --h-teal-ink: #A7D9B3;
   --h-vermilion-solid: #E5736A; --h-vermilion-tint: #2F1B19; --h-vermilion-ink: #F0958D;
   --h-ochre-solid: #E3A93B;     --h-ochre-tint: #2B2210;     --h-ochre-ink: #EBBE6A;
   --h-bamboo-solid: #6CC08B;    --h-bamboo-tint: #16261D;    --h-bamboo-ink: #8ED2A6;
@@ -2466,7 +2617,7 @@ html[data-theme="dark"] {
   --toast-ok: #1F6B3F;
   --toast-err: #B8372B;
   --toast-warn: #8A5A00;
-  --toast-info: #1D4C59;
+  --toast-info: #A7D9B3;
   --img-edge: rgba(255, 255, 255, 0.1);
   --map-bg: #F2EFE8;       /* 地图画布始终保持浅色，避免要素配色失真 */
   --viewer-bg: rgba(0, 0, 0, 0.92);

@@ -12,9 +12,9 @@
     version: '1.0',
     config: {
       brand: '校园信息网',
-      iconsUrl: '/img/icons.svg',
+      iconsUrl: '/img/icons.svg?v=brand-su-2026-10-03',
       features: {
-        shops: false,    // #6 三元坊必吃榜上线后改 true
+        shops: true,     // #6 三元坊必吃榜（列表 / 详情 / 添加店铺）
         dishes: true,    // #5 菜品目录已上线；详情与店铺关联后续实现
         inbox: true,     // #9 消息箱已上线
         titles: false,   // #10 头衔上线后改 true
@@ -135,7 +135,8 @@
   UI.PERMISSION_LABELS = {
     banner_edit: '编辑横幅', announcement_publish: '发布更新公告', student_review: '学生认证审核',
     invite_manage: '邀请码管理', weekly_menu_upload: '每周菜谱上传', map_popup_edit: '地图弹窗编辑',
-    user_manage: '用户管理', ban_appeal_review: '申诉处理', ticket_manage: '工单管理'
+    user_manage: '用户管理', ban_appeal_review: '申诉处理', ticket_manage: '工单管理',
+    shop_create: '添加店铺'
   };
   UI.session = {
     token: function () { try { return localStorage.getItem('token') || ''; } catch (e) { return ''; } },
@@ -883,7 +884,7 @@
       var dark = m === 'dark' || (m === 'auto' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
       document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
       var meta = document.querySelector('meta[name="theme-color"]');
-      if (meta) meta.setAttribute('content', dark ? '#101517' : '#F5F3EE');
+      if (meta) meta.setAttribute('content', dark ? '#103A22' : '#085628');
     },
     set: function (m) { try { localStorage.setItem('theme', m); } catch (e) { /* ignore */ } UI.theme.apply(); }
   };

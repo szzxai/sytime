@@ -10,6 +10,8 @@ const multer = require("multer");
 const { DatabaseSync } = require("node:sqlite");
 const { MenuService } = require("./lib/menu/service");
 const { mountMenuRoutes } = require("./lib/menu/routes");
+const { migrate: migrateShops } = require("./lib/shops/store");
+const { mountShopRoutes } = require("./lib/shops/routes");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -297,6 +299,9 @@ CREATE INDEX IF NOT EXISTS idx_messages_created ON messages(user_id, created_at)
   }
 })();
 
+// 三元坊必吃榜（#6）：店铺表
+migrateShops(db);
+
 const UPLOAD_DIR = path.join(__dirname, "uploads");
 if (!fs.existsSync(UPLOAD_DIR)) {
   fs.mkdirSync(UPLOAD_DIR);
@@ -430,8 +435,15 @@ const PERMISSIONS = {
   map_popup_edit: "地图弹窗编辑",
   user_manage: "用户管理",
   ban_appeal_review: "申诉处理",
-  ticket_manage: "工单管理"
+  ticket_manage: "工单管理",
+  shop_create: "添加店铺"
 };
+
+// 添加店铺的最低角色：默认 student，可用环境变量 SHOP_CREATE_MIN_ROLE 调整
+const SHOP_CREATE_ROLES = ["user", "student", "admin", "super_admin", "developer"];
+const SHOP_CREATE_MIN_ROLE = SHOP_CREATE_ROLES.indexOf(process.env.SHOP_CREATE_MIN_ROLE || "") !== -1
+  ? process.env.SHOP_CREATE_MIN_ROLE
+  : "student";
 
 const PERMISSION_REQUIRES = {
   banner_edit: "super_admin",
@@ -442,7 +454,8 @@ const PERMISSION_REQUIRES = {
   ban_appeal_review: "super_admin",
   weekly_menu_upload: "admin",
   map_popup_edit: "admin",
-  ticket_manage: "admin"
+  ticket_manage: "admin",
+  shop_create: SHOP_CREATE_MIN_ROLE
 };
 
 function userPermissionList(userId) {
@@ -454,10 +467,24 @@ function userPermissionList(userId) {
 
 function hasPermission(req, perm) {
   if (!req.user || req.user.id === null || req.user.id === undefined) return false;
+  // 角色或封禁状态可能在 JWT 签发后发生变化；权限写操作以数据库当前状态为准。
+  const account = db.prepare("SELECT role, status FROM users WHERE id = ?").get(req.user.id);
+  if (!account || account.status !== "active") return false;
   const needed = ROLE_WEIGHTS[PERMISSION_REQUIRES[perm]] || 0;
-  if ((ROLE_WEIGHTS[req.user.role] || 0) >= needed) return true;
+  if ((ROLE_WEIGHTS[account.role] || 0) >= needed) return true;
   const row = db.prepare("SELECT id FROM user_permissions WHERE user_id = ? AND permission = ?").get(req.user.id, perm);
   return !!row;
+}
+
+function isVerifiedStudent(req) {
+  if (!req.user || req.user.id === null || req.user.id === undefined) return false;
+  const account = db.prepare("SELECT role, status FROM users WHERE id = ?").get(req.user.id);
+  if (!account || account.status !== "active") return false;
+  // The student role is assigned only after certification; elevated roles count only
+  // if the account still has an explicitly approved student application.
+  if (account.role === "student") return true;
+  if ((ROLE_WEIGHTS[account.role] || 0) < ROLE_WEIGHTS.student) return false;
+  return !!db.prepare("SELECT 1 FROM student_applications WHERE user_id = ? AND status = 'approved' LIMIT 1").get(req.user.id);
 }
 
 function requirePermission(perm) {
@@ -1618,6 +1645,17 @@ app.post("/api/admin/notifications", requirePermission("announcement_publish"), 
 
 const menuService = new MenuService(db, __dirname);
 mountMenuRoutes(app, db, menuService, checkRole());
+mountShopRoutes(app, db, {
+  root: __dirname,
+  authenticate: checkRole(),
+  requirePermission: requirePermission,
+  hasPermission: hasPermission,
+  isVerifiedStudent: isVerifiedStudent,
+  createMinRole: SHOP_CREATE_MIN_ROLE,
+  mapKey: process.env.AMAP_JS_KEY || "",
+  mapSecurityCode: process.env.AMAP_SECURITY_CODE || "",
+  mapServiceKey: process.env.AMAP_SERVICE_KEY || ""
+});
 app.use("/api", function (req, res) {
   res.status(404).json({ error: "not found" });
 });

@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#085628" />
+    <title>三元坊必吃榜 · 校园信息网</title>
+    <link rel="icon" href="/img/favicon.svg?v=su-085628-v3" type="image/svg+xml" />
+    <link rel="stylesheet" href="/css/site.css?v=interactive-map-2" />
+  </head>
+  <body data-nav="shops">
+    <noscript
+      ><div class="alert alert--warning">
+        <div class="alert__body">本站需要启用 JavaScript 才能正常使用。</div>
+      </div></noscript
+    >
+    <a class="skip-link" href="#main">跳到正文</a>
+    <div id="siteBanner"></div>
+    <div id="siteHeader"></div>
+    <main id="main" class="main container">
+      <div class="page-head">
+        <div class="page-head__main">
+          <span class="page-head__eyebrow">Sanyuanfang · Must-Eat</span>
+          <h1 class="page-head__title">三元坊必吃榜</h1>
+          <p class="page-head__desc">
+            同学们推荐的学校周边美食。距离与步行时间按高德地图步行路线填写，均为步行距离而非直线距离。
+          </p>
+        </div>
+        <div class="page-head__actions" id="createAction"></div>
+      </div>
+
+      <section class="card u-mb-6" aria-labelledby="mapTitle">
+        <div class="row row--between u-mb-4">
+          <div>
+            <h2 class="section__title" id="mapTitle">附近地图</h2>
+            <p class="u-muted u-fs-sm" id="areaText">覆盖范围：加载中…</p>
+          </div>
+        </div>
+        <div
+          class="shop-map"
+          id="shopMap"
+          role="region"
+          aria-label="店铺地图"
+        >
+          <div class="shop-map__state u-muted">地图加载中…</div>
+        </div>
+        <div class="shop-map-legend u-mt-4" id="mapLegend" hidden></div>
+      </section>
+
+      <div class="row row--between row--top u-mb-4">
+        <div
+          class="filter-bar"
+          id="typeFilter"
+          role="radiogroup"
+          aria-label="店铺类型筛选"
+        >
+          <label class="chip"
+            ><input class="chip__input" type="radio" name="type" value="" checked /><span
+              class="chip__face"
+              >全部</span
+            ></label
+          >
+        </div>
+        <div class="row row--sm">
+          <label class="u-fs-sm u-muted" for="sortSelect">排序</label>
+          <select class="select select--sm" id="sortSelect" aria-label="排序">
+            <option value="campus">距苏州中学本部最近</option>
+            <option value="az">A–Z</option>
+            <option value="metro">距地铁最近</option>
+            <option value="likes">按点赞数</option>
+            <option value="reviews">按评价数</option>
+            <option value="rating">按评分</option>
+            <option value="new">最新添加</option>
+          </select>
+        </div>
+      </div>
+
+      <section class="card shop-search u-mb-4" aria-labelledby="searchTitle">
+        <div class="shop-search__grid">
+          <div class="field shop-search__text">
+            <label class="field__label" id="searchTitle" for="shopSearch">搜索店名、道路或商场</label>
+            <input class="input" id="shopSearch" type="search" maxlength="80" placeholder="例如：十全街、购物中心、面馆" autocomplete="off" />
+          </div>
+          <fieldset class="shop-search__range">
+            <legend>距苏州中学本部（米）</legend>
+            <label class="sr-only" for="distanceMin">最小步行距离（米）</label>
+            <input class="input" id="distanceMin" type="number" min="0" max="50000" step="50" inputmode="numeric" placeholder="最小" />
+            <span aria-hidden="true">至</span>
+            <label class="sr-only" for="distanceMax">最大步行距离（米）</label>
+            <input class="input" id="distanceMax" type="number" min="0" max="50000" step="50" inputmode="numeric" placeholder="最大" />
+          </fieldset>
+          <fieldset class="shop-search__range">
+            <legend>步行时间（分钟）</legend>
+            <label class="sr-only" for="walkMin">最短步行时间（分钟）</label>
+            <input class="input" id="walkMin" type="number" min="0" max="240" step="1" inputmode="numeric" placeholder="最短" />
+            <span aria-hidden="true">至</span>
+            <label class="sr-only" for="walkMax">最长步行时间（分钟）</label>
+            <input class="input" id="walkMax" type="number" min="0" max="240" step="1" inputmode="numeric" placeholder="最长" />
+          </fieldset>
+          <fieldset class="shop-search__range">
+            <legend>点赞数</legend>
+            <label class="sr-only" for="likesMin">最少点赞数</label>
+            <input class="input" id="likesMin" type="number" min="0" max="1000000" step="1" inputmode="numeric" placeholder="最少" />
+            <span aria-hidden="true">至</span>
+            <label class="sr-only" for="likesMax">最多点赞数</label>
+            <input class="input" id="likesMax" type="number" min="0" max="1000000" step="1" inputmode="numeric" placeholder="最多" />
+          </fieldset>
+          <fieldset class="shop-search__range">
+            <legend>评价数</legend>
+            <label class="sr-only" for="reviewsMin">最少评价数</label>
+            <input class="input" id="reviewsMin" type="number" min="0" max="1000000" step="1" inputmode="numeric" placeholder="最少" />
+            <span aria-hidden="true">至</span>
+            <label class="sr-only" for="reviewsMax">最多评价数</label>
+            <input class="input" id="reviewsMax" type="number" min="0" max="1000000" step="1" inputmode="numeric" placeholder="最多" />
+          </fieldset>
+          <fieldset class="shop-search__range">
+            <legend>评分（1–5）</legend>
+            <label class="sr-only" for="ratingMin">最低评分</label>
+            <input class="input" id="ratingMin" type="number" min="0" max="5" step="0.1" inputmode="decimal" placeholder="最低" />
+            <span aria-hidden="true">至</span>
+            <label class="sr-only" for="ratingMax">最高评分</label>
+            <input class="input" id="ratingMax" type="number" min="0" max="5" step="0.1" inputmode="decimal" placeholder="最高" />
+          </fieldset>
+          <button type="button" class="btn btn--sm shop-search__clear" id="clearShopFilters">清除筛选</button>
+        </div>
+      </section>
+
+      <p class="u-muted u-fs-sm u-mb-4" id="shopSummary" role="status"></p>
+      <span class="sr-only" aria-live="polite" id="shopLive"></span>
+
+      <div class="grid grid--lg" id="shopGrid"></div>
+      <div class="load-more" id="loadMore" hidden>
+        <button type="button" class="btn" id="moreBtn">加载更多</button
+        ><span id="moreInfo"></span>
+      </div>
+
+      <div class="callout u-mt-6" id="addHint" hidden>
+        <span class="callout__text" id="addHintText"></span>
+        <span class="callout__actions" id="addHintActions"></span>
+      </div>
+    </main>
+    <div id="siteFooter"></div>
+    <script src="/js/ui.js"></script>
+    <script src="/js/page.js"></script>
+    <script src="/js/shops-map-interactive.js?v=cluster-map-2"></script>
+    <script src="/js/shops-map.js?v=interactive-map-2"></script>
+    <script src="/js/pages/shops.js?v=interactive-map-2"></script>
+  </body>
+</html>

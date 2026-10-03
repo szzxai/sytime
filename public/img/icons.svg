@@ -4,19 +4,13 @@
 
 <!-- 品牌印章：朱底 + 几何“中”字（32x32），颜色取自 CSS 变量 seal 与 ink-inverse（自带回退值） -->
 <symbol id="brand-mark" viewBox="0 0 32 32">
-  <rect width="32" height="32" rx="8" style="fill:var(--seal,#B8372B)"/>
-  <g style="fill:none;stroke:var(--ink-inverse,#FFFFFF);stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round">
-    <rect x="8.6" y="10.4" width="14.8" height="11.2" rx="1.6"/>
-    <path d="M16 6.2v19.6"/>
-  </g>
+  <rect width="32" height="32" rx="8" style="fill:var(--seal,#085628)"/>
+  <text x="16" y="16" text-anchor="middle" dominant-baseline="central" style="fill:var(--ink-inverse,#FFFFFF);font-family:'Noto Sans CJK TC','Microsoft JhengHei','PingFang TC','Microsoft YaHei',sans-serif;font-size:20px;font-weight:700">蘇</text>
 </symbol>
 
 <!-- 品牌字形（仅笔画，用于首页水印等装饰），颜色取自 CSS 变量 seal -->
 <symbol id="brand-glyph" viewBox="0 0 32 32">
-  <g style="fill:none;stroke:var(--seal,#B8372B);stroke-width:2;stroke-linecap:round;stroke-linejoin:round">
-    <rect x="8.6" y="10.4" width="14.8" height="11.2" rx="1.6"/>
-    <path d="M16 6.2v19.6"/>
-  </g>
+  <text x="16" y="16" text-anchor="middle" dominant-baseline="central" style="fill:var(--seal,#085628);font-family:'Noto Sans CJK TC','Microsoft JhengHei','PingFang TC','Microsoft YaHei',sans-serif;font-size:20px;font-weight:700">蘇</text>
 </symbol>
 
 <!-- 导航与操作 -->

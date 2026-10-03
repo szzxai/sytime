@@ -29,7 +29,7 @@
   <div class="page-head__main">
     <span class="page-head__eyebrow">Sanyuanfang · Must-Eat</span>
     <h1 class="page-head__title">三元坊必吃榜</h1>
-    <p class="page-head__desc">同学们推荐的学校周边美食，距离和步行时间以高德/百度步行路线为准。</p>
+    <p class="page-head__desc">同学们推荐的学校周边美食，距离和步行时间以高德步行路线为准。</p>
   </div>
   <div class="page-head__actions" id="createAction"></div>
 </div>
@@ -49,16 +49,18 @@
   <div class="row row--sm">
     <label class="u-fs-sm u-muted" for="sortSelect">排序</label>
     <select class="select select--sm" id="sortSelect" aria-label="排序">
-      <option value="distance">距离最近</option>
-      <option value="walk">步行最短</option>
+      <option value="campus">距苏州中学本部最近</option>
+      <option value="az">A–Z（按中文拼音）</option>
+      <option value="metro">距地铁出口最近</option>
       <option value="new">最新添加</option>
     </select>
   </div>
 </div>
 ```
 
-- 筛选/排序写入 URL：`?type=面馆&sort=walk`（`history.replaceState`）；载入读取，非法值回退默认（全部 / distance）。
-- 排序实现：distance = `distance_m` 升序；walk = `walk_min` 升序；new = `created_at` 降序；tie-break id。**榜单序号 `.rank` 仅在 `sort=rank` 或接口提供 `rank` 字段时显示**（默认无 rank 字段则不显示）。
+- 筛选/排序写入 URL：`?type=面馆&q=十全街&distance_min_m=300&walk_max=12&sort=az`；载入读取，非法值回退默认。
+- 排序实现：campus = 本部步行距离升序；az = 前端中文拼音顺序；metro = 最近出口步行距离升序；new = `created_at` 降序；距离排序 tie-break id。关键词范围包括 name/address/location_note/type/metro 字段，距离和时间支持上下限。
+- 目前没有榜单序号 `.rank`，默认不显示排名。
 
 ### 1.3 店铺卡（整卡可点）
 
@@ -72,9 +74,8 @@ function shopCard(s) {
     '</div>' +
     '<p class="shop__addr">' + UI.icon('map-pin') + '<span>' + UI.esc(s.address) + (s.location_note ? '<small>' + UI.esc(s.location_note) + '</small>' : '') + '</span></p>' +
     '<div class="shop__stats">' +
-      '<span class="stat">' + UI.icon('route') + '<b>' + UI.esc(UI.formatDistance(s.distance_m)) + '</b><small>距苏中</small></span>' +
-      '<span class="stat">' + UI.icon('walk') + '<b>' + UI.esc(UI.formatMinutes(s.walk_min)) + '</b><small>步行</small></span>' +
-      (s.rating_avg !== undefined ? '<span class="stat">' + UI.stars(s.rating_avg) + '</span>' : '') +
+      '<span class="stat">' + UI.icon('route') + '<b>' + UI.esc(UI.formatDistance(s.campus_distance_m)) + '</b><small>距本部 · 步行 ' + UI.esc(UI.formatMinutes(s.campus_walk_min)) + '</small></span>' +
+      '<span class="stat">' + UI.icon('walk') + '<b>' + UI.esc(UI.formatDistance(s.metro_distance_m)) + '</b><small>距' + UI.esc(s.metro_station + ' ' + s.metro_exit) + ' · 步行 ' + UI.esc(UI.formatMinutes(s.metro_walk_min)) + '</small></span>' +
     '</div></article>';
 }
 ```
@@ -136,7 +137,7 @@ function shopCard(s) {
     <div class="field">
       <label class="field__label" for="sAddr">店铺地址</label>
       <input class="input" id="sAddr" placeholder="例如：三元路 12 号" enterkeyhint="next">
-      <div class="field__hint">需要包含「XX路XX号」，例如三元路 12 号</div>
+      <div class="field__hint">需要包含道路/巷坊名和门牌号，例如三元路 12 号或滚绣坊 51 号</div>
     </div>
     <div class="field">
       <label class="field__label" for="sNote">补充位置描述 <span class="field__opt">（选填）</span></label>
@@ -154,7 +155,7 @@ function shopCard(s) {
       <div class="field">
         <label class="field__label" for="sDist">距离苏州中学</label>
         <div class="input-group"><input class="input input--unit" id="sDist" type="number" min="1" max="20000" step="1" inputmode="numeric" enterkeyhint="next"><span class="input-group__unit">米</span></div>
-        <div class="field__hint">在高德或百度地图用步行路线查询后填写</div>
+        <div class="field__hint">在高德地图用步行路线查询后填写</div>
       </div>
       <div class="field">
         <label class="field__label" for="sWalk">预计步行时间</label>
@@ -175,7 +176,7 @@ function shopCard(s) {
 // 校验顺序：名称(必填,≤30) → 地址(必填, /^.+路.+号/) → 补充(≤40) → 类型(必选；other 时自定义 1–8 字) → 距离(1–20000 整数) → 步行(1–240 整数)
 // 错误文案（内联）：
 //  「请输入店铺名称」「店铺名称不能超过 30 字」
-//  「请输入店铺地址」「地址格式应包含「XX路XX号」」
+//  「请输入店铺地址」「地址格式应包含道路/巷坊名与门牌号」
 //  「请选择店铺类型」「请输入自定义类型（8 字以内）」
 //  「请输入距离（1–20000 米）」「请输入步行时间（1–240 分钟）」
 // 提交：UI.form.busy → POST /api/shops（建议路径）
