@@ -1429,7 +1429,7 @@ app.post("/api/forum/posts/:id/like", requireLogin, function (req, res) {
     res.status(400).json({ error: "invalid post id" });
     return;
   }
-  const post = db.prepare("SELECT id FROM forum_posts WHERE id = ?").get(postId);
+  const post = db.prepare("SELECT id, user_id FROM forum_posts WHERE id = ?").get(postId);
   if (!post) {
     res.status(404).json({ error: "post not found" });
     return;
@@ -1441,6 +1441,7 @@ app.post("/api/forum/posts/:id/like", requireLogin, function (req, res) {
   }
   db.prepare("INSERT INTO post_likes (post_id, user_id) VALUES (?, ?)").run(postId, req.user.id);
   notifyLike(postId, req.user.id);
+  evaluateAutoTitles(db, post.user_id);
   const count = db.prepare("SELECT COUNT(*) AS n FROM post_likes WHERE post_id = ?").get(postId).n;
   res.json({ ok: true, liked: true, like_count: Number(count) });
 });
@@ -1500,6 +1501,8 @@ app.post("/api/forum/posts/:id/replies", requireLogin, function (req, res) {
     .prepare("INSERT INTO forum_replies (post_id, user_id, username, content) VALUES (?, ?, ?, ?)")
     .run(postId, req.user.id, req.user.username, content);
   notifyComment(post, req.user.id, content);
+  // 帖子达到「评论 5 条以上」可能让作者获得「论坛催化剂」
+  evaluateAutoTitles(db, post.user_id);
   const reply = db.prepare("SELECT * FROM forum_replies WHERE id = ?").get(Number(info.lastInsertRowid));
   attachAuthors([reply]);
   res.status(201).json({ reply: reply });
@@ -1540,6 +1543,7 @@ app.post("/api/recipes", requireLogin, function (req, res) {
     const info = db
       .prepare("INSERT INTO recipes (user_id, username, name, rating, comment, image_url, is_weekly) VALUES (?, ?, ?, ?, ?, ?, ?)")
       .run(req.user.id, req.user.username, name, rating, comment, imageUrl, isWeekly);
+    evaluateAutoTitles(db, req.user.id);
     const recipe = db.prepare("SELECT * FROM recipes WHERE id = ?").get(Number(info.lastInsertRowid));
     res.status(201).json({ recipe: recipe });
   });

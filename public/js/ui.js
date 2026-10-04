@@ -223,7 +223,14 @@
     'image not found': '图片不存在或已被删除',
     'feature not found': '没有找到该地图对象',
     'rate_limited': '操作太频繁，请稍后再试',
-    'banned': '账号已被封禁'
+    'banned': '账号已被封禁',
+    'head title name already exists': '头衔名称已存在',
+    'head title not found': '头衔不存在或已被删除',
+    'head title not owned': '你尚未拥有该头衔',
+    'invalid head title': '头衔无效',
+    'auto head title cannot be revoked': '自动头衔由规则发放，不能撤销',
+    'auto head title cannot be granted': '自动头衔由规则发放，不能手动授予',
+    'built-in head title cannot be deleted': '内置头衔不能删除'
   };
   var STATUS_TEXT = {
     0: '网络连接失败，请检查网络后重试',

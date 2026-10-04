@@ -432,6 +432,54 @@ test("授予/撤销：自动头衔不可手动授予，撤销佩戴中的头衔�
   assert.match(messages.data.messages[0].body, /创站元老/);
 });
 
+test("保护与即时发放：内置不可删、自动不可撤销、专属不重名、达标即时授予", async () => {
+  const catalog = await api("/api/admin/titles", { token: developer.token });
+  const byName = {};
+  catalog.data.titles.forEach(function (t) { byName[t.name] = t; });
+
+  // 内置头衔（带 key）每次启动会重新播种，删除返回 409 且仍在目录
+  const delBuiltin = await api("/api/admin/titles/" + byName["创站元老"].id, { token: developer.token, method: "DELETE" });
+  assert.equal(delBuiltin.status, 409, "内置头衔不可删除");
+  const after = await api("/api/admin/titles", { token: developer.token });
+  assert.equal(after.data.titles.some(function (t) { return t.name === "创站元老"; }), true, "内置头衔仍在目录中");
+
+  // 自动头衔由规则发放，撤销会在下次评估恢复，故后端拒绝
+  const revokeAuto = await api("/api/admin/users/" + plainUser.user.id + "/titles/" + byName["同窗"].id, { token: developer.token, method: "DELETE" });
+  assert.equal(revokeAuto.status, 409, "自动头衔不可手动撤销");
+
+  // 专属头衔不能与公共头衔同名
+  const clash = await api("/api/admin/users/" + plainUser.user.id + "/titles/custom", {
+    token: developer.token, method: "POST", body: { name: "官方", hue: "teal" }
+  });
+  assert.equal(clash.status, 409, "专属头衔不能与公共头衔同名");
+
+  // 即时发放：3 篇帖子各 5 条评论后，作者无需等待下次评估即获得「论坛催化剂」
+  // 用独立账号，避免影响后续用例对既有用户头衔的精确断言
+  const author = await account("titles_catalyst");
+  const postIds = [];
+  for (let i = 0; i < 3; i += 1) {
+    const created = await api("/api/forum/posts", {
+      token: author.token, method: "POST",
+      body: { category: "讨论", title: "即时头衔 " + i, content: "等待评论" }
+    });
+    assert.equal(created.status, 201);
+    postIds.push(created.data.post.id);
+  }
+  const countCatalyst = function () {
+    const db = new DatabaseSync(path.join(temp, "data.db"));
+    const n = db.prepare("SELECT COUNT(*) AS n FROM user_titles ut JOIN titles t ON t.id = ut.title_id WHERE ut.user_id = ? AND t.key = 'catalyst'").get(author.user.id).n;
+    db.close();
+    return n;
+  };
+  for (let p = 0; p < postIds.length; p += 1) {
+    for (let i = 0; i < 5; i += 1) {
+      const rep = await api("/api/forum/posts/" + postIds[p] + "/replies", { token: studentUser.token, method: "POST", body: { content: "评论 " + i } });
+      assert.equal(rep.status, 201);
+    }
+    assert.equal(countCatalyst(), p === 2 ? 1 : 0, "仅在第 3 篇帖子集满 5 条评论后即时发放");
+  }
+});
+
 test("佩戴：未拥有 403、可取消佩戴、非法 id 404", async () => {
   const owned = await api("/api/admin/users/" + studentUser.user.id + "/titles", {
     token: developer.token,

@@ -619,7 +619,8 @@
     if (!list.length) return '<span class="u-muted">—</span>';
     return list
       .map(function (t) {
-        if (!editable) return UI.titleBadge(t);
+        // 自动头衔由规则管理，撤销会在下次评估时恢复，故不提供撤销按钮
+        if (!editable || t.source === "auto") return UI.titleBadge(t);
         return (
           '<span class="row row--sm">' +
           UI.titleBadge(t) +
@@ -686,9 +687,14 @@
               '</td><td data-label="持有人数" class="mono">' + UI.esc(t.holder_count) +
               '</td><td data-label="操作"><div class="row row--sm"><button type="button" class="btn btn--sm" data-edit-title="' +
               UI.esc(t.id) +
-              '">编辑</button><button type="button" class="btn btn--danger-quiet btn--sm" data-delete-title="' +
-              UI.esc(t.id) +
-              '">删除</button></div></td></tr>'
+              '">编辑</button>' +
+              // 内置头衔（带 key）每次启动会由 migrate 重新播种，删除不持久，故不提供删除按钮
+              (t.key
+                ? '<button type="button" class="btn btn--sm" disabled title="内置头衔不可删除">删除</button>'
+                : '<button type="button" class="btn btn--danger-quiet btn--sm" data-delete-title="' +
+                  UI.esc(t.id) +
+                  '">删除</button>') +
+              "</div></td></tr>"
             );
           })
           .join("") +
@@ -757,8 +763,12 @@
             return (
               '<span class="row row--sm">' + UI.titleBadge(t) +
               (t.equipped ? '<span class="badge badge--ok">佩戴中</span>' : "") +
-              '<button type="button" class="btn btn--danger-quiet btn--sm" data-revoke-title="' +
-              UI.esc(t.id) + '" data-revoke-user="' + UI.esc(userId) + '">撤销</button></span>'
+              // 自动头衔由规则管理，不提供撤销（撤销会随下次评估恢复）
+              (t.source === "auto"
+                ? '<span class="u-muted u-fs-xs">自动</span>'
+                : '<button type="button" class="btn btn--danger-quiet btn--sm" data-revoke-title="' +
+                  UI.esc(t.id) + '" data-revoke-user="' + UI.esc(userId) + '">撤销</button>') +
+              "</span>"
             );
           })
           .join("")
