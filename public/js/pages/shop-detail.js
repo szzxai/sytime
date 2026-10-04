@@ -330,7 +330,16 @@
     var stars = "★".repeat(Number(review.rating) || 0) + "☆".repeat(5 - (Number(review.rating) || 0));
     return (
       '<article class="shop-review-item">' +
-      '<div class="shop-review-item__head"><strong>' + UI.esc(review.author || "同学") + '</strong><span class="shop-review-item__stars" aria-label="' + UI.esc(review.rating) + ' 星">' + stars + '</span><time>' + UI.esc(date) + "</time>" +
+      '<div class="shop-review-item__head">' +
+      UI.userLine({
+        id: review.user_id,
+        username: review.username,
+        nickname: review.nickname || review.author,
+        avatar_url: review.avatar_url,
+        role: review.role,
+        title: review.user_title
+      }) +
+      '<span class="shop-review-item__stars" aria-label="' + UI.esc(review.rating) + ' 星">' + stars + '</span><time>' + UI.esc(date) + "</time>" +
       (isMine
         ? '<button type="button" class="btn btn--danger-quiet btn--sm" data-delete-my-review>' + UI.icon("trash", "icon--sm") + "删除</button>"
         : "") +

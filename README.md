@@ -46,6 +46,16 @@
 - 图文评价（菜名 / 评分 / 评论 / 图片）
 - 每周食谱：按日期范围展开 / 收起菜谱大图，支持缩放查看
 
+### 头衔系统
+- 头衔是全站徽章：论坛帖子与回复、帖子详情、店铺评价、个人中心等位置统一由用户信息组件渲染佩戴中的头衔；缺少头衔数据时不显示徽章也不报错
+- 个人中心「我的头衔」可查看全部头衔、选择一个佩戴或选择不佩戴；未达成的自动头衔以锁定卡片显示条件与当前进度
+- 后台「头衔管理」（`title_manage`，默认 super_admin）维护头衔目录（名称 1–8 字、8 种颜色、描述）并授予/撤销；撤销佩戴中的头衔会自动取消佩戴并发送一条系统消息
+- 超管还可以为**单个账号**颁发专属自定义头衔（名称 1–8 字 + 8 色任选）：只在该账号出现，不进公共目录，撤销时目录行一并删除
+- 角色等级自带徽章，每个角色恰好一枚且按角色互斥换发：开发者（`developer`）/ 超级管理员（`super_admin`）/ 管理员（`admin`）/ 学子（`student`）/ 同窗（`user`）；`guest` 未登录无法持有头衔
+- 成就头衔按实际行为自动发放（只增不减）：三元坊老饕（推荐 10 家店铺）、夜读星（连续 7 天登录）、论坛催化剂（3 篇帖子各获 5 条以上评论）、闲者爱上网（连续 3 个周末登录）、高赞校友（发帖累计 30 个赞）、校园老吃家（10 篇菜品评价）
+- 自动条件由可扩展的规则注册表提供；新增条件只需注册表加一项并为目录行指定规则
+- 「师者」不绑定角色，由管理员手动授予在职教职员工
+
 ### 其他
 - **更新公告**：左侧列表 + 右侧详情；有发布权限的用户可删除公告（二次确认），管理后台「更新公告」面板列出已发布公告并可逐条删除
 - **消息箱**：集中展示系统通知与互动通知（评论、回复、点赞），支持分类筛选、仅看未读与分页；导航栏铃铛显示未读数量
@@ -106,6 +116,7 @@
 ├── server.js            # Express 后端、菜单与店铺路由
 ├── lib/menu/            # 来源、模型、分块、校验、配置、存储、调度、任务及路由
 ├── lib/shops/           # 店铺数据校验、SQLite 存储与权限 API
+├── lib/titles/          # 头衔目录与佩戴存储、自动规则注册表及接口
 ├── data/shops-config.json # 高德地图中心、校门锚点及覆盖范围多边形（GCJ-02）
 ├── data/menu-bootstrap.json # 十篇历史菜单种子，启动自动导入
 ├── tools/build-menu-seed.py # 开发时离线重建种子，Python 标准库
@@ -121,10 +132,12 @@
 ├── tests/shops.test.cjs # 店铺接口、校验、角色权限与范围测试
 ├── tests/shops-ui.mjs   # 店铺页面端到端与无障碍回归
 ├── tests/menu.test.cjs   # 调度、数据、识别、任务和权限测试
+├── tests/titles.test.cjs # 头衔目录、授予撤销、佩戴、自动规则与序列化测试
 ├── docs/menu-sync.md     # 配置、备份、故障处理及接口
 ├── docs/issue-5-plan.md  # 用户确认的 Issue #5 实施范围
 ├── docs/issue-7-plan.md  # 必吃榜店铺详情页双布局方案
 ├── docs/issue-9-plan.md  # 消息箱与通知实施范围
+├── docs/issue-10-plan.md # 头衔系统实施范围与验收
 ├── docs/ui/             # 组件、逐页规范、场景、文案、参考资产与验收记录
 ├── UI.md                # UI 设计总纲
 ├── MAP.md               # 当前项目结构、数据流与完整接口索引
@@ -218,7 +231,7 @@ npm.cmd start
 | user | 2 | 普通用户 |
 | guest | 1 | 未登录 |
 
-**特殊权限**（可单独授予任意用户）：`banner_edit`、`announcement_publish`、`student_review`、`invite_manage`、`weekly_menu_upload`、`map_popup_edit`、`user_manage`、`ban_appeal_review`、`shop_create`（添加店铺）。
+**特殊权限**（可单独授予任意用户）：`banner_edit`、`announcement_publish`、`student_review`、`invite_manage`、`weekly_menu_upload`、`map_popup_edit`、`user_manage`、`ban_appeal_review`、`shop_create`（添加店铺）、`title_manage`（头衔管理）。
 
 `shop_create` 默认要求 `student` 及以上角色，也可在角色外单独授权。通过 `SHOP_CREATE_MIN_ROLE` 调整默认最低角色；后端每次创建请求都会重新核验。
 
@@ -254,6 +267,9 @@ npm.cmd start
 | DELETE | `/api/shops/:id/reviews/me` | 学生及以上撤销自己的评价 |
 | GET | `/api/messages` | 当前用户消息列表（分类筛选、仅未读、游标分页） |
 | PUT | `/api/messages/:id/read`、`/api/messages/read-all` | 标记单条 / 全部消息已读 |
+| GET | `/api/user/titles` | 我的头衔（含佩戴状态）与未达成自动头衔的进度 |
+| PUT | `/api/user/title` | 佩戴 / 不佩戴头衔 |
+| — | `/api/admin/titles*`、`/api/admin/users/:id/titles*` | 头衔目录维护、授予撤销与专属头衔颁发（`title_manage`，默认 super_admin） |
 | POST | `/api/shops` | 创建店铺（默认 student 及以上或显式 `shop_create`）；可选 `dianping_url` 仅接受安全的 `dianping.com` HTTPS 链接 |
 | — | `/api/admin/menu-sync/settings`、`test`、任务写操作 | active developer 配置与自动同步管理 |
 | — | `/api/admin/menu-sync/imports*`、任务详情和资料读取 | active developer / super_admin / admin 手动导入、编辑及原图核对 |

@@ -1,6 +1,6 @@
 # 校园信息网 · 进度文档（progress.md）
 
-> 更新日期：2026-10-03。当前实现 #4 全站 UI、#5 独立菜品目录/网站内菜单同步，以及 #6 姑苏区全域必吃榜数据重采与导入。#5 配置/备份/故障处理见 [菜单同步](./docs/menu-sync.md)，用户确认的范围见 [实施计划](./docs/issue-5-plan.md)。完整结构及接口见 [MAP.md](./MAP.md)，验证见 [验收记录](./docs/ui/acceptance.md)。历史章节按当时实现保留。
+> 更新日期：2026-10-04。当前实现 #4 全站 UI、#5 独立菜品目录/网站内菜单同步、#6 姑苏区全域必吃榜数据重采与导入，以及 #10 头衔系统。#5 配置/备份/故障处理见 [菜单同步](./docs/menu-sync.md)，用户确认的范围见 [实施计划](./docs/issue-5-plan.md)，#10 范围见 [头衔实施计划](./docs/issue-10-plan.md)。完整结构及接口见 [MAP.md](./MAP.md)，验证见 [验收记录](./docs/ui/acceptance.md)。历史章节按当时实现保留。
 
 ---
 
@@ -245,7 +245,7 @@ CREATE INDEX idx_tickets_user ON tickets(user_id);
 - `ROLE_WEIGHTS = { developer:6, super_admin:5, admin:4, student:3, user:2, guest:1 }`
 - `checkRole(requiredRole)`：解析 `Authorization: Bearer <token>`；无/无效 token **不报 401**，而是 `req.user = { id:null, role:'guest', username:null }` 放行；若指定了 requiredRole，则按权重比较，不足返回 **403**。token 缺 `username` 时按 id 回查数据库补全。
 - `requireLogin`：基于 `checkRole()`，未登录返回 **401** `{ error:"login required" }`。
-- **特殊权限（`user_permissions` 表 + `requirePermission(perm)`）**：在角色之外可给单个用户授予细粒度权限。`hasPermission` 判定 = **角色权重 ≥ 该权限默认要求**（`PERMISSION_REQUIRES`）**或**在 `user_permissions` 中有显式授权。权限键：`banner_edit`(super_admin)、`announcement_publish`(super_admin)、`student_review`(super_admin)、`invite_manage`(super_admin)、`user_manage`(super_admin)、`ban_appeal_review`(super_admin)、`weekly_menu_upload`(admin)、`map_popup_edit`(admin)、`ticket_manage`(admin)。`requirePermission` 未登录 401、无权限 403。`GET /api/me` 与 `GET /api/user/profile` 均返回 `permissions` 数组。
+- **特殊权限（`user_permissions` 表 + `requirePermission(perm)`）**：在角色之外可给单个用户授予细粒度权限。`hasPermission` 判定 = **角色权重 ≥ 该权限默认要求**（`PERMISSION_REQUIRES`）**或**在 `user_permissions` 中有显式授权。权限键：`banner_edit`(super_admin)、`announcement_publish`(super_admin)、`student_review`(super_admin)、`invite_manage`(super_admin)、`user_manage`(super_admin)、`ban_appeal_review`(super_admin)、`weekly_menu_upload`(admin)、`map_popup_edit`(admin)、`ticket_manage`(admin)、`shop_create`(默认 student，可用 `SHOP_CREATE_MIN_ROLE` 调整)、`title_manage`(super_admin)。`requirePermission` 未登录 401、无权限 403。`GET /api/me` 与 `GET /api/user/profile` 均返回 `permissions` 数组。
 
 **个人资料**（均需登录）
 - `GET /api/user/profile` — 返回 `{ user: { id, display_id, username, nickname, avatar_url, signature, role, default_page, default_floor, recipe_default_view, shop_default_sort, shop_default_type, shop_layout, status } }`
@@ -381,8 +381,8 @@ CREATE INDEX idx_tickets_user ON tickets(user_id);
 | post | 正文、点赞与默认显示的回复；分批加载、回复锚点定位；帖子缺失、无权限和加载失败有明确状态 |
 | recipe | 全部菜品、菜品评价、每周食谱三个页签；A–Z 目录与名称/拼音/首字母搜索，原评价和每周图片操作保留；明确 URL 优先于账号默认设置 |
 | announcements | 桌面列表与详情并排；手机选择后进入正文，可返回列表 |
-| profile | 资料、账号安全、网站设置、工单四个面板；ID/角色/额外权限、头像、昵称、签名、密码、默认页/楼层/菜谱视图及工单保持原接口 |
-| admin | 按权限显示横幅、公告、认证审核、邀请码、每周食谱、用户、申诉和工单八个面板；待办数、确认、拒绝、角色、特殊权限、封禁和批复统一使用新组件 |
+| profile | 资料、账号安全、网站设置、消息通知、我的头衔、工单六个面板；ID/角色/额外权限、头像、昵称、签名、密码、默认页/楼层/菜谱视图及工单保持原接口；我的头衔按 `features.titles` 显隐侧栏项 |
+| admin | 按权限显示横幅、公告、认证审核、邀请码、每周食谱、用户、头衔管理、申诉和工单九个面板；待办数、确认、拒绝、角色、特殊权限、封禁、头衔授予撤销和批复统一使用新组件 |
 | 404 | 未知 GET 页面路径显示统一错误页；未知 API 仍返回 JSON 404 |
 
 动态文本通过 `UI.esc` 或 `textContent` 输出。长列表使用加载更多；异步区域提供加载、空和错误重试状态。发帖、评价、工单与公告表单保护未保存内容，提交失败保留填写内容。
@@ -473,11 +473,14 @@ CREATE INDEX idx_tickets_user ON tickets(user_id);
 
 58. **必吃榜评价带图与人均价**：`shop_reviews` 迁移新增 `guests`、`total_price`、`image_url` 字段（旧库自动 ALTER）。`POST /api/shops/:id/reviews` 改用 multer 接收 multipart：可选一张 JPG/PNG 配图（≤2 MB，存 `uploads/shops/`，重传替换、勾选「不带图」或 `remove_image=1` 清除并删文件，删除评价同步清理）；可选 `guests`（1–99 整数）与 `total_price`（0–100000 元，两位小数），服务端按总价/人数计算并回传 `per_person`，纯 JSON 提交继续兼容。评价列表与我的评价返回新字段。详情页评价表单新增「就餐人数」「总价（元）」选填输入（输入时实时预览「人均约 ¥xx」）与「评价带图」勾选（展开上传区，复用 `UI.upload` 组件，支持拖拽、预览、移除，更新时回填已有配图可换可移）；评价卡片显示「N 人 · 人均 ¥xx」和可点击放大的配图缩略图。`tests/shops.test.cjs` 新增 `tests/review-image.test.cjs`（后端 14 项），浏览器回归 `tests/shops-ui.mjs` 新增 6 项检查共 64 项通过。
 
+59. **需求 #10 头衔系统**：新增 `lib/titles/` 模块。`store.js` 建 `titles`（名称/颜色/来源/规则/描述/`owner_user_id`）、`user_titles`（拥有关系，`granted_by` 为空表示自动发放）与 `user_login_days`（登录逐日历史，供周末统计）三张表，给 `users` 自动迁移 `equipped_title_id`（佩戴状态，一次最多一个）以及 `login_streak`/`last_login_date`（连续登录计数），启动幂等写入 14 个头衔种子。`rules.js` 是可扩展的自动规则注册表（`{key,label,measure}`），本轮实现 **11 条自动规则**：五个角色等级（`role_developer` / `role_super_admin` / `role_admin` / `student_verified` / `role_user`）+ 六个成就条件（累计推荐 10 家店铺、连续登录 7 天、论坛催化剂 = 3 篇帖子各获 ≥5 条评论、闲者爱上网 = 连续 3 个周末登录、高赞校友 = 发帖累计 30 个赞、校园老吃家 = 10 篇菜品评价且排除 `is_weekly`）；新增条件只需注册表加一项并给 `titles.rule` 关联目录行。角色口径：**每个角色恰好一枚等级徽章且互斥** —— 开发者（`developer`）/ 超级管理员（`super_admin`）/ 管理员（`admin`）/ 学子（`student`，精确匹配）/ 同窗（`user`）；`evaluateAutoTitles` 在角色变化时自动换发等级徽章（升为超级管理员会收回「管理员」并发放「超级管理员」），成就类头衔只增不减，两者可并存。`guest` 未登录、没有账号，无法持有头衔。「师者」不绑定角色，改为手动授予留给真正的教职员工（`migrate()` 会把早期作为自动头衔的「师者」目录行转为手动，已发放的拥有关系保留）。「我的头衔」的未达成列表按完成度从高到低排序。`routes.js` 提供用户与后台接口，`server.js` 挂载。新增特殊权限 **`title_manage`**（默认 super_admin），同步 `server.js` 标签表与最低角色表、`public/js/ui.js` 的 `PERMISSION_LABELS`、`public/js/pages/profile.js` 权限映射。接口：`GET /api/user/titles`（已拥有头衔含佩戴状态 + 未达成自动头衔的进度文案）、`PUT /api/user/title`（佩戴/不佩戴，未拥有 403、非法 id 404）、`GET /api/admin/titles/rules`、`GET|POST /api/admin/titles`、`PUT|DELETE /api/admin/titles/:id`、`POST /api/admin/users/:id/titles`（自动头衔不可手动授予，409；重复授予幂等）、`POST /api/admin/users/:id/titles/custom`（超管为单个账号颁发专属自定义头衔：名称 1–8 字 + 8 色任选，写 `titles.owner_user_id`；同名沿用同一行；公共目录与 `/api/admin/titles` 都不列出；该账号撤销时目录行一并删除）、`DELETE /api/admin/users/:id/titles/:titleId`（撤销佩戴中的头衔会清空佩戴并写入一条系统消息）。自动头衔在登录（`recordLogin` 更新连续登录后评估）、新增店铺（`mountShopRoutes` 新增 `onCreated` 回调）与打开「我的头衔」时评估，不引入定时任务。统一用户组件补数据：个人资料返回佩戴头衔，论坛帖子/回复补齐 `nickname/avatar_url/role` 并附佩戴头衔，店铺评价卡改用 `UI.userLine`；由于 `forum_posts` 自身有 `title` 列（帖子标题），佩戴头衔统一放在 `user_title` 字段，避免覆盖。前端：`profile.html` 新增「我的头衔」面板（佩戴预览、脏检测后启用保存、不佩戴、未达成自动头衔的锁定卡与进度（按完成度从高到低排序）、撤销后回退）；针对具体账号的授予/撤销/专属颁发在后端统一校验目标权重（不能给自己或权重不低于自己的人，与改角色/封号的既有约定一致），`admin.html` 新增「头衔管理」面板（目录表格、新建/编辑对话框含 8 色 chip 预览、删除二次确认、用户表新增头衔列与授予/撤销、授予对话框底部「专属头衔」名称输入 + 选色 + 颁发），`ui.js` 开启 `features.titles`。新增 `tests/titles.test.cjs`（后端 14 项，覆盖规则引擎与全部等级/成就规则、周末窗口计算、目录 CRUD、授予撤销与系统消息、佩戴、自动发放、专属头衔可见性与清理、目标权重边界、序列化与权限）并挂入 `npm test` 的 `test:titles`；`tests/ui-smoke.mjs` 新增 31 项头衔检查（佩戴流程、重名内联报错、目录增删、用户表徽章、专属头衔颁发与撤销、等级头衔与学子锁定、未达成列表只渲染进行中的、360/1280 布局与 axe），浏览器回归共 **363 项通过**。同时修掉 `tests/ui-smoke.mjs` 菜单同步面板的一处既有竞态：面板打开会异步 `refresh(true)` 回填表单，迟到的回填会覆盖测试刚填入的值，导致间歇超时；现在等待 `networkidle` 并以「界面回显 + 接口落库」双重断言、必要时重试，连续多次全绿。文档同步 [docs/issue-10-plan.md](./docs/issue-10-plan.md)、[头衔页面规范](./docs/ui/pages/titles.md)、本文件与 [MAP.md](./MAP.md)、[README.md](./README.md)。
+
 ---
 
 ## 10. 已知事项 / 待办
 
-- #5 独立菜品目录与同步、#6 姑苏区全域店铺榜首期及交互地图、#9 消息箱已实现；当前有 5,567 条通过校验的高德餐饮 POI。采集源可能漏掉未被高德收录或检索返回的实际店铺；未通过地址/营业状态/路线/名称校验及同名项未导入。交互地图使用同源服务器端静态图代理，无需浏览器 JS Key。#7 店铺详情双布局与评价删除已实现；#8 店铺菜品关联与 #10 头衔仍待实施。菜谱同步仍需 developer 配置提供商/Key/模型并开启。
+- #5 独立菜品目录与同步、#6 姑苏区全域店铺榜首期及交互地图、#7 店铺详情双布局与评价删除、#9 消息箱、#10 头衔系统已实现；当前有 5,567 条通过校验的高德餐饮 POI。采集源可能漏掉未被高德收录或检索返回的实际店铺；未通过地址/营业状态/路线/名称校验及同名项未导入。交互地图使用同源服务器端静态图代理，无需浏览器 JS Key。**#8 店铺菜品关联仍待实施**。菜谱同步仍需 developer 配置提供商/Key/模型并开启。
+- #10 自动头衔目前有六个成就条件（推荐店铺、连续登录、论坛催化剂、闲者爱上网、高赞校友、校园老吃家）与五个角色等级条件；注册时间等示例条件留作扩展（规则注册表 + 目录即可新增）。撤销头衔需管理员撤销拥有关系或删除目录，规则本身不提供「取消达成」；等级头衔按角色互斥换发，成就头衔只增不减，数据被删（帖子/评价被删）也不会收回已获得的成就徽章。「师者」为手动授予。专属头衔只服务于所属账号，撤销即删除目录行，不能转正为公共头衔。「闲者爱上网」依赖 `user_login_days`，该表从上线起累积，历史登录无法回填。`guest` 无账号，无法持有头衔。
 - 地图部分建筑说明仍是简短介绍，可按需补充真实内容；地图数据方向与几何约定保持不变。
 - 主题切换入口是手册 P2 能力，当前未开启。
 - 回归测试可用 `npm.cmd test` 重跑，在系统临时目录中运行，不修改项目数据库或上传数据；输出在被忽略的 `output/playwright/`。

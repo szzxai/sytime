@@ -1,6 +1,6 @@
 # szzx-info 项目地图
 
-> 更新日期：2026-10-02。本文描述 #4 UI 改版、#5 菜品目录与菜单同步，以及 #6 三元坊必吃榜的代码。
+> 更新日期：2026-10-04。本文描述 #4 UI 改版、#5 菜品目录与菜单同步、#6 三元坊必吃榜，以及 #10 头衔系统的代码。
 >
 > 本文依据实际文件、后端代码、全部前端页面、地图 JSON、SQLite 表结构及依赖清单整理。设计规范见 [UI.md](./UI.md)，验收记录见 [docs/ui/acceptance.md](./docs/ui/acceptance.md)，原始里程碑快照见 [PLAN_2026-10-01.md](./PLAN_2026-10-01.md)。
 
@@ -11,7 +11,7 @@
 | 层次 | 实际实现 | 入口 |
 | --- | --- | --- |
 | 服务端 | CommonJS、Node.js、Express 5；原有业务及网站内菜单 worker 模块 | [server.js](./server.js)、[lib/menu/](./lib/menu/) |
-| 数据库 | Node 内置 `node:sqlite` 的同步 `DatabaseSync`；13 张原有表及 8 张菜单表 | [data.db](./data.db)、[lib/menu/store.js](./lib/menu/store.js) |
+| 数据库 | Node 内置 `node:sqlite` 的同步 `DatabaseSync`；14 张原有表、3 张必吃榜表、2 张头衔表及 8 张菜单表 | [data.db](./data.db)、[lib/menu/store.js](./lib/menu/store.js)、[lib/shops/store.js](./lib/shops/store.js)、[lib/titles/store.js](./lib/titles/store.js) |
 | 前端 | 16 个功能页面及 404，统一外部 CSS 与页面脚本；原生 JavaScript，无构建流程 | [public/](./public/) |
 | 共享前端逻辑 | 导航壳、登录态、用户展示、横幅、表单、对话框、上传、图片查看器及页面工具 | [public/js/ui.js](./public/js/ui.js)、[public/js/page.js](./public/js/page.js) |
 | 地图 | 本地 Leaflet 1.9.4；自定义平面坐标数据，保留原有几何与楼层关系 | [public/vendor/leaflet/](./public/vendor/leaflet/)、[data.json](./data.json) |
@@ -59,7 +59,11 @@ szzx-info/
 ├── data/shops-config.json        高德地图中心、苏州中学参考点、姑苏区边界多边形（GCJ-02）
 ├── lib/shops/store.js            shops 表、路线字段校验、列表/详情与地理围栏
 ├── lib/shops/routes.js           店铺公开读取与带权限的创建 API
+├── lib/titles/store.js           titles/user_titles 表、佩戴状态、种子与增删改查
+├── lib/titles/rules.js           自动头衔规则注册表与发放逻辑
+├── lib/titles/routes.js          用户佩戴接口与后台头衔管理接口
 ├── MAP.md                        项目结构与实现地图（本文）
+├── docs/issue-10-plan.md         #10 头衔系统的实施范围与验收
 ├── PLAN_2026-10-01.md             国庆里程碑与全部 issue 的原始快照
 ├── UI.md                         全站 UI 设计总纲
 ├── docs/ui/
@@ -71,6 +75,7 @@ szzx-info/
 │   ├── implementation.md         实施步骤与可复现验证方法
 │   └── acceptance.md             #4 实施范围及验收记录
 ├── tests/
+│   ├── titles.test.cjs           头衔目录/授予撤销/佩戴/自动规则/序列化测试
 │   ├── shops.test.cjs            店铺 API、字段校验、覆盖区域、角色/显式权限测试
 │   ├── shops-ui.mjs              店铺列表/详情/创建与权限浏览器回归
 │   ├── menu.test.cjs             菜单数据/调度/提供商/队列/权限测试
@@ -93,8 +98,8 @@ szzx-info/
 │   ├── login.html                登录与被封账号的解封申诉
 │   ├── register.html             注册并自动登录
 │   ├── student_verify.html       邀请码认证或提交学生审核申请
-│   ├── profile.html              资料、密码、网站设置、工单
-│   ├── admin.html                权限控制的后台菜单与管理操作
+│   ├── profile.html              资料、密码、网站设置、消息通知、我的头衔、工单
+│   ├── admin.html                权限控制的后台菜单、用户与头衔管理操作
 │   ├── 404.html                  未知页面提示，使用绝对资源路径
 │   ├── css/site.css              设计令牌、组件与响应式样式
 │   ├── img/                      icons.svg 与 favicon.svg
@@ -163,9 +168,9 @@ flowchart LR
 | `login.html` | 用户名/密码登录；封禁错误展示；允许申诉时提交理由及可选图片 | `/api/login`、`/api/user/appeal` |
 | `register.html` | 用户名/昵称/密码及重复密码校验；注册后调用登录 | `/api/register`、`/api/login` |
 | `student_verify.html` | 已达到学生角色时隐藏表单；否则填写新生号、班级、真实姓名，可填邀请码及补充信息 | `/api/user/profile`、`/api/student/apply` |
-| `profile.html` | 展示 ID/角色/额外权限；修改头像、昵称、签名、密码；保存网站设置（默认进入界面 / 校园地图默认楼层 / 菜品与食谱默认页 / 必吃榜默认排序与餐食类型 / 店铺详情页样式）；提交与查看本人工单；消息通知偏好（系统/评论/回复/点赞） | `/api/user/*`、`/api/tickets`、`/api/tickets/mine`、`/api/user/preferences` |
+| `profile.html` | 展示 ID/角色/额外权限；修改头像、昵称、签名、密码；保存网站设置（默认进入界面 / 校园地图默认楼层 / 菜品与食谱默认页 / 必吃榜默认排序与餐食类型 / 店铺详情页样式）；提交与查看本人工单；消息通知偏好（系统/评论/回复/点赞）；我的头衔（选择佩戴/不佩戴，未达成自动头衔显示条件与进度） | `/api/user/*`、`/api/tickets`、`/api/tickets/mine`、`/api/user/preferences`、`/api/user/titles`、`/api/user/title` |
 | `inbox.html` | 消息箱：按天分组、四类标签过滤、只看未读、全部标为已读、点击标记已读并跳转；页头消息铃显示未读数 | `/api/messages`、`/api/messages/unread-count`、`/api/messages/:id/read`、`/api/messages/read-all` |
-| `admin.html` | 横幅、公告、发送系统通知、学生审核、邀请码、每周菜谱、用户管理、申诉、工单、developer 菜单同步和三种管理角色的 JSON 手动导入；待办红点 | `/api/admin/*`，菜单接口见 [运维文档](./docs/menu-sync.md) |
+| `admin.html` | 横幅、公告、发送系统通知、学生审核、邀请码、每周菜谱、用户管理、头衔管理、申诉、工单、developer 菜单同步和三种管理角色的 JSON 手动导入；待办红点 | `/api/admin/*`，菜单接口见 [运维文档](./docs/menu-sync.md) |
 | `404.html` | 404 提示、返回首页与返回上一页 | 无 |
 | `js/ui.js` | 公共导航/页脚、账户菜单、手机抽屉、横幅、用户信息与全站交互组件 | `/api/user/profile`、`/api/settings/banner` |
 
@@ -182,7 +187,9 @@ flowchart LR
 | POST | `/api/register` | 公开 | 创建用户；首个用户为 developer，其余为 user；生成 display_id |
 | POST | `/api/login` | 公开 | 验证密码、封禁状态，签发 JWT |
 | GET | `/api/me` | 公开，可携带 token | 返回解析后的用户及显式权限 |
-| GET | `/api/user/profile` | 登录 | 当前用户资料、设置、状态、权限 |
+| GET | `/api/user/profile` | 登录 | 当前用户资料、设置、状态、权限与佩戴中的头衔 |
+| GET | `/api/user/titles` | 登录 | 已拥有头衔（含佩戴状态）与未达成自动头衔的条件进度 |
+| PUT | `/api/user/title` | 登录 | 佩戴或取消佩戴；未拥有的头衔 403，`title_id: null` 表示不佩戴 |
 | PUT | `/api/user/settings` | 登录 | 部分更新：默认页、1–4 楼层、菜谱视图（all/reviews/weekly）、必吃榜默认排序/餐食类型、店铺详情页样式（stacked/split） |
 | POST | `/api/user/avatar` | 登录 | 上传头像，更新 avatar_url |
 | PUT | `/api/user/nickname` | 登录 | 修改昵称 |
@@ -244,6 +251,14 @@ flowchart LR
 | PUT | `/api/admin/users/permissions` | user_manage，另有目标角色限制 | 替换显式权限列表 |
 | POST | `/api/admin/weekly-menu/upload` | weekly_menu_upload | 上传日期范围内的每周食谱图片 |
 | DELETE | `/api/admin/weekly-menu/:id` | 登录，上传者或 super_admin 及以上 | 删除食谱记录及图片文件 |
+| GET | `/api/admin/titles` | title_manage | 头衔目录与持有人数 |
+| GET | `/api/admin/titles/rules` | title_manage | 可用的自动头衔规则清单 |
+| POST | `/api/admin/titles` | title_manage | 新建头衔；重名 409，名称超 8 字 422 |
+| PUT | `/api/admin/titles/:id` | title_manage | 修改名称、颜色与描述 |
+| DELETE | `/api/admin/titles/:id` | title_manage | 删除头衔并清理所有拥有与佩戴记录 |
+| POST | `/api/admin/users/:id/titles` | title_manage，目标权重须低于自己 | 授予公共头衔；重复幂等，自动头衔 409 |
+| POST | `/api/admin/users/:id/titles/custom` | title_manage，目标权重须低于自己 | 为该账号创建并颁发专属头衔；同名沿用同一行，不进公共目录 |
+| DELETE | `/api/admin/users/:id/titles/:titleId` | title_manage，目标权重须低于自己 | 撤销头衔；佩戴中会清空佩戴并写入系统消息 |
 
 ### 5.4 申诉、工单与消息
 
@@ -288,16 +303,17 @@ flowchart LR
 | map_popup_edit | admin | 地图弹窗编辑 |
 | ticket_manage | admin | 工单管理 |
 | shop_create | student（由 `SHOP_CREATE_MIN_ROLE` 可配置） | 添加店铺；也可在用户显式权限中单独授权 |
+| title_manage | super_admin | 头衔目录维护与用户头衔授予/撤销 |
 
 ## 7. 数据模型与文件存储
 
 ### 7.1 SQLite
 
-原有 14 张业务表保留；启动迁移另创建 `shops`、`shop_likes`、`shop_reviews` 三张店铺表和 8 张菜单表。店铺 schema 在 `lib/shops/store.js`，菜单迁移与种子导入位于 `lib/menu/store.js`。另有内部表 sqlite_sequence；测试使用临时数据库。
+原有 14 张业务表保留；启动迁移另创建 `shops`、`shop_likes`、`shop_reviews` 三张店铺表、`titles`、`user_titles` 两张头衔表和 8 张菜单表。店铺 schema 在 `lib/shops/store.js`，头衔 schema 与种子在 `lib/titles/store.js`，菜单迁移与种子导入位于 `lib/menu/store.js`。另有内部表 sqlite_sequence；测试使用临时数据库。
 
 | 表 | 主要字段/约束 | 关联与用途 |
 | --- | --- | --- |
-| users | id、display_id、username、nickname、password_hash、avatar_url、signature、role、三项默认设置、status、封禁字段、三条通知偏好（pref_comment/pref_reply/pref_like）；username/email 唯一 | 账号与偏好；email 为兼容字段，现有注册不使用邮箱 |
+| users | id、display_id、username、nickname、password_hash、avatar_url、signature、role、三项默认设置、status、封禁字段、三条通知偏好（pref_comment/pref_reply/pref_like）、`equipped_title_id`、`last_login_date`/`login_streak`；username/email 唯一 | 账号与偏好；email 为兼容字段，现有注册不使用邮箱；`equipped_title_id` 为当前佩戴的头衔（单值），`login_streak` 供「夜读星」规则使用 |
 | user_permissions | user_id、permission；二者联合唯一 | 用户显式授权 |
 | forum_posts | user_id、username、category、title、content、created_at；category 只允许讨论/提问 | 论坛帖子 |
 | forum_replies | post_id、user_id、username、content、created_at | 平铺帖子回复；没有父评论 ID |
@@ -311,6 +327,9 @@ flowchart LR
 | ban_appeals | user_id、appeal_reason、appeal_image、status | 解封审核；pending/approved/rejected |
 | tickets | user_id、username、title、content、visibility、status、reply_content、reply_image、reply_by、replied_at | 工单；pending/resolved |
 | messages | user_id、type、actors(JSON)、count、target_kind/target_id、title/body/snippet、important、read_at | 消息箱；system/comment/reply/like，点赞按目标聚合 |
+| titles | key（种子标识，可空）、name、hue、source（grant/auto）、rule（自动规则 key）、description、`owner_user_id` | 头衔目录，共 14 个种子：五个角色等级（开发者/超级管理员/管理员/学子/同窗）、六个成就（三元坊老饕/夜读星/论坛催化剂/闲者爱上网/高赞校友/校园老吃家）与三个手动（师者/创站元老/官方）；`owner_user_id` 为空是公共头衔（按名称全站唯一），非空是该账号的专属头衔（按「账号 + 名称」唯一，不进公共目录）；`rule` 关联 `lib/titles/rules.js` 的规则，来源为 auto 时不可手动授予 |
+| user_titles | user_id、title_id 联合唯一、granted_by（NULL 表示自动发放）、created_at | 用户拥有的头衔，一人可多个；等级头衔互斥（角色变化时换发），成就头衔只增不减；佩戴状态单独存在 users.equipped_title_id；撤销专属头衔时其 titles 目录行一并删除 |
+| user_login_days | user_id、day 联合主键 | 登录逐日历史（北京时间自然日，登录时写入），供「闲者爱上网」按周末窗口统计；不做回填 |
 | shops | name 唯一、address、location_note、可选 `dianping_url`、type、GCJ-02 lat/lng、本部/最近地铁出口 distance_m 与 walk_min、metro_station/metro_exit、created_by/created_at | 三元坊必吃榜；列表可按本部、地铁及互动统计排序筛选 |
 | shop_likes | shop_id、user_id 唯一、created_at | 每名学生及以上用户每店一个点赞；重复点击取消 |
 | shop_reviews | shop_id、user_id 唯一、rating 1–5、content、guests、total_price、image_url、created_at/updated_at | 每名学生及以上用户每店一条评价，可更新；可选带一张图（存 `uploads/shops/`）与人数/总价，人均价按总价/人数自动计算；汇总评价数、评分数和平均星级 |
@@ -380,7 +399,7 @@ JWT_EXPIRES_IN=7d
 - data.db、data.json 的在线编辑结果、uploads/ 都是本地持久数据；部署需要可写、持久化的存储和 Node 服务。
 - 开发依赖为 Playwright 与 axe-core。运行 `npm.cmd test` 可执行浏览器回归；Windows 使用 Microsoft Edge，其他平台先运行 `npx playwright install chromium`。
 - 回归测试在系统临时目录启动独立后端并创建测试数据库与上传文件；项目内的 `data.db`、`uploads/` 和 `data.json` 不被测试改写。
-- 最近一次验证：13 项菜单后端测试、295 项浏览器检查及全新 Node 生产安装通过；360px/1280px、light/dark 扫描无违规。真实模型的失败与限制见 [菜单验证记录](./docs/menu-validation.md)，产物位于忽略的 output/。
+- 最近一次验证：菜单 18 项、头衔 14 项、店铺 14 项后端测试，店铺 64 项与浏览器 363 项检查及全新 Node 生产安装通过；360px/1280px、light/dark 扫描无违规。真实模型的失败与限制见 [菜单验证记录](./docs/menu-validation.md)，产物位于忽略的 output/。
 
 ## 9. 文档与实现约定
 
@@ -405,4 +424,4 @@ JWT_EXPIRES_IN=7d
 | [#9 消息箱](https://github.com/szzxvc/szzx-info/issues/9) | inbox.html、messages 表、论坛回复/点赞通知、profile.html 通知偏好、admin.html 发送系统通知、ui.js 消息铃 | 已实现：系统/评论/回复/点赞消息、聚合点赞、已读与未读计数、按天分组、类型过滤、通知偏好、super_admin 发送系统通知 |
 | [#10 头衔系统](https://github.com/szzxvc/szzx-info/issues/10) | 用户资料、后台用户管理、各用户内容渲染处 | 头衔目录/拥有关系/佩戴状态、授予撤销、自动规则、统一用户展示 |
 
-菜品目录、消息箱与必吃榜开关已开启。#6 姑苏区全域边界取自高德行政区 adcode 320508（GCJ-02、323 点），范围文案/地图/服务端地理围栏共用该多边形。全区分块检索得到 5,942 条高德餐饮 POI，地址及步行路线补全后 5,629 条通过初筛；正式导入 5,567 条，62 条同名项跳过。其余候选因地址格式、明确停业标记、名称长度或缺少最近地铁步行路线未导入（原因可能重叠）；数据代表高德可检索 POI，不保证涵盖所有实际店铺。数据库店铺均通过区界校验。页面具备可拖动/缩放的同源高德底图与近邻聚合点（显示店数、点击居中放大）、拼音 A–Z、店名/道路/商场搜索及本部距离/时间和互动指标筛选；地图代理不向浏览器泄漏 Web 服务 Key。后端 13 项、浏览器 58 项测试通过。#7/#8 店铺详情布局和店铺菜品关联、#10 头衔仍未实现。
+菜品目录、消息箱与必吃榜开关已开启。#6 姑苏区全域边界取自高德行政区 adcode 320508（GCJ-02、323 点），范围文案/地图/服务端地理围栏共用该多边形。全区分块检索得到 5,942 条高德餐饮 POI，地址及步行路线补全后 5,629 条通过初筛；正式导入 5,567 条，62 条同名项跳过。其余候选因地址格式、明确停业标记、名称长度或缺少最近地铁步行路线未导入（原因可能重叠）；数据代表高德可检索 POI，不保证涵盖所有实际店铺。数据库店铺均通过区界校验。页面具备可拖动/缩放的同源高德底图与近邻聚合点（显示店数、点击居中放大）、拼音 A–Z、店名/道路/商场搜索及本部距离/时间和互动指标筛选；地图代理不向浏览器泄漏 Web 服务 Key。#7 店铺详情双布局、#9 消息箱与 #10 头衔系统已实现；#8 店铺菜品关联仍待实施。回归入口：`npm run test:menu`（18 项）、`npm run test:titles`（14 项）、`npm run test:shops`（14 项）、`npm run test:shops:ui`（64 项）、`npm run test:ui`（363 项）。

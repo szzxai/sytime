@@ -394,9 +394,25 @@ try {
     (await adminPage.page.locator("#annList [data-delete-announce]").count()) >= 1,
   );
   await adminPage.page.locator('[data-panel="menu"]').click();
-  await adminPage.page.locator("#menuDailyTime").fill("10:35");
-  await adminPage.page.locator("#menuSave").click();
-  await adminPage.page.waitForFunction(() => document.getElementById("menuSchedule").textContent.includes("10:35"));
+  await adminPage.page.waitForLoadState("networkidle");
+  // 面板打开时会异步 refresh(true) 回填表单；迟到的回填可能覆盖本次输入，
+  // 因此以“表单提交后界面回显 10:35”为准，未回显就重试（落库结果由下面的接口断言保证）。
+  let menuSaved = false;
+  for (let attempt = 0; attempt < 4 && !menuSaved; attempt += 1) {
+    await adminPage.page.locator("#menuDailyTime").fill("10:35");
+    await adminPage.page.locator("#menuSave").click();
+    try {
+      await adminPage.page.waitForFunction(
+        () => document.getElementById("menuSchedule").textContent.includes("10:35"),
+        null,
+        { timeout: 5000 },
+      );
+      menuSaved = true;
+    } catch (err) {
+      /* 迟到的回填覆盖了输入，重试 */
+    }
+  }
+  check("developer saves daily time from the panel", menuSaved);
   check("developer daily time persisted", (await api("/api/admin/menu-sync/settings", {token: admin.token})).data.settings.daily_time === "10:35");
   await adminPage.page.locator("#menuModel").fill("vision-test");
   await adminPage.page.locator("#menuKey").fill("test-only-menu-key");
@@ -784,6 +800,213 @@ try {
     check(role+" publishes corrected vision JSON",history.actor_id===login.user.id && history.job_id===menuJobId && history.source_id==="szzx1000:36:11392");
     await audit(manual.page,"admin/manual/"+role+"/dark");await manual.ctx.close();
   }
+  /* ---------- 头衔系统（#10） ---------- */
+  const catalog = (await api("/api/admin/titles", { token: admin.token })).data
+    .titles;
+  check(
+    "title catalog seeded with rules",
+    catalog.length === 14 &&
+      catalog.some((t) => t.rule === "shop_contributor") &&
+      catalog.some((t) => t.rule === "forum_catalyst") &&
+      catalog.some((t) => t.rule === "weekend_regular") &&
+      catalog.some((t) => t.rule === "top_liked") &&
+      catalog.some((t) => t.rule === "canteen_veteran") &&
+      catalog.some((t) => t.rule === "role_developer") &&
+      catalog.some((t) => t.rule === "role_super_admin") &&
+      catalog.some((t) => t.rule === "role_admin") &&
+      catalog.some((t) => t.rule === "role_user" && t.hue === "stone") &&
+      catalog.some((t) => t.name === "师者" && t.source === "grant") &&
+      catalog.some((t) => t.source === "grant"),
+  );
+  const devTitles = (await api("/api/user/titles", { token: admin.token })).data;
+  check(
+    "developer auto receives the grade title instead of 学子",
+    devTitles.titles.some((t) => t.name === "开发者") &&
+      !devTitles.titles.some((t) => t.name === "学子") &&
+      !devTitles.titles.some((t) => t.name === "师者"),
+  );
+  check(
+    "学子 is locked for a developer",
+    devTitles.locked.some((t) => t.name === "学子" && !t.met),
+  );
+  const founder = catalog.find((t) => t.name === "创站元老");
+  check(
+    "developer grants a manual title",
+    (
+      await api(`/api/admin/users/${ordinary.user.id}/titles`, {
+        token: admin.token,
+        method: "POST",
+        body: { title_id: founder.id },
+      })
+    ).data.granted === true,
+  );
+  check(
+    "auto title rejects manual grant",
+    (
+      await api(`/api/admin/users/${ordinary.user.id}/titles`, {
+        token: admin.token,
+        method: "POST",
+        body: { title_id: catalog.find((t) => t.source === "auto").id },
+      })
+    ).status === 409,
+  );
+  check(
+    "user wears the granted title",
+    (
+      await api("/api/user/title", {
+        token: ordinary.token,
+        method: "PUT",
+        body: { title_id: founder.id },
+      })
+    ).status === 200,
+  );
+
+  const titlesPage = await pageFor(ordinary, "/profile.html#titles", 1280);
+  await titlesPage.page.waitForSelector("#view-titles:not([hidden])");
+  check(
+    "profile titles panel renders",
+    await titlesPage.page.locator("#view-titles").isVisible(),
+  );
+  check(
+    "worn title shows in preview",
+    (await titlesPage.page.locator("#titlePreview").textContent()).includes(
+      "创站元老",
+    ),
+  );
+  check(
+    "save stays disabled until a change",
+    await titlesPage.page.locator("#wearSubmit").isDisabled(),
+  );
+  await titlesPage.page.locator("#titleChoices label").first().click();
+  check(
+    "choosing no title enables save",
+    !(await titlesPage.page.locator("#wearSubmit").isDisabled()),
+  );
+  const apiLocked = (await api("/api/user/titles", { token: ordinary.token }))
+    .data.locked;
+  const inProgress = apiLocked.filter((t) => !t.met && t.progress > 0);
+  const renderedLocked = await titlesPage.page
+    .locator("#titlesLocked .choice")
+    .count();
+  check(
+    `locked list shows only in-progress titles (rendered ${renderedLocked}, expected ${inProgress.length})`,
+    renderedLocked === inProgress.length,
+  );
+  check(
+    "zero-progress titles are not rendered",
+    (await titlesPage.page.locator("#titlesLocked").textContent()).includes(
+      "校园老吃家",
+    ) === inProgress.some((t) => t.name === "校园老吃家"),
+  );
+  await titlesPage.page.locator("#wearSubmit").click();
+  await titlesPage.page.waitForFunction(
+    () => document.getElementById("wearSubmit").disabled,
+  );
+  check(
+    "saving clears the worn title",
+    (await api("/api/user/profile", { token: ordinary.token })).data.user
+      .title === null,
+  );
+  await audit(titlesPage.page, "profile/titles/1280");
+  await titlesPage.page.screenshot({
+    path: path.join(output, "profile-titles-1280.png"),
+    fullPage: true,
+  });
+  await titlesPage.ctx.close();
+
+  const narrowTitles = await pageFor(ordinary, "/profile.html#titles", 360);
+  await narrowTitles.page.waitForSelector("#view-titles:not([hidden])");
+  await audit(narrowTitles.page, "profile/titles/360");
+  await narrowTitles.ctx.close();
+
+  const titlesAdmin = await pageFor(admin, "/admin.html#titles-mgmt", 1280);
+  await titlesAdmin.page.waitForSelector("#view-titles-mgmt:not([hidden])");
+  check(
+    "admin catalog lists seeded titles",
+    (await titlesAdmin.page.locator("#titleList tbody tr").count()) === 14,
+  );
+  await titlesAdmin.page.locator("#titleAdd").click();
+  await titlesAdmin.page.waitForSelector("#titleModal[open]");
+  await titlesAdmin.page.locator("#titleName").fill("创站元老");
+  await titlesAdmin.page.locator("#titleConfirm").click();
+  await titlesAdmin.page.waitForFunction(() =>
+    document.getElementById("titleMsg").textContent.includes("已存在"),
+  );
+  check(
+    "duplicate title name shows inline error",
+    await titlesAdmin.page.locator("#titleModal[open]").isVisible(),
+  );
+  await titlesAdmin.page.locator("#titleName").fill("测试头衔");
+  await titlesAdmin.page.locator("#titleConfirm").click();
+  await titlesAdmin.page.waitForFunction(
+    () => document.querySelectorAll("#titleList tbody tr").length === 15,
+  );
+  check(
+    "new title appears in catalog",
+    (await titlesAdmin.page.locator("#titleList tbody tr").count()) === 15,
+  );
+  await titlesAdmin.page.locator("[data-delete-title]").last().click();
+  await titlesAdmin.page.locator('dialog[open] [data-r="ok"]').click();
+  await titlesAdmin.page.waitForFunction(
+    () => document.querySelectorAll("#titleList tbody tr").length === 14,
+  );
+  check(
+    "deleting a title refreshes the catalog",
+    (await titlesAdmin.page.locator("#titleList tbody tr").count()) === 14,
+  );
+  await audit(titlesAdmin.page, "admin/titles/1280");
+  await titlesAdmin.page.screenshot({
+    path: path.join(output, "admin-titles-1280.png"),
+    fullPage: true,
+  });
+  await titlesAdmin.page.locator('[data-panel="users"]').click();
+  await titlesAdmin.page.waitForSelector("#view-users:not([hidden])");
+  await titlesAdmin.page.waitForSelector("#userList tbody tr");
+  check(
+    "users table lists granted titles",
+    (await titlesAdmin.page.locator("#userList").textContent()).includes(
+      "创站元老",
+    ),
+  );
+
+  // 专属头衔：超管给单个账号颁发自定义头衔
+  const userRow = titlesAdmin.page
+    .locator("#userList tbody tr")
+    .filter({ hasText: "campus-user" });
+  await userRow.locator("[data-titles]").click();
+  await titlesAdmin.page.waitForSelector("#grantModal[open]");
+  await titlesAdmin.page.locator("#exclusiveName").fill("首席摸鱼官");
+  await titlesAdmin.page
+    .locator("#exclusiveHues label")
+    .filter({ hasText: "绛红" })
+    .click();
+  await titlesAdmin.page.locator("#exclusiveGrant").click();
+  await titlesAdmin.page.waitForFunction(() =>
+    document.getElementById("grantOwned").textContent.includes("首席摸鱼官"),
+  );
+  check(
+    "exclusive title granted to a single account",
+    (await titlesAdmin.page.locator("#grantOwned").textContent()).includes(
+      "首席摸鱼官",
+    ),
+  );
+  check(
+    "exclusive title stays out of the shared catalog",
+    (await api("/api/admin/titles", { token: admin.token })).data.titles
+      .length === 14,
+  );
+  await titlesAdmin.page
+    .locator("#grantOwned [data-revoke-title]")
+    .last()
+    .click();
+  await titlesAdmin.page.locator('dialog[open] [data-r="ok"]').click();
+  await titlesAdmin.page.waitForFunction(
+    () =>
+      !document.getElementById("grantOwned").textContent.includes("首席摸鱼官"),
+  );
+  check("exclusive title removed on revoke", true);
+  await titlesAdmin.ctx.close();
+
   const notFound = await fetch(base + "/missing/deep/path");
   check(
     "unknown page returns styled 404",

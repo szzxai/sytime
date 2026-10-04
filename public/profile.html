@@ -45,6 +45,10 @@
             ><svg class="icon" aria-hidden="true">
               <use href="/img/icons.svg#i-bell"></use></svg
             >消息通知</a
+          ><a class="side-nav__item" href="#titles" data-panel="titles" id="titlesNav"
+            ><svg class="icon" aria-hidden="true">
+              <use href="/img/icons.svg#i-award"></use></svg
+            >我的头衔</a
           ><button type="button" class="side-nav__item" data-logout>
             <svg class="icon" aria-hidden="true">
               <use href="/img/icons.svg#i-logout"></use></svg
@@ -571,6 +575,42 @@
                     aria-label="点赞通知"
                   />
                 </div>
+              </div>
+            </div>
+          </section>
+          <section class="view" id="view-titles" hidden>
+            <div class="panel">
+              <div class="panel__head">
+                <h2 class="panel__title">选择佩戴</h2>
+                <p class="panel__desc">
+                  同一时间只能佩戴一个头衔；也可以不佩戴。
+                </p>
+              </div>
+              <div class="panel__body stack">
+                <div class="title-preview" aria-live="polite">
+                  <span class="title-preview__label">预览</span>
+                  <span id="titlePreview"></span>
+                </div>
+                <div
+                  class="choice-group choice-group--2"
+                  id="titleChoices"
+                ></div>
+                <div id="titlesEmpty"></div>
+                <div
+                  class="choice-group choice-group--2"
+                  id="titlesLocked"
+                ></div>
+              </div>
+              <div class="panel__foot">
+                <span class="status-text" id="wearMsg"></span>
+                <button
+                  type="button"
+                  class="btn btn--primary"
+                  id="wearSubmit"
+                  disabled
+                >
+                  保存佩戴
+                </button>
               </div>
             </div>
           </section>

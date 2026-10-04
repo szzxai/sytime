@@ -18,6 +18,7 @@
     tickets: ["ticket_manage", "admin"],
     users: ["user_manage", "super_admin"],
     invite: ["invite_manage", "super_admin"],
+    "titles-mgmt": ["title_manage", "super_admin"],
     menu: [null, "developer"],
     "menu-import": [null, "admin"],
   };
@@ -31,6 +32,7 @@
     tickets: loadTickets,
     users: loadUsers,
     invite: loadInvites,
+    "titles-mgmt": function () { loadTitlesMgmt(); },
     menu: function () { UI.menuAdmin.load(); },
     "menu-import": function () { UI.menuImport.load(); },
   };
@@ -528,7 +530,7 @@
     users = {};
     root.innerHTML =
       '<div class="table-wrap"><table class="table table--stack"><caption class="sr-only">用户与权限管理</caption><thead><tr>' +
-      ["ID", "用户名", "昵称", "角色", "状态", "操作"]
+      ["ID", "用户名", "昵称", "角色", "头衔", "状态", "操作"]
         .map(function (s) {
           return '<th scope="col">' + s + "</th>";
         })
@@ -565,7 +567,9 @@
               "</select>"
             : UI.esc(UI.ROLE_LABELS[u.role] || u.role);
           var actions = editable
-            ? '<div class="row row--sm"><button type="button" class="btn btn--sm" data-perms="' +
+            ? '<div class="row row--sm"><button type="button" class="btn btn--sm" data-titles="' +
+              UI.esc(u.id) +
+              '">头衔</button><button type="button" class="btn btn--sm" data-perms="' +
               UI.esc(u.id) +
               '">权限</button><button type="button" class="btn btn--sm' +
               (u.status === "banned" ? "" : " btn--danger-quiet") +
@@ -586,6 +590,8 @@
             UI.esc(u.nickname) +
             '</td><td data-label="角色">' +
             role +
+            '</td><td data-label="头衔">' +
+            userTitlesHtml(u, editable) +
             '</td><td data-label="状态"><span class="badge badge--' +
             (u.status === "banned" ? "danger" : "ok") +
             '">' +
@@ -598,6 +604,283 @@
         .join("") +
       "</tbody></table></div>";
   }
+  /* ---------- 头衔管理（#10） ---------- */
+  var TITLE_HUES = ["teal", "vermilion", "ochre", "bamboo", "wisteria", "indigo", "rose", "stone"];
+  var HUE_LABELS = {
+    teal: "黛青", vermilion: "朱印", ochre: "赭石", bamboo: "竹青",
+    wisteria: "紫藤", indigo: "靛蓝", rose: "绛红", stone: "石灰",
+  };
+  var titleCatalog = [];
+  var titleTargets = { id: null, user: null };
+
+  // 用户表「头衔」列：徽章列表，每枚可撤销
+  function userTitlesHtml(u, editable) {
+    var list = u.titles || [];
+    if (!list.length) return '<span class="u-muted">—</span>';
+    return list
+      .map(function (t) {
+        if (!editable) return UI.titleBadge(t);
+        return (
+          '<span class="row row--sm">' +
+          UI.titleBadge(t) +
+          '<button type="button" class="icon-btn icon-btn--sm" data-revoke-title="' +
+          UI.esc(t.id) +
+          '" data-revoke-user="' +
+          UI.esc(u.id) +
+          '" aria-label="撤销 ' +
+          UI.esc(u.username) +
+          " 的「" +
+          UI.esc(t.name) +
+          '」">' +
+          UI.icon("close", "icon--sm") +
+          "</button></span>"
+        );
+      })
+      .join(" ");
+  }
+
+  // 颜色 chip 自带徽章预览，选择即预览
+  function hueChipsHtml(name, current) {
+    return TITLE_HUES.map(function (hue) {
+      return (
+        '<label class="chip"><input class="chip__input" type="radio" name="' +
+        name +
+        '" value="' +
+        hue +
+        '"' +
+        (hue === current ? " checked" : "") +
+        '><span class="chip__face"><span class="title-badge" data-hue="' +
+        hue +
+        '">' +
+        UI.icon("award") +
+        '<span class="title-badge__text">' +
+        HUE_LABELS[hue] +
+        "</span></span></span></label>"
+      );
+    }).join("");
+  }
+
+  async function loadTitlesMgmt() {
+    var root = P.el("titleList");
+    root.innerHTML = UI.html.skeleton("row", 3);
+    var r = await UI.api("/api/admin/titles");
+    if (!r.ok) {
+      P.error(root, r, loadTitlesMgmt, "头衔加载失败");
+      return;
+    }
+    titleCatalog = r.data.titles || [];
+    root.innerHTML = titleCatalog.length
+      ? '<div class="table-wrap"><table class="table table--stack"><caption class="sr-only">头衔目录</caption><thead><tr>' +
+        ["徽章", "名称", "颜色", "来源", "持有人数", "操作"]
+          .map(function (s) { return '<th scope="col">' + s + "</th>"; })
+          .join("") +
+        "</tr></thead><tbody>" +
+        titleCatalog
+          .map(function (t) {
+            return (
+              '<tr><td data-label="徽章">' + UI.titleBadge(t) +
+              '</td><td data-label="名称">' + UI.esc(t.name) +
+              '</td><td data-label="颜色">' + UI.esc(HUE_LABELS[t.hue] || t.hue) +
+              '</td><td data-label="来源">' +
+              (t.source === "auto" ? "自动 · " + UI.esc(t.rule) : "手动授予") +
+              '</td><td data-label="持有人数" class="mono">' + UI.esc(t.holder_count) +
+              '</td><td data-label="操作"><div class="row row--sm"><button type="button" class="btn btn--sm" data-edit-title="' +
+              UI.esc(t.id) +
+              '">编辑</button><button type="button" class="btn btn--danger-quiet btn--sm" data-delete-title="' +
+              UI.esc(t.id) +
+              '">删除</button></div></td></tr>'
+            );
+          })
+          .join("") +
+        "</tbody></table></div>"
+      : UI.html.empty({ icon: "award", title: "暂无头衔", desc: "新建一个头衔后即可授予用户。" });
+  }
+
+  function openTitleDialog(id) {
+    titleTargets.id = id || null;
+    var t = id
+      ? titleCatalog.filter(function (x) { return String(x.id) === String(id); })[0]
+      : null;
+    P.el("titleModal-t").textContent = t ? "编辑头衔" : "新建头衔";
+    P.el("titleName").value = t ? t.name : "";
+    P.el("titleDesc").value = t ? t.description : "";
+    P.el("titleHueChips").innerHTML = hueChipsHtml("titleHue", t ? t.hue : "stone");
+    P.el("titleSourceNote").textContent = t
+      ? t.source === "auto"
+        ? "自动头衔：由规则「" + t.rule + "」发放，不能手动授予。"
+        : "手动头衔：需要在用户管理中授予。"
+      : "新建后为手动头衔，可在用户管理中授予。";
+    P.el("titleMsg").textContent = "";
+    P.el("titleMsg").className = "status-text";
+    UI.qsa("[data-counter]", P.el("titleForm")).forEach(function (input) {
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    UI.dialog.open("titleModal");
+  }
+
+  async function openGrantDialog(userId) {
+    var u = users[userId];
+    if (!u) return;
+    titleTargets.user = userId;
+    P.el("grantTargetName").textContent = u.username;
+    P.el("grantMsg").textContent = "";
+    P.el("grantMsg").className = "status-text";
+    P.el("exclusiveName").value = "";
+    P.el("exclusiveName").dispatchEvent(new Event("input", { bubbles: true }));
+    P.el("exclusiveHues").innerHTML = hueChipsHtml("exclusiveHue", "stone");
+    UI.dialog.open("grantModal");
+    var r = await UI.api("/api/admin/titles");
+    if (!r.ok) {
+      P.el("grantChoices").innerHTML = "";
+      P.el("grantOwned").innerHTML = '<span class="u-muted u-fs-sm">头衔加载失败</span>';
+      return;
+    }
+    titleCatalog = r.data.titles || [];
+    var owned = u.titles || [];
+    var ownedIds = owned.map(function (t) { return String(t.id); });
+    var available = titleCatalog.filter(function (t) {
+      return t.source === "grant" && ownedIds.indexOf(String(t.id)) === -1;
+    });
+    P.el("grantChoices").innerHTML = available.length
+      ? available
+          .map(function (t) {
+            return (
+              '<label class="chip"><input class="chip__input" type="radio" name="grantTitle" value="' +
+              UI.esc(t.id) + '"><span class="chip__face">' + UI.titleBadge(t) + "</span></label>"
+            );
+          })
+          .join("")
+      : '<span class="u-muted u-fs-sm">该用户已拥有全部可授予头衔</span>';
+    P.el("grantOwned").innerHTML = owned.length
+      ? owned
+          .map(function (t) {
+            return (
+              '<span class="row row--sm">' + UI.titleBadge(t) +
+              (t.equipped ? '<span class="badge badge--ok">佩戴中</span>' : "") +
+              '<button type="button" class="btn btn--danger-quiet btn--sm" data-revoke-title="' +
+              UI.esc(t.id) + '" data-revoke-user="' + UI.esc(userId) + '">撤销</button></span>'
+            );
+          })
+          .join("")
+      : '<span class="u-muted u-fs-sm">尚未拥有任何头衔</span>';
+    P.el("grantConfirm").disabled = !available.length;
+  }
+
+  async function revokeTitle(userId, titleId) {
+    var u = users[userId] || {};
+    var t = titleCatalog.filter(function (x) { return String(x.id) === String(titleId); })[0];
+    var ok = await UI.confirm({
+      title: "撤销 " + (u.username || "该用户") + " 的「" + (t ? t.name : "头衔") + "」？",
+      message: "其佩戴状态将一并清除。",
+      confirmText: "撤销",
+    });
+    if (!ok) return;
+    var r = await UI.api("/api/admin/users/" + encodeURIComponent(userId) + "/titles/" + encodeURIComponent(titleId), { method: "DELETE" });
+    if (!r.ok) {
+      UI.toast.error(UI.errorText(r));
+      return;
+    }
+    if (u.id !== undefined) u.titles = r.data.titles || [];
+    UI.toast.success("已撤销");
+    if (P.el("grantModal") && P.el("grantModal").open) openGrantDialog(userId);
+    loadUsers();
+  }
+
+  P.el("titleAdd").addEventListener("click", function () { openTitleDialog(null); });
+
+  P.el("titleList").addEventListener("click", async function (e) {
+    var edit = e.target.closest("[data-edit-title]");
+    if (edit) { openTitleDialog(edit.dataset.editTitle); return; }
+    var del = e.target.closest("[data-delete-title]");
+    if (!del) return;
+    var t = titleCatalog.filter(function (x) { return String(x.id) === String(del.dataset.deleteTitle); })[0];
+    var ok = await UI.confirm({
+      title: "删除头衔「" + (t ? t.name : "") + "」？",
+      message: "所有用户的拥有与佩戴记录都会一并移除，且不可恢复。",
+      confirmText: "删除",
+    });
+    if (!ok) return;
+    var r = await P.request(P.el("titleAdd"), "/api/admin/titles/" + del.dataset.deleteTitle, { method: "DELETE" }, "已删除");
+    if (r && r.ok) loadTitlesMgmt();
+  });
+
+  P.el("titleForm").addEventListener("submit", async function (e) {
+    e.preventDefault();
+    if (!P.validate(this, [["titleName", "请填写头衔名称"]])) return;
+    var hueInput = this.querySelector('input[name="titleHue"]:checked');
+    var btn = P.el("titleConfirm");
+    UI.form.busy(btn, true);
+    var r = await UI.api(titleTargets.id ? "/api/admin/titles/" + titleTargets.id : "/api/admin/titles", {
+      method: titleTargets.id ? "PUT" : "POST",
+      body: {
+        name: P.value("titleName"),
+        hue: hueInput ? hueInput.value : "stone",
+        description: P.value("titleDesc"),
+      },
+      on401: false,
+    });
+    UI.form.busy(btn, false);
+    var msg = P.el("titleMsg");
+    if (r && r.ok) {
+      UI.dialog.close("titleModal");
+      UI.toast.success("已保存");
+      loadTitlesMgmt();
+      return;
+    }
+    msg.className = "status-text is-error";
+    msg.textContent =
+      r && r.status === 409
+        ? "头衔名称已存在"
+        : r && r.status === 422
+          ? "名称需 1–8 个字，描述不超过 40 字"
+          : r
+            ? UI.errorText(r)
+            : "保存失败，请稍后再试";
+  });
+
+  P.el("grantConfirm").addEventListener("click", async function () {
+    var picked = P.el("grantForm").querySelector('input[name="grantTitle"]:checked');
+    if (!picked) return;
+    var r = await P.request(
+      P.el("grantConfirm"),
+      "/api/admin/users/" + encodeURIComponent(titleTargets.user) + "/titles",
+      { method: "POST", body: { title_id: Number(picked.value) } },
+      "已授予",
+    );
+    if (r && r.ok) {
+      if (users[titleTargets.user]) users[titleTargets.user].titles = r.data.titles || [];
+      openGrantDialog(titleTargets.user);
+      loadUsers();
+    }
+  });
+
+  // 专属头衔：为该账号创建并颁发一个不进公共目录的自定义头衔
+  P.el("exclusiveGrant").addEventListener("click", async function () {
+    var name = P.value("exclusiveName");
+    if (!name) {
+      UI.toast.warning("请填写专属头衔名称");
+      P.el("exclusiveName").focus();
+      return;
+    }
+    var hue = P.el("exclusiveHues").querySelector("input:checked");
+    var r = await P.request(
+      P.el("exclusiveGrant"),
+      "/api/admin/users/" + encodeURIComponent(titleTargets.user) + "/titles/custom",
+      { method: "POST", body: { name: name, hue: hue ? hue.value : "stone" } },
+      "已颁发专属头衔",
+    );
+    if (r && r.ok) {
+      if (users[titleTargets.user]) users[titleTargets.user].titles = r.data.titles || [];
+      await openGrantDialog(titleTargets.user);
+      loadUsers();
+    }
+  });
+
+  P.el("grantOwned").addEventListener("click", function (e) {
+    var btn = e.target.closest("[data-revoke-title]");
+    if (btn) revokeTitle(btn.dataset.revokeUser, btn.dataset.revokeTitle);
+  });
+
   P.el("userList").addEventListener("change", async function (e) {
     var input = e.target.closest("[data-role-select]");
     if (!input || input.disabled) return;
@@ -623,7 +906,12 @@
     loadUsers();
   });
   P.el("userList").addEventListener("click", function (e) {
-    var btn = e.target.closest("[data-ban], [data-unban], [data-perms]");
+    var revoke = e.target.closest("[data-revoke-title]");
+    if (revoke) {
+      revokeTitle(revoke.dataset.revokeUser, revoke.dataset.revokeTitle);
+      return;
+    }
+    var btn = e.target.closest("[data-ban], [data-unban], [data-perms], [data-titles]");
     if (!btn) return;
     if (btn.dataset.unban) {
       confirmedAction(
@@ -641,6 +929,8 @@
       P.reset(P.el("banForm"));
       P.el("banTargetName").textContent = users[targets.ban].username;
       UI.dialog.open("banModal");
+    } else if (btn.dataset.titles) {
+      openGrantDialog(btn.dataset.titles);
     } else {
       targets.perms = btn.dataset.perms;
       P.el("permsTargetName").textContent = users[targets.perms].username;

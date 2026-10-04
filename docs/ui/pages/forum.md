@@ -331,7 +331,7 @@ UI.ready(function () { setCategory("讨论"); });
 补充规则：
 - 未登录点击「发布帖子」：toast「请先登录」+ 0.9s 后 `UI.goLogin()`（把 `UI.goLoginSoon` 定义为 `setTimeout(function(){UI.goLogin();},900)`；上文占位可删，直接写 `setTimeout(UI.goLogin, 900)`）。
 - 空状态的「发布帖子」按钮与 page-head 主按钮同行为。
-- 后端字段缺口：`/api/forum/posts` 现只返回 `username`，无 nickname/avatar/role/title。**回退**：`nickname || username`、头像按 `UI.hueFor(user_id)` 首字占位、不渲染 roleTag/titleBadge。**数据契约（需后端补充，P1）**：帖子与回复增加 `nickname`、`avatar_url`、`role`、`title`（含 `title.hue/name`）。缺字段时界面必须如常显示（上文模板已兼容）。
+- 后端字段已补齐（#10 完成）：`/api/forum/posts`、`/api/forum/posts/:id` 与回复接口返回 `nickname`、`avatar_url`、`role` 与佩戴中的头衔 `user_title`（`{name, hue}`，无佩戴为 `null`）。**回退**：`nickname || username`、头像按 `UI.hueFor(user_id)` 首字占位、`user_title` 为空时不渲染 titleBadge。帖子行自身已有 `title` 列（帖子标题），因此佩戴头衔使用 `user_title` 传输，前端在 `F.user()` 中映射为 `title` 交给 `UI.userLine`。
 
 ## JS 钩子清单（旧 → 新）
 

@@ -10,6 +10,7 @@
       nickname: p.nickname,
       avatar_url: p.avatar_url,
       role: p.role,
+      title: p.user_title,
     };
   };
   F.canDelete = function (p) {
@@ -116,6 +117,7 @@
                 '<div class="reply__body"><div class="reply__meta"><span class="user-line__name">' +
                 UI.esc(reply.nickname || reply.username || "已注销用户") +
                 "</span>" +
+                (UI.config.features.titles ? UI.titleBadge(reply.user_title) : "") +
                 UI.roleTag(reply.role) +
                 UI.timeEl(reply.created_at) +
                 '<span class="reply__floor">' +

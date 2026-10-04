@@ -15,6 +15,7 @@
     weekly_menu_upload: "admin",
     map_popup_edit: "admin",
     ticket_manage: "admin",
+    title_manage: "super_admin",
   };
   var SHOP_SORTS = ["campus", "az", "metro", "likes", "reviews", "rating", "new"];
   async function loadShopTypeOptions(current) {
@@ -130,9 +131,140 @@
           desc: "遇到问题可以提交工单。",
         });
   }
+  /* ---------- 我的头衔（#10） ---------- */
+  var titles = { owned: [], locked: [], equippedId: "", selected: "" };
+
+  function titleDate(sec) {
+    return sec ? UI.formatTime(sec).slice(0, 10) : "";
+  }
+
+  function titleSource(t) {
+    return t.source === "auto" ? "自动获得" : "管理员授予";
+  }
+
+  function titleOptionHtml(t) {
+    return (
+      '<label class="choice" data-hue="' + UI.esc(t.hue || "stone") + '">' +
+      '<input class="choice__input" type="radio" name="wear" value="' + UI.esc(String(t.id)) + '"' +
+      (t.equipped ? " checked" : "") + ">" +
+      '<span class="choice__body"><span class="choice__badge-row">' +
+      UI.titleBadge(t) +
+      UI.icon("check-circle", "choice__check") +
+      "</span>" +
+      '<span class="choice__desc">' + UI.esc(t.description || titleSource(t)) + "</span>" +
+      '<span class="choice__meta">' + titleSource(t) +
+      (t.granted_at ? " · " + UI.esc(titleDate(t.granted_at)) : "") +
+      "</span></span></label>"
+    );
+  }
+
+  // 未达成的自动头衔：灰化展示条件与当前进度，不可选择
+  function lockedOptionHtml(t) {
+    return (
+      '<label class="choice choice--locked" data-hue="' + UI.esc(t.hue || "stone") + '">' +
+      '<input class="choice__input" type="radio" name="wear" value="" disabled>' +
+      '<span class="choice__body"><span class="choice__badge-row">' +
+      UI.titleBadge(t) +
+      UI.icon("lock", "icon--sm") +
+      "</span>" +
+      '<span class="choice__desc">' + UI.esc(t.description) + "</span>" +
+      '<span class="choice__meta">未获得 · ' + UI.esc(t.text) + "</span></span></label>"
+    );
+  }
+
+  function refreshWear() {
+    var input = P.el("titleChoices").querySelector('input[name="wear"][value="' + titles.selected + '"]');
+    if (input) input.checked = true;
+    var badge = "";
+    titles.owned.forEach(function (t) {
+      if (String(t.id) === titles.selected) badge = UI.titleBadge(t);
+    });
+    P.el("titlePreview").innerHTML = badge || '<span class="u-muted u-fs-sm">不佩戴头衔</span>';
+    P.el("wearSubmit").disabled = titles.selected === titles.equippedId;
+  }
+
+  function renderTitles() {
+    var worn = titles.owned.some(function (t) { return t.equipped; });
+    P.el("titleChoices").innerHTML =
+      '<label class="choice"><input class="choice__input" type="radio" name="wear" value=""' +
+      (worn ? "" : " checked") + '><span class="choice__body"><span class="choice__title">不佩戴' +
+      UI.icon("check-circle", "choice__check") +
+      '</span><span class="choice__desc">不显示任何头衔</span></span></label>' +
+      titles.owned.map(titleOptionHtml).join("");
+    P.el("titlesLocked").innerHTML = titles.locked.map(lockedOptionHtml).join("");
+    P.el("titlesEmpty").innerHTML = titles.owned.length
+      ? ""
+      : UI.html.empty({
+          compact: true,
+          icon: "award",
+          title: "暂无头衔",
+          desc: "继续使用网站，可能会获得头衔。",
+        });
+    refreshWear();
+  }
+
+  async function loadTitles() {
+    var r = await UI.api("/api/user/titles");
+    if (!r.ok) {
+      P.el("titleChoices").innerHTML = "";
+      P.el("titlesLocked").innerHTML = "";
+      P.error(P.el("titlesEmpty"), r, loadTitles, "头衔加载失败");
+      return;
+    }
+    titles.owned = r.data.titles || [];
+    // 只列出已着手（进度 > 0）的未达成头衔，按完成度从高到低排；完全没开始的留白太多
+    titles.locked = (r.data.locked || [])
+      .filter(function (t) { return !t.met && t.progress > 0; })
+      .sort(function (a, b) { return b.progress / (b.target || 1) - a.progress / (a.target || 1); });
+    var worn = titles.owned.filter(function (t) { return t.equipped; })[0];
+    titles.equippedId = worn ? String(worn.id) : "";
+    titles.selected = titles.equippedId;
+    renderTitles();
+  }
+
+  if (!UI.config.features.titles) {
+    P.el("titlesNav").hidden = true;
+  } else {
+    P.el("titleChoices").addEventListener("change", function (e) {
+      var input = e.target.closest('input[name="wear"]');
+      if (!input) return;
+      titles.selected = input.value;
+      P.el("wearMsg").textContent = "";
+      P.el("wearMsg").className = "status-text";
+      refreshWear();
+    });
+    P.el("wearSubmit").addEventListener("click", async function () {
+      var btn = this;
+      P.el("wearMsg").textContent = "";
+      P.el("wearMsg").className = "status-text";
+      UI.form.busy(btn, true);
+      var r = await UI.api("/api/user/title", {
+        method: "PUT",
+        body: { title_id: titles.selected === "" ? null : Number(titles.selected) },
+        on401: false,
+      });
+      UI.form.busy(btn, false);
+      if (!r || !r.ok) {
+        var msg = P.el("wearMsg");
+        msg.className = "status-text is-error";
+        msg.textContent = r ? UI.errorText(r) : "保存失败，请稍后再试";
+        titles.selected = titles.equippedId;
+        refreshWear();
+        return;
+      }
+      titles.equippedId = titles.selected;
+      titles.owned.forEach(function (t) { t.equipped = String(t.id) === titles.equippedId; });
+      UI.session.patch({ title: r.data.title });
+      if (UI.shell && UI.shell.refreshAuth) UI.shell.refreshAuth();
+      UI.toast.success("佩戴已更新");
+      renderTitles();
+    });
+  }
+
   P.panels(P.el("profileNav"), function (name) {
     if (name === "tickets") loadTickets();
     if (name === "messages") loadPrefs();
+    if (name === "titles") loadTitles();
   });
   async function loadPrefs() {
     var r = await UI.api("/api/user/preferences");

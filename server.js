@@ -12,6 +12,15 @@ const { MenuService } = require("./lib/menu/service");
 const { mountMenuRoutes } = require("./lib/menu/routes");
 const { migrate: migrateShops } = require("./lib/shops/store");
 const { mountShopRoutes } = require("./lib/shops/routes");
+const {
+  migrate: migrateTitles,
+  equippedTitle: equippedTitleOf,
+  equippedTitleMap,
+  titlesByUserMap
+} = require("./lib/titles/store");
+const { mountTitleRoutes } = require("./lib/titles/routes");
+const { evaluateAutoTitles } = require("./lib/titles/rules");
+const { localDay, shiftDay } = require("./lib/menu/schedule");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -125,6 +134,13 @@ CREATE TABLE IF NOT EXISTS users (
   }
   if (cols.indexOf("pref_like") === -1) {
     db.exec("ALTER TABLE users ADD COLUMN pref_like INTEGER NOT NULL DEFAULT 1");
+  }
+  // 头衔系统（#10）「连续登录」规则的计数来源
+  if (cols.indexOf("last_login_date") === -1) {
+    db.exec("ALTER TABLE users ADD COLUMN last_login_date TEXT NOT NULL DEFAULT ''");
+  }
+  if (cols.indexOf("login_streak") === -1) {
+    db.exec("ALTER TABLE users ADD COLUMN login_streak INTEGER NOT NULL DEFAULT 0");
   }
   db.exec("UPDATE users SET display_id = CAST(id AS TEXT) WHERE display_id IS NULL OR display_id = ''");
 })();
@@ -317,6 +333,9 @@ CREATE INDEX IF NOT EXISTS idx_messages_created ON messages(user_id, created_at)
 // 三元坊必吃榜（#6）：店铺表
 migrateShops(db);
 
+// 头衔系统（#10）：头衔目录、拥有关系与佩戴状态
+migrateTitles(db);
+
 const UPLOAD_DIR = path.join(__dirname, "uploads");
 if (!fs.existsSync(UPLOAD_DIR)) {
   fs.mkdirSync(UPLOAD_DIR);
@@ -451,7 +470,8 @@ const PERMISSIONS = {
   user_manage: "用户管理",
   ban_appeal_review: "申诉处理",
   ticket_manage: "工单管理",
-  shop_create: "添加店铺"
+  shop_create: "添加店铺",
+  title_manage: "头衔管理"
 };
 
 // 添加店铺的最低角色：默认 student，可用环境变量 SHOP_CREATE_MIN_ROLE 调整
@@ -470,7 +490,8 @@ const PERMISSION_REQUIRES = {
   weekly_menu_upload: "admin",
   map_popup_edit: "admin",
   ticket_manage: "admin",
-  shop_create: SHOP_CREATE_MIN_ROLE
+  shop_create: SHOP_CREATE_MIN_ROLE,
+  title_manage: "super_admin"
 };
 
 function userPermissionList(userId) {
@@ -499,6 +520,17 @@ function isVerifiedStudent(req) {
   return (ROLE_WEIGHTS[account.role] || 0) >= ROLE_WEIGHTS.student;
 }
 
+// 后台针对具体账号的写操作一律遵守：不能操作自己，也不能操作权重不低于自己的人。
+// 与 PUT /api/admin/users/role、/ban、/permissions 的判定保持一致；返回值区分不存在与无权限。
+function checkTarget(actorId, targetId) {
+  const target = db.prepare("SELECT role FROM users WHERE id = ?").get(targetId);
+  if (!target) return "missing";
+  const actor = db.prepare("SELECT role, status FROM users WHERE id = ?").get(actorId);
+  if (!actor || actor.status !== "active") return "forbidden";
+  if (Number(actorId) === Number(targetId)) return "forbidden";
+  return (ROLE_WEIGHTS[target.role] || 0) < (ROLE_WEIGHTS[actor.role] || 0) ? "ok" : "forbidden";
+}
+
 function requirePermission(perm) {
   return function (req, res, next) {
     checkRole()(req, res, function () {
@@ -521,6 +553,47 @@ function actorInfo(userId) {
   const row = db.prepare("SELECT id, username, nickname, avatar_url FROM users WHERE id = ?").get(userId);
   if (!row) return { id: userId, username: "", nickname: "", avatar_url: "" };
   return { id: row.id, username: row.username, nickname: row.nickname || "", avatar_url: row.avatar_url || "" };
+}
+
+// 头衔系统（#10）：论坛帖子与回复只存了 username，统一用户组件还需要昵称、头像、角色与佩戴头衔。
+// 佩戴头衔放在 user_title，避免覆盖 forum_posts.title 这类同名字段。
+function attachAuthors(rows, key) {
+  const column = key || "user_id";
+  const ids = [];
+  rows.forEach(function (row) {
+    const id = row[column];
+    if (id !== null && id !== undefined && ids.indexOf(id) === -1) ids.push(id);
+  });
+  if (!ids.length) return rows;
+  const placeholders = ids.map(function () { return "?"; }).join(",");
+  const accounts = new Map();
+  db.prepare("SELECT id, nickname, avatar_url, role FROM users WHERE id IN (" + placeholders + ")")
+    .all(...ids)
+    .forEach(function (account) { accounts.set(account.id, account); });
+  const titles = equippedTitleMap(db, ids);
+  rows.forEach(function (row) {
+    const account = accounts.get(row[column]);
+    row.nickname = account ? account.nickname || "" : "";
+    row.avatar_url = account ? account.avatar_url || "" : "";
+    row.role = account ? account.role : "";
+    row.user_title = titles.get(row[column]) || null;
+  });
+  return rows;
+}
+
+// 连续登录按北京时间自然日累计，用于「夜读星」自动头衔；登录成功后顺带发放已达成的自动头衔。
+function recordLogin(userId) {
+  const today = localDay(Date.now());
+  const row = db.prepare("SELECT last_login_date, login_streak FROM users WHERE id = ?").get(userId);
+  if (row) {
+    const last = row.last_login_date || "";
+    const previous = row.login_streak || 0;
+    const streak = last === today ? Math.max(previous, 1) : last === shiftDay(today, -1) ? previous + 1 : 1;
+    db.prepare("UPDATE users SET last_login_date = ?, login_streak = ? WHERE id = ?").run(today, streak, userId);
+  }
+  // 逐日登录历史供「闲者爱上网」按周末统计；同一自然日只记一条
+  db.prepare("INSERT OR IGNORE INTO user_login_days (user_id, day) VALUES (?, ?)").run(userId, today);
+  return evaluateAutoTitles(db, userId);
 }
 
 function notifyComment(post, actorId, content) {
@@ -625,9 +698,11 @@ app.post("/api/login", function (req, res) {
     return;
   }
   const token = jwt.sign({ id: user.id, role: user.role, username: user.username }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+  const grantedTitles = recordLogin(user.id);
   res.json({
     token: token,
-    user: { id: user.id, username: user.username, nickname: user.nickname, role: user.role }
+    user: { id: user.id, username: user.username, nickname: user.nickname, role: user.role },
+    granted_titles: grantedTitles
   });
 });
 
@@ -860,8 +935,14 @@ app.get("/api/admin/users", requirePermission("user_manage"), function (req, res
   const rows = db
     .prepare("SELECT id, display_id, username, nickname, role, status FROM users ORDER BY id ASC")
     .all();
+  const titles = titlesByUserMap(db, rows.map(function (u) { return u.id; }));
+  const equipped = equippedTitleMap(db, rows.map(function (u) { return u.id; }));
   const users = rows.map(function (u) {
-    return Object.assign({}, u, { permissions: userPermissionList(u.id) });
+    return Object.assign({}, u, {
+      permissions: userPermissionList(u.id),
+      titles: titles.get(u.id) || [],
+      title: equipped.get(u.id) || null
+    });
   });
   res.json({ users: users });
 });
@@ -1151,7 +1232,12 @@ app.get("/api/user/profile", requireLogin, function (req, res) {
     res.status(404).json({ error: "user not found" });
     return;
   }
-  res.json({ user: Object.assign({}, user, { permissions: userPermissionList(req.user.id) }) });
+  res.json({
+    user: Object.assign({}, user, {
+      permissions: userPermissionList(req.user.id),
+      title: equippedTitleOf(db, req.user.id)
+    })
+  });
 });
 
 app.put("/api/user/settings", requireLogin, function (req, res) {
@@ -1262,6 +1348,7 @@ app.get("/api/forum/posts", checkRole(), function (req, res) {
     const liked = db.prepare("SELECT post_id FROM post_likes WHERE user_id = ?").all(req.user.id);
     liked.forEach(function (row) { likedSet[row.post_id] = true; });
   }
+  attachAuthors(rows);
   const posts = rows.map(function (p) {
     return Object.assign({}, p, { is_liked: likedSet[p.id] === true });
   });
@@ -1288,6 +1375,7 @@ app.get("/api/forum/posts/:id", checkRole(), function (req, res) {
     const row = db.prepare("SELECT id FROM post_likes WHERE post_id = ? AND user_id = ?").get(id, req.user.id);
     isLiked = !!row;
   }
+  attachAuthors([post]);
   res.json({ post: Object.assign({}, post, { is_liked: isLiked }) });
 });
 
@@ -1388,6 +1476,7 @@ app.get("/api/forum/posts/:id/replies", function (req, res) {
   const replies = db
     .prepare("SELECT * FROM forum_replies WHERE post_id = ? ORDER BY created_at ASC, id ASC")
     .all(postId);
+  attachAuthors(replies);
   res.json({ replies: replies });
 });
 
@@ -1412,6 +1501,7 @@ app.post("/api/forum/posts/:id/replies", requireLogin, function (req, res) {
     .run(postId, req.user.id, req.user.username, content);
   notifyComment(post, req.user.id, content);
   const reply = db.prepare("SELECT * FROM forum_replies WHERE id = ?").get(Number(info.lastInsertRowid));
+  attachAuthors([reply]);
   res.status(201).json({ reply: reply });
 });
 
@@ -1708,7 +1798,16 @@ mountShopRoutes(app, db, {
   createMinRole: SHOP_CREATE_MIN_ROLE,
   mapKey: process.env.AMAP_JS_KEY || "",
   mapSecurityCode: process.env.AMAP_SECURITY_CODE || "",
-  mapServiceKey: process.env.AMAP_SERVICE_KEY || ""
+  mapServiceKey: process.env.AMAP_SERVICE_KEY || "",
+  // 新增店铺后立刻评估「累计推荐」自动头衔
+  onCreated: function (userId) { evaluateAutoTitles(db, userId); }
+});
+
+// 头衔系统（#10）
+mountTitleRoutes(app, db, {
+  authenticate: checkRole(),
+  requirePermission: requirePermission,
+  checkTarget: checkTarget
 });
 app.use("/api", function (req, res) {
   res.status(404).json({ error: "not found" });

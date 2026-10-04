@@ -70,8 +70,8 @@
 | #6 必吃榜 | shops.html + shop-new.html | shops | 2 |
 | #7 店铺详情 | shop.html + profile 设置项 + shopLayout 持久化 | shops | 3 |
 | #8 菜品上传 | shop.html 添加菜品对话框 + 权限 | shops | 4 |
-| #9 消息箱 | inbox.html + 页头铃 + profile 通知设置 + admin 发送面板 | inbox | 5 |
-| #10 头衔 | UI.userLine 全站接入 + profile 头衔区 + admin 头衔面板 | titles | 6 |
+| #9 消息箱 | inbox.html + 页头铃 + profile 通知设置 + admin 发送面板 | inbox（已开启） | 5 |
+| #10 头衔 | UI.userLine 全站接入 + profile 头衔区 + admin 头衔面板；实现见 [issue-10-plan.md](../issue-10-plan.md) | titles（已开启） | 6 |
 
 每个功能上线：先建数据/接口（不在本手册范围），再把 `UI.config.features.xxx` 改 true，然后按对应页面文档实现，最后跑该页验收清单 + axe。
 
@@ -117,7 +117,7 @@ Windows 使用已安装的 Microsoft Edge；其他平台先运行 `npx playwrigh
 
 ## 完成定义（DoD）
 
-菜单自动同步与 JSON 人工导入的实现和权限见 [同步运维](../menu-sync.md)及[后台规范](./pages/admin.md)。回归入口为 `npm run test:menu`（18 项）、`npm run test:ui`（331 项）、`npm run test:menu-skill`（便携包/16 个非法样例）及 `npm run test:deploy`（全新生产安装），均通过。真实模型三图的完整导入和局部抽样结果见 [验证记录](../menu-validation.md)，不由界面或格式测试推导识图准确率。
+菜单自动同步与 JSON 人工导入的实现和权限见 [同步运维](../menu-sync.md)及[后台规范](./pages/admin.md)。回归入口为 `npm run test:menu`（18 项）、`npm run test:titles`（14 项）、`npm run test:shops`（14 项）、`npm run test:shops:ui`（64 项）、`npm run test:ui`（363 项）、`npm run test:menu-skill`（便携包/16 个非法样例）及 `npm run test:deploy`（全新生产安装），均通过。真实模型三图的完整导入和局部抽样结果见 [验证记录](../menu-validation.md)，不由界面或格式测试推导识图准确率。
 
 - [ ] 阶段 0–2 全部验收项通过。
 - [ ] 12 个现有页面 + 404 全部完成并逐页验收。

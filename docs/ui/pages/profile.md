@@ -250,7 +250,7 @@ function ticketHtml(t) {
 
 ## 接口与存储（保留清单）
 
-- 接口：GET /api/user/profile；PUT /api/user/settings；POST /api/user/avatar；PUT /api/user/nickname；PUT /api/user/signature；PUT /api/user/password；POST /api/tickets；GET /api/tickets/mine。
+- 接口：GET /api/user/profile；PUT /api/user/settings；POST /api/user/avatar；PUT /api/user/nickname；PUT /api/user/signature；PUT /api/user/password；POST /api/tickets；GET /api/tickets/mine；GET /api/user/preferences、PUT /api/user/preferences（#9）；GET /api/user/titles、PUT /api/user/title（#10）。
 - localStorage：token、user、defaultPage、defaultFloor、recipeDefaultView（保存成功后同步写入）；P1 增加 shopDefaultSort、shopDefaultType、shopLayout。
 
 ## 响应式
