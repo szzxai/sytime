@@ -81,7 +81,7 @@ function shopBody(name) {
 }
 
 let developer, plainUser, studentUser;
-let founderId, foodieId, scholarId;
+let founderId, foodieId;
 
 test.before(async () => {
   server = spawn(process.execPath, [path.join(temp, "server.js")], {
@@ -131,69 +131,41 @@ test("规则引擎：新增规则只依赖注册表，未注册的 rule 不会�
   db.prepare("INSERT INTO users (id, role) VALUES (1, 'user'), (2, 'student'), (3, 'admin'), (4, 'developer'), (5, 'super_admin')").run();
 
   const catalog = titleStore.listCatalog(db);
-  assert.equal(catalog.length, 14);
+  assert.equal(catalog.length, 9);
   assert.deepEqual(
     catalog.filter(function (t) { return t.source === "auto"; }).map(function (t) { return t.rule; }).sort(),
-    [
-      "canteen_veteran",
-      "forum_catalyst",
-      "login_streak",
-      "role_admin",
-      "role_developer",
-      "role_super_admin",
-      "role_user",
-      "shop_contributor",
-      "student_verified",
-      "top_liked",
-      "weekend_regular"
-    ]
+    ["canteen_veteran", "forum_catalyst", "login_streak", "shop_contributor", "top_liked", "weekend_regular"]
+  );
+  assert.equal(
+    catalog.some(function (t) { return t.rule.indexOf("role_") === 0 || t.rule === "student_verified"; }),
+    false,
+    "已无角色/权限等级头衔"
   );
   const mentor = catalog.filter(function (t) { return t.key === "mentor"; })[0];
   assert.equal(mentor.name, "师者");
   assert.equal(mentor.source, "grant", "师者已改为手动授予");
   assert.equal(mentor.rule, "");
 
-  return Promise.resolve()
-    .then(function () {
-      // 每个角色恰好一枚等级徽章，各等级之间互不重叠
-      assert.deepEqual(rules.evaluateAutoTitles(db, 1).map(function (t) { return t.name; }), ["同窗"]);
-      assert.deepEqual(rules.evaluateAutoTitles(db, 2).map(function (t) { return t.name; }), ["学子"]);
-      assert.deepEqual(rules.evaluateAutoTitles(db, 3).map(function (t) { return t.name; }), ["管理员"]);
-      assert.deepEqual(rules.evaluateAutoTitles(db, 4).map(function (t) { return t.name; }), ["开发者"]);
-      assert.deepEqual(rules.evaluateAutoTitles(db, 5).map(function (t) { return t.name; }), ["超级管理员"]);
-      // 幂等：再次评估不重复发放
-      assert.deepEqual(rules.evaluateAutoTitles(db, 2), []);
-      assert.deepEqual(rules.evaluateAutoTitles(db, 3), []);
-      assert.deepEqual(
-        titleStore.ownedTitles(db, 4).map(function (t) { return t.name; }),
-        ["开发者"],
-        "developer 不会额外获得学子、同窗或师者"
-      );
-    })
-    .then(function () {
-      // 等级头衔互斥：角色变化时自动收下旧徽章，只保留当前角色那一枚
-      db.prepare("UPDATE users SET role = 'admin' WHERE id = 1").run();
-      assert.deepEqual(rules.evaluateAutoTitles(db, 1).map(function (t) { return t.name; }), ["管理员"]);
-      assert.deepEqual(
-        titleStore.ownedTitles(db, 1).map(function (t) { return t.name; }),
-        ["管理员"],
-        "普通用户升为管理员后「同窗」被收回"
-      );
-    })
-    .then(function () {
-      // 行为类头衔不受角色变化影响，仍然只增不减
-      db.prepare("UPDATE users SET login_streak = 7 WHERE id = 1").run();
-      assert.deepEqual(rules.evaluateAutoTitles(db, 1).map(function (t) { return t.name; }), ["夜读星"]);
-      const insert = db.prepare("INSERT INTO shops (created_by) VALUES (?)");
-      for (let i = 0; i < 10; i += 1) insert.run(1);
-      assert.deepEqual(rules.evaluateAutoTitles(db, 1).map(function (t) { return t.name; }), ["三元坊老饕"]);
-      assert.deepEqual(
-        titleStore.ownedTitles(db, 1).map(function (t) { return t.name; }).sort(),
-        ["三元坊老饕", "夜读星", "管理员"].sort(),
-        "等级徽章与行为徽章可以并存"
-      );
-      db.close();
-    });
+  // 行为类头衔只增不减
+  db.prepare("UPDATE users SET login_streak = 7 WHERE id = 1").run();
+  assert.deepEqual(rules.evaluateAutoTitles(db, 1).map(function (t) { return t.name; }), ["夜读星"]);
+  const insert = db.prepare("INSERT INTO shops (created_by) VALUES (?)");
+  for (let i = 0; i < 10; i += 1) insert.run(1);
+  assert.deepEqual(rules.evaluateAutoTitles(db, 1).map(function (t) { return t.name; }), ["三元坊老饕"]);
+  assert.deepEqual(
+    titleStore.ownedTitles(db, 1).map(function (t) { return t.name; }).sort(),
+    ["三元坊老饕", "夜读星"].sort()
+  );
+  // 幂等：再次评估不重复发放
+  assert.deepEqual(rules.evaluateAutoTitles(db, 1), []);
+  // 角色变化不再影响头衔（已无等级头衔）
+  db.prepare("UPDATE users SET role = 'admin' WHERE id = 1").run();
+  assert.deepEqual(rules.evaluateAutoTitles(db, 1), []);
+  assert.deepEqual(
+    titleStore.ownedTitles(db, 1).map(function (t) { return t.name; }).sort(),
+    ["三元坊老饕", "夜读星"].sort()
+  );
+  db.close();
 });
 
 test("周末窗口：连续三个周末登录才算达成", () => {
@@ -276,19 +248,19 @@ test("成就头衔：论坛催化剂 / 高赞校友 / 校园老吃家 / 闲者�
 
   assert.deepEqual(
     names().sort(),
-    ["校园老吃家", "论坛催化剂", "高赞校友", "闲者爱上网", "同窗"].sort(),
-    "四个成就头衔与等级头衔（同窗）并存"
+    ["校园老吃家", "论坛催化剂", "高赞校友", "闲者爱上网"].sort(),
+    "四个成就头衔并存"
   );
   db.close();
 });
 
-test("目录种子：14 个头衔，自动规则可读，未登录不可读", async () => {
+test("目录种子：9 个头衔，自动规则可读，未登录不可读", async () => {
   assert.equal((await api("/api/admin/titles")).status, 401);
   assert.equal((await api("/api/admin/titles", { token: plainUser.token })).status, 403);
 
   const list = await api("/api/admin/titles", { token: developer.token });
   assert.equal(list.status, 200);
-  assert.equal(list.data.titles.length, 14);
+  assert.equal(list.data.titles.length, 9);
   const byName = {};
   list.data.titles.forEach(function (t) { byName[t.name] = t; });
   assert.equal(byName["创站元老"].source, "grant");
@@ -296,20 +268,9 @@ test("目录种子：14 个头衔，自动规则可读，未登录不可读", as
   assert.equal(byName["三元坊老饕"].source, "auto");
   assert.equal(byName["三元坊老饕"].rule, "shop_contributor");
   assert.equal(byName["夜读星"].rule, "login_streak");
-  assert.equal(byName["学子"].rule, "student_verified");
-  assert.equal(byName["学子"].description, "在校学生");
-  // 管理等级头衔与角色一一对应
-  assert.equal(byName["开发者"].source, "auto");
-  assert.equal(byName["开发者"].rule, "role_developer");
-  assert.equal(byName["开发者"].hue, "rose");
-  assert.equal(byName["超级管理员"].rule, "role_super_admin");
-  assert.equal(byName["超级管理员"].hue, "vermilion");
-  assert.equal(byName["管理员"].rule, "role_admin");
-  assert.equal(byName["管理员"].hue, "teal");
-  assert.equal(byName["同窗"].source, "auto");
-  assert.equal(byName["同窗"].rule, "role_user");
-  assert.equal(byName["同窗"].hue, "stone");
-  assert.equal(byName["同窗"].description, "已注册用户");
+  // 已无角色/权限等级头衔
+  assert.equal(byName["开发者"], undefined);
+  assert.equal(byName["学子"], undefined);
   // 成就头衔
   assert.equal(byName["论坛催化剂"].source, "auto");
   assert.equal(byName["论坛催化剂"].rule, "forum_catalyst");
@@ -328,7 +289,6 @@ test("目录种子：14 个头衔，自动规则可读，未登录不可读", as
   assert.equal(byName["创站元老"].owner_user_id, null, "公共头衔不属于任何账号");
   founderId = byName["创站元老"].id;
   foodieId = byName["三元坊老饕"].id;
-  scholarId = byName["学子"].id;
 
   const ruleList = await api("/api/admin/titles/rules", { token: developer.token });
   assert.equal(ruleList.status, 200);
@@ -336,12 +296,7 @@ test("目录种子：14 个头衔，自动规则可读，未登录不可读", as
     "canteen_veteran",
     "forum_catalyst",
     "login_streak",
-    "role_admin",
-    "role_developer",
-    "role_super_admin",
-    "role_user",
     "shop_contributor",
-    "student_verified",
     "top_liked",
     "weekend_regular"
   ]);
@@ -424,7 +379,7 @@ test("授予/撤销：自动头衔不可手动授予，撤销佩戴中的头衔�
   assert.equal(revoked.status, 200);
   assert.equal(revoked.data.removed, true);
   assert.equal(revoked.data.unequipped, true, "撤销佩戴中的头衔应自动取消佩戴");
-  assert.deepEqual(revoked.data.titles.map(function (t) { return t.name; }), ["同窗"]);
+  assert.deepEqual(revoked.data.titles.map(function (t) { return t.name; }), []);
 
   const messages = await api("/api/messages?type=system", { token: plainUser.token });
   assert.equal(messages.status, 200);
@@ -442,10 +397,6 @@ test("保护与即时发放：内置不可删、自动不可撤销、专属不�
   assert.equal(delBuiltin.status, 409, "内置头衔不可删除");
   const after = await api("/api/admin/titles", { token: developer.token });
   assert.equal(after.data.titles.some(function (t) { return t.name === "创站元老"; }), true, "内置头衔仍在目录中");
-
-  // 自动头衔由规则发放，撤销会在下次评估恢复，故后端拒绝
-  const revokeAuto = await api("/api/admin/users/" + plainUser.user.id + "/titles/" + byName["同窗"].id, { token: developer.token, method: "DELETE" });
-  assert.equal(revokeAuto.status, 409, "自动头衔不可手动撤销");
 
   // 专属头衔不能与公共头衔同名
   const clash = await api("/api/admin/users/" + plainUser.user.id + "/titles/custom", {
@@ -478,6 +429,10 @@ test("保护与即时发放：内置不可删、自动不可撤销、专属不�
     }
     assert.equal(countCatalyst(), p === 2 ? 1 : 0, "仅在第 3 篇帖子集满 5 条评论后即时发放");
   }
+
+  // 自动头衔由规则发放，撤销会被后端拒绝（author 此时已拥有「论坛催化剂」）
+  const revokeAuto = await api("/api/admin/users/" + author.user.id + "/titles/" + byName["论坛催化剂"].id, { token: developer.token, method: "DELETE" });
+  assert.equal(revokeAuto.status, 409, "自动头衔不可手动撤销");
 });
 
 test("佩戴：未拥有 403、可取消佩戴、非法 id 404", async () => {
@@ -501,20 +456,17 @@ test("佩戴：未拥有 403、可取消佩戴、非法 id 404", async () => {
 
   const list = await api("/api/user/titles", { token: studentUser.token });
   assert.equal(list.status, 200);
-  // 学生身份会同时自动获得「学子」
-  assert.deepEqual(list.data.titles.map(function (t) { return t.name; }).sort(), ["创站元老", "学子"]);
+  assert.deepEqual(list.data.titles.map(function (t) { return t.name; }).sort(), ["创站元老"]);
   assert.equal(list.data.titles.filter(function (t) { return t.equipped; }).length, 0);
   const locked = {};
   list.data.locked.forEach(function (t) { locked[t.rule] = t; });
-  assert.equal(locked.student_verified.met, true, "学生认证已达成");
-  assert.equal(locked.student_verified.progress, 1);
   assert.equal(locked.login_streak.met, false);
   assert.equal(locked.shop_contributor.target, 10);
   assert.match(locked.shop_contributor.text, /累计推荐/);
   assert.equal((await api("/api/user/titles")).status, 401);
 });
 
-test("自动头衔：新增店铺后自动获得「三元坊老饕」，登录后自动获得「学子」", async () => {
+test("自动头衔：新增店铺后自动获得「三元坊老饕」", async () => {
   for (let i = 0; i < 10; i += 1) {
     const created = await api("/api/shops", { token: studentUser.token, method: "POST", body: shopBody("头衔测试店 " + i) });
     assert.equal(created.status, 201, "create shop " + i);
@@ -522,7 +474,6 @@ test("自动头衔：新增店铺后自动获得「三元坊老饕」，登录�
   const list = await api("/api/user/titles", { token: studentUser.token });
   const rules = list.data.titles.map(function (t) { return t.rule; });
   assert.equal(rules.indexOf("shop_contributor") !== -1, true, "推荐 10 家后自动获得三元坊老饕");
-  assert.equal(rules.indexOf("student_verified") !== -1, true, "学生认证后自动获得学子");
   const foodie = list.data.titles.filter(function (t) { return t.rule === "shop_contributor"; })[0];
   assert.equal(foodie.name, "三元坊老饕");
   assert.equal(foodie.equipped, false);
@@ -534,12 +485,12 @@ test("自动头衔：新增店铺后自动获得「三元坊老饕」，登录�
 });
 
 test("序列化：个人资料、论坛帖子与回复、店铺评价都带佩戴头衔", async () => {
-  const worn = await api("/api/user/title", { token: studentUser.token, method: "PUT", body: { title_id: scholarId } });
+  const worn = await api("/api/user/title", { token: studentUser.token, method: "PUT", body: { title_id: founderId } });
   assert.equal(worn.status, 200);
-  assert.equal(worn.data.title.name, "学子");
+  assert.equal(worn.data.title.name, "创站元老");
 
   const profile = await api("/api/user/profile", { token: studentUser.token });
-  assert.deepEqual(profile.data.user.title, { name: "学子", hue: "bamboo" });
+  assert.deepEqual(profile.data.user.title, { name: "创站元老", hue: "teal" });
 
   const post = await api("/api/forum/posts", {
     token: studentUser.token,
@@ -550,7 +501,7 @@ test("序列化：个人资料、论坛帖子与回复、店铺评价都带佩�
 
   const feed = await api("/api/forum/posts", { token: plainUser.token });
   assert.equal(feed.data.posts[0].title, "头衔展示", "佩戴头衔不能覆盖 forum_posts.title");
-  assert.equal(feed.data.posts[0].user_title.name, "学子", "帖子卡头带佩戴头衔");
+  assert.equal(feed.data.posts[0].user_title.name, "创站元老", "帖子卡头带佩戴头衔");
   assert.equal(feed.data.posts[0].nickname, "titles_student", "同时补齐昵称等统一用户组件字段");
   assert.equal(feed.data.posts[0].role, "student");
 
@@ -568,7 +519,7 @@ test("序列化：个人资料、论坛帖子与回复、店铺评价都带佩�
 
   const detail = await api("/api/forum/posts/" + post.data.post.id, { token: plainUser.token });
   assert.equal(detail.data.post.title, "头衔展示");
-  assert.deepEqual(detail.data.post.user_title, { name: "学子", hue: "bamboo" });
+  assert.deepEqual(detail.data.post.user_title, { name: "创站元老", hue: "teal" });
 
   const shopId = (await api("/api/shops")).data.shops[0].id;
   const review = await api("/api/shops/" + shopId + "/reviews", {
@@ -578,29 +529,9 @@ test("序列化：个人资料、论坛帖子与回复、店铺评价都带佩�
   });
   assert.equal(review.status, 201);
   const reviews = await api("/api/shops/" + shopId + "/reviews");
-  assert.deepEqual(reviews.data.reviews[0].user_title, { name: "学子", hue: "bamboo" });
+  assert.deepEqual(reviews.data.reviews[0].user_title, { name: "创站元老", hue: "teal" });
   assert.equal(reviews.data.reviews[0].user_id, studentUser.user.id);
   assert.equal(reviews.data.reviews[0].nickname, "titles_student");
-});
-
-test("管理等级头衔：developer 获得「开发者」，且不会获得学子/师者", async () => {
-  const mine = await api("/api/user/titles", { token: developer.token });
-  assert.equal(mine.status, 200);
-  assert.deepEqual(mine.data.titles.map(function (t) { return t.name; }).sort(), ["开发者"]);
-  const grade = mine.data.titles[0];
-  assert.equal(grade.source, "auto");
-  assert.equal(grade.rule, "role_developer");
-  assert.equal(grade.equipped, false);
-  const locked = {};
-  mine.data.locked.forEach(function (t) { locked[t.rule] = t; });
-  assert.equal(locked.student_verified.met, false, "开发者不满足学子条件");
-  assert.equal(locked.student_verified.text, "尚未通过学生认证");
-  assert.equal(locked.role_developer.met, true);
-  assert.equal(locked.role_developer.text, "当前角色为开发者");
-  assert.equal(locked.role_admin.met, false);
-  assert.equal(locked.role_super_admin.met, false);
-  // 师者是手动头衔，不出现在自动规则的锁定项里
-  assert.equal(Object.prototype.hasOwnProperty.call(locked, "mentor"), false);
 });
 
 test("专属头衔：只发给指定账号、不进公共目录、撤销后目录行一并删除", async () => {
@@ -618,7 +549,7 @@ test("专属头衔：只发给指定账号、不进公共目录、撤销后目�
   assert.equal(created.data.title.owner_user_id, plainUser.user.id);
   assert.equal(created.data.title.source, "grant");
   const exclusiveId = created.data.title.id;
-  assert.deepEqual(created.data.titles.map(function (t) { return t.name; }).sort(), ["同窗", "首席摸鱼官"].sort());
+  assert.deepEqual(created.data.titles.map(function (t) { return t.name; }).sort(), ["首席摸鱼官"]);
 
   const after = await api("/api/admin/titles", { token: developer.token });
   assert.equal(after.data.titles.length, before, "专属头衔不进公共目录");
@@ -636,10 +567,10 @@ test("专属头衔：只发给指定账号、不进公共目录、撤销后目�
   assert.equal(again.status, 201);
   assert.equal(again.data.title.id, exclusiveId);
   assert.equal(again.data.granted, false, "已拥有则不重复授予");
-  assert.equal(again.data.titles.length, 2, "「同窗」+ 专属头衔");
+  assert.equal(again.data.titles.length, 1, "仅专属头衔");
 
   // 只有所属账号能看到并使用
-  assert.deepEqual((await api("/api/user/titles", { token: plainUser.token })).data.titles.map(function (t) { return t.name; }).sort(), ["同窗", "只属于我"].sort());
+  assert.deepEqual((await api("/api/user/titles", { token: plainUser.token })).data.titles.map(function (t) { return t.name; }).sort(), ["只属于我"]);
   assert.equal(
     (await api("/api/user/titles", { token: studentUser.token })).data.titles.some(function (t) { return t.name === "只属于我"; }),
     false
@@ -660,7 +591,7 @@ test("专属头衔：只发给指定账号、不进公共目录、撤销后目�
   assert.equal(revoked.status, 200);
   assert.equal(revoked.data.removed, true);
   assert.equal(revoked.data.unequipped, true);
-  assert.deepEqual(revoked.data.titles.map(function (t) { return t.name; }), ["同窗"]);
+  assert.deepEqual(revoked.data.titles.map(function (t) { return t.name; }), []);
   assert.equal((await api("/api/user/profile", { token: plainUser.token })).data.user.title, null);
   assert.equal((await api("/api/admin/titles/" + exclusiveId, { token: developer.token, method: "DELETE" })).status, 404, "专属目录行已随撤销删除");
   const messages = await api("/api/messages?type=system", { token: plainUser.token });
@@ -731,34 +662,4 @@ test("权限：title_manage 可显式授予普通用户", async () => {
   assert.equal(catalog.length >= 4, true);
 });
 
-test("管理等级：admin 与 super_admin 分别获得对应等级头衔", async () => {
-  const promoted = await api("/api/admin/users/role", {
-    token: developer.token,
-    method: "PUT",
-    body: { userId: plainUser.user.id, newRole: "admin" }
-  });
-  assert.equal(promoted.status, 200, "promote to admin");
-  const adminLogin = await api("/api/login", { method: "POST", body: { username: "titles_user", password: "test-password" } });
-  assert.equal(adminLogin.status, 200);
-  const adminTitles = await api("/api/user/titles", { token: adminLogin.data.token });
-  assert.deepEqual(
-    adminTitles.data.titles.map(function (t) { return t.name; }),
-    ["管理员"],
-    "升为管理员后自动换发「管理员」，旧的「同窗」被收回"
-  );
 
-  const suLogin = await api("/api/login", { method: "POST", body: { username: "titles_dev", password: "test-password" } });
-  const stale = await api("/api/admin/users/role", {
-    token: suLogin.data.token,
-    method: "PUT",
-    body: { userId: plainUser.user.id, newRole: "super_admin" }
-  });
-  assert.equal(stale.status, 200, "promote to super_admin");
-  const suReLogin = await api("/api/login", { method: "POST", body: { username: "titles_user", password: "test-password" } });
-  const suTitles = await api("/api/user/titles", { token: suReLogin.data.token });
-  assert.deepEqual(
-    suTitles.data.titles.map(function (t) { return t.name; }),
-    ["超级管理员"],
-    "升为超级管理员后换发「超级管理员」，「管理员」被收回"
-  );
-});

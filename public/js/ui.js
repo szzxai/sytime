@@ -292,8 +292,10 @@
     if (!t || !t.name) return '';
     return '<span class="title-badge" data-hue="' + UI.esc(t.hue || 'stone') + '">' + UI.icon('award') + '<span class="title-badge__text">' + UI.esc(t.name) + '</span></span>';
   };
-  UI.roleTag = function (role) {
-    if (['admin', 'super_admin', 'developer'].indexOf(role) === -1) return '';
+  // 权限等级标签：所有已登录角色都有；除普通用户（user）强制展示外，其余由用户偏好 show_role 控制（默认展示）
+  UI.roleTag = function (role, showRole) {
+    if (!role || role === 'guest' || !UI.ROLE_LABELS[role]) return '';
+    if (role !== 'user' && (showRole === 0 || showRole === false || showRole === '0')) return '';
     return '<span class="role-tag">' + UI.esc(UI.ROLE_LABELS[role]) + '</span>';
   };
   // 统一用户信息组件：论坛、评价、消息、后台都用它
@@ -302,7 +304,7 @@
     var name = user.nickname || user.username || '已注销用户';
     var top = '<span class="user-line__name">' + UI.esc(name) + '</span>' +
       (UI.config.features.titles ? UI.titleBadge(user.title) : '') +
-      (opt.showRole === false ? '' : UI.roleTag(user.role));
+      (opt.showRole === false ? '' : UI.roleTag(user.role, user.show_role));
     var meta = opt.meta ? '<span class="user-line__meta">' + opt.meta + '</span>' : '';   // meta 由调用方保证已转义（可含 <time>）
     var tag = opt.href ? 'a' : 'div';
     return '<' + tag + ' class="user-line' + (opt.large ? ' user-line--lg' : '') + '"' + (opt.href ? ' href="' + UI.esc(opt.href) + '"' : '') + '>' +

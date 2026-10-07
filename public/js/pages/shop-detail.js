@@ -337,6 +337,7 @@
         nickname: review.nickname || review.author,
         avatar_url: review.avatar_url,
         role: review.role,
+        show_role: review.show_role,
         title: review.user_title
       }) +
       '<span class="shop-review-item__stars" aria-label="' + UI.esc(review.rating) + ' 星">' + stars + '</span><time>' + UI.esc(date) + "</time>" +

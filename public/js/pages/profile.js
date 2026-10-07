@@ -100,6 +100,18 @@
       );
       if (layoutInput) layoutInput.checked = true;
     }
+    // 权限等级标签：普通用户强制展示（不可关闭），其余角色可自行选择
+    var forceRole = me.role === "user";
+    var showRole = me.show_role;
+    if (showRole === undefined || showRole === null) {
+      showRole = localStorage.getItem("showRole") === "0" ? 0 : 1;
+    }
+    var showRoleInput = P.el("showRole");
+    showRoleInput.checked = forceRole ? true : Number(showRole) !== 0;
+    showRoleInput.disabled = forceRole;
+    P.el("showRoleHint").textContent = forceRole
+      ? "普通用户始终展示权限等级，无需设置。"
+      : "关闭后，你的权限等级标签将不在论坛、评价等位置显示。";
     UI.qsa("[data-counter]", main).forEach(function (input) {
       input.dispatchEvent(new Event("input", { bubbles: true }));
     });
@@ -389,6 +401,7 @@
       shop_default_sort: P.value("shopDefaultSort"),
       shop_default_type: P.value("shopDefaultType"),
       shop_layout: layoutChoice ? layoutChoice.value : "stacked",
+      show_role: P.el("showRole").checked ? 1 : 0,
     };
     var r = await P.request(
       P.el("siteSubmit"),
@@ -404,6 +417,7 @@
         localStorage.setItem("shopDefaultSort", body.shop_default_sort);
       localStorage.setItem("shopDefaultType", body.shop_default_type || "");
       localStorage.setItem("shopLayout", body.shop_layout);
+      localStorage.setItem("showRole", body.show_role ? "1" : "0");
       UI.session.patch(body);
     }
   });

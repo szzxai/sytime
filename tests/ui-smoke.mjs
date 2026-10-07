@@ -805,29 +805,24 @@ try {
     .titles;
   check(
     "title catalog seeded with rules",
-    catalog.length === 14 &&
+    catalog.length === 9 &&
       catalog.some((t) => t.rule === "shop_contributor") &&
       catalog.some((t) => t.rule === "forum_catalyst") &&
       catalog.some((t) => t.rule === "weekend_regular") &&
       catalog.some((t) => t.rule === "top_liked") &&
       catalog.some((t) => t.rule === "canteen_veteran") &&
-      catalog.some((t) => t.rule === "role_developer") &&
-      catalog.some((t) => t.rule === "role_super_admin") &&
-      catalog.some((t) => t.rule === "role_admin") &&
-      catalog.some((t) => t.rule === "role_user" && t.hue === "stone") &&
+      !catalog.some(
+        (t) => t.rule.indexOf("role_") === 0 || t.rule === "student_verified",
+      ) &&
       catalog.some((t) => t.name === "师者" && t.source === "grant") &&
       catalog.some((t) => t.source === "grant"),
   );
   const devTitles = (await api("/api/user/titles", { token: admin.token })).data;
   check(
-    "developer auto receives the grade title instead of 学子",
-    devTitles.titles.some((t) => t.name === "开发者") &&
+    "developer has no grade title",
+    !devTitles.titles.some((t) => t.name === "开发者") &&
       !devTitles.titles.some((t) => t.name === "学子") &&
       !devTitles.titles.some((t) => t.name === "师者"),
-  );
-  check(
-    "学子 is locked for a developer",
-    devTitles.locked.some((t) => t.name === "学子" && !t.met),
   );
   const founder = catalog.find((t) => t.name === "创站元老");
   check(
@@ -923,7 +918,7 @@ try {
   await titlesAdmin.page.waitForSelector("#view-titles-mgmt:not([hidden])");
   check(
     "admin catalog lists seeded titles",
-    (await titlesAdmin.page.locator("#titleList tbody tr").count()) === 14,
+    (await titlesAdmin.page.locator("#titleList tbody tr").count()) === 9,
   );
   await titlesAdmin.page.locator("#titleAdd").click();
   await titlesAdmin.page.waitForSelector("#titleModal[open]");
@@ -939,20 +934,20 @@ try {
   await titlesAdmin.page.locator("#titleName").fill("测试头衔");
   await titlesAdmin.page.locator("#titleConfirm").click();
   await titlesAdmin.page.waitForFunction(
-    () => document.querySelectorAll("#titleList tbody tr").length === 15,
+    () => document.querySelectorAll("#titleList tbody tr").length === 10,
   );
   check(
     "new title appears in catalog",
-    (await titlesAdmin.page.locator("#titleList tbody tr").count()) === 15,
+    (await titlesAdmin.page.locator("#titleList tbody tr").count()) === 10,
   );
   await titlesAdmin.page.locator("[data-delete-title]").last().click();
   await titlesAdmin.page.locator('dialog[open] [data-r="ok"]').click();
   await titlesAdmin.page.waitForFunction(
-    () => document.querySelectorAll("#titleList tbody tr").length === 14,
+    () => document.querySelectorAll("#titleList tbody tr").length === 9,
   );
   check(
     "deleting a title refreshes the catalog",
-    (await titlesAdmin.page.locator("#titleList tbody tr").count()) === 14,
+    (await titlesAdmin.page.locator("#titleList tbody tr").count()) === 9,
   );
   await audit(titlesAdmin.page, "admin/titles/1280");
   await titlesAdmin.page.screenshot({
@@ -993,7 +988,7 @@ try {
   check(
     "exclusive title stays out of the shared catalog",
     (await api("/api/admin/titles", { token: admin.token })).data.titles
-      .length === 14,
+      .length === 9,
   );
   await titlesAdmin.page
     .locator("#grantOwned [data-revoke-title]")

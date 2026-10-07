@@ -142,6 +142,10 @@ CREATE TABLE IF NOT EXISTS users (
   if (cols.indexOf("login_streak") === -1) {
     db.exec("ALTER TABLE users ADD COLUMN login_streak INTEGER NOT NULL DEFAULT 0");
   }
+  // 是否展示「权限等级」标签（普通用户等级始终展示，见 public/js/ui.js 的 UI.roleTag）
+  if (cols.indexOf("show_role") === -1) {
+    db.exec("ALTER TABLE users ADD COLUMN show_role INTEGER NOT NULL DEFAULT 1");
+  }
   db.exec("UPDATE users SET display_id = CAST(id AS TEXT) WHERE display_id IS NULL OR display_id = ''");
 })();
 
@@ -567,7 +571,7 @@ function attachAuthors(rows, key) {
   if (!ids.length) return rows;
   const placeholders = ids.map(function () { return "?"; }).join(",");
   const accounts = new Map();
-  db.prepare("SELECT id, nickname, avatar_url, role FROM users WHERE id IN (" + placeholders + ")")
+  db.prepare("SELECT id, nickname, avatar_url, role, show_role FROM users WHERE id IN (" + placeholders + ")")
     .all(...ids)
     .forEach(function (account) { accounts.set(account.id, account); });
   const titles = equippedTitleMap(db, ids);
@@ -576,6 +580,7 @@ function attachAuthors(rows, key) {
     row.nickname = account ? account.nickname || "" : "";
     row.avatar_url = account ? account.avatar_url || "" : "";
     row.role = account ? account.role : "";
+    row.show_role = account && account.show_role !== null && account.show_role !== undefined ? account.show_role : 1;
     row.user_title = titles.get(row[column]) || null;
   });
   return rows;
@@ -1226,7 +1231,7 @@ app.get("/api/admin/pending-counts", requireLogin, function (req, res) {
 
 app.get("/api/user/profile", requireLogin, function (req, res) {
   const user = db
-    .prepare("SELECT id, display_id, username, nickname, avatar_url, signature, role, default_page, default_floor, recipe_default_view, shop_default_sort, shop_default_type, shop_layout, status FROM users WHERE id = ?")
+    .prepare("SELECT id, display_id, username, nickname, avatar_url, signature, role, default_page, default_floor, recipe_default_view, shop_default_sort, shop_default_type, shop_layout, show_role, status FROM users WHERE id = ?")
     .get(req.user.id);
   if (!user) {
     res.status(404).json({ error: "user not found" });
@@ -1243,7 +1248,7 @@ app.get("/api/user/profile", requireLogin, function (req, res) {
 app.put("/api/user/settings", requireLogin, function (req, res) {
   const body = req.body || {};
   const current = db
-    .prepare("SELECT default_page, default_floor, recipe_default_view, shop_default_sort, shop_default_type, shop_layout FROM users WHERE id = ?")
+    .prepare("SELECT default_page, default_floor, recipe_default_view, shop_default_sort, shop_default_type, shop_layout, show_role FROM users WHERE id = ?")
     .get(req.user.id);
   if (!current) {
     res.status(404).json({ error: "user not found" });
@@ -1276,9 +1281,13 @@ app.put("/api/user/settings", requireLogin, function (req, res) {
   if (body.shop_layout !== undefined) {
     shopLayout = body.shop_layout === "split" ? "split" : "stacked";
   }
-  db.prepare("UPDATE users SET default_page = ?, default_floor = ?, recipe_default_view = ?, shop_default_sort = ?, shop_default_type = ?, shop_layout = ? WHERE id = ?")
-    .run(defaultPage, defaultFloor, recipeView, shopSort, shopType, shopLayout, req.user.id);
-  res.json({ default_page: defaultPage, default_floor: defaultFloor, recipe_default_view: recipeView, shop_default_sort: shopSort, shop_default_type: shopType, shop_layout: shopLayout });
+  let showRole = current.show_role;
+  if (body.show_role !== undefined) {
+    showRole = body.show_role === 0 || body.show_role === false || body.show_role === "0" ? 0 : 1;
+  }
+  db.prepare("UPDATE users SET default_page = ?, default_floor = ?, recipe_default_view = ?, shop_default_sort = ?, shop_default_type = ?, shop_layout = ?, show_role = ? WHERE id = ?")
+    .run(defaultPage, defaultFloor, recipeView, shopSort, shopType, shopLayout, showRole, req.user.id);
+  res.json({ default_page: defaultPage, default_floor: defaultFloor, recipe_default_view: recipeView, shop_default_sort: shopSort, shop_default_type: shopType, shop_layout: shopLayout, show_role: showRole });
 });
 
 app.post("/api/user/avatar", requireLogin, function (req, res) {
@@ -1509,13 +1518,15 @@ app.post("/api/forum/posts/:id/replies", requireLogin, function (req, res) {
 });
 
 app.get("/api/recipes", function (req, res) {
-  const rows = db.prepare("SELECT * FROM recipes ORDER BY name COLLATE NOCASE ASC, id ASC").all();
+  const rows = db
+    .prepare("SELECT r.*, u.role AS role, u.show_role AS show_role FROM recipes r LEFT JOIN users u ON u.id = r.user_id ORDER BY r.name COLLATE NOCASE ASC, r.id ASC")
+    .all();
   res.json({ recipes: rows });
 });
 
 app.get("/api/recipes/weekly", function (req, res) {
   const rows = db
-    .prepare("SELECT * FROM recipes WHERE is_weekly = 1 ORDER BY name COLLATE NOCASE ASC, id ASC")
+    .prepare("SELECT r.*, u.role AS role, u.show_role AS show_role FROM recipes r LEFT JOIN users u ON u.id = r.user_id WHERE r.is_weekly = 1 ORDER BY r.name COLLATE NOCASE ASC, r.id ASC")
     .all();
   res.json({ recipes: rows });
 });

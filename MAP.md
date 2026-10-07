@@ -190,7 +190,7 @@ flowchart LR
 | GET | `/api/user/profile` | 登录 | 当前用户资料、设置、状态、权限与佩戴中的头衔 |
 | GET | `/api/user/titles` | 登录 | 已拥有头衔（含佩戴状态）与未达成自动头衔的条件进度 |
 | PUT | `/api/user/title` | 登录 | 佩戴或取消佩戴；未拥有的头衔 403，`title_id: null` 表示不佩戴 |
-| PUT | `/api/user/settings` | 登录 | 部分更新：默认页、1–4 楼层、菜谱视图（all/reviews/weekly）、必吃榜默认排序/餐食类型、店铺详情页样式（stacked/split） |
+| PUT | `/api/user/settings` | 登录 | 部分更新：默认页、1–4 楼层、菜谱视图（all/reviews/weekly）、必吃榜默认排序/餐食类型、店铺详情页样式（stacked/split）、是否展示权限等级（show_role） |
 | POST | `/api/user/avatar` | 登录 | 上传头像，更新 avatar_url |
 | PUT | `/api/user/nickname` | 登录 | 修改昵称 |
 | PUT | `/api/user/signature` | 登录 | 修改签名 |
@@ -313,7 +313,7 @@ flowchart LR
 
 | 表 | 主要字段/约束 | 关联与用途 |
 | --- | --- | --- |
-| users | id、display_id、username、nickname、password_hash、avatar_url、signature、role、三项默认设置、status、封禁字段、三条通知偏好（pref_comment/pref_reply/pref_like）、`equipped_title_id`、`last_login_date`/`login_streak`；username/email 唯一 | 账号与偏好；email 为兼容字段，现有注册不使用邮箱；`equipped_title_id` 为当前佩戴的头衔（单值），`login_streak` 供「夜读星」规则使用 |
+| users | id、display_id、username、nickname、password_hash、avatar_url、signature、role、网站设置（默认页/楼层/菜谱视图/必吃榜排序与餐食类型/店铺布局、`show_role` 是否展示权限等级）、status、封禁字段、三条通知偏好（pref_comment/pref_reply/pref_like）、`equipped_title_id`、`last_login_date`/`login_streak`；username/email 唯一 | 账号与偏好；email 为兼容字段，现有注册不使用邮箱；`equipped_title_id` 为当前佩戴的头衔（单值），`login_streak` 供「夜读星」规则使用；`show_role` 控制论坛/评价等处是否显示角色标签（普通用户强制展示） |
 | user_permissions | user_id、permission；二者联合唯一 | 用户显式授权 |
 | forum_posts | user_id、username、category、title、content、created_at；category 只允许讨论/提问 | 论坛帖子 |
 | forum_replies | post_id、user_id、username、content、created_at | 平铺帖子回复；没有父评论 ID |
@@ -327,8 +327,8 @@ flowchart LR
 | ban_appeals | user_id、appeal_reason、appeal_image、status | 解封审核；pending/approved/rejected |
 | tickets | user_id、username、title、content、visibility、status、reply_content、reply_image、reply_by、replied_at | 工单；pending/resolved |
 | messages | user_id、type、actors(JSON)、count、target_kind/target_id、title/body/snippet、important、read_at | 消息箱；system/comment/reply/like，点赞按目标聚合 |
-| titles | key（种子标识，可空）、name、hue、source（grant/auto）、rule（自动规则 key）、description、`owner_user_id` | 头衔目录，共 14 个种子：五个角色等级（开发者/超级管理员/管理员/学子/同窗）、六个成就（三元坊老饕/夜读星/论坛催化剂/闲者爱上网/高赞校友/校园老吃家）与三个手动（师者/创站元老/官方）；`owner_user_id` 为空是公共头衔（按名称全站唯一），非空是该账号的专属头衔（按「账号 + 名称」唯一，不进公共目录）；`rule` 关联 `lib/titles/rules.js` 的规则；来源为 auto 时不可手动授予也不可手动撤销，带 `key` 的种子头衔不可删除，专属头衔不得与公共头衔同名 |
-| user_titles | user_id、title_id 联合唯一、granted_by（NULL 表示自动发放）、created_at | 用户拥有的头衔，一人可多个；等级头衔互斥（角色变化时换发），成就头衔只增不减；佩戴状态单独存在 users.equipped_title_id；撤销专属头衔时其 titles 目录行一并删除 |
+| titles | key（种子标识，可空）、name、hue、source（grant/auto）、rule（自动规则 key）、description、`owner_user_id` | 头衔目录，共 9 个种子：六个成就（三元坊老饕/夜读星/论坛催化剂/闲者爱上网/高赞校友/校园老吃家）与三个手动（师者/创站元老/官方）；角色等级头衔已下线（角色改由权限等级标签体现），旧库中的这类目录行会在启动迁移时清理；`owner_user_id` 为空是公共头衔（按名称全站唯一），非空是该账号的专属头衔（按「账号 + 名称」唯一，不进公共目录）；`rule` 关联 `lib/titles/rules.js` 的规则；来源为 auto 时不可手动授予也不可手动撤销，带 `key` 的种子头衔不可删除，专属头衔不得与公共头衔同名 |
+| user_titles | user_id、title_id 联合唯一、granted_by（NULL 表示自动发放）、created_at | 用户拥有的头衔，一人可多个；成就头衔只增不减；佩戴状态单独存在 users.equipped_title_id；撤销专属头衔时其 titles 目录行一并删除 |
 | user_login_days | user_id、day 联合主键 | 登录逐日历史（北京时间自然日，登录时写入），供「闲者爱上网」按周末窗口统计；不做回填 |
 | shops | name 唯一、address、location_note、可选 `dianping_url`、type、GCJ-02 lat/lng、本部/最近地铁出口 distance_m 与 walk_min、metro_station/metro_exit、created_by/created_at | 三元坊必吃榜；列表可按本部、地铁及互动统计排序筛选 |
 | shop_likes | shop_id、user_id 唯一、created_at | 每名学生及以上用户每店一个点赞；重复点击取消 |

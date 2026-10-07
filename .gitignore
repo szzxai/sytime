@@ -11,4 +11,3 @@ __pycache__/
 *.db-shm
 output/playwright/
 .playwright-cli/
-AGENTS.md

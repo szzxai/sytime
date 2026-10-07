@@ -10,6 +10,7 @@
       nickname: p.nickname,
       avatar_url: p.avatar_url,
       role: p.role,
+      show_role: p.show_role,
       title: p.user_title,
     };
   };
@@ -118,7 +119,7 @@
                 UI.esc(reply.nickname || reply.username || "已注销用户") +
                 "</span>" +
                 (UI.config.features.titles ? UI.titleBadge(reply.user_title) : "") +
-                UI.roleTag(reply.role) +
+                UI.roleTag(reply.role, reply.show_role) +
                 UI.timeEl(reply.created_at) +
                 '<span class="reply__floor">' +
                 (i + 1) +

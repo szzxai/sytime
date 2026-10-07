@@ -148,7 +148,9 @@
 <div class="panel__foot"><span class="status-text" id="siteMsg"></span><button type="button" class="btn btn--primary" id="siteSubmit">保存</button></div>
 ```
 
-设置保存：请求体 `{default_page, default_floor, recipe_default_view}` +（#7 时）`shop_default_sort`、`shop_default_type`、`shop_layout`；后端按传入字段部分更新。成功后同步 localStorage 键（defaultPage/defaultFloor/recipeDefaultView/shopDefaultSort/shopDefaultType/shopLayout）+ toast「网站设置已保存到账号」。必吃榜偏好与样式面板在 `features.shops` 时显示；`shopDefaultType` 的选项由 `/api/shops/meta` 的分类动态填充。
+设置保存：请求体 `{default_page, default_floor, recipe_default_view}` +（#7 时）`shop_default_sort`、`shop_default_type`、`shop_layout` + `show_role`；后端按传入字段部分更新。成功后同步 localStorage 键（defaultPage/defaultFloor/recipeDefaultView/shopDefaultSort/shopDefaultType/shopLayout/showRole）+ toast「网站设置已保存到账号」。必吃榜偏好与样式面板在 `features.shops` 时显示；`shopDefaultType` 的选项由 `/api/shops/meta` 的分类动态填充。
+
+「显示权限等级」开关（`#showRole`）：控制论坛/评价等处是否显示自己的角色标签；**普通用户（`user`）强制勾选并禁用**，其余角色可自由开关。默认展示。
 
 ### #view-security 账号安全
 
@@ -216,6 +218,7 @@ function ticketHtml(t) {
 | #oldPassword/#newPassword/#confirmPassword/#passwordSubmit/#passwordMsg | 密码 | 同 ID + 显隐按钮 | 保留 |
 | #defaultPage/#defaultFloor/#recipeDefaultView/#siteSubmit/#siteMsg | 网站设置 | 同 ID | 保留 |
 | #shopDefaultSort/#shopDefaultType/#shopLayoutChoices | 必吃榜偏好与店铺详情页样式 | 同 ID（features.shops 时显示） | 新增 |
+| #showRole（+ #showRoleHint） | 是否显示权限等级标签 | 同 ID（普通用户强制勾选禁用） | 新增 |
 | #ticketTitle/#ticketContent/#ticketVisibility/#ticketSubmit/#ticketSubmitMsg/#myTicketList | 工单 | 同 ID（SubmitMsg → toast） | 保留 |
 | #logoutBtn | 退出 | 侧栏底部 `data-logout` 按钮（ui.js 委托） | 迁移 |
 | ROLE_LABELS/ROLE_WEIGHTS/PERMISSION_* | 工具 | `UI.ROLE_* / UI.session` | 替换 |
@@ -251,7 +254,7 @@ function ticketHtml(t) {
 ## 接口与存储（保留清单）
 
 - 接口：GET /api/user/profile；PUT /api/user/settings；POST /api/user/avatar；PUT /api/user/nickname；PUT /api/user/signature；PUT /api/user/password；POST /api/tickets；GET /api/tickets/mine；GET /api/user/preferences、PUT /api/user/preferences（#9）；GET /api/user/titles、PUT /api/user/title（#10）。
-- localStorage：token、user、defaultPage、defaultFloor、recipeDefaultView（保存成功后同步写入）；P1 增加 shopDefaultSort、shopDefaultType、shopLayout。
+- localStorage：token、user、defaultPage、defaultFloor、recipeDefaultView（保存成功后同步写入）；P1 增加 shopDefaultSort、shopDefaultType、shopLayout、showRole。
 
 ## 响应式
 

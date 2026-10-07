@@ -83,7 +83,7 @@
         : "") +
       '</div><div class="review-card__foot">' +
       UI.userLine(
-        { id: r.user_id, username: r.username },
+        { id: r.user_id, username: r.username, role: r.role, show_role: r.show_role },
         { size: "xs", meta: UI.timeEl(r.created_at) },
       ) +
       "</div></article>"
