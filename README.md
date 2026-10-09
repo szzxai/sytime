@@ -283,6 +283,12 @@ npm.cmd start
 
 功能更新记录（面向使用者，日常用语）见 [CHANGELOG.md](./CHANGELOG.md)。
 
+## 配套离线地图编辑器
+
+同级 [szzx-mapeditor](../szzx-mapeditor/README.md) 可直接打开 HTML 编辑校园地图，再下载 JSON，备份后人工替换本项目的 `data.json`。它不修改网站数据库。网站支持基础地图字段；编辑器的单独颜色、分段边线、字体样式和手动层级当前仅在编辑器中显示，具体范围见 [项目地图](./MAP.md#721-配套离线地图编辑器)。
+
+每次代码更新必须同步相关文档并实质修改最新的根目录 `MAP.md`；规则见 [AGENTS.md](./AGENTS.md)，[agent.md](./agent.md) 提供兼容入口。
+
 ---
 
 ## License
