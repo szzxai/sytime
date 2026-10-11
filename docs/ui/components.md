@@ -361,6 +361,8 @@ JS 写法：`UI.icon('search')`、`UI.icon('search', 'icon--sm')`。
 ```
 尺寸 xs 24 / sm 32 / md 40 / lg 64 / xl 96；圆形；无图 = 底色 + 首字（白）；内描边自动。hue 由 `UI.hueFor(id或name)` 生成（只用 7 彩色）；页面静态写死也允许。JS：`UI.avatar(user, size)`。
 
+`UI.avatarLink(user, size)` 把头像包成链接（#21）：本人 → `profile.html`，他人 → `user.html?id=<id>`（`UI.userHref`）；user 无 id 时退化为不可点击的 `span`。论坛、帖子、评价等处的头像由它渲染，`a.user-avatar--link` 有 hover/focus 态。
+
 ### User Line 用户信息行
 
 **全站统一的用户展示**（论坛、评价、消息、后台都用它，不允许页面另写）。
@@ -374,7 +376,7 @@ JS 写法：`UI.icon('search')`、`UI.icon('search', 'icon--sm')`。
   </span>
 </a>
 ```
-JS：`UI.userLine(user, {size, meta, href, large, showRole})`；meta 传 HTML 字符串（如 `UI.timeEl(sec)`）。名字 14px 中灰粗、meta 12px 辅助灰；`user-line--lg` 用于资料头部。宽度溢出自动省略。
+JS：`UI.userLine(user, {size, meta, href, large, showRole})`；meta 传 HTML 字符串（如 `UI.timeEl(sec)`）。名字 14px 中灰粗、meta 12px 辅助灰；`user-line--lg` 用于资料头部。宽度溢出自动省略。**头像默认可点击进入用户主页（#21）**；当传入 `href`（整行为链接）时不再嵌套头像链接。
 
 ### Stars 评分展示
 
@@ -565,6 +567,7 @@ JS：`UI.userLine(user, {size, meta, href, large, showRole})`；meta 传 HTML �
   <div class="menu__panel" role="menu" hidden>
     <div class="menu__head"><div class="menu__head-name">{{昵称}}</div><div class="menu__head-sub">{{角色}} · ID {{id}}</div></div>
     <a class="menu__item" role="menuitem" href="profile.html"><svg class="icon">…</svg>个人中心</a>
+    <a class="menu__item" role="menuitem" href="settings.html"><svg class="icon">…</svg>设置</a>
     <div class="menu__sep"></div>
     <button type="button" class="menu__item menu__item--danger" role="menuitem">退出登录</button>
   </div>
@@ -593,7 +596,11 @@ JS：`UI.userLine(user, {size, meta, href, large, showRole})`；meta 传 HTML �
   <a class="side-nav__item" href="#" aria-current="page"><svg class="icon">…</svg>学生认证<span class="side-nav__count">3</span></a>
 </nav>
 ```
-双形态：桌面（≥900）静置于 `.shell` 左列（分组标题 `side-nav__group` 12px 灰、项 44 圆角 hover、当前黛青浅底）；手机（<900）自动变吸顶横向滚动条（毛玻璃）。待办计数 `side-nav__count` 红胶囊（>99 显示 99+）。个人中心/后台共用。
+双形态：桌面（≥900）静置于 `.shell` 左列（分组标题 `side-nav__group` 12px 灰、项 44 圆角 hover、当前黛青浅底）；手机（<900）自动变吸顶横向滚动条（毛玻璃）。待办计数 `side-nav__count` 红胶囊（>99 显示 99+）。个人中心/设置/后台共用。
+
+### Profile Tabs 个人中心头部与吸顶横向菜单栏
+
+`#20` 个人中心专用结构：页头（站点导航）之下为资料头部 `.profile-hero`（头像含右下编辑按钮 + 上行 用户名/权限等级标签/昵称 + 下行 个性签名；昵称与签名 `contenteditable`，点击即可编辑、失焦弹确认保存），再下为 `.profile-tabs`（`position: sticky; top: var(--header-h)`，横向可滚动，项复用 `.side-nav__item`，当前项 `aria-current="page"`）。分区 `.view`（`#view-home` / `#view-favorites` / `#view-titles`）由 `UI.page.panels` 切换；「设置」为普通链接。详见 [pages/profile.md](./pages/profile.md)。
 
 ### Collapse 折叠面板
 

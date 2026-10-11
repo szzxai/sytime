@@ -67,6 +67,8 @@ Windows 下 `map.md` 与 `MAP.md` 指向同一文件，本仓库统一使用 `MA
 | `announcements.html` | `docs/ui/pages/announcements.md` |
 | `inbox.html` | `docs/ui/pages/inbox.md` |
 | `profile.html` | `docs/ui/pages/profile.md` |
+| `settings.html` | `docs/ui/pages/settings.md` |
+| `user.html` | `docs/ui/pages/user-home.md` |
 | `admin.html` | `docs/ui/pages/admin.md` |
 | `login.html` | `docs/ui/pages/login.md` |
 | `register.html` | `docs/ui/pages/register.md` |
@@ -84,6 +86,7 @@ npm run test:menu        # 菜单后端
 npm run test:titles      # 头衔后端
 npm run test:shops       # 店铺后端
 npm run test:shops:ui    # 店铺页面浏览器回归
+npm run test:user        # 用户主页与头像跳转浏览器回归
 npm run test:ui          # 全站浏览器回归
 ```
 

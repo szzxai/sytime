@@ -114,7 +114,7 @@
                 '<li class="reply" id="reply-' +
                 UI.esc(reply.id) +
                 '" tabindex="-1">' +
-                UI.avatar(F.user(reply), "sm") +
+                UI.avatarLink(F.user(reply), "sm") +
                 '<div class="reply__body"><div class="reply__meta"><span class="user-line__name">' +
                 UI.esc(reply.nickname || reply.username || "已注销用户") +
                 "</span>" +

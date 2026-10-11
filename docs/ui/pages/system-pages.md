@@ -66,7 +66,7 @@ main.innerHTML = UI.html.empty({
 ## 3. 服务器错误整页
 
 - 触发：页面数据接口 500 且该页无任何可呈现内容。
-- 呈现：`empty--error`「服务器开小差了」/「请稍后再试，或提交工单告诉我们。」actions=[重试(带 data-retry), 提交工单→profile.html#tickets]。
+- 呈现：`empty--error`「服务器开小差了」/「请稍后再试，或提交工单告诉我们。」actions=[重试(带 data-retry), 提交工单→settings.html#tickets]。
 - **禁止**为此新建独立 500.html（现有架构由前端状态承担）。
 
 ## 4. 维护中页面

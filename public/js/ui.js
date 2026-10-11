@@ -298,6 +298,23 @@
     if (role !== 'user' && (showRole === 0 || showRole === false || showRole === '0')) return '';
     return '<span class="role-tag">' + UI.esc(UI.ROLE_LABELS[role]) + '</span>';
   };
+  // 头像 → 用户主页链接（#21）：自己 → 个人中心；他人 → user.html?id=；无法定位则返回空
+  UI.userHref = function (user) {
+    if (!user) return '';
+    var id = user.id !== undefined && user.id !== null ? user.id
+      : (user.user_id !== undefined && user.user_id !== null ? user.user_id : null);
+    if (id === null || id === '' || String(id) === 'undefined') return '';
+    var me = UI.session.user();
+    if (me && me.id !== undefined && me.id !== null && String(me.id) === String(id)) return 'profile.html';
+    return 'user.html?id=' + encodeURIComponent(String(id));
+  };
+  // 头像（可点击进入该用户主页/个人中心）；user 无 id 时退化为不可点击
+  UI.avatarLink = function (user, size, cls) {
+    var inner = UI.avatar(user, size);
+    var href = UI.userHref(user);
+    if (!href) return '<span class="user-avatar' + (cls ? ' ' + cls : '') + '">' + inner + '</span>';
+    return '<a class="user-avatar user-avatar--link' + (cls ? ' ' + cls : '') + '" href="' + UI.esc(href) + '" aria-label="查看用户主页">' + inner + '</a>';
+  };
   // 统一用户信息组件：论坛、评价、消息、后台都用它
   UI.userLine = function (user, opt) {
     user = user || {}; opt = opt || {};
@@ -307,8 +324,10 @@
       (opt.showRole === false ? '' : UI.roleTag(user.role, user.show_role));
     var meta = opt.meta ? '<span class="user-line__meta">' + opt.meta + '</span>' : '';   // meta 由调用方保证已转义（可含 <time>）
     var tag = opt.href ? 'a' : 'div';
+    // opt.href 时整行已是链接，避免嵌套 <a>，头像不再单独链接
+    var avatar = opt.href ? UI.avatar(user, opt.size || 'sm') : UI.avatarLink(user, opt.size || 'sm');
     return '<' + tag + ' class="user-line' + (opt.large ? ' user-line--lg' : '') + '"' + (opt.href ? ' href="' + UI.esc(opt.href) + '"' : '') + '>' +
-      UI.avatar(user, opt.size || 'sm') + '<span class="user-line__body"><span class="user-line__top">' + top + '</span>' + meta + '</span></' + tag + '>';
+      avatar + '<span class="user-line__body"><span class="user-line__top">' + top + '</span>' + meta + '</span></' + tag + '>';
   };
   UI.stars = function (rating, opt) {
     var r = Math.max(0, Math.min(5, Number(rating) || 0));
@@ -915,7 +934,7 @@
   }
 
   function accountLinks(user) {
-    var links = [{ href: 'profile.html', icon: 'user', label: '个人中心' }];
+    var links = [{ href: 'profile.html', icon: 'user', label: '个人中心' }, { href: 'settings.html', icon: 'settings', label: '设置' }];
     if (UI.session.weight(user) < UI.ROLE_WEIGHTS.student) links.push({ href: 'student_verify.html', icon: 'graduation', label: '学生认证' });
     var hasPerms = user.permissions && user.permissions.length > 0;
     if (UI.session.weight(user) >= UI.ROLE_WEIGHTS.admin || hasPerms) links.push({ href: 'admin.html', icon: 'shield', label: '管理后台' });
@@ -955,7 +974,7 @@
 
   function footerHtml() {
     return '<footer class="site-footer"><div class="container container--wide site-footer__inner"><div class="site-footer__brand">' + brandMark() + '<span>' + UI.config.brand + '</span></div>' +
-      '<nav class="site-footer__links" aria-label="页脚"><a href="index.html#about">关于我们</a><a href="announcements.html">更新公告</a><a href="profile.html#tickets">提交工单</a></nav>' +
+      '<nav class="site-footer__links" aria-label="页脚"><a href="index.html#about">关于我们</a><a href="announcements.html">更新公告</a><a href="settings.html#tickets">提交工单</a></nav>' +
       '<p class="site-footer__note">© ' + new Date().getFullYear() + ' ' + UI.config.brand + ' · 以 AGPL-3.0 协议开源</p></div></footer>';
   }
 

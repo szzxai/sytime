@@ -1,18 +1,18 @@
 # szzx-info 项目地图
 
-> 更新日期：2026-10-09。本文描述 #4 UI 改版、#5 菜品目录与菜单同步、#6 三元坊必吃榜，以及 #10 头衔系统的代码。本次增补配套地图编辑器的数据兼容说明和文档维护规则；其他章节的既有测试数字保留原验证口径。
+> 更新日期：2026-10-11。本文描述 #4 UI 改版、#5 菜品目录与菜单同步、#6 三元坊必吃榜，#10 头衔系统，#19 个人中心拆分（新增 settings.html），#20 个人中心重做（类 B 站资料头部 + 吸顶横向菜单栏），以及 #21 用户主页（头像跳转 + 他人主页只读 + 管理面板）的代码。其他章节的既有测试数字保留原验证口径。
 >
 > 本文依据实际文件、后端代码、全部前端页面、地图 JSON、SQLite 表结构及依赖清单整理。设计规范见 [UI.md](./UI.md)，验收记录见 [docs/ui/acceptance.md](./docs/ui/acceptance.md)，原始里程碑快照见 [PLAN_2026-10-01.md](./PLAN_2026-10-01.md)。
 
 ## 1. 项目概览
 
-校园信息网是一个采用「宣纸·黛青·朱印」风格的动态网站，现有校园地图、论坛、菜谱评价、每周食谱图片、公告、账号与权限、学生认证、个人设置和管理后台。用户可在个人中心提交工单，管理员可审核认证、处理封禁申诉及批复工单。
+校园信息网是一个采用「宣纸·黛青·朱印」风格的动态网站，现有校园地图、论坛、菜谱评价、每周食谱图片、公告、账号与权限、学生认证、个人中心、设置和管理后台。用户可在设置页提交工单，管理员可审核认证、处理封禁申诉及批复工单。
 
 | 层次 | 实际实现 | 入口 |
 | --- | --- | --- |
 | 服务端 | CommonJS、Node.js、Express 5；原有业务及网站内菜单 worker 模块 | [server.js](./server.js)、[lib/menu/](./lib/menu/) |
 | 数据库 | Node 内置 `node:sqlite` 的同步 `DatabaseSync`；14 张原有表、3 张必吃榜表、2 张头衔表及 8 张菜单表 | [data.db](./data.db)、[lib/menu/store.js](./lib/menu/store.js)、[lib/shops/store.js](./lib/shops/store.js)、[lib/titles/store.js](./lib/titles/store.js) |
-| 前端 | 16 个功能页面及 404，统一外部 CSS 与页面脚本；原生 JavaScript，无构建流程 | [public/](./public/) |
+| 前端 | 18 个功能页面及 404，统一外部 CSS 与页面脚本；原生 JavaScript，无构建流程 | [public/](./public/) |
 | 共享前端逻辑 | 导航壳、登录态、用户展示、横幅、表单、对话框、上传、图片查看器及页面工具 | [public/js/ui.js](./public/js/ui.js)、[public/js/page.js](./public/js/page.js) |
 | 地图 | 本地 Leaflet 1.9.4；自定义平面坐标数据，保留原有几何与楼层关系 | [public/vendor/leaflet/](./public/vendor/leaflet/)、[data.json](./data.json) |
 | 文件存储 | 本地图片文件，通过 `/uploads` 静态提供 | [uploads/](./uploads/) |
@@ -98,7 +98,9 @@ szzx-info/
 │   ├── login.html                登录与被封账号的解封申诉
 │   ├── register.html             注册并自动登录
 │   ├── student_verify.html       邀请码认证或提交学生审核申请
-│   ├── profile.html              资料、密码、网站设置、消息通知、我的头衔、工单
+│   ├── profile.html              个人资料、我的头衔
+│   ├── settings.html             设置：账号安全、网站设置、工单、消息通知、退出登录
+│   ├── user.html                 其他用户主页（只读 + 权限足够时的管理面板）
 │   ├── admin.html                权限控制的后台菜单、用户与头衔管理操作
 │   ├── 404.html                  未知页面提示，使用绝对资源路径
 │   ├── css/site.css              设计令牌、组件与响应式样式
@@ -162,17 +164,19 @@ flowchart LR
 | `post.html` | 按查询参数 `id` 加载正文与点赞状态；默认展开回复 | `/api/forum/posts/:id` 及其回复、点赞路由 |
 | `recipe.html` | A–Z 菜品目录与搜索；评价卡与发布对话框；每周食谱折叠、放大及授权删除 | `/api/dishes`、`/api/recipes`、`/api/weekly-menu`、`/api/user/profile` |
 | `shops.html` | 三元坊必吃榜；可拖动/缩放的高德地图，附近店铺按屏幕距离聚合为带数量的点，点击聚合点居中放大；分类、拼音 A–Z、道路/商场、距离/时间、点赞/评价/评分筛选与排序；列表分页（每页 20 条，`?page=` 保留） | `/api/shops`、`/api/shops/meta`、`/api/shops/map-image` |
-| `shop.html` | 地址、路线、本部/地铁出口距离、点赞/评价/评分汇总；学生及以上可点赞、提交/更新及删除本人 1–5 星评价，评价可选带一张实拍图（JPG/PNG，≤2 MB）、选填人数与总价并自动计算人均价；详情页「纵向 / 双栏」两种布局（个人中心设默认） | `/api/shops/:id`、`/api/shops/:id/reviews`、互动写接口 |
+| `shop.html` | 地址、路线、本部/地铁出口距离、点赞/评价/评分汇总；学生及以上可点赞、提交/更新及删除本人 1–5 星评价，评价可选带一张实拍图（JPG/PNG，≤2 MB）、选填人数与总价并自动计算人均价；详情页「纵向 / 双栏」两种布局（设置页设默认） | `/api/shops/:id`、`/api/shops/:id/reviews`、互动写接口 |
 | `shop-new.html` | 最低角色提示；店铺、地址、自定义类型、可选大众点评链接、GCJ-02 坐标和本部/地铁两组步行路线表单；高德步行路线测算 | `/api/shops/meta`、`POST /api/shops`、高德 AMap.Walking |
 | `announcements.html` | 桌面主从列表；手机先看列表，选择后显示正文并可返回 | `/api/announcements` |
 | `login.html` | 用户名/密码登录；封禁错误展示；允许申诉时提交理由及可选图片 | `/api/login`、`/api/user/appeal` |
 | `register.html` | 用户名/昵称/密码及重复密码校验；注册后调用登录 | `/api/register`、`/api/login` |
 | `student_verify.html` | 已达到学生角色时隐藏表单；否则填写新生号、班级、真实姓名，可填邀请码及补充信息 | `/api/user/profile`、`/api/student/apply` |
-| `profile.html` | 展示 ID/角色/额外权限；修改头像、昵称、签名、密码；保存网站设置（默认进入界面 / 校园地图默认楼层 / 菜品与食谱默认页 / 必吃榜默认排序与餐食类型 / 店铺详情页样式）；提交与查看本人工单；消息通知偏好（系统/评论/回复/点赞）；我的头衔（选择佩戴/不佩戴，未达成自动头衔显示条件与进度） | `/api/user/*`、`/api/tickets`、`/api/tickets/mine`、`/api/user/preferences`、`/api/user/titles`、`/api/user/title` |
+| `profile.html` | #20 类 B 站布局：资料头部（头像含编辑按钮 + 用户名/权限等级标签/昵称 + 个性签名；昵称与签名点击即可编辑、失焦弹确认保存）+ 吸顶横向菜单栏（主页 / 收藏 / 头衔 / 设置）；主页与收藏为空页面，头衔为佩戴/不佩戴选择（未达成自动头衔显示条件与进度），设置跳转 settings.html | `/api/user/profile`、`/api/user/avatar`、`/api/user/nickname`、`/api/user/signature`、`/api/user/titles`、`/api/user/title` |
+| `settings.html` | 设置页（左侧菜单，与个人中心同构）：账号安全（改密码）、网站设置（默认进入界面 / 校园地图默认楼层 / 菜品与食谱默认页 / 必吃榜默认排序与餐食类型 / 店铺详情页样式 / 显示权限等级）、工单（提交与查看本人）、消息通知偏好（系统/评论/回复/点赞）、退出登录 | `/api/user/profile`、`/api/user/settings`、`/api/user/password`、`/api/tickets`、`/api/tickets/mine`、`/api/user/preferences` |
+| `user.html` | #21 其他用户主页（类个人中心版式，#20；只读）：资料头部 + 吸顶横向菜单栏（主页 / 收藏 / 头衔 / [管理]）；权限等级按该用户 `show_role` 显示；头衔只读；有 `user_manage` / `title_manage` 且目标权重低于自己（非本人）时出现「管理」：改权限等级、发放特殊权限、发放头衔、封号/解封；`?id=` 为本人时跳转 profile.html | 公开 `GET /api/users/:id/profile`、`GET /api/users/:id/titles`；`GET /api/me`；管理 `GET /api/admin/users/:id`、`GET /api/admin/permissions`、`PUT /api/admin/users/role`、`PUT /api/admin/users/permissions`、`PUT /api/admin/users/ban`、`PUT /api/admin/users/unban`、`GET /api/admin/titles`、`POST|DELETE /api/admin/users/:id/titles` |
 | `inbox.html` | 消息箱：按天分组、四类标签过滤、只看未读、全部标为已读、点击标记已读并跳转；页头消息铃显示未读数 | `/api/messages`、`/api/messages/unread-count`、`/api/messages/:id/read`、`/api/messages/read-all` |
 | `admin.html` | 横幅、公告、发送系统通知、学生审核、邀请码、每周菜谱、用户管理、头衔管理、申诉、工单、developer 菜单同步和三种管理角色的 JSON 手动导入；待办红点 | `/api/admin/*`，菜单接口见 [运维文档](./docs/menu-sync.md) |
 | `404.html` | 404 提示、返回首页与返回上一页 | 无 |
-| `js/ui.js` | 公共导航/页脚、账户菜单、手机抽屉、横幅、用户信息与全站交互组件 | `/api/user/profile`、`/api/settings/banner` |
+| `js/ui.js` | 公共导航/页脚、账户菜单、手机抽屉、横幅、用户信息与全站交互组件；头像跳转 `UI.avatarLink`/`UI.userHref`（#21，本人→个人中心，他人→用户主页） | `/api/user/profile`、`/api/settings/banner` |
 
 页面布局由 `public/css/site.css` 统一维护，业务脚本位于 `public/js/pages/`。`ui.js` 集中处理角色权重、用户展示、日期、转义和交互；`page.js` 与 `forum.js` 复用页面业务逻辑。动态文本使用 `UI.esc` 或 DOM `textContent` 输出。
 
@@ -195,6 +199,8 @@ flowchart LR
 | PUT | `/api/user/nickname` | 登录 | 修改昵称 |
 | PUT | `/api/user/signature` | 登录 | 修改签名 |
 | PUT | `/api/user/password` | 登录 | 校验旧密码并修改密码 |
+| GET | `/api/users/:id/profile` | 公开 | 指定用户的公开资料（昵称/签名/头像/角色/`show_role`/状态/佩戴头衔）；用于用户主页（#21） |
+| GET | `/api/users/:id/titles` | 公开 | 指定用户已拥有的头衔（只读，不含自动头衔进度）；用于用户主页「头衔」分区 |
 
 ### 5.2 论坛、菜谱、公告与地图
 
@@ -244,6 +250,7 @@ flowchart LR
 | PUT | `/api/admin/student-applications/approve` | student_review | 通过申请并提升未达学生级别用户的角色 |
 | PUT | `/api/admin/student-applications/reject` | student_review | 拒绝申请并记录可选原因 |
 | GET | `/api/admin/users` | user_manage | 用户 ID、显示 ID、账号、角色、状态与额外权限 |
+| GET | `/api/admin/users/:id` | user_manage | 单个用户的管理信息（角色、状态、显式权限、头衔）；用于用户主页「管理」分区（#21） |
 | GET | `/api/admin/permissions` | user_manage | 权限目录 |
 | PUT | `/api/admin/users/role` | user_manage，另有目标角色限制 | 修改角色 |
 | PUT | `/api/admin/users/ban` | user_manage，另有目标角色限制 | 封禁并保存理由、可选图片及是否允许申诉 |
@@ -435,5 +442,8 @@ JWT_EXPIRES_IN=7d
 | [#8 三元坊必吃榜菜谱上传](https://github.com/szzxvc/szzx-info/issues/8) | student 角色、multer 存储器、现有评价模型 | 菜品与店铺关联、学生上传权限、图片、去重及异常数据处理 |
 | [#9 消息箱](https://github.com/szzxvc/szzx-info/issues/9) | inbox.html、messages 表、论坛回复/点赞通知、profile.html 通知偏好、admin.html 发送系统通知、ui.js 消息铃 | 已实现：系统/评论/回复/点赞消息、聚合点赞、已读与未读计数、按天分组、类型过滤、通知偏好、super_admin 发送系统通知 |
 | [#10 头衔系统](https://github.com/szzxvc/szzx-info/issues/10) | 用户资料、后台用户管理、各用户内容渲染处 | 头衔目录/拥有关系/佩戴状态、授予撤销、自动规则、统一用户展示 |
+| [#19 个人中心拆分](https://github.com/szzxvc/szzx-info/issues/19) | profile.html、settings.html、public/js/pages/profile.js、public/js/pages/settings.js、ui.js 账户菜单 | 已实现：账户菜单新增「设置」（个人中心与管理后台之间），新建 settings.html（同构左侧菜单），将账号安全、网站设置、工单、消息通知、退出登录从个人中心迁出；profile.html 仅保留个人资料与我的头衔 |
+| [#20 个人中心重做](https://github.com/szzxvc/szzx-info/issues/20) | profile.html、public/js/pages/profile.js、public/css/site.css（.profile-hero / .profile-tabs） | 已实现：类 B 站布局，资料头部（头像 + 用户名/权限等级/昵称 + 个性签名，昵称与签名点击可编辑、失焦确认保存）+ 吸顶横向菜单栏（主页 / 收藏 / 头衔 / 设置）；主页、收藏为空页面，头衔沿用原面板，设置直接跳转 settings.html |
+| [#21 头像进入主页](https://github.com/szzxvc/szzx-info/issues/21) | public/js/ui.js（UI.userHref/UI.avatarLink）、forum/reviews 头像、user.html、public/js/pages/user.js、server.js 公开用户接口 | 已实现：论坛/评价等处头像可点击，本人 → profile.html、他人 → user.html?id=；他人主页与个人中心同版式但只读、权限等级按 show_role 显示、无设置、头衔只读；有足够权限且目标权重更低时追加「管理」（改角色 / 权限 / 发头衔 / 封号） |
 
 菜品目录、消息箱与必吃榜开关已开启。#6 姑苏区全域边界取自高德行政区 adcode 320508（GCJ-02、323 点），范围文案/地图/服务端地理围栏共用该多边形。全区分块检索得到 5,942 条高德餐饮 POI，地址及步行路线补全后 5,629 条通过初筛；正式导入 5,567 条，62 条同名项跳过。其余候选因地址格式、明确停业标记、名称长度或缺少最近地铁步行路线未导入（原因可能重叠）；数据代表高德可检索 POI，不保证涵盖所有实际店铺。数据库店铺均通过区界校验。页面具备可拖动/缩放的同源高德底图与近邻聚合点（显示店数、点击居中放大）、拼音 A–Z、店名/道路/商场搜索及本部距离/时间和互动指标筛选；地图代理不向浏览器泄漏 Web 服务 Key。#7 店铺详情双布局、#9 消息箱与 #10 头衔系统已实现；#8 店铺菜品关联仍待实施。回归入口：`npm run test:menu`（18 项）、`npm run test:titles`（14 项）、`npm run test:shops`（14 项）、`npm run test:shops:ui`（64 项）、`npm run test:ui`（363 项）。

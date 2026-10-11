@@ -339,7 +339,7 @@ try {
     () => document.getElementById("replyTotal").textContent === "26",
   );
   check("reply count refreshes", true);
-  await page.goto(base + "/profile.html#tickets", { waitUntil: "networkidle" });
+  await page.goto(base + "/settings.html#tickets", { waitUntil: "networkidle" });
   await page.locator("#ticketTitle").fill("通过新 UI 提交");
   await page.locator("#ticketContent").fill("工单正文");
   await page.locator("#ticketSubmit").click();
@@ -347,7 +347,7 @@ try {
     () => document.querySelectorAll("#myTicketList article").length === 2,
   );
   check("personal ticket form reaches the existing API", true);
-  await page.goto(base + "/profile.html#site", { waitUntil: "networkidle" });
+  await page.goto(base + "/settings.html#site", { waitUntil: "networkidle" });
   await page.locator("#defaultFloor").selectOption("3");
   await page.locator("#recipeDefaultView").selectOption("weekly");
   await page.locator("#siteSubmit").click();

@@ -21,615 +21,113 @@
     <div id="siteBanner"></div>
     <div id="siteHeader"></div>
     <main id="main" class="main container">
-      <div class="page-head"><h1 class="page-head__title">个人中心</h1></div>
       <div id="profileStatus"></div>
-      <div class="shell">
-        <nav class="side-nav" aria-label="个人中心" id="profileNav">
-          <a class="side-nav__item" href="#profile" data-panel="profile"
-            ><svg class="icon" aria-hidden="true">
-              <use href="/img/icons.svg#i-user"></use></svg
-            >个人资料</a
-          ><a class="side-nav__item" href="#security" data-panel="security"
-            ><svg class="icon" aria-hidden="true">
-              <use href="/img/icons.svg#i-lock"></use></svg
-            >账号安全</a
-          ><a class="side-nav__item" href="#site" data-panel="site"
-            ><svg class="icon" aria-hidden="true">
-              <use href="/img/icons.svg#i-settings"></use></svg
-            >网站设置</a
-          ><a class="side-nav__item" href="#tickets" data-panel="tickets"
-            ><svg class="icon" aria-hidden="true">
-              <use href="/img/icons.svg#i-clipboard"></use></svg
-            >工单</a
-          ><a class="side-nav__item" href="#messages" data-panel="messages"
-            ><svg class="icon" aria-hidden="true">
-              <use href="/img/icons.svg#i-bell"></use></svg
-            >消息通知</a
-          ><a class="side-nav__item" href="#titles" data-panel="titles" id="titlesNav"
-            ><svg class="icon" aria-hidden="true">
-              <use href="/img/icons.svg#i-award"></use></svg
-            >我的头衔</a
-          ><button type="button" class="side-nav__item" data-logout>
-            <svg class="icon" aria-hidden="true">
-              <use href="/img/icons.svg#i-logout"></use></svg
-            >退出登录
-          </button>
-        </nav>
-        <div class="shell__main">
-          <section class="view" id="view-profile" hidden>
-            <div class="panel">
-              <div class="panel__head">
-                <h2 class="panel__title">账号信息</h2>
-              </div>
-              <div class="panel__body form">
-                <div class="profile-head">
-                  <span class="avatar-edit"
-                    ><span id="avatarBox"></span
-                    ><button
-                      type="button"
-                      class="avatar-edit__btn"
-                      id="chooseAvatar"
-                      aria-label="更换头像"
-                    >
-                      <svg class="icon icon--sm" aria-hidden="true">
-                        <use href="/img/icons.svg#i-pencil"></use>
-                      </svg></button
-                    ><input
-                      type="file"
-                      id="avatarFile"
-                      accept="image/jpeg,image/png"
-                      hidden
-                  /></span>
-                  <div class="profile-head__main">
-                    <span class="profile-head__name" id="profileName">—</span
-                    ><span class="row row--sm"
-                      ><span class="u-muted u-fs-sm">权限等级</span
-                      ><span id="infoRole" class="u-fs-sm">—</span></span
-                    ><span class="row row--sm"
-                      ><span class="u-muted u-fs-sm">特殊权限</span
-                      ><span id="infoPerms" class="u-fs-sm">—</span></span
-                    ><span class="row row--sm"
-                      ><span class="u-muted u-fs-sm">ID</span
-                      ><span id="infoId" class="u-fs-sm">—</span></span
-                    >
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div class="panel">
-              <div class="panel__head">
-                <h2 class="panel__title">用户名</h2>
-              </div>
-              <div class="panel__body form">
-                <input
-                  class="input"
-                  id="username"
-                  readonly
-                  aria-label="用户名（不可修改）"
-                />
-              </div>
-            </div>
-            <form id="nicknameForm" class="u-mt-4" novalidate>
-              <div class="panel">
-                <div class="panel__head">
-                  <h2 class="panel__title">昵称</h2>
-                </div>
-                <div class="panel__body form">
-                  <div class="field">
-                    <label class="field__label" for="nickname">昵称</label
-                    ><input
-                      class="input"
-                      type="text"
-                      id="nickname"
-                      name="nickname"
-                      required
-                      data-counter="20"
-                    />
-                    <div class="field__foot">
-                      <span class="field__hint"></span
-                      ><span class="field__counter"></span>
-                    </div>
-                  </div>
-                </div>
-                <div class="panel__foot">
-                  <span
-                    class="status-text"
-                    id="nicknameMsg"
-                    role="status"
-                  ></span
-                  ><button
-                    type="submit"
-                    class="btn btn--primary"
-                    id="nicknameSubmit"
-                  >
-                    保存
-                  </button>
-                </div>
-              </div>
-            </form>
-            <form id="signatureForm" class="u-mt-4" novalidate>
-              <div class="panel">
-                <div class="panel__head">
-                  <h2 class="panel__title">个性签名</h2>
-                </div>
-                <div class="panel__body form">
-                  <div class="field">
-                    <label class="field__label" for="signature">个性签名</label
-                    ><textarea
-                      class="textarea"
-                      id="signature"
-                      name="signature"
-                      data-counter="80"
-                    ></textarea>
-                    <div class="field__foot">
-                      <span class="field__hint"></span
-                      ><span class="field__counter"></span>
-                    </div>
-                  </div>
-                </div>
-                <div class="panel__foot">
-                  <span
-                    class="status-text"
-                    id="signatureMsg"
-                    role="status"
-                  ></span
-                  ><button
-                    type="submit"
-                    class="btn btn--primary"
-                    id="signatureSubmit"
-                  >
-                    保存
-                  </button>
-                </div>
-              </div>
-            </form>
-          </section>
-          <section class="view" id="view-security" hidden>
-            <form id="passwordForm" novalidate>
-              <div class="panel">
-                <div class="panel__head">
-                  <h2 class="panel__title">修改密码</h2>
-                </div>
-                <div class="panel__body form">
-                  <div class="field">
-                    <label class="field__label" for="oldPassword">旧密码</label>
-                    <div class="input-group">
-                      <input
-                        class="input input--end"
-                        type="password"
-                        id="oldPassword"
-                        name="oldPassword"
-                        required
-                        autocomplete="current-password"
-                      />
-                      <div class="input-group__end">
-                        <button
-                          type="button"
-                          class="icon-btn icon-btn--sm"
-                          data-password-toggle
-                          aria-label="显示密码"
-                        >
-                          <svg class="icon" aria-hidden="true">
-                            <use href="/img/icons.svg#i-eye"></use>
-                          </svg>
-                        </button>
-                      </div>
-                    </div>
-                    <div class="field__foot">
-                      <span class="field__hint"></span>
-                    </div>
-                  </div>
-                  <div class="field">
-                    <label class="field__label" for="newPassword">新密码</label>
-                    <div class="input-group">
-                      <input
-                        class="input input--end"
-                        type="password"
-                        id="newPassword"
-                        name="newPassword"
-                        required
-                        autocomplete="new-password"
-                      />
-                      <div class="input-group__end">
-                        <button
-                          type="button"
-                          class="icon-btn icon-btn--sm"
-                          data-password-toggle
-                          aria-label="显示密码"
-                        >
-                          <svg class="icon" aria-hidden="true">
-                            <use href="/img/icons.svg#i-eye"></use>
-                          </svg>
-                        </button>
-                      </div>
-                    </div>
-                    <div class="field__foot">
-                      <span class="field__hint"></span>
-                    </div>
-                  </div>
-                  <div class="field">
-                    <label class="field__label" for="confirmPassword"
-                      >确认新密码</label
-                    >
-                    <div class="input-group">
-                      <input
-                        class="input input--end"
-                        type="password"
-                        id="confirmPassword"
-                        name="confirmPassword"
-                        required
-                        autocomplete="new-password"
-                      />
-                      <div class="input-group__end">
-                        <button
-                          type="button"
-                          class="icon-btn icon-btn--sm"
-                          data-password-toggle
-                          aria-label="显示密码"
-                        >
-                          <svg class="icon" aria-hidden="true">
-                            <use href="/img/icons.svg#i-eye"></use>
-                          </svg>
-                        </button>
-                      </div>
-                    </div>
-                    <div class="field__foot">
-                      <span class="field__hint"></span>
-                    </div>
-                  </div>
-                </div>
-                <div class="panel__foot">
-                  <span
-                    class="status-text"
-                    id="passwordMsg"
-                    role="status"
-                  ></span
-                  ><button
-                    type="submit"
-                    class="btn btn--primary"
-                    id="passwordSubmit"
-                  >
-                    保存
-                  </button>
-                </div>
-              </div>
-            </form>
-          </section>
-          <section class="view" id="view-site" hidden>
-            <form id="siteForm" novalidate>
-              <div class="panel">
-                <div class="panel__head">
-                  <h2 class="panel__title">网站设置</h2>
-                </div>
-                <div class="panel__body form">
-                  <div class="field">
-                    <label class="field__label" for="defaultPage"
-                      >默认进入界面</label
-                    ><select class="select" id="defaultPage" name="defaultPage">
-                      <option value="index.html">首页</option>
-                      <option value="map.html">校园地图</option>
-                      <option value="forum.html">论坛</option>
-                      <option value="recipe.html">菜品与食谱</option></select
-                    ><span class="field__hint"
-                      >访问网站首页时会自动跳转到所选界面</span
-                    >
-                  </div>
-                  <div class="field">
-                    <label class="field__label" for="defaultFloor"
-                      >校园地图默认楼层</label
-                    ><select
-                      class="select"
-                      id="defaultFloor"
-                      name="defaultFloor"
-                    >
-                      <option value="1">1F</option>
-                      <option value="2">2F</option>
-                      <option value="3">3F</option>
-                      <option value="4">4F</option></select
-                    ><span class="field__hint"></span>
-                  </div>
-                  <div class="field">
-                    <label class="field__label" for="recipeDefaultView"
-                      >菜品与食谱默认页</label
-                    ><select
-                      class="select"
-                      id="recipeDefaultView"
-                      name="recipeDefaultView"
-                    >
-                      <option value="all">全部菜品</option>
-                      <option value="reviews">菜品评价</option>
-                      <option value="weekly">每周食谱</option></select
-                    ><span class="field__hint"></span>
-                  </div>
-                  <div id="shopPrefFields" hidden>
-                    <div class="field">
-                      <label class="field__label" for="shopDefaultSort"
-                        >必吃榜默认排序</label
-                      ><select
-                        class="select"
-                        id="shopDefaultSort"
-                        name="shopDefaultSort"
-                      >
-                        <option value="campus">距苏州中学本部最近</option>
-                        <option value="az">A–Z</option>
-                        <option value="metro">距地铁最近</option>
-                        <option value="likes">按点赞数</option>
-                        <option value="reviews">按评价数</option>
-                        <option value="rating">按评分</option>
-                        <option value="new">最新添加</option></select
-                      ><span class="field__hint"
-                        >进入三元坊必吃榜时默认使用的排序</span
-                      >
-                    </div>
-                    <div class="field">
-                      <label class="field__label" for="shopDefaultType"
-                        >必吃榜默认餐食类型</label
-                      ><select
-                        class="select"
-                        id="shopDefaultType"
-                        name="shopDefaultType"
-                      >
-                        <option value="">全部</option></select
-                      ><span class="field__hint"
-                        >进入三元坊必吃榜时默认筛选的店铺类型</span
-                      >
-                    </div>
-                    <div class="field">
-                      <span class="field__label">店铺详情页样式</span>
-                      <div class="choice-group choice-group--2" id="shopLayoutChoices">
-                        <label class="choice">
-                          <input
-                            class="choice__input"
-                            type="radio"
-                            name="shopLayout"
-                            value="stacked"
-                          /><span class="choice__body"
-                            ><span class="choice__title"
-                              >样式一 · 纵向<svg
-                                class="icon choice__check"
-                                aria-hidden="true"
-                              >
-                                <use
-                                  href="/img/icons.svg#i-check-circle"
-                                ></use></svg></span
-                            ><span class="choice__desc"
-                              >手机友好，菜品与评价上下排列</span
-                            ></span
-                          >
-                        </label>
-                        <label class="choice">
-                          <input
-                            class="choice__input"
-                            type="radio"
-                            name="shopLayout"
-                            value="split"
-                          /><span class="choice__body"
-                            ><span class="choice__title"
-                              >样式二 · 双栏<svg
-                                class="icon choice__check"
-                                aria-hidden="true"
-                              >
-                                <use
-                                  href="/img/icons.svg#i-check-circle"
-                                ></use></svg></span
-                            ><span class="choice__desc"
-                              >电脑友好，左右并排查看</span
-                            ></span
-                          >
-                        </label>
-                      </div>
-                      <span class="field__hint"
-                        >浏览三元坊必吃榜店铺详情时默认使用的布局</span
-                      >
-                    </div>
-                  </div>
-                  <div class="field">
-                    <span class="field__label">显示权限等级</span>
-                    <label class="check-row"
-                      ><input
-                        class="check"
-                        type="checkbox"
-                        id="showRole"
-                        name="showRole"
-                      /><span class="check-row__text"
-                        >在论坛、评价等位置显示我的权限等级标签</span
-                      ></label
-                    >
-                    <span class="field__hint" id="showRoleHint"></span>
-                  </div>
-                </div>
-                <div class="panel__foot">
-                  <span class="status-text" id="siteMsg" role="status"></span
-                  ><button
-                    type="submit"
-                    class="btn btn--primary"
-                    id="siteSubmit"
-                  >
-                    保存
-                  </button>
-                </div>
-              </div>
-            </form>
-          </section>
-          <section class="view" id="view-tickets" hidden>
-            <form id="ticketForm" novalidate>
-              <div class="panel">
-                <div class="panel__head">
-                  <h2 class="panel__title">新建工单</h2>
-                </div>
-                <div class="panel__body form">
-                  <div class="field">
-                    <label class="field__label" for="ticketTitle">标题</label
-                    ><input
-                      class="input"
-                      type="text"
-                      id="ticketTitle"
-                      name="ticketTitle"
-                      required
-                      data-counter="40"
-                    />
-                    <div class="field__foot">
-                      <span class="field__hint"></span
-                      ><span class="field__counter"></span>
-                    </div>
-                  </div>
-                  <div class="field">
-                    <label class="field__label" for="ticketContent">内容</label
-                    ><textarea
-                      class="textarea"
-                      id="ticketContent"
-                      name="ticketContent"
-                      required
-                      data-counter="1000"
-                    ></textarea>
-                    <div class="field__foot">
-                      <span class="field__hint"></span
-                      ><span class="field__counter"></span>
-                    </div>
-                  </div>
-                  <div class="field">
-                    <label class="field__label" for="ticketVisibility"
-                      >可见范围</label
-                    ><select
-                      class="select"
-                      id="ticketVisibility"
-                      name="ticketVisibility"
-                    >
-                      <option value="admin">管理员及以上</option>
-                      <option value="super_admin">超级管理员及以上</option>
-                      <option value="developer">仅开发者</option></select
-                    ><span class="field__hint"
-                      >工单将提交给所选权限及以上的管理人员处理。</span
-                    >
-                  </div>
-                </div>
-                <div class="panel__foot">
-                  <button
-                    type="submit"
-                    class="btn btn--primary"
-                    id="ticketSubmit"
-                  >
-                    提交工单
-                  </button>
-                </div>
-              </div>
-            </form>
-            <section class="section">
-              <h2 class="section__title u-mb-4">我的工单</h2>
-              <div
-                id="myTicketList"
-                class="stack stack--md"
-                aria-live="polite"
-              ></div>
-            </section>
-          </section>
-          <section class="view" id="view-messages" hidden>
-            <div class="panel">
-              <div class="panel__head">
-                <h2 class="panel__title">消息通知</h2>
-                <p class="panel__desc">
-                  关闭后不再产生对应的新消息；已收到的消息不受影响。
-                </p>
-              </div>
-              <div class="panel__body">
-                <div class="switch-row">
-                  <div class="switch-row__text">
-                    <span class="switch-row__title">系统消息</span
-                    ><span class="switch-row__desc"
-                      >管理员发布的通知。其中「重要」通知无法关闭。</span
-                    >
-                  </div>
-                  <input
-                    type="checkbox"
-                    class="switch"
-                    role="switch"
-                    checked
-                    disabled
-                    aria-label="系统消息"
-                  />
-                </div>
-                <div class="switch-row">
-                  <div class="switch-row__text">
-                    <span class="switch-row__title">评论通知</span
-                    ><span class="switch-row__desc">有人评论你的帖子</span>
-                  </div>
-                  <input
-                    type="checkbox"
-                    class="switch"
-                    role="switch"
-                    id="prefComment"
-                    checked
-                    aria-label="评论通知"
-                  />
-                </div>
-                <div class="switch-row">
-                  <div class="switch-row__text">
-                    <span class="switch-row__title">回复通知</span
-                    ><span class="switch-row__desc">有人回复你的评论</span>
-                  </div>
-                  <input
-                    type="checkbox"
-                    class="switch"
-                    role="switch"
-                    id="prefReply"
-                    checked
-                    aria-label="回复通知"
-                  />
-                </div>
-                <div class="switch-row">
-                  <div class="switch-row__text">
-                    <span class="switch-row__title">点赞通知</span
-                    ><span class="switch-row__desc">有人赞了你的内容</span>
-                  </div>
-                  <input
-                    type="checkbox"
-                    class="switch"
-                    role="switch"
-                    id="prefLike"
-                    aria-label="点赞通知"
-                  />
-                </div>
-              </div>
-            </div>
-          </section>
-          <section class="view" id="view-titles" hidden>
-            <div class="panel">
-              <div class="panel__head">
-                <h2 class="panel__title">选择佩戴</h2>
-                <p class="panel__desc">
-                  同一时间只能佩戴一个头衔；也可以不佩戴。
-                </p>
-              </div>
-              <div class="panel__body stack">
-                <div class="title-preview" aria-live="polite">
-                  <span class="title-preview__label">预览</span>
-                  <span id="titlePreview"></span>
-                </div>
-                <div
-                  class="choice-group choice-group--2"
-                  id="titleChoices"
-                ></div>
-                <div id="titlesEmpty"></div>
-                <div
-                  class="choice-group choice-group--2"
-                  id="titlesLocked"
-                ></div>
-              </div>
-              <div class="panel__foot">
-                <span class="status-text" id="wearMsg"></span>
-                <button
-                  type="button"
-                  class="btn btn--primary"
-                  id="wearSubmit"
-                  disabled
-                >
-                  保存佩戴
-                </button>
-              </div>
-            </div>
-          </section>
+      <header class="profile-hero">
+        <span class="avatar-edit profile-hero__avatar"
+          ><span id="avatarBox"></span
+          ><button
+            type="button"
+            class="avatar-edit__btn"
+            id="chooseAvatar"
+            aria-label="更换头像"
+          >
+            <svg class="icon icon--sm" aria-hidden="true">
+              <use href="/img/icons.svg#i-pencil"></use>
+            </svg></button
+          ><input
+            type="file"
+            id="avatarFile"
+            accept="image/jpeg,image/png"
+            hidden
+        /></span>
+        <div class="profile-hero__info">
+          <div class="profile-hero__row">
+            <h1 class="profile-hero__username" id="heroUsername">—</h1>
+            <span id="heroRole"></span>
+            <span
+              class="profile-hero__edit"
+              id="heroNickname"
+              contenteditable="true"
+              role="textbox"
+              aria-label="昵称，点击编辑"
+              spellcheck="false"
+              data-placeholder="设置昵称"
+            ></span>
+          </div>
+          <div class="profile-hero__row">
+            <span
+              class="profile-hero__edit profile-hero__edit--sig"
+              id="heroSignature"
+              contenteditable="true"
+              role="textbox"
+              aria-label="个性签名，点击编辑"
+              spellcheck="false"
+              data-placeholder="填写个性签名"
+            ></span>
+          </div>
         </div>
-      </div>
+      </header>
+      <nav class="profile-tabs" aria-label="个人中心分区" id="profileNav">
+        <a class="side-nav__item" href="#home" data-panel="home"
+          ><svg class="icon" aria-hidden="true">
+            <use href="/img/icons.svg#i-home"></use></svg
+          >主页</a
+        ><a class="side-nav__item" href="#favorites" data-panel="favorites"
+          ><svg class="icon" aria-hidden="true">
+            <use href="/img/icons.svg#i-star"></use></svg
+          >收藏</a
+        ><a
+          class="side-nav__item"
+          href="#titles"
+          data-panel="titles"
+          id="titlesNav"
+          ><svg class="icon" aria-hidden="true">
+            <use href="/img/icons.svg#i-award"></use></svg
+          >头衔</a
+        ><a class="side-nav__item" href="settings.html"
+          ><svg class="icon" aria-hidden="true">
+            <use href="/img/icons.svg#i-settings"></use></svg
+          >设置</a
+        >
+      </nav>
+      <section class="view" id="view-home" hidden></section>
+      <section class="view" id="view-favorites" hidden></section>
+      <section class="view" id="view-titles" hidden>
+          <div class="panel">
+            <div class="panel__head">
+              <h2 class="panel__title">选择佩戴</h2>
+              <p class="panel__desc">
+                同一时间只能佩戴一个头衔；也可以不佩戴。
+              </p>
+            </div>
+            <div class="panel__body stack">
+              <div class="title-preview" aria-live="polite">
+                <span class="title-preview__label">预览</span>
+                <span id="titlePreview"></span>
+              </div>
+              <div
+                class="choice-group choice-group--2"
+                id="titleChoices"
+              ></div>
+              <div id="titlesEmpty"></div>
+              <div
+                class="choice-group choice-group--2"
+                id="titlesLocked"
+              ></div>
+            </div>
+            <div class="panel__foot">
+              <span class="status-text" id="wearMsg"></span>
+              <button
+                type="button"
+                class="btn btn--primary"
+                id="wearSubmit"
+                disabled
+              >
+                保存佩戴
+              </button>
+            </div>
+          </div>
+        </section>
     </main>
     <div id="siteFooter"></div>
     <script src="/js/ui.js"></script>

@@ -1,6 +1,6 @@
 # 消息箱 · inbox.md（#9）
 
-> 状态：新功能 ｜ 优先级：P1 ｜ issue：#9 ｜ 依赖：阶段 0；#9 数据与接口 ｜ 落点：inbox.html（新页）+ 页头消息铃 + profile.html#messages 设置 + admin.html#notify 发送面板
+> 状态：新功能 ｜ 优先级：P1 ｜ issue：#9 ｜ 依赖：阶段 0；#9 数据与接口 ｜ 落点：inbox.html（新页）+ 页头消息铃 + settings.html#messages 设置（#19 起从个人中心迁出）+ admin.html#notify 发送面板
 
 ## 需求对照表（PLAN #9 → 本文档）
 
@@ -67,7 +67,7 @@
     <label class="check-row" style="padding-block:0"><input type="checkbox" class="switch" role="switch" id="unreadOnly" aria-label="只看未读"><span>只看未读</span></label>
     <div class="row row--sm">
       <button type="button" class="btn btn--sm" id="readAllBtn"><svg class="icon icon--sm" aria-hidden="true"><use href="img/icons.svg#i-check"></use></svg>全部标为已读</button>
-      <a class="btn btn--sm btn--ghost" href="profile.html#messages"><svg class="icon icon--sm" aria-hidden="true"><use href="img/icons.svg#i-settings"></use></svg>消息设置</a>
+      <a class="btn btn--sm btn--ghost" href="settings.html#messages"><svg class="icon icon--sm" aria-hidden="true"><use href="img/icons.svg#i-settings"></use></svg>消息设置</a>
     </div>
   </div>
   <div id="inboxList" aria-live="polite"></div>
@@ -109,7 +109,7 @@
 - 评价目标（#8 后）：`shop.html?id=…` 或 dish 页；以 target.url 为准。
 - 系统消息：无跳转（原地展开）。
 
-## 5. 消息设置（profile.html#messages 分区）
+## 5. 消息设置（settings.html#messages 分区，见 [settings.md](settings.md)）
 
 ```html
 <section class="view" id="view-messages" hidden>

@@ -669,10 +669,6 @@
       "cat": "none",
       "points": [
         [
-          60,
-          240
-        ],
-        [
           100,
           240
         ]
@@ -2913,6 +2909,106 @@
         3,
         4
       ],
+      "type": "polyline",
+      "name": "东紫阳楼",
+      "popup": "东紫阳楼 · 教学楼",
+      "cat": "none",
+      "points": [
+        [
+          60,
+          480
+        ],
+        [
+          90,
+          480
+        ]
+      ],
+      "fill": false,
+      "stroke": true,
+      "dash": null,
+      "weight": 1
+    },
+    {
+      "layers": [
+        2,
+        3,
+        4
+      ],
+      "type": "polyline",
+      "name": "东紫阳楼",
+      "popup": "东紫阳楼 · 教学楼",
+      "cat": "none",
+      "points": [
+        [
+          60,
+          520
+        ],
+        [
+          90,
+          520
+        ]
+      ],
+      "fill": false,
+      "stroke": true,
+      "dash": null,
+      "weight": 1
+    },
+    {
+      "layers": [
+        2,
+        3,
+        4
+      ],
+      "type": "polyline",
+      "name": "东紫阳楼",
+      "popup": "东紫阳楼 · 教学楼",
+      "cat": "none",
+      "points": [
+        [
+          60,
+          560
+        ],
+        [
+          90,
+          560
+        ]
+      ],
+      "fill": false,
+      "stroke": true,
+      "dash": null,
+      "weight": 1
+    },
+    {
+      "layers": [
+        2,
+        3,
+        4
+      ],
+      "type": "polyline",
+      "name": "东紫阳楼",
+      "popup": "东紫阳楼 · 教学楼",
+      "cat": "none",
+      "points": [
+        [
+          90,
+          440
+        ],
+        [
+          90,
+          600
+        ]
+      ],
+      "fill": false,
+      "stroke": true,
+      "dash": "8,6",
+      "weight": null
+    },
+    {
+      "layers": [
+        2,
+        3,
+        4
+      ],
       "type": "polygon",
       "name": "西紫阳楼",
       "popup": "西紫阳楼 · 教学楼",
@@ -3043,6 +3139,106 @@
       "stroke": true,
       "dash": null,
       "weight": null
+    },
+    {
+      "layers": [
+        2,
+        3,
+        4
+      ],
+      "type": "polyline",
+      "name": "西紫阳楼",
+      "popup": "西紫阳楼 · 教学楼",
+      "cat": "none",
+      "points": [
+        [
+          60,
+          240
+        ],
+        [
+          90,
+          240
+        ]
+      ],
+      "fill": false,
+      "stroke": true,
+      "dash": null,
+      "weight": 1
+    },
+    {
+      "layers": [
+        2,
+        3,
+        4
+      ],
+      "type": "polyline",
+      "name": "西紫阳楼",
+      "popup": "西紫阳楼 · 教学楼",
+      "cat": "none",
+      "points": [
+        [
+          60,
+          280
+        ],
+        [
+          90,
+          280
+        ]
+      ],
+      "fill": false,
+      "stroke": true,
+      "dash": null,
+      "weight": 1
+    },
+    {
+      "layers": [
+        2,
+        3,
+        4
+      ],
+      "type": "polyline",
+      "name": "西紫阳楼",
+      "popup": "西紫阳楼 · 教学楼",
+      "cat": "none",
+      "points": [
+        [
+          60,
+          320
+        ],
+        [
+          90,
+          320
+        ]
+      ],
+      "fill": false,
+      "stroke": true,
+      "dash": null,
+      "weight": 1
+    },
+    {
+      "layers": [
+        2,
+        3,
+        4
+      ],
+      "type": "polyline",
+      "name": "西紫阳楼",
+      "popup": "西紫阳楼 · 教学楼",
+      "cat": "none",
+      "points": [
+        [
+          60,
+          360
+        ],
+        [
+          90,
+          360
+        ]
+      ],
+      "fill": false,
+      "stroke": true,
+      "dash": null,
+      "weight": 1
     },
     {
       "layers": [

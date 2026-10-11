@@ -425,7 +425,8 @@
 | 论坛列表、帖子详情、消息箱 | `container--prose` | 720px |
 | 登录、注册 | `container--narrow` + `.auth` 居中布局 | 400px |
 | 学生认证、添加店铺 | `container--form` | 576px |
-| 个人中心 | `container` + `.shell`（15rem 侧栏） | 内容列 ≤ 44rem |
+| 个人中心 | `container`（资料头部 + 吸顶横向菜单栏） | 内容列 ≤ 44rem |
+| 设置 | `container` + `.shell`（15rem 侧栏） | 内容列 ≤ 44rem |
 | 后台 | `container--wide` + `.shell` | 1280px |
 | 公告 | `container` + `.master-detail` | |
 | 地图 | 全屏 `.map-page`（无容器） | 应用壳 |
@@ -438,8 +439,8 @@
 
 - **页头**（sticky，高 56/64）：手机 = 汉堡按钮 + 品牌 + （铃铛）+ 头像/登录注册；≥768 = 品牌 + 主导航 + 右侧操作。毛玻璃底 `--header-bg`，发丝线下边。
 - **主导航项**（≥768）：地图 · 论坛 · 菜谱 · 必吃榜(开关) · 公告。当前页 `aria-current="page"`（黛青浅底）。新功能未上线时由 `UI.config.features` 隐藏。
-- **手机抽屉**：汉堡打开 `<dialog class="dialog--drawer">`，含完整导航（带图标、当前高亮）、账户区（登录态：个人中心/我的消息/学生认证/管理后台/退出登录；未登录：登录/注册）、页脚协议行。Esc / 遮罩 / 关闭按钮均可关；≥768 窗口时自动关。
-- **用户菜单**（头像按钮）：下拉面板，头部显示昵称/角色/ID，菜单项：个人中心、我的消息(开关)、学生认证(仅未达 student)、管理后台(admin 或有显式权限)、退出登录（红色）。键盘 ↑↓ 移动、Esc 关闭并还焦点。
+- **手机抽屉**：汉堡打开 `<dialog class="dialog--drawer">`，含完整导航（带图标、当前高亮）、账户区（登录态：个人中心/设置/学生认证/管理后台/退出登录；未登录：登录/注册）、页脚协议行。Esc / 遮罩 / 关闭按钮均可关；≥768 窗口时自动关。
+- **用户菜单**（头像按钮）：下拉面板，头部显示昵称/角色/ID，菜单项：个人中心、设置、我的消息(开关)、学生认证(仅未达 student)、管理后台(admin 或有显式权限)、退出登录（红色）。键盘 ↑↓ 移动、Esc 关闭并还焦点。
 - **消息铃**（features.inbox）：`UI.inbox` 每 60 秒轮询未读数，红点徽标 1–99，>99 显示 99+；`aria-label="消息，N 条未读"`。
 - **退出登录**：清 token/user → toast「已退出登录」→ 0.5s 后回 `index.html`。
 - **横幅**：`UI.shell.loadBanner()` 读接口；黛青浅底条，关闭按钮记录 `bannerDismissed:<用户名>` 与版本号；版本变化重新显示。多行文本自动换行。
@@ -582,7 +583,9 @@
 | login.html | 现有改版 | P0 | 默认 | — | container--narrow | [pages/login.md](./docs/ui/pages/login.md) |
 | register.html | 现有改版 | P0 | 默认 | — | container--narrow | [pages/register.md](./docs/ui/pages/register.md) |
 | student_verify.html | 现有改版 | P0 | 默认 | — | container--form | [pages/student-verify.md](./docs/ui/pages/student-verify.md) |
-| profile.html | 现有改版 | P0（#7/#9/#10 扩展） | 默认 | — | container | [pages/profile.md](./docs/ui/pages/profile.md) |
+| profile.html | 现有改版 | P0（#7/#9/#10 扩展，#19 拆分，#20 重做） | 默认 | — | container | [pages/profile.md](./docs/ui/pages/profile.md) |
+| settings.html | 新建 | P1（#19） | 默认 | — | container | [pages/settings.md](./docs/ui/pages/settings.md) |
+| user.html | 新建 | P1（#21） | 默认 | — | container | [pages/user-home.md](./docs/ui/pages/user-home.md) |
 | admin.html | 现有改版 | P0（#9/#10 扩展） | 应用 | — | container--wide | [pages/admin.md](./docs/ui/pages/admin.md) |
 | 404.html | 新建 | P0 | 默认 | — | container--narrow | [pages/system-pages.md](./docs/ui/pages/system-pages.md) |
 | shops.html | 新建 | P1（#6） | 默认 | shops | container | [pages/shops.md](./docs/ui/pages/shops.md) |

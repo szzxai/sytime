@@ -16,7 +16,8 @@ const {
   migrate: migrateTitles,
   equippedTitle: equippedTitleOf,
   equippedTitleMap,
-  titlesByUserMap
+  titlesByUserMap,
+  ownedTitles
 } = require("./lib/titles/store");
 const { mountTitleRoutes } = require("./lib/titles/routes");
 const { evaluateAutoTitles } = require("./lib/titles/rules");
@@ -952,6 +953,28 @@ app.get("/api/admin/users", requirePermission("user_manage"), function (req, res
   res.json({ users: users });
 });
 
+app.get("/api/admin/users/:id", requirePermission("user_manage"), function (req, res) {
+  const id = parseInt(req.params.id, 10);
+  if (isNaN(id)) {
+    res.status(404).json({ error: "user not found" });
+    return;
+  }
+  const u = db
+    .prepare("SELECT id, display_id, username, nickname, role, status FROM users WHERE id = ?")
+    .get(id);
+  if (!u) {
+    res.status(404).json({ error: "user not found" });
+    return;
+  }
+  res.json({
+    user: Object.assign({}, u, {
+      permissions: userPermissionList(id),
+      titles: titlesByUserMap(db, [id]).get(id) || [],
+      title: equippedTitleMap(db, [id]).get(id) || null
+    })
+  });
+});
+
 app.get("/api/admin/permissions", requirePermission("user_manage"), function (req, res) {
   const list = Object.keys(PERMISSIONS).map(function (key) {
     return { key: key, label: PERMISSIONS[key] };
@@ -1243,6 +1266,44 @@ app.get("/api/user/profile", requireLogin, function (req, res) {
       title: equippedTitleOf(db, req.user.id)
     })
   });
+});
+
+// 公开的用户主页（#21）：他人资料只读；是否展示权限等级由该用户的 show_role 决定（前端 UI.roleTag 处理）
+app.get("/api/users/:id/profile", function (req, res) {
+  const id = parseInt(req.params.id, 10);
+  if (isNaN(id)) {
+    res.status(404).json({ error: "user not found" });
+    return;
+  }
+  const user = db
+    .prepare("SELECT id, display_id, username, nickname, avatar_url, signature, role, show_role, status FROM users WHERE id = ?")
+    .get(id);
+  if (!user) {
+    res.status(404).json({ error: "user not found" });
+    return;
+  }
+  res.json({ user: Object.assign({}, user, { title: equippedTitleOf(db, id) }) });
+});
+
+// 公开（#21）：某用户已拥有的头衔（只读，不含自动头衔进度）
+app.get("/api/users/:id/titles", function (req, res) {
+  const id = parseInt(req.params.id, 10);
+  const exists = !isNaN(id) && db.prepare("SELECT id FROM users WHERE id = ?").get(id);
+  if (!exists) {
+    res.status(404).json({ error: "user not found" });
+    return;
+  }
+  const titles = ownedTitles(db, id).map(function (t) {
+    return {
+      id: t.id,
+      name: t.name,
+      hue: t.hue,
+      description: t.description,
+      source: t.source,
+      equipped: t.equipped
+    };
+  });
+  res.json({ titles: titles });
 });
 
 app.put("/api/user/settings", requireLogin, function (req, res) {

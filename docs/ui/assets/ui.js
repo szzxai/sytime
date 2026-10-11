@@ -946,7 +946,7 @@
 
   function footerHtml() {
     return '<footer class="site-footer"><div class="container container--wide site-footer__inner"><div class="site-footer__brand">' + brandMark() + '<span>' + UI.config.brand + '</span></div>' +
-      '<nav class="site-footer__links" aria-label="页脚"><a href="index.html#about">关于我们</a><a href="announcements.html">更新公告</a><a href="profile.html#tickets">提交工单</a></nav>' +
+      '<nav class="site-footer__links" aria-label="页脚"><a href="index.html#about">关于我们</a><a href="announcements.html">更新公告</a><a href="settings.html#tickets">提交工单</a></nav>' +
       '<p class="site-footer__note">© ' + new Date().getFullYear() + ' ' + UI.config.brand + ' · 以 AGPL-3.0 协议开源</p></div></footer>';
   }
 

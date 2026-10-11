@@ -1268,6 +1268,11 @@ button.list__item { width: 100%; text-align: left; }
 .avatar--md { --avatar-size: 2.5rem; }
 .avatar--lg { --avatar-size: 4rem; }
 .avatar--xl { --avatar-size: 6rem; }
+/* 可点击头像（#21）：论坛 / 评价等处点击进入该用户主页或本人个人中心 */
+.user-avatar { display: inline-flex; flex: none; }
+a.user-avatar--link { border-radius: 50%; text-decoration: none; -webkit-tap-highlight-color: transparent; }
+a.user-avatar--link:hover .avatar { box-shadow: 0 0 0 3px var(--primary-100); }
+a.user-avatar--link:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
 
 /* 统一用户信息组件（论坛、评价、消息、后台等所有展示用户的地方都用它） */
 .user-line { display: flex; align-items: center; gap: 0.625rem; min-width: 0; color: inherit; }
@@ -2485,13 +2490,69 @@ dialog .toast-host { position: absolute; top: var(--sp-3); }
 .queue-item__actions { display: flex; flex-wrap: wrap; gap: var(--sp-2); flex: none; }
 .queue-item__reply { margin-top: var(--sp-2); padding: var(--sp-3); border-radius: var(--r-2); background: var(--surface-2); border: 1px solid var(--line); font-size: var(--fs-sm); line-height: 1.7; }
 
-/* 个人资料头部 */
-.profile-head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-5); }
-.profile-head__main { flex: 1 1 14rem; min-width: 0; display: grid; gap: var(--sp-1); }
-.profile-head__name { font-size: var(--fs-xl); }
+/* 头像编辑（个人中心 / 设置） */
 .avatar-edit { position: relative; display: inline-block; }
 .avatar-edit__btn { position: absolute; right: -0.125rem; bottom: -0.125rem; width: 2rem; height: 2rem; border-radius: 50%; background: var(--surface); border: 1px solid var(--line-strong); box-shadow: var(--sh-1); display: grid; place-items: center; color: var(--ink-2); }
 .avatar-edit__btn:hover { background: var(--sunken); color: var(--ink); }
+
+/* #20 个人中心（B站样式）：头部信息 + 吸顶横向菜单栏 */
+.profile-hero {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-5);
+  padding: var(--sp-4) 0 var(--sp-5);
+}
+.profile-hero__avatar { flex: none; margin-left: var(--sp-5); }
+.profile-hero__info { flex: 1 1 auto; min-width: 0; display: grid; gap: var(--sp-2); }
+.profile-hero__row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2) var(--sp-3); }
+.profile-hero__username {
+  margin: 0;
+  font-size: var(--fs-2xl);
+  font-weight: var(--fw-bold);
+  line-height: 1.25;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+.profile-hero__edit {
+  min-width: 3rem;
+  max-width: 100%;
+  padding: 0.125rem 0.375rem;
+  border: 1px solid transparent;
+  border-radius: var(--r-1);
+  color: var(--ink-2);
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+  cursor: text;
+  transition: background var(--t-fast) var(--ease-out), border-color var(--t-fast) var(--ease-out);
+}
+.profile-hero__edit:hover { background: var(--sunken); }
+.profile-hero__edit:focus { outline: none; background: var(--surface); border-color: var(--primary); color: var(--ink); }
+.profile-hero__edit.is-empty::before { content: attr(data-placeholder); color: var(--ink-3); pointer-events: none; }
+.profile-hero__edit--sig { font-size: var(--fs-sm); }
+.profile-hero__nickname { color: var(--ink-2); line-height: 1.6; overflow-wrap: anywhere; }
+.profile-hero__signature { color: var(--ink-2); font-size: var(--fs-sm); line-height: 1.6; overflow-wrap: anywhere; }
+@media (min-width: 768px) {
+  .profile-hero { padding-block: var(--sp-6); }
+  .profile-hero__avatar { margin-left: var(--sp-8); }
+}
+.profile-tabs {
+  position: sticky;
+  top: var(--header-h);
+  z-index: var(--z-sticky);
+  display: flex;
+  gap: var(--sp-1);
+  margin: 0 calc(var(--page-pad) * -1) var(--sp-5);
+  padding: var(--sp-2) var(--page-pad);
+  overflow-x: auto;
+  scrollbar-width: none;
+  background: var(--header-bg);
+  -webkit-backdrop-filter: saturate(1.4) blur(14px);
+  backdrop-filter: saturate(1.4) blur(14px);
+  border-bottom: 1px solid var(--line);
+}
+.profile-tabs::-webkit-scrollbar { display: none; }
+.profile-tabs .side-nav__item { white-space: nowrap; }
+
 
 /* 地图页：全屏应用壳 + Leaflet 皮肤 */
 body[data-page="map"] { height: 100vh; height: 100dvh; overflow: hidden; }
