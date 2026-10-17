@@ -243,3 +243,5 @@ UI.guardUnsaved(document.getElementById("shopForm"));
 - [ ] 添加页全字段校验（含地址正则、数字范围、自定义类型）；409 处理。
 - [ ] 未保存离开提醒；提交 busy；成功跳详情。
 - [ ] 360/1280 正常；axe=0；控制台零报错。
+
+> 2026-10-17 共享加载状态修正：本页使用的 `UI.html.skeleton` 已补齐 `role="status"`，保留加载名称与 `aria-busy`，避免加载过程中的无障碍属性违规；外观与业务流程不变。

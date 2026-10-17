@@ -89,7 +89,6 @@
     <div class="panel__head"><h2 class="panel__title">网站设置</h2></div>
     <div class="panel__body form">
       <div class="field"><label class="field__label" for="defaultPage">默认进入界面</label><select class="select" id="defaultPage" name="defaultPage"><option value="index.html">首页</option><option value="map.html">校园地图</option><option value="forum.html">论坛</option><option value="recipe.html">菜品与食谱</option></select><span class="field__hint">访问网站首页时会自动跳转到所选界面</span></div>
-      <div class="field"><label class="field__label" for="defaultFloor">校园地图默认楼层</label><select class="select" id="defaultFloor" name="defaultFloor"><option value="1">1F</option>…<option value="4">4F</option></select></div>
       <div class="field"><label class="field__label" for="recipeDefaultView">菜品与食谱默认页</label><select class="select" id="recipeDefaultView" name="recipeDefaultView"><option value="all">全部菜品</option><option value="reviews">菜品评价</option><option value="weekly">每周食谱</option></select></div>
       <div id="shopPrefFields" hidden><!-- features.shops：必吃榜默认排序 / 默认餐食类型 / 店铺详情页样式 --></div>
       <div class="field">
@@ -103,7 +102,9 @@
 </form>
 ```
 
-设置保存：请求体 `{default_page, default_floor, recipe_default_view, shop_default_sort, shop_default_type, shop_layout, show_role}`；后端按传入字段部分更新。成功后同步 localStorage 键（defaultPage/defaultFloor/recipeDefaultView/shopDefaultSort/shopDefaultType/shopLayout/showRole）+ toast「网站设置已保存到账号」。必吃榜偏好与样式面板（`#shopPrefFields`）在 `features.shops` 时显示；`shopDefaultType` 选项由 `/api/shops/meta` 动态填充。
+设置保存：请求体 `{default_page, recipe_default_view, shop_default_sort, shop_default_type, shop_layout, show_role}`；后端按传入字段部分更新。成功后同步 localStorage 键（defaultPage/recipeDefaultView/shopDefaultSort/shopDefaultType/shopLayout/showRole）+ toast「网站设置已保存到账号」。必吃榜偏好与样式面板（`#shopPrefFields`）在 `features.shops` 时显示；`shopDefaultType` 选项由 `/api/shops/meta` 动态填充。
+
+2026-10-17 起移除「校园地图默认楼层」，不再读取、提交或写入本地楼层偏好。后端 `default_floor` 字段保留兼容，当前校园地图不使用此字段。
 
 「显示权限等级」开关（`#showRole`）：控制论坛/评价等处是否显示自己的角色标签；**普通用户（`user`）强制勾选并禁用**，其余角色可自由开关。默认展示。
 
@@ -156,7 +157,7 @@
 ## 接口与存储（保留清单）
 
 - 接口：`GET /api/user/profile`；`PUT /api/user/settings`；`PUT /api/user/password`；`POST /api/tickets`、`GET /api/tickets/mine`；`GET /api/user/preferences`、`PUT /api/user/preferences`（#9）；`GET /api/shops/meta`（必吃榜类型，features.shops）。
-- localStorage：token、user；defaultPage、defaultFloor、recipeDefaultView、shopDefaultSort、shopDefaultType、shopLayout、showRole（保存成功后同步写入）。
+- localStorage：token、user；defaultPage、recipeDefaultView、shopDefaultSort、shopDefaultType、shopLayout、showRole（保存成功后同步写入）。
 
 ## 响应式
 
@@ -186,3 +187,7 @@
 - [ ] 消息偏好三开关保存与回滚。
 - [ ] 退出登录回首页。
 - [ ] 360/900 正常；无 alert/confirm；axe=0；零报错。
+
+> 2026-10-17 共享加载状态修正：本页使用的 `UI.html.skeleton` 已补齐 `role="status"`，保留加载名称与 `aria-busy`，避免加载过程中的无障碍属性违规；外观与业务流程不变。
+
+> 2026-10-17 地图设置精简验证：`npm run test:ui` 370 项通过，确认默认楼层字段已移除，默认进入界面及菜品与食谱默认页仍可保存。

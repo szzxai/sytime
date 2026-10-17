@@ -507,7 +507,7 @@ JS：`UI.userLine(user, {size, meta, href, large, showRole})`；meta 传 HTML �
 
 ### Skeleton 骨架屏
 
-`UI.html.skeleton(kind, n)` 生成；kind：post（头像+三行）/card（媒体+两行）/row（56px 方+两行）/text。样式 `skeleton` + 变体（`--text/--title/--avatar/--block/--media/--short`），微光动画；容器 `aria-busy="true" aria-label="加载中"`。**禁止**整页骨架；列表首屏才用。
+`UI.html.skeleton(kind, n)` 生成；kind：post（头像+三行）/card（媒体+两行）/row（56px 方+两行）/text。样式 `skeleton` + 变体（`--text/--title/--avatar/--block/--media/--short`），微光动画；容器 `role="status" aria-busy="true" aria-label="加载中"`（2026-10-17 补齐状态角色，避免给普通 div 命名造成无障碍违规）。**禁止**整页骨架；列表首屏才用。
 
 ### Spinner 与进度条
 
@@ -804,7 +804,7 @@ JS：`UI.userLine(user, {size, meta, href, large, showRole})`；meta 传 HTML �
 <article class="card card--interactive tile" data-hue="teal">
   <span class="tile__icon">map 图标 icon--lg</span>
   <h2 class="tile__title"><a class="card__link" href="map.html">校园地图</a><svg class="icon">arrow-right</svg></h2>
-  <p class="tile__desc">楼层切换，点击建筑查看介绍</p>
+  <p class="tile__desc">探索校园，点击地点查看介绍</p>
 </article>
 ```
 图标 44 圆角 10 tint 底；hover 箭头右移 3px 变黛青。
@@ -849,4 +849,13 @@ JS：`UI.userLine(user, {size, meta, href, large, showRole})`；meta 传 HTML �
 
 ### Map Controls 地图控件
 
-详见 pages/map.md。组件：`.floor-switch`（竖排楼层钮，4F→1F 自上而下，`aria-pressed` 选中黛青实底）、`.map-help-btn`（左下圆形问号）与 `.map-help` 面板（含 `<kbd>` 键帽）、`.map-status`（居中加载/错误卡）、`.map-popup__text` + `.map-popup__edit`（弹窗内编辑按钮，btn--sm）。Leaflet 皮肤已在 site.css（zoom 控件、popup 全部换肤）。
+校园地图的当前规范见 [pages/map.md](./pages/map.md)。`public/css/map.css` 为页面专用样式，不影响必吃榜地图。
+
+- `.campus-search` + `.campus-filters`：关键词与分类联合过滤，按钮 `aria-pressed`，数量 `role=status`；无结果可重置。
+- `.campus-place-row`：SVG 缩略图、名称、分类或别名；选中背景和左侧细线同时提示状态。
+- 单一地图无需视图切换器；旧楼层图及相关前端控件已移除。
+- `.campus-controls`：放大、缩小、回到全景；地图画布形成独立层叠上下文，不能覆盖这些按钮或详情。
+- `.campus-detail`：插画、分类、名称、说明、位置，带关闭按钮；打开后焦点进入标题，关闭后返回来源。
+- `.campus-places-panel`：桌面独立滚动，手机可折叠；`placesToggle` 的 `aria-expanded` 与显示状态一致。
+- `.campus-map-place`：SVG 地点组可点击与键盘激活；非搜索结果淡化、退出焦点顺序。标签随缩放调整以保证全景可读。地点可指定独立 `height`，篮球场和操场使用大面积场地插画。
+- 普通滚轮/双指滚动双轴平移，捏合或 Ctrl / ⌘ + 滚轮围绕指针连续缩放；Safari 手势期间抑制重复滚轮事件。自由平移配合全景复位，避免固定边界导致宽屏回弹。Leaflet 公共皮肤仍在 `site.css`。

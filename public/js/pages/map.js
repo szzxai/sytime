@@ -1,474 +1,296 @@
 (function () {
-  "use strict";
-  if (!window.L) {
-    UI.page.error(
-      document.getElementById("mapStatus"),
-      { status: 500 },
-      function () {
-        location.reload();
-      },
-      "地图组件加载失败",
-    );
-    return;
+  'use strict';
+  var places = window.CampusPlaces;
+  var categories = { study: '教学空间', heritage: '人文地标', nature: '校园园林', life: '校园生活', sport: '运动场地', gate: '校园出入口' };
+  var $ = function (id) { return document.getElementById(id); };
+  var ns = 'http://www.w3.org/2000/svg';
+  var selected = null, category = 'all';
+  var scene = null, map = null, fitted = true, selectSource = null;
+  var bounds = [[-1540, 0], [0, 1000]];
+  var reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+  function svgNode(tag, attrs) {
+    var node = document.createElementNS(ns, tag);
+    Object.keys(attrs || {}).forEach(function (key) { node.setAttribute(key, attrs[key]); });
+    return node;
   }
-  var popupOptions = {
-    minWidth: 140,
-    maxWidth: 260,
-    autoPanPaddingTopLeft: [16, 72],
-    autoPanPaddingBottomRight: [72, 16],
-  };
-
-  var map = L.map("map", {
-    crs: L.CRS.Simple,
-    minZoom: -2,
-    zoomSnap: 0.25,
-    zoomDelta: 0.5,
-    wheelPxPerZoomLevel: 90,
-    maxZoom: 6,
-    zoomControl: false,
-    attributionControl: false,
-    keyboard: false,
-    scrollWheelZoom: true,
-    dragging: true,
-    closePopupOnClick: true,
-  });
-
-  L.control
-    .zoom({
-      position: "bottomright",
-      zoomInText: UI.icon("plus"),
-      zoomOutText: UI.icon("minus"),
-      zoomInTitle: "放大地图",
-      zoomOutTitle: "缩小地图",
-    })
-    .addTo(map);
-
-  map.createPane("labelsPane");
-  map.getPane("labelsPane").style.zIndex = 650;
-  map.getPane("labelsPane").style.pointerEvents = "none";
-
-  map.on("popupopen", function (e) {
-    var el = e.popup.getElement();
-    if (!el) {
-      return;
-    }
-    L.DomEvent.disableClickPropagation(el);
-    L.DomEvent.disableScrollPropagation(el);
-    L.DomEvent.on(el, "click", function (ev) {
-      if (ev.target && ev.target.tagName === "A") {
-        ev.preventDefault();
-      }
-      L.DomEvent.stopPropagation(ev);
-    });
-  });
-
-  var AXIS_Y = 420;
-  var RECT_W = 1200;
-  var RECT_H = 700;
-
-  var style = null;
-  var baseZoom = 1;
-  var scalablePaths = [];
-  var currentFloor = 1;
-  var currentRole = "guest";
-  var canEditPopups = false;
-  var popupShapes = [];
-  var lastEditedName = null;
-  var zoomHandlerBound = false;
-
-  var baseLayer = L.layerGroup().addTo(map);
-  var floorGroups = {
-    1: L.layerGroup(),
-    2: L.layerGroup(),
-    3: L.layerGroup(),
-    4: L.layerGroup(),
-  };
-
-  function point(x, y) {
-    return [y, x];
-  }
-
-  function mirrorY(y) {
-    return 2 * AXIS_Y - y;
-  }
-
-  function createAreaLabel(text, x1, y1, x2, y2, color, scale) {
-    var w = Math.abs(x2 - x1);
-    var h = Math.abs(y2 - y1);
-    var ns = "http://www.w3.org/2000/svg";
-    var svg = document.createElementNS(ns, "svg");
-    svg.setAttribute("xmlns", ns);
-    svg.setAttribute("viewBox", "0 0 " + w + " " + h);
-    svg.setAttribute("font-weight", "400");
-    var fillColor = color || style.labelColor;
-    var textScale = scale || 0.8;
-
-    var chars = text.split("");
-    var vertical = h >= w;
-    var fontSize;
-
-    if (vertical) {
-      fontSize = Math.min(w * textScale, (h / chars.length) * textScale);
-      chars.forEach(function (ch, index) {
-        var t = document.createElementNS(ns, "text");
-        t.setAttribute("x", w / 2);
-        t.setAttribute("y", (index + 0.5) * (h / chars.length));
-        t.setAttribute("font-size", fontSize);
-        t.setAttribute("fill", fillColor);
-        t.setAttribute("text-anchor", "middle");
-        t.setAttribute("dominant-baseline", "central");
-        t.setAttribute(
-          "font-family",
-          "Microsoft YaHei, PingFang SC, sans-serif",
-        );
-        t.textContent = ch;
-        svg.appendChild(t);
-      });
-    } else {
-      fontSize = Math.min((w / chars.length) * textScale, h * textScale);
-      var t = document.createElementNS(ns, "text");
-      t.setAttribute("x", w / 2);
-      t.setAttribute("y", h / 2);
-      t.setAttribute("font-size", fontSize);
-      t.setAttribute("fill", fillColor);
-      t.setAttribute("text-anchor", "middle");
-      t.setAttribute("dominant-baseline", "central");
-      t.setAttribute("font-family", "Microsoft YaHei, PingFang SC, sans-serif");
-      t.textContent = text;
-      svg.appendChild(t);
-    }
-
+  function thumbnail(place) {
+    var svg = svgNode('svg', { viewBox: '0 0 160 120', 'aria-hidden': 'true' });
+    svg.appendChild(svgNode('use', { href: '#art-' + place.icon }));
     return svg;
   }
-
-  function targetGroups(layers) {
-    var out = [];
-    layers.forEach(function (l) {
-      if (l === "base") {
-        out.push(baseLayer);
-      } else if (floorGroups[l]) {
-        out.push(floorGroups[l]);
-      }
-    });
-    return out;
+  function toggleDirectory(open) {
+    $('placesPanel').classList.toggle('is-open', open);
+    $('placesToggle').setAttribute('aria-expanded', String(open));
   }
-
-  function styleOptions(feat) {
-    var opts = {
-      color: style.outline,
-      weight: feat.weight || 1,
-      opacity: 1,
-      fill: !!feat.fill && feat.cat !== "none",
-      fillColor: style.palette[feat.cat] || style.outline,
-      fillOpacity: style.fillOpacity,
-      stroke: feat.stroke !== false,
-    };
-    if (feat.type === "polyline") {
-      opts.fill = false;
-      opts.stroke = true;
-    }
-    if (feat.dash) {
-      opts.dashArray = feat.dash;
-    }
-    return opts;
-  }
-
-  function buildPopupContent(feat) {
-    var wrap = document.createElement("div");
-    wrap.className = "map-popup";
-    var span = document.createElement("div");
-    span.className = "map-popup__text";
-    span.textContent =
-      feat.popup === undefined || feat.popup === null ? "" : String(feat.popup);
-    wrap.appendChild(span);
-    if (canEditPopups) {
-      var btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = "btn btn--sm map-popup__edit";
-      btn.textContent = "编辑";
-      L.DomEvent.on(btn, "click", function (ev) {
-        L.DomEvent.stop(ev);
-        openEditPrompt(feat.name, span);
-      });
-      wrap.appendChild(btn);
-    }
-    return wrap;
-  }
-
-  async function openEditPrompt(name, spanEl) {
-    var input = await UI.prompt({
-      title: "修改弹窗内容",
-      label: name || "建筑介绍",
-      value: spanEl.textContent,
-      multiline: true,
-      confirmText: "保存",
-    });
-    if (input === null) return;
-    var r = await UI.api("/api/admin/map-popup", {
-      method: "PUT",
-      body: { name: name, popup: input },
-    });
-    if (!r.ok) {
-      UI.toast.error("修改失败：" + UI.errorText(r));
-      return;
-    }
-    spanEl.textContent = input;
-    lastEditedName = name;
-    UI.toast.success("已保存");
-    await refreshMapData();
-  }
-
-  function renderFeature(feat) {
-    var groups = targetGroups(feat.layers);
-
-    if (feat.type === "label") {
-      groups.forEach(function (g) {
-        var clickable = !!feat.popup;
-        var overlay = L.svgOverlay(
-          createAreaLabel(
-            feat.text,
-            feat.x1,
-            feat.y1,
-            feat.x2,
-            feat.y2,
-            style.labelColor,
-            feat.scale,
-          ),
-          L.latLngBounds(point(feat.x1, feat.y1), point(feat.x2, feat.y2)),
-          { pane: "labelsPane", interactive: clickable },
-        ).addTo(g);
-        var overlayEl = overlay.getElement();
-        if (overlayEl) {
-          overlayEl.style.pointerEvents = clickable ? "auto" : "none";
-          if (clickable) {
-            overlayEl.style.cursor = "pointer";
-          }
-        }
-        if (clickable) {
-          overlay.bindPopup(buildPopupContent(feat), popupOptions);
-        }
-      });
-      return;
-    }
-
-    var pts = feat.points.map(function (p) {
-      return point(p[0], p[1]);
-    });
-    var opts = styleOptions(feat);
-
-    groups.forEach(function (g) {
-      var shape =
-        feat.type === "polygon" ? L.polygon(pts, opts) : L.polyline(pts, opts);
-      if (feat.popup) {
-        shape.bindPopup(buildPopupContent(feat), popupOptions);
-        shape._popupName = feat.name;
-        popupShapes.push(shape);
-      }
-      shape.addTo(g);
-      scalablePaths.push(shape);
+  function matchingPlaces() {
+    var query = $('placeSearch').value.trim().toLocaleLowerCase();
+    return places.filter(function (p) {
+      return (category === 'all' || p.category === category) &&
+        (!query || (p.name + (p.alias || '') + p.area + categories[p.category]).toLocaleLowerCase().includes(query));
     });
   }
-
-  function collectPaths(obj) {
-    if (obj instanceof L.Path) {
-      if (obj.options.baseWeight === undefined) {
-        obj.options.baseWeight = obj.options.weight;
-      }
-    } else if (obj && typeof obj.eachLayer === "function") {
-      obj.eachLayer(function (child) {
-        collectPaths(child);
+  function renderList() {
+    var matches = matchingPlaces();
+    $('placesCount').textContent = matches.length + ' 个地点';
+    $('placesHeading').textContent = $('placeSearch').value.trim() ? '搜索结果' : category === 'all' ? '探索校园' : categories[category];
+    $('clearSearch').hidden = !$('placeSearch').value;
+    $('placesEmpty').hidden = matches.length !== 0;
+    $('placeList').replaceChildren();
+    matches.forEach(function (p) {
+      var button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'campus-place-row';
+      button.dataset.place = p.id;
+      button.setAttribute('aria-pressed', String(selected === p.id));
+      var art = document.createElement('span');
+      art.className = 'campus-place-thumb';
+      art.appendChild(thumbnail(p));
+      var text = document.createElement('span');
+      text.className = 'campus-place-text';
+      var title = document.createElement('strong');
+      title.textContent = p.name;
+      var subtitle = document.createElement('span');
+      subtitle.textContent = p.alias || categories[p.category];
+      text.append(title, subtitle);
+      var arrow = document.createElement('span');
+      arrow.className = 'campus-row-arrow';
+      arrow.textContent = '↗';
+      arrow.setAttribute('aria-hidden', 'true');
+      button.append(art, text, arrow);
+      button.addEventListener('click', function () { selectPlace(p, button); });
+      $('placeList').appendChild(button);
+    });
+    if (scene) {
+      var ids = new Set(matches.map(function (p) { return p.id; }));
+      scene.querySelectorAll('[data-map-place]').forEach(function (node) {
+        var matched = ids.has(node.dataset.mapPlace);
+        node.classList.toggle('is-muted', !matched);
+        node.setAttribute('tabindex', matched ? '0' : '-1');
+        node.setAttribute('aria-hidden', String(!matched));
+        node.style.pointerEvents = matched ? '' : 'none';
       });
     }
+    if (selected && !matches.some(function (p) { return p.id === selected; })) closeDetail(false);
   }
-
-  function updateLineWeights() {
-    var factor = Math.pow(2, map.getZoom() - baseZoom);
-    factor = Math.min(1, Math.max(0.3, factor));
-    scalablePaths.forEach(function (path) {
-      var base =
-        path.options.baseWeight === undefined
-          ? path.options.weight
-          : path.options.baseWeight;
-      path.setStyle({ weight: Math.max(0.4, base * factor) });
+  function selectPlace(p, source) {
+    if (!map || !scene) return;
+    selected = p.id;
+    selectSource = source;
+    $('detailArt').replaceChildren(thumbnail(p));
+    $('detailCategory').textContent = categories[p.category] + (p.alias ? ' / ' + p.alias : '');
+    $('detailName').textContent = p.name;
+    $('detailDescription').textContent = p.description;
+    $('detailLocation').textContent = p.area;
+    $('placeDetail').hidden = false;
+    document.querySelectorAll('.campus-place-row').forEach(function (button) {
+      button.setAttribute('aria-pressed', String(button.dataset.place === selected));
     });
+    scene.querySelectorAll('[data-map-place]').forEach(function (node) {
+      var active = node.dataset.mapPlace === selected;
+      node.classList.toggle('is-selected', active);
+      node.setAttribute('aria-pressed', String(active));
+    });
+    toggleDirectory(false);
+    fitted = false;
+    // Raise the selected point above the detail card, especially on narrow screens.
+    var zoom = Math.max(map.getZoom(), -0.35);
+    var point = map.project([-p.y, p.x], zoom);
+    point.y += Math.min(115, map.getSize().y * 0.22);
+    map.setView(map.unproject(point, zoom), zoom, { animate: !reducedMotion.matches });
+    $('detailName').setAttribute('tabindex', '-1');
+    $('detailName').focus({ preventScroll: true });
   }
+  function closeDetail(restoreFocus) {
+    selected = null;
+    $('placeDetail').hidden = true;
+    if (scene) scene.querySelectorAll('.is-selected').forEach(function (node) { node.classList.remove('is-selected'); node.setAttribute('aria-pressed', 'false'); });
+    document.querySelectorAll('.campus-place-row[aria-pressed="true"]').forEach(function (node) { node.setAttribute('aria-pressed', 'false'); });
+    if (restoreFocus && selectSource && selectSource.isConnected && selectSource.getClientRects().length) selectSource.focus({ preventScroll: true });
+    else if (restoreFocus) $('guideMap').focus({ preventScroll: true });
+  }
+  function fitCampus() {
+    if (!map) return;
+    fitted = true;
+    map.fitBounds(bounds, { paddingTopLeft: [25, 30], paddingBottomRight: [25, 48], animate: false });
+  }
+  function bindMapGestures() {
+    var container = $('guideMap');
+    var frame = null, panX = 0, panY = 0, targetZoom = null, anchor = null;
+    var gesture = null, lastPointer = null;
 
-  function setFloor(n) {
-    currentFloor = n;
-    [1, 2, 3, 4].forEach(function (f) {
-      var g = floorGroups[f];
-      if (f === n) {
-        if (!map.hasLayer(g)) {
-          g.addTo(map);
-        }
-      } else if (map.hasLayer(g)) {
-        map.removeLayer(g);
+    function clampZoom(zoom) {
+      return Math.min(map.getMaxZoom(), Math.max(map.getMinZoom(), zoom));
+    }
+    function flush() {
+      if (frame !== null) cancelAnimationFrame(frame);
+      frame = null;
+      if (panX || panY) {
+        map.panBy([panX, panY], { animate: false });
+        panX = panY = 0;
       }
-    });
-    for (var i = 1; i <= 4; i++) {
-      document
-        .getElementById("floor" + i + "Btn")
-        .setAttribute("aria-pressed", String(i === n));
-    }
-  }
-
-  function renderMap(data) {
-    baseLayer.clearLayers();
-    [1, 2, 3, 4].forEach(function (f) {
-      floorGroups[f].clearLayers();
-    });
-    scalablePaths = [];
-    popupShapes = [];
-
-    var order = { polygon: 0, polyline: 1, label: 2 };
-    var feats = data.features.slice().sort(function (a, b) {
-      return (
-        (order[a.type] === undefined ? 0 : order[a.type]) -
-        (order[b.type] === undefined ? 0 : order[b.type])
-      );
-    });
-
-    feats.forEach(renderFeature);
-
-    collectPaths(baseLayer);
-    [1, 2, 3, 4].forEach(function (f) {
-      collectPaths(floorGroups[f]);
-    });
-    updateLineWeights();
-  }
-
-  function build(data) {
-    style = data.style;
-    AXIS_Y = data.meta.axisY;
-    RECT_W = data.meta.rectW;
-    RECT_H = data.meta.rectH;
-    map.setMinZoom(data.meta.minZoom);
-    map.setMaxZoom(data.meta.maxZoom);
-
-    renderMap(data);
-
-    map.invalidateSize();
-    map.fitBounds(contentBounds(data), { padding: [16, 16] });
-    var savedFloor =
-      preferredFloor !== null
-        ? preferredFloor
-        : parseInt(localStorage.getItem("defaultFloor"), 10);
-    currentFloor = savedFloor >= 1 && savedFloor <= 4 ? savedFloor : 1;
-    setFloor(currentFloor);
-    baseZoom = map.getZoom();
-    updateLineWeights();
-    map.fire("viewreset");
-
-    if (!zoomHandlerBound) {
-      map.on("zoomend", updateLineWeights);
-      zoomHandlerBound = true;
-    }
-  }
-
-  async function refreshMapData() {
-    var r = await UI.api("/api/map-data", { auth: false });
-    if (!r.ok) {
-      UI.toast.error(UI.errorText(r));
-      return;
-    }
-    renderMap(r.data);
-    setFloor(currentFloor);
-    if (lastEditedName) {
-      var shape = popupShapes.find(function (item) {
-        return item._popupName === lastEditedName && map.hasLayer(item);
-      });
-      if (shape) shape.openPopup();
-    }
-  }
-  var preferredFloor = null;
-  async function load() {
-    var P = UI.page,
-      status = P.el("mapStatus"),
-      wrap = P.el("mapStatusWrap");
-    wrap.hidden = false;
-    status.innerHTML =
-      '<span class="spinner spinner--lg"></span><span>地图加载中…</span>';
-    var fallback = Number(localStorage.getItem("defaultFloor")) || 1;
-    preferredFloor = fallback;
-    if (UI.session.token()) {
-      var responses = await Promise.all([
-        UI.api("/api/user/profile", { on401: false }),
-        UI.api("/api/me", { on401: false }),
-      ]);
-      if (responses[0].ok)
-        preferredFloor =
-          Number(responses[0].data.user.default_floor) || fallback;
-      var user = responses[1].ok ? responses[1].data.user : null;
-      canEditPopups = !!user && UI.session.can("map_popup_edit", "admin", user);
-    }
-    var r = await UI.api("/api/map-data", { auth: false });
-    if (!r.ok) {
-      P.error(status, r, load, "地图加载失败");
-      return;
-    }
-    try {
-      build(r.data);
-      wrap.hidden = true;
-    } catch (err) {
-      P.error(status, { status: 500 }, load, "地图数据无法显示");
-    }
-  }
-  function contentBounds(data) {
-    var points = [];
-    data.features.forEach(function (feat) {
-      if (feat.name === "地图边界") return;
-      if (feat.points)
-        feat.points.forEach(function (p) {
-          points.push(point(p[0], p[1]));
-        });
-      if (feat.type === "label") {
-        points.push(point(feat.x1, feat.y1), point(feat.x2, feat.y2));
+      if (targetZoom !== null) {
+        map.setZoomAround(anchor, targetZoom, { animate: false });
+        targetZoom = null;
       }
-    });
-    return points.length
-      ? L.latLngBounds(points)
-      : [
-          [0, 0],
-          [RECT_H, RECT_W],
-        ];
-  }
-  document.getElementById("helpBtn").addEventListener("click", function () {
-    var panel = document.getElementById("helpPanel");
-    panel.hidden = !panel.hidden;
-    this.setAttribute("aria-expanded", String(!panel.hidden));
-  });
-  window.setFloor = setFloor;
-  new ResizeObserver(function () {
-    map.invalidateSize();
-  }).observe(document.getElementById("map"));
-  load();
-
-  document.addEventListener("keydown", function (e) {
-    if (
-      e.target.closest(
-        "input,textarea,select,button,a,[contenteditable],dialog",
-      ) ||
-      document.querySelector("dialog[open]")
-    )
-      return;
-    var k = e.key.toLowerCase();
-    var step = 90;
-    var moved = true;
-
-    if (k === "w" || e.key === "ArrowUp") {
-      map.panBy([0, -step], { animate: false });
-    } else if (k === "s" || e.key === "ArrowDown") {
-      map.panBy([0, step], { animate: false });
-    } else if (k === "a" || e.key === "ArrowLeft") {
-      map.panBy([-step, 0], { animate: false });
-    } else if (k === "d" || e.key === "ArrowRight") {
-      map.panBy([step, 0], { animate: false });
-    } else {
-      moved = false;
     }
-
-    if (moved) {
+    function schedule() {
+      if (frame === null) frame = requestAnimationFrame(flush);
+    }
+    function pointer(e) {
+      if (Number.isFinite(e.clientX) && Number.isFinite(e.clientY) && (e.clientX || e.clientY)) {
+        return map.mouseEventToContainerPoint(e);
+      }
+      return lastPointer || map.getSize().divideBy(2);
+    }
+    container.addEventListener('pointermove', function (e) { lastPointer = pointer(e); });
+    container.addEventListener('wheel', function (e) {
       e.preventDefault();
+      // macOS trackpad pinch arrives as Ctrl+wheel in Chromium/Firefox.
+      // Safari's GestureEvents take precedence if both event streams arrive.
+      if (gesture) return;
+      fitted = false;
+      map.stop();
+      var unit = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? container.clientHeight : 1;
+      var dx = e.deltaX * unit, dy = e.deltaY * unit;
+      if (e.ctrlKey || e.metaKey) {
+        if (panX || panY) flush();
+        anchor = pointer(e);
+        targetZoom = clampZoom((targetZoom === null ? map.getZoom() : targetZoom) - dy / 240);
+      } else {
+        if (targetZoom !== null) flush();
+        panX += e.shiftKey && !dx ? dy : dx;
+        panY += e.shiftKey && !dx ? 0 : dy;
+      }
+      schedule();
+    }, { passive: false });
+    container.addEventListener('gesturestart', function (e) {
+      e.preventDefault();
+      flush();
+      fitted = false;
+      map.stop();
+      gesture = { zoom: map.getZoom(), scale: e.scale || 1, anchor: pointer(e) };
+    }, { passive: false });
+    container.addEventListener('gesturechange', function (e) {
+      if (!gesture || !(e.scale > 0)) return;
+      e.preventDefault();
+      anchor = gesture.anchor;
+      targetZoom = clampZoom(gesture.zoom + Math.log2(e.scale / gesture.scale));
+      schedule();
+    }, { passive: false });
+    container.addEventListener('gestureend', function (e) {
+      if (!gesture) return;
+      e.preventDefault();
+      flush();
+      gesture = null;
+    }, { passive: false });
+    // Finish pending trackpad updates before a click, drag or keyboard command.
+    container.addEventListener('pointerdown', flush, true);
+    document.addEventListener('keydown', flush, true);
+    $('guideControls').addEventListener('click', flush, true);
+    $('placeList').addEventListener('click', flush, true);
+  }
+  function renderScene(svg) {
+    var layer = svg.querySelector('#atlas-places');
+    places.forEach(function (p) {
+      var group = svgNode('g', { transform: 'translate(' + p.x + ' ' + p.y + ')', class: 'campus-map-place', 'data-map-place': p.id, role: 'button', tabindex: '0', 'aria-label': p.name + '，' + categories[p.category], 'aria-pressed': 'false' });
+      var height = p.height || p.size * 0.75;
+      group.appendChild(svgNode('ellipse', { cx: 0, cy: -4, rx: p.size * 0.57, ry: height * 0.5, class: 'campus-map-halo' }));
+      group.appendChild(svgNode('rect', { x: -p.size / 2, y: -height / 2, width: p.size, height: height + 40, fill: 'transparent', rx: 10 }));
+      group.appendChild(svgNode('use', { href: '#art-' + p.icon, x: -p.size / 2, y: -height / 2, width: p.size, height: height, 'pointer-events': 'none', preserveAspectRatio: 'none' }));
+      var label = svgNode('text', { x: 0, y: p.height ? height / 2 + 18 : height * 0.4 + 14, class: 'campus-map-label', 'text-anchor': 'middle', 'aria-hidden': 'true' });
+      label.textContent = p.name;
+      group.appendChild(label);
+      group.addEventListener('click', function (e) {
+        L.DomEvent.stopPropagation(e);
+        if (!map.dragging.moved()) selectPlace(p, group);
+      });
+      group.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); selectPlace(p, group); }
+      });
+      // Bring offscreen keyboard targets into view without stealing focus.
+      group.addEventListener('focus', function () {
+        var point = map.latLngToContainerPoint([-p.y, p.x]);
+        var size = map.getSize();
+        if (point.x < 60 || point.y < 60 || point.x > size.x - 60 || point.y > size.y - 80) {
+          fitted = false;
+          map.panTo([-p.y, p.x], { animate: false });
+        }
+      });
+      layer.appendChild(group);
+    });
+    return svg;
+  }
+  async function loadGuide() {
+    $('guideStatus').hidden = false;
+    $('guideStatus').textContent = '正在展开校园…';
+    try {
+      if (!window.L) throw new Error('map component unavailable');
+      var response = await fetch('/img/map/campus.svg');
+      if (!response.ok) throw new Error('map artwork unavailable');
+      var doc = new DOMParser().parseFromString(await response.text(), 'image/svg+xml');
+      if (doc.querySelector('parsererror') || !doc.querySelector('#atlas-places')) throw new Error('invalid artwork');
+      scene = renderScene(document.importNode(doc.documentElement, true));
+      map = L.map('guideMap', { crs: L.CRS.Simple, minZoom: -3, maxZoom: 1.5, zoomSnap: 0, zoomDelta: 0.4, scrollWheelZoom: false, zoomControl: false, attributionControl: false, keyboard: false });
+      L.svgOverlay(scene, bounds, { interactive: true }).addTo(map);
+      bindMapGestures();
+      function sizeLabels() {
+        var fontSize = Math.min(34, Math.max(23, 10.5 / Math.pow(2, map.getZoom())));
+        scene.querySelectorAll('.campus-map-label').forEach(function (label) { label.style.fontSize = fontSize + 'px'; });
+      }
+      fitCampus();
+      sizeLabels();
+      map.on('zoomend', sizeLabels);
+      map.on('dragstart zoomstart', function () { fitted = false; });
+      // fitBounds fires zoomstart too; mark automatic resize fits after they finish.
+      new ResizeObserver(function () {
+        var shouldFit = fitted;
+        map.invalidateSize({ pan: false });
+        if (shouldFit) { fitCampus(); fitted = true; }
+      }).observe($('guideMap'));
+      renderList();
+      $('guideStatus').hidden = true;
+      document.body.dataset.guideReady = 'true';
+    } catch (err) {
+      $('guideStatus').textContent = '校园导览暂时无法加载';
+      var retry = document.createElement('button');
+      retry.type = 'button'; retry.textContent = '重新加载';
+      retry.addEventListener('click', loadGuide);
+      $('guideStatus').appendChild(retry);
     }
+  }
+  $('placeSearch').addEventListener('input', function () { renderList(); toggleDirectory(true); });
+  $('placeSearch').addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') { var first = matchingPlaces()[0]; if (first) selectPlace(first, $('placeSearch')); }
   });
+  $('clearSearch').addEventListener('click', function () { $('placeSearch').value = ''; renderList(); $('placeSearch').focus(); });
+  $('resetSearch').addEventListener('click', function () { category = 'all'; $('placeSearch').value = ''; updateCategories(); renderList(); });
+  function updateCategories() {
+    document.querySelectorAll('[data-category]').forEach(function (button) { button.setAttribute('aria-pressed', String(button.dataset.category === category)); });
+  }
+  document.querySelectorAll('[data-category]').forEach(function (button) {
+    button.addEventListener('click', function () { category = button.dataset.category; updateCategories(); renderList(); toggleDirectory(true); });
+  });
+  $('placesToggle').addEventListener('click', function () { toggleDirectory(this.getAttribute('aria-expanded') !== 'true'); });
+  $('closeDetail').addEventListener('click', function () { closeDetail(true); });
+  $('guideZoomIn').addEventListener('click', function () { if (map) map.zoomIn(); });
+  $('guideZoomOut').addEventListener('click', function () { if (map) map.zoomOut(); });
+  $('guideReset').addEventListener('click', function () { closeDetail(false); fitCampus(); fitted = true; });
+  $('guideMap').addEventListener('keydown', function (e) {
+    if (!map || e.target !== $('guideMap')) return;
+    var move = { ArrowUp: [0, -80], ArrowDown: [0, 80], ArrowLeft: [-80, 0], ArrowRight: [80, 0], w: [0, -80], s: [0, 80], a: [-80, 0], d: [80, 0] }[e.key];
+    if (move) { fitted = false; map.panBy(move, { animate: false }); }
+    else if (e.key === '+' || e.key === '=') map.zoomIn();
+    else if (e.key === '-') map.zoomOut();
+    else if (e.key === 'Home') { closeDetail(false); fitCampus(); fitted = true; }
+    else return;
+    e.preventDefault();
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Escape' || document.querySelector('dialog[open]')) return;
+    if (!$('placeDetail').hidden) { closeDetail(true); e.preventDefault(); }
+    if ($('placesToggle').getAttribute('aria-expanded') === 'true') { toggleDirectory(false); $('placesToggle').focus(); }
+  });
+  renderList();
+  loadGuide();
 })();

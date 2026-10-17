@@ -348,7 +348,7 @@
       }[kind || 'post'];
       var out = '';
       for (var i = 0; i < n; i++) out += one;
-      return '<div class="stack" aria-busy="true" aria-label="加载中">' + out + '</div>';
+      return '<div class="stack" role="status" aria-busy="true" aria-label="加载中">' + out + '</div>';
     },
     // tone: '' | 'error' | 'lock'；actions: [{label, href, id, primary}]
     empty: function (o) {

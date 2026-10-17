@@ -1,0 +1,32 @@
+/* North-up, illustrative coordinates (1000 × 1540), traced from the user's campus sketch.
+   Icons evoke building types; they are not surveyed footprints or exact elevations. */
+window.CampusPlaces = [
+  { id: 'weichang-gate', name: '伟长门', category: 'gate', icon: 'gate', x: 320, y: 75, size: 100, area: '校园西北侧', description: '位于伟长楼北侧，靠近西紫阳楼的校园出入口。' },
+  { id: 'north-gate', name: '北门', category: 'gate', icon: 'gate', x: 600, y: 50, size: 100, area: '校园北侧', description: '从校园北侧进入，东、西紫阳楼分列附近。' },
+  { id: 'west-ziyang', name: '西紫阳楼', category: 'study', icon: 'teaching', x: 440, y: 150, size: 164, area: '北部教学区 · 西侧', description: '位于西红楼北侧，与东紫阳楼东西相望。' },
+  { id: 'east-ziyang', name: '东紫阳楼', category: 'study', icon: 'teaching', x: 660, y: 130, size: 164, area: '北部教学区 · 东侧', description: '位于东红楼北侧，靠近北门与三元楼。' },
+  { id: 'weichang', name: '伟长楼', category: 'study', icon: 'tower', x: 230, y: 230, size: 140, area: '校园西北侧', description: '位于伟长门南侧、实验楼北侧，沿校园西侧分布。' },
+  { id: 'sanyuan', name: '三元楼', category: 'study', icon: 'tower', x: 835, y: 220, size: 142, area: '校园东北侧', description: '位于东紫阳楼和东红楼东侧的综合楼。' },
+  { id: 'west-red', name: '西红楼', category: 'study', icon: 'red', x: 440, y: 260, size: 170, area: '北部教学区 · 西侧', description: '位于西紫阳楼南侧，楼前是西红楼草坪。' },
+  { id: 'east-red', name: '东红楼', category: 'study', icon: 'red', x: 660, y: 245, size: 170, area: '北部教学区 · 东侧', description: '位于东紫阳楼南侧，楼前是东红楼草坪。' },
+  { id: 'west-lawn', name: '西红楼草坪', category: 'nature', icon: 'garden', x: 440, y: 350, size: 105, area: '西红楼南侧', description: '西红楼前的一片绿地，与东红楼草坪隔路相望。' },
+  { id: 'east-lawn', name: '东红楼草坪', category: 'nature', icon: 'garden', x: 660, y: 340, size: 105, area: '东红楼南侧', description: '东红楼前的绿地，位于智德之门北侧。' },
+  { id: 'zhide', name: '智德之门', category: 'heritage', icon: 'arch', x: 565, y: 420, size: 120, area: '红楼草坪与科学楼之间', description: '位于红楼草坪南侧，是北部教学区与校园中部之间的地标。' },
+  { id: 'laboratory', name: '实验楼', category: 'study', icon: 'lab', x: 230, y: 455, size: 165, area: '校园西侧 · 伟长楼以南', description: '位于伟长楼南侧、篮球场北侧，东边是春雨池。' },
+  { id: 'science', name: '科学楼', category: 'study', icon: 'science', x: 680, y: 490, size: 200, area: '校园中部偏东', description: '位于智德之门南侧、尊经阁北侧，靠近东门。' },
+  { id: 'east-gate', name: '东门', category: 'gate', icon: 'gate', x: 925, y: 445, size: 90, area: '校园东侧', description: '位于科学楼东侧、希文楼北侧的校园出入口。' },
+  { id: 'xiwen', name: '希文楼', category: 'study', icon: 'teaching', x: 865, y: 590, size: 132, area: '校园东侧 · 科学楼东南', description: '位于科学楼东南侧，临近校园东侧边界。' },
+  { id: 'chunyu', name: '春雨池', category: 'nature', icon: 'pond', x: 440, y: 555, size: 155, area: '道山北侧', description: '位于实验楼东侧、道山北侧。与道山、碧霞池构成校园中部的园林景致。' },
+  { id: 'daoshan', name: '道山', category: 'nature', icon: 'hill', x: 445, y: 700, size: 160, area: '春雨池与碧霞池之间', description: '春雨池在北，碧霞池在南，尊经阁位于东侧。沿着园林慢慢走，感受校园的静谧。' },
+  { id: 'zunjing', name: '尊经阁', alias: '校史馆', category: 'heritage', icon: 'pavilion', x: 700, y: 710, size: 195, area: '道山东侧 · 文庙北侧', description: '校史馆所在。位于道山东侧、苏州文庙北侧，是认识苏中校园文脉的一站。' },
+  { id: 'basketball', name: '篮球场', category: 'sport', icon: 'basketball', x: 229, y: 750, size: 210, height: 330, area: '校园西侧 · 实验楼以南', description: '位于实验楼南侧、操场北侧。东边依次是春雨池、道山与碧霞池。' },
+  { id: 'bixia', name: '碧霞池', category: 'nature', icon: 'pond', x: 445, y: 835, size: 155, area: '道山南侧 · 图书馆以北', description: '位于道山南侧、图书馆北侧，与春雨池南北呼应。' },
+  { id: 'library', name: '图书馆', category: 'study', icon: 'library', x: 490, y: 980, size: 185, area: '校园中南部 · 碧霞池以南', description: '位于碧霞池南侧、来秀坊北侧，西边是篮球场与操场。' },
+  { id: 'temple', name: '苏州文庙', category: 'heritage', icon: 'temple', x: 795, y: 955, size: 230, area: '校园东侧的文庙区域', description: '位于尊经阁南侧、图书馆东侧。图中单独勾勒文庙区域；实际开放范围与通行情况以现场为准。' },
+  { id: 'laixiu', name: '来秀坊', category: 'life', icon: 'hall', x: 490, y: 1130, size: 185, area: '图书馆与体育馆之间', description: '位于图书馆南侧、体育馆北侧，西边是操场。' },
+  { id: 'daomeng', name: '道梦空间', category: 'life', icon: 'studio', x: 790, y: 1170, size: 160, area: '文庙南侧', description: '位于文庙区域南侧、泮水居北侧。' },
+  { id: 'gym', name: '体育馆', category: 'sport', icon: 'gym', x: 510, y: 1280, size: 190, area: '校园南部 · 操场东侧', description: '位于来秀坊南侧、采芹园北侧，西侧与操场相邻。' },
+  { id: 'track', name: '操场', category: 'sport', icon: 'track', x: 225, y: 1210, size: 290, height: 370, area: '校园西南侧', description: '沿校园西南侧展开的田径运动场，东侧是来秀坊与体育馆。' },
+  { id: 'caiqin', name: '采芹园', category: 'life', icon: 'courtyard', x: 540, y: 1440, size: 190, area: '校园南侧 · 体育馆以南', description: '位于体育馆南侧，与东边的泮水居相邻。' },
+  { id: 'panshui', name: '泮水居', category: 'life', icon: 'residence', x: 820, y: 1420, size: 190, area: '校园东南侧', description: '位于道梦空间南侧、采芹园东侧。' }
+];

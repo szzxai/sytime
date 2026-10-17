@@ -348,16 +348,16 @@ try {
   );
   check("personal ticket form reaches the existing API", true);
   await page.goto(base + "/settings.html#site", { waitUntil: "networkidle" });
-  await page.locator("#defaultFloor").selectOption("3");
+  check("obsolete map floor preference removed", await page.locator("#defaultFloor").count() === 0);
   await page.locator("#recipeDefaultView").selectOption("weekly");
   await page.locator("#siteSubmit").click();
   await page.waitForFunction(
-    () => localStorage.getItem("defaultFloor") === "3",
+    () => localStorage.getItem("recipeDefaultView") === "weekly",
   );
   check(
     "site settings remain persistent",
     (await api("/api/user/profile", { token: ordinary.token })).data.user
-      .default_floor === 3,
+      .recipe_default_view === "weekly",
   );
   await ctx.close();
 
@@ -563,7 +563,11 @@ try {
   await ep
     .locator(`[data-role-select="${member.user.id}"]`)
     .selectOption("student");
-  await ep.locator('dialog[open] button[type="submit"]').click();
+  // Closing the confirmation precedes the request; wait for the write before reading back.
+  await Promise.all([
+    ep.waitForResponse((response) => response.url().endsWith("/api/admin/users/role") && response.request().method() === "PUT"),
+    ep.locator('dialog[open] button[type="submit"]').click(),
+  ]);
   await ep.waitForFunction(
     (id) =>
       document.querySelector(`[data-role-select="${id}"]`)?.value ===
@@ -628,30 +632,14 @@ try {
     ).data.tickets.some((t) => t.reply_image.startsWith("data:image/png;")),
   );
   await ep.goto(base + "/map.html", { waitUntil: "networkidle" });
-  await ep.locator("#floor4Btn").click();
-  check(
-    "map floor changes ARIA state",
-    (await ep.locator("#floor4Btn").getAttribute("aria-pressed")) === "true",
-  );
-  await ep.locator("#floor1Btn").click();
-  await ep.locator("#helpBtn").click();
-  check("map help expands", await ep.locator("#helpPanel").isVisible());
-  await ep.locator(".leaflet-interactive").first().dispatchEvent("click");
-  await ep.locator(".map-popup__edit").click();
-  await audit(ep, "map/edit/dialog/dark");
-  await ep.locator("dialog[open] textarea").fill("更新后的校园建筑说明");
-  await ep.locator('dialog[open] button[type="submit"]').click();
-  await ep.waitForFunction(
-    () =>
-      document.querySelector(".map-popup__text")?.textContent ===
-      "更新后的校园建筑说明",
-  );
-  check(
-    "map popup update persists",
-    (await api("/api/map-data")).data.features.some(
-      (f) => f.popup === "更新后的校园建筑说明",
-    ),
-  );
+  await ep.waitForSelector('body[data-guide-ready="true"]');
+  check("map has a single view", await ep.locator("#floorView, .campus-view-switch").count() === 0);
+  await ep.locator("#placeSearch").fill("校史馆");
+  await ep.locator('.campus-place-row[data-place="zunjing"]').click();
+  check("map location introduction opens", await ep.locator("#detailName").textContent() === "尊经阁");
+  await audit(ep, "map/detail/dark");
+  await ep.locator("#closeDetail").click();
+  check("map location introduction closes", await ep.locator("#placeDetail").isHidden());
   await extra.ctx.close();
   const partial = await pageFor(member, "/admin.html#users");
   check(
@@ -717,17 +705,18 @@ try {
   await audit(recipe.page, "recipe/weekly/360");
   await recipe.ctx.close();
   const profile = await pageFor(ordinary, "/profile.html", 360);
-  for (const panel of ["profile", "security", "site", "tickets"]) {
+  for (const panel of ["home", "favorites", "titles"]) {
     await profile.page.locator(`[data-panel="${panel}"]`).click();
     await profile.page.waitForLoadState("networkidle");
     await audit(profile.page, `profile/${panel}/360`);
   }
-  await profile.page.locator('[data-panel="profile"]').click();
-  await profile.page.locator("#nickname").fill("校园昵称");
-  await profile.page.locator("#nicknameSubmit").click();
-  await profile.page.waitForFunction(
-    () => document.getElementById("profileName").textContent === "校园昵称",
-  );
+  await profile.page.locator("#heroNickname").fill("校园昵称");
+  await profile.page.locator("#heroNickname").press("Enter");
+  await Promise.all([
+    profile.page.waitForResponse((response) => response.url().endsWith("/api/user/nickname") && response.request().method() === "PUT"),
+    profile.page.locator('dialog[open] button[type="submit"]').click(),
+  ]);
+  check("inline nickname saved", (await api("/api/user/profile", { token: ordinary.token })).data.user.nickname === "校园昵称");
   await profile.page.locator("#avatarFile").setInputFiles(fixture);
   await profile.page.waitForFunction(
     () => !!document.querySelector("#avatarBox img"),
@@ -738,6 +727,13 @@ try {
       .avatar_url,
   );
   await profile.ctx.close();
+  const settings = await pageFor(ordinary, "/settings.html", 360);
+  for (const panel of ["security", "site", "tickets"]) {
+    await settings.page.locator(`[data-panel="${panel}"]`).click();
+    await settings.page.waitForLoadState("networkidle");
+    await audit(settings.page, `settings/${panel}/360`);
+  }
+  await settings.ctx.close();
   const registration = await pageFor(
     null,
     "/register.html?next=%2Fforum.html",

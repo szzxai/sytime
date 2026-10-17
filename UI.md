@@ -5,6 +5,8 @@
 > 设计文档与参考资产现已用于需求 #4 的全站改版；页面实现位于 `public/`，验证方式见 README，实施范围与结果见 [验收记录](./docs/ui/acceptance.md)。
 > #5 当前实现为三个菜品页签、developer 专属菜单同步设置及三种管理角色可用的手动 JSON 导入，详见 [菜品目录](./docs/ui/pages/dishes.md)、[菜品与食谱](./docs/ui/pages/recipe.md)、[后台设计](./docs/ui/pages/admin.md)及[同步运维](./docs/menu-sync.md)。该范围以用户确认的[实施计划](./docs/issue-5-plan.md)为准。
 
+> 2026-10-17 地图更新：校园地图采用独立的简约导览视觉，页面局部令牌位于 `public/css/map.css`，使用系统字体、近白/深绿灰底色和柔和 SVG 建筑插画；目录、详情与地图均适配手机和暗色主题。只保留单一地图，移除旧楼层平面与视图切换；双指滚动平移，捏合或 Ctrl / ⌘ + 滚轮连续缩放。篮球场与操场均采用大面积场地插画。共享站点壳维持现有规范，当前行为以 [地图页面规范](./docs/ui/pages/map.md) 为准。
+
 ---
 
 ## 先读这里
@@ -242,7 +244,7 @@
 | `--toast-warn` | `#F2C467` | Toast 警告图标 |
 | `--toast-info` | `#8FD0DE` | Toast 信息图标与操作文字 |
 | `--img-edge` | `rgba(27, 35, 38, 0.08)` | 图片/头像内描边 |
-| `--map-bg` | `#F2EFE8` | 地图画布底色（深色模式下也是浅色） |
+| `--map-bg` | `#F2EFE8` | Leaflet 公共皮肤默认底色；校园地图使用 atlas 局部令牌覆盖 |
 | `--viewer-bg` | `rgba(14, 19, 21, 0.92)` | 图片查看器背景 |
 | `--viewer-ink` | `#F5F3EE` | 图片查看器文字与图标 |
 | `--viewer-chip` | `rgba(255, 255, 255, 0.14)` | 查看器浮层按钮底 |
@@ -413,7 +415,7 @@
 - `<main>` 上同时给 `.main`（上下留白）和容器类（见下表）；`id="main"` 供跳转链接。
 - 页面**禁止**再写自己的页头/页脚 HTML；由 `UI.shell.mount()` 填充（ui.js 在 DOMContentLoaded 自动执行，条件是页面有 `#siteHeader` 或 `<body data-nav>`）。
 - `<body data-shell="app">` 时页脚不渲染（地图、后台使用）。
-- 每页恰好一个 `h1`（在 `main` 内；地图页 h1 用 `.sr-only`）。
+- 每页恰好一个 `h1`（在 `main` 内；地图页标题显示在地点目录头部）。
 - `<noscript>` 内放一条提示：`<div class="alert alert--warning">…</div>`，文案见 copy.md。
 - 图标库不需要每个页面引入：`ui.js` 通过 `img/icons.svg` 外链引用。
 
@@ -429,7 +431,7 @@
 | 设置 | `container` + `.shell`（15rem 侧栏） | 内容列 ≤ 44rem |
 | 后台 | `container--wide` + `.shell` | 1280px |
 | 公告 | `container` + `.master-detail` | |
-| 地图 | 全屏 `.map-page`（无容器） | 应用壳 |
+| 地图 | 全屏 `.campus-page`（地点目录 + 导览舞台） | 应用壳 |
 
 `.main` 自带上下留白（手机 24/64，桌面 40/80），**不要再加** padding。
 
@@ -549,7 +551,7 @@
 
 - 仅 `<html data-theme="dark">` 生效；**禁止**按系统偏好自动切换，直到「外观」设置上线（`UI.theme` 已备好）。
 - 所有颜色经令牌自动适配（17-dark.css）；**深色下禁止**新增任何十六进制值。
-- 地图画布始终浅色（`--map-bg` 不随主题变）；图片查看器始终深底。
+- 校园地图随主题使用浅色或深色 atlas 局部令牌，地面、道路、文字与浮层同步适配；图片查看器始终深底。
 - 切换入口（P2）：个人中心「网站设置 → 外观」`choice-group`：浅色 / 深色（`UI.theme.set`）。
 - 验收：dark 下跑 axe = 0；检查 Toast、对话框、地图、图片查看器四类浮层。
 
@@ -627,3 +629,5 @@ CSS/JS/图标落位：`public/css/site.css`、`public/js/ui.js`、`public/img/ic
 - [ ] 键盘可完成页面全部操作；焦点环可见；对话框焦点受控。
 - [ ] axe 扫描（light+dark）violations = 0。
 - [ ] 「有品味」自检 10 条全过。
+
+2026-10-17 骨架屏语义修复：共享 `UI.html.skeleton` 的命名容器使用 `role="status"`，保留 `aria-busy` 和「加载中」名称；外观不变，修复加载过程中普通 div 不允许命名的无障碍问题。

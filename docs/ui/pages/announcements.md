@@ -190,3 +190,5 @@ window.addEventListener("hashchange", function () {
 - [ ] 「最新」标签只在首条。
 - [ ] 有发布权限者可在详情删除公告（危险确认 + 404 兜底并刷新）；无权限不显示按钮。
 - [ ] 无 alert/confirm；零报错；360/900 正常。
+
+> 2026-10-17 共享加载状态修正：本页使用的 `UI.html.skeleton` 已补齐 `role="status"`，保留加载名称与 `aria-busy`，避免加载过程中的无障碍属性违规；外观与业务流程不变。

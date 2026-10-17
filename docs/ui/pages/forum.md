@@ -413,3 +413,5 @@ UI.ready(function () { setCategory("讨论"); });
 - [ ] 加载更多：20/批，计数正确，到底显示「已显示全部」。
 - [ ] XSS 测试：发 `<img src=x onerror=alert(1)>` 原样显示不执行。
 - [ ] 360/1280 无横向滚动；axe=0；控制台零报错。
+
+> 2026-10-17 共享加载状态修正：本页使用的 `UI.html.skeleton` 已补齐 `role="status"`，保留加载名称与 `aria-busy`，避免加载过程中的无障碍属性违规；外观与业务流程不变。

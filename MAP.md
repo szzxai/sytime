@@ -1,6 +1,6 @@
 # szzx-info 项目地图
 
-> 更新日期：2026-10-11。本文描述 #4 UI 改版、#5 菜品目录与菜单同步、#6 三元坊必吃榜，#10 头衔系统，#19 个人中心拆分（新增 settings.html），#20 个人中心重做（类 B 站资料头部 + 吸顶横向菜单栏），以及 #21 用户主页（头像跳转 + 他人主页只读 + 管理面板）的代码。其他章节的既有测试数字保留原验证口径。
+> 更新日期：2026-10-17。本文描述 #4 UI 改版、#5 菜品目录与菜单同步、#6 三元坊必吃榜，#10 头衔系统，#11 优化地图UI，#19 个人中心拆分（新增 settings.html），#20 个人中心重做（类 B 站资料头部 + 吸顶横向菜单栏），以及 #21 用户主页（头像跳转 + 他人主页只读 + 管理面板）的代码，并新增 2026-10-17 的完整 SVG 校园导览改版。其他章节的既有测试数字保留原验证口径。
 >
 > 本文依据实际文件、后端代码、全部前端页面、地图 JSON、SQLite 表结构及依赖清单整理。设计规范见 [UI.md](./UI.md)，验收记录见 [docs/ui/acceptance.md](./docs/ui/acceptance.md)，原始里程碑快照见 [PLAN_2026-10-01.md](./PLAN_2026-10-01.md)。
 
@@ -14,7 +14,7 @@
 | 数据库 | Node 内置 `node:sqlite` 的同步 `DatabaseSync`；14 张原有表、3 张必吃榜表、2 张头衔表及 8 张菜单表 | [data.db](./data.db)、[lib/menu/store.js](./lib/menu/store.js)、[lib/shops/store.js](./lib/shops/store.js)、[lib/titles/store.js](./lib/titles/store.js) |
 | 前端 | 18 个功能页面及 404，统一外部 CSS 与页面脚本；原生 JavaScript，无构建流程 | [public/](./public/) |
 | 共享前端逻辑 | 导航壳、登录态、用户展示、横幅、表单、对话框、上传、图片查看器及页面工具 | [public/js/ui.js](./public/js/ui.js)、[public/js/page.js](./public/js/page.js) |
-| 地图 | 本地 Leaflet 1.9.4；自定义平面坐标数据，保留原有几何与楼层关系 | [public/vendor/leaflet/](./public/vendor/leaflet/)、[data.json](./data.json) |
+| 地图 | 本地 Leaflet 1.9.4；单一北向上 SVG 校园地图（28 个地点），支持触控板平移/捏合与大面积运动场插画 | [campus-places.js](./public/js/campus-places.js)、[campus.svg](./public/img/map/campus.svg)；[data.json](./data.json) 仅为旧数据归档 |
 | 文件存储 | 本地图片文件，通过 `/uploads` 静态提供 | [uploads/](./uploads/) |
 | 依赖与运行 | npm 安装；`npm start` 直接执行 `node server.js` | [package.json](./package.json)、[package-lock.json](./package-lock.json) |
 | 验证 | Playwright 浏览器回归、axe 无障碍与布局检查；临时数据库和上传目录 | [tests/ui-smoke.mjs](./tests/ui-smoke.mjs) |
@@ -55,7 +55,7 @@ szzx-info/
 ├── skills/szzx-menu/             SKILL.md、references/menu-json-rules.md、scripts/validate_menu.py
 ├── .private/                     运行时主密钥、原图、补图、诊断及缓存（忽略）
 ├── data.db                       随仓库提交的 SQLite 数据库（启动迁移 shops 表）
-├── data.json                     校园地图几何、楼层、文字和配色
+├── data.json                     旧楼层地图数据归档；后端保留兼容
 ├── data/shops-config.json        高德地图中心、苏州中学参考点、姑苏区边界多边形（GCJ-02）
 ├── lib/shops/store.js            shops 表、路线字段校验、列表/详情与地理围栏
 ├── lib/shops/routes.js           店铺公开读取与带权限的创建 API
@@ -87,7 +87,7 @@ szzx-info/
 ├── public/
 │   ├── index.html                首页与关于我们；根路径默认页面跳转
 │   ├── about.html                旧地址兼容入口，跳转 index.html#about
-│   ├── map.html                  校园地图、楼层切换、弹窗编辑
+│   ├── map.html                  单一 SVG 校园地图，无楼层切换
 │   ├── forum.html                讨论/提问列表、发帖、回复、点赞、删帖
 │   ├── post.html                 单帖详情，通过 ?id=<帖子 ID> 访问
 │   ├── recipe.html               A–Z 菜品目录、评价与每周食谱三个页签
@@ -104,10 +104,14 @@ szzx-info/
 │   ├── admin.html                权限控制的后台菜单、用户与头衔管理操作
 │   ├── 404.html                  未知页面提示，使用绝对资源路径
 │   ├── css/site.css              设计令牌、组件与响应式样式
+│   ├── css/map.css               校园导览局部样式与明暗主题
+│   ├── img/map/campus.svg        校园底图、路径、植被与建筑 symbol
 │   ├── img/                      icons.svg 与 favicon.svg
 │   ├── js/
 │   │   ├── ui.js                 全站交互、导航壳与统一 API 客户端
 │   │   ├── page.js               页面表单、请求、权限、面板和工单工具
+│   │   ├── campus-places.js      28 个导览地点、分类、别名、示意坐标与介绍
+│   │   ├── pages/map.js          SVG 导览、搜索、选点与触控板手势
 │   │   ├── forum.js              论坛及详情共用的点赞、回复与删除逻辑
 │   │   ├── shops-map.js          高德地图加载、标记、路线查询与外链
 │   │   └── pages/                各页业务脚本、菜单同步/导入及店铺列表/创建/详情
@@ -151,7 +155,7 @@ flowchart LR
 - 页面通过共享 `UI.api` 封装同源 `fetch('/api/...')`，统一 token、失败提示和登录回跳；后端仍使用原有业务接口。
 - 未知 `/api` 路径返回 JSON 404；未知 GET 页面路径（无扩展名且不属于上传目录）返回 `404.html`。
 - 登录返回 JWT；浏览器以 `localStorage.token` 保存，并以 `Authorization: Bearer <token>` 请求登录接口。`localStorage.user` 保存用户缓存。
-- 网站默认页面、地图楼层、菜谱默认视图保存在用户表，同时用 `defaultPage`、`defaultFloor`、`recipeDefaultView` 本地键作回退；横幅关闭使用 `bannerDismissed:<用户名>` 与横幅版本。手机导航使用受控抽屉；旧 `navCollapsed` 设置不再使用。
+- 网站默认页面、菜谱默认视图保存在用户表，同时用 `defaultPage`、`recipeDefaultView` 本地键作回退；旧 `default_floor` 字段保留兼容，设置页和地图均不再读取或写入楼层偏好。横幅关闭使用 `bannerDismissed:<用户名>` 与横幅版本。手机导航使用受控抽屉；旧 `navCollapsed` 设置不再使用。
 
 ## 4. 前端页面地图
 
@@ -159,7 +163,7 @@ flowchart LR
 | --- | --- | --- |
 | `index.html` | 首页介绍、地图/论坛/菜谱/公告入口、关于我们与工单反馈；仅在根路径 `/` 且无锚点时按用户默认页面跳转 | `/api/user/profile`、本地默认页设置 |
 | `about.html` | 跳转 `/index.html#about`，并保留可读的兼容链接 | 无 |
-| `map.html` | `CRS.Simple` 地图；1F–4F；缩放、拖动、WASD/方向键；按权限编辑建筑文字弹窗 | `/api/map-data`、`/api/me`、`/api/user/profile`、`PUT /api/admin/map-popup` |
+| `map.html` | 单一北向上 SVG 校园地图：28 地点、名称/别名搜索、分类、介绍卡、大面积篮球场与操场、拖动/滚动平移、捏合或 Ctrl / ⌘ + 滚轮缩放、键盘与全景；无楼层视图及切换器 | 读取本地 `campus-places.js` + `campus.svg`，不调用旧地图接口或读取楼层偏好 |
 | `forum.html` | 讨论/提问切换；发帖对话框；每批 20 条；卡片跳转详情；回复展开、发布；点赞及失败回滚；更多菜单删帖 | `/api/forum/posts` 及其回复、点赞、删除路由 |
 | `post.html` | 按查询参数 `id` 加载正文与点赞状态；默认展开回复 | `/api/forum/posts/:id` 及其回复、点赞路由 |
 | `recipe.html` | A–Z 菜品目录与搜索；评价卡与发布对话框；每周食谱折叠、放大及授权删除 | `/api/dishes`、`/api/recipes`、`/api/weekly-menu`、`/api/user/profile` |
@@ -171,7 +175,7 @@ flowchart LR
 | `register.html` | 用户名/昵称/密码及重复密码校验；注册后调用登录 | `/api/register`、`/api/login` |
 | `student_verify.html` | 已达到学生角色时隐藏表单；否则填写新生号、班级、真实姓名，可填邀请码及补充信息 | `/api/user/profile`、`/api/student/apply` |
 | `profile.html` | #20 类 B 站布局：资料头部（头像含编辑按钮 + 用户名/权限等级标签/昵称 + 个性签名；昵称与签名点击即可编辑、失焦弹确认保存）+ 吸顶横向菜单栏（主页 / 收藏 / 头衔 / 设置）；主页与收藏为空页面，头衔为佩戴/不佩戴选择（未达成自动头衔显示条件与进度），设置跳转 settings.html | `/api/user/profile`、`/api/user/avatar`、`/api/user/nickname`、`/api/user/signature`、`/api/user/titles`、`/api/user/title` |
-| `settings.html` | 设置页（左侧菜单，与个人中心同构）：账号安全（改密码）、网站设置（默认进入界面 / 校园地图默认楼层 / 菜品与食谱默认页 / 必吃榜默认排序与餐食类型 / 店铺详情页样式 / 显示权限等级）、工单（提交与查看本人）、消息通知偏好（系统/评论/回复/点赞）、退出登录 | `/api/user/profile`、`/api/user/settings`、`/api/user/password`、`/api/tickets`、`/api/tickets/mine`、`/api/user/preferences` |
+| `settings.html` | 设置页（左侧菜单，与个人中心同构）：账号安全（改密码）、网站设置（默认进入界面 / 菜品与食谱默认页 / 必吃榜默认排序与餐食类型 / 店铺详情页样式 / 显示权限等级）、工单（提交与查看本人）、消息通知偏好（系统/评论/回复/点赞）、退出登录 | `/api/user/profile`、`/api/user/settings`、`/api/user/password`、`/api/tickets`、`/api/tickets/mine`、`/api/user/preferences` |
 | `user.html` | #21 其他用户主页（类个人中心版式，#20；只读）：资料头部 + 吸顶横向菜单栏（主页 / 收藏 / 头衔 / [管理]）；权限等级按该用户 `show_role` 显示；头衔只读；有 `user_manage` / `title_manage` 且目标权重低于自己（非本人）时出现「管理」：改权限等级、发放特殊权限、发放头衔、封号/解封；`?id=` 为本人时跳转 profile.html | 公开 `GET /api/users/:id/profile`、`GET /api/users/:id/titles`；`GET /api/me`；管理 `GET /api/admin/users/:id`、`GET /api/admin/permissions`、`PUT /api/admin/users/role`、`PUT /api/admin/users/permissions`、`PUT /api/admin/users/ban`、`PUT /api/admin/users/unban`、`GET /api/admin/titles`、`POST|DELETE /api/admin/users/:id/titles` |
 | `inbox.html` | 消息箱：按天分组、四类标签过滤、只看未读、全部标为已读、点击标记已读并跳转；页头消息铃显示未读数 | `/api/messages`、`/api/messages/unread-count`、`/api/messages/:id/read`、`/api/messages/read-all` |
 | `admin.html` | 横幅、公告、发送系统通知、学生审核、邀请码、每周菜谱、用户管理、头衔管理、申诉、工单、developer 菜单同步和三种管理角色的 JSON 手动导入；待办红点 | `/api/admin/*`，菜单接口见 [运维文档](./docs/menu-sync.md) |
@@ -194,7 +198,7 @@ flowchart LR
 | GET | `/api/user/profile` | 登录 | 当前用户资料、设置、状态、权限与佩戴中的头衔 |
 | GET | `/api/user/titles` | 登录 | 已拥有头衔（含佩戴状态）与未达成自动头衔的条件进度 |
 | PUT | `/api/user/title` | 登录 | 佩戴或取消佩戴；未拥有的头衔 403，`title_id: null` 表示不佩戴 |
-| PUT | `/api/user/settings` | 登录 | 部分更新：默认页、1–4 楼层、菜谱视图（all/reviews/weekly）、必吃榜默认排序/餐食类型、店铺详情页样式（stacked/split）、是否展示权限等级（show_role） |
+| PUT | `/api/user/settings` | 登录 | 部分更新：默认页、菜谱视图（all/reviews/weekly）、必吃榜默认排序/餐食类型、店铺详情页样式（stacked/split）、是否展示权限等级（show_role）；旧 1–4 楼层字段仅保留后端兼容，前端不再提交 |
 | POST | `/api/user/avatar` | 登录 | 上传头像，更新 avatar_url |
 | PUT | `/api/user/nickname` | 登录 | 修改昵称 |
 | PUT | `/api/user/signature` | 登录 | 修改签名 |
@@ -220,7 +224,7 @@ flowchart LR
 | GET | `/api/announcements` | 公开 | 按发布日期倒序读取公告 |
 | GET | `/api/weekly-menu` | 公开 | 每周食谱日期、图片 URL 和上传者 |
 | GET | `/api/settings/banner` | 公开 | 当前横幅及版本 |
-| GET | `/api/map-data` | 公开 | 每次从磁盘读取 data.json |
+| GET | `/api/map-data` | 公开 | 兼容旧地图数据，每次从磁盘读取 data.json；当前地图页面不调用 |
 | GET | `/api/shops` | 公开 | 店铺列表；支持 `type`、`q`、本部距离/时间及点赞/评价/评分范围过滤，`sort=campus/metro/likes/reviews/rating/new` 排序；拼音 A–Z 在前端排序 |
 | GET | `/api/shops/meta` | 公开 | 浏览器端 JS Key（仅另配时返回）、静态地图是否可用、坐标/范围配置、分类和当前用户创建权限；不返回 Web 服务 Key |
 | GET | `/api/shops/map-image?lat=..&lng=..&zoom=..` | 公开、同源代理 | 服务器端用 `AMAP_SERVICE_KEY` 按当前视图获取并缓存底图；中心限制在姑苏区边界外扩范围内，缩放级别限制为 9–18，不向浏览器暴露 Key |
@@ -230,7 +234,7 @@ flowchart LR
 | POST | `/api/shops/:id/reviews` | 登录 + 学生及以上 | 创建或更新本人的评价；评分必填 1–5，文字最多 500 字；multipart 可选 `image`（JPG/PNG，≤2 MB），可选 `guests`（1–99）与 `total_price`（0–100000 元）字段，`per_person` 由服务端计算；`remove_image=1` 清除配图 |
 | DELETE | `/api/shops/:id/reviews/me` | 登录 + 学生及以上 | 删除本人的评价并重算统计 |
 | POST | `/api/shops` | 登录 + `shop_create`；默认 student 及以上 | 后端验证地址、分类、GCJ-02 坐标、路线字段与已配置覆盖多边形；同名返回 409 |
-| PUT | `/api/admin/map-popup` | map_popup_edit | 按 feature.name 更新所有同名对象的 popup，回写 data.json |
+| PUT | `/api/admin/map-popup` | map_popup_edit | 兼容旧地图弹窗，按 feature.name 更新所有同名对象的 popup，回写 data.json；当前地图页面无编辑入口 |
 
 ### 5.3 学生认证、后台内容与用户管理
 
@@ -353,9 +357,19 @@ flowchart LR
 
 实际已提交数据库保留旧迁移结构，例如 users.display_id 通过后续 `ALTER TABLE` 添加，没有新建库 SQL 中的 UNIQUE 约束；不能假设旧库与新库的所有约束完全一致。
 
-### 7.2 地图 JSON
+### 7.2 校园地图与旧数据归档
 
-`data.json` 是自定义格式，顶层包含 `meta`、`style`、`features`，并非标准 GeoJSON。
+2026-10-17 起，页面只展示北向上 SVG 校园地图。旧楼层平面、顶部视图切换器及设置页默认楼层字段已移除，旧前端渲染脚本已删除。
+
+- 导览 `public/js/campus-places.js` 含 28 个地点，字段为 `id`（唯一选择键）、`name`、可选 `alias`、`category`、`icon`（SVG symbol）、`x/y`、`size`、可选 `height`、`area`、`description`。静态示意范围 1000 × 1540；`[x,y]` 转为 Leaflet `[-y,x]`，上方为北。未指定高度时使用宽度的 0.75 倍；篮球场为 210 × 330，操场为 290 × 370。
+- `public/img/map/campus.svg` 提供边界、道路、植被、文庙区域和建筑图形；`map.js` 插入可点击、可键盘操作的 SVG 地点组。相同 symbol 复用于目录缩略图和地点详情。坐标依据用户提供的粗略参考图，建筑插画是类型示意；不承诺实景还原或路线导航。
+- 搜索覆盖名称、别名、区域和分类，支持「校史馆」→「尊经阁」；与分类取交集。结果数量实时更新，不匹配地点淡化并退出焦点顺序，空结果可重置。
+- 选择地点显示介绍卡、放大并平移以避开卡片；关闭/Escape 恢复焦点。手机目录可折叠；全景模式下尺寸变化重新适配。拖动、按钮、方向键/WASD、加减键与 Home 提供操作入口。
+- 普通滚轮或触控板双指滚动双轴平移；Shift + 纵向滚轮横向移动。捏合或 Ctrl / ⌘ + 滚轮连续缩放并保持指针锚定；Safari 原生手势期间抑制重复滚轮事件。禁用 Leaflet 原生滚轮缩放，归一化增量并通过动画帧合并更新。手机保留双指缩放。
+- 移除固定平移边界，解决宽屏中拖动回弹和缩放锚点漂移；用户可通过全景按钮复位。设置页与地图均不消费旧楼层偏好。
+- 页面专用 `public/css/map.css` 管理简约面板、响应式、明暗地图与 reduced-motion；共享 `site.css` 和站点壳无改动。导览无需在线底图服务，也不依赖地图 API；SVG 请求失败可重试。
+
+`data.json` 仅作为旧楼层数据归档，旧读取/弹窗接口与数据库 `default_floor` 字段保留兼容，当前地图页面不调用或使用。此文件是自定义格式，顶层包含 `meta`、`style`、`features`，并非标准 GeoJSON；本次未修改其几何或后端结构。
 
 | 部分 | 字段与当前内容 |
 | --- | --- |
@@ -363,24 +377,21 @@ flowchart LR
 | style | outline、labelColor、fillOpacity、palette；建筑/绿地/水体/白色/无填充分类 |
 | features | 227 个对象：153 条 polyline、48 个 polygon、26 个 label |
 | layers | base=始终显示；数字 1–4=所在楼层；同一对象可以出现在多层 |
-店铺地图使用服务器端高德静态图代理与前端自绘交互层，无需浏览器 JS Key；`data/shops-config.json` 坐标为 GCJ-02：`center` 为初始地图中心，`anchors.campus` 为苏中本部步行路线起点，`area.polygon` 为 `[纬度,经度]` 多边形。Web 服务 Key 放在被 `.gitignore` 排除的 `.env`（`AMAP_SERVICE_KEY`），仅服务器端使用且不下发。前端支持拖动、滚轮/双指缩放、缩放按钮及回到全域；店铺按当前视图的屏幕距离聚合，圆点显示数量，点击后以聚合中心放大。底图接口只允许姑苏区边界外扩范围内的中心点、缩放 9–18，并缓存近期视图。源码、测试和文档不含实际 Key。地图初始中心/缩放与本部路线起点分别来自配置的中心点和高德 POI「江苏省苏州中学本部」（120.622380, 31.295509）。地理围栏只有在多边形至少 3 个有效点时才生效；范围配置为空时后端无法判定区域。店铺初始化不使用虚构坐标或路线。
-
 | 几何字段 | points 为 `[x,y]` 点数组；fill/stroke/dash/weight 控制路径 |
 | 文字字段 | text、x1/y1/x2/y2、scale 控制区域文字；name/popup 控制名称与弹窗 |
 
-当前楼层集合为：20 个 base 对象、118 个仅 1F 对象、42 个仅 2F 对象、2 个同时位于 1F/2F 的对象、45 个同时位于 2F/3F/4F 的对象。`public/js/pages/map.js` 将 `[x,y]` 转为 Leaflet 的 `[y,x]`，按 polygon → polyline → label 顺序绘制。方向约定是左为北、上为东、右为南、下为西。#4 仅调整配色和最小缩放级别，227 个 feature 的几何、文字和楼层数据与改版前一致。
+归档楼层集合为：20 个 base 对象、118 个仅 1F 对象、42 个仅 2F 对象、2 个同时位于 1F/2F 的对象、45 个同时位于 2F/3F/4F 的对象。旧方向约定是左北、上东；不适用于当前北向上的 SVG 校园地图。兼容读取接口仍每次访问磁盘，兼容弹窗接口仍按名称批量更新同名对象；两者均不改变当前地图。
 
-地图读取每次访问磁盘，修改数据刷新即可；地图弹窗编辑按名称批量更新，同名几何会一起变化。
+店铺地图使用服务器端高德静态图代理与前端自绘交互层，无需浏览器 JS Key；`data/shops-config.json` 坐标为 GCJ-02：`center` 为初始地图中心，`anchors.campus` 为苏中本部步行路线起点，`area.polygon` 为 `[纬度,经度]` 多边形。Web 服务 Key 放在被 `.gitignore` 排除的 `.env`（`AMAP_SERVICE_KEY`），仅服务器端使用且不下发。前端支持拖动、滚轮/双指缩放、缩放按钮及回到全域；店铺按当前视图的屏幕距离聚合，圆点显示数量，点击后以聚合中心放大。底图接口只允许姑苏区边界外扩范围内的中心点、缩放 9–18，并缓存近期视图。源码、测试和文档不含实际 Key。地图初始中心/缩放与本部路线起点分别来自配置的中心点和高德 POI「江苏省苏州中学本部」（120.622380, 31.295509）。地理围栏只有在多边形至少 3 个有效点时才生效；范围配置为空时后端无法判定区域。店铺初始化不使用虚构坐标或路线。
 
 ### 7.2.1 配套离线地图编辑器
 
-`../szzx-mapeditor/map-editor.html` 是独立离线编辑器，使用说明与完整字段表见 [编辑器 README](../szzx-mapeditor/README.md) 和 [编辑器 MAP.md](../szzx-mapeditor/MAP.md)。2026-10-09 编辑器内置数据已与本项目 `data.json` 的 227 个要素一致，配色和 `minZoom=-2` 同步，几何不变。
+`../szzx-mapeditor/map-editor.html` 是独立离线旧楼层编辑器。本站楼层页面已移除，其输出不再作用于当前校园地图。使用说明与完整字段表见 [编辑器 README](../szzx-mapeditor/README.md) 和 [编辑器 MAP.md](../szzx-mapeditor/MAP.md)。2026-10-09 编辑器内置数据与本项目归档 `data.json` 的 227 个要素一致，配色和 `minZoom=-2` 同步，几何不变。
 
-- 编辑器通过下载导出 JSON，由维护者备份后人工替换本项目 `data.json`；不会调用网站接口或写入数据库。
-- 本网站当前读取基本几何、楼层、名称、弹窗、分类配色、基础线型及文字框比例；按区域→线条→文字绘制。
-- 编辑器的 `fillColor/lineColor/textColor/fillOpacity/edgeStyles`、字距、字体样式和 `zIndex` 是扩展字段，当前网站渲染器没有读取；编辑器显示这些效果不代表网站已经支持。折线在网站中仍强制描边，线宽随缩放调整。
-- 网站按名称批量编辑弹窗；编辑器修改单个对象不会自动同步同名对象。网站数据需要更新时，以实际导出文件为准核对。
-- 编辑器回归只打开离线文件，不运行本网站，也不修改本项目的数据库、依赖或地图数据。本次网站仅更新协作与兼容性文档，原有未提交改动保留。
+- 编辑器通过下载导出 JSON；不会调用网站接口或写入数据库。替换本项目归档文件只影响旧兼容接口的返回值。
+- 当前校园地图的位置、尺寸和介绍在 `campus-places.js` 维护，底图与插画在 `campus.svg` 维护；不读取编辑器的几何、楼层、字体或层级扩展字段。
+- 旧兼容接口按名称批量编辑弹窗；编辑器修改单个对象不会自动同步同名对象。
+- 编辑器回归只打开离线文件，不运行本网站，也不修改本项目的数据库、依赖或地图数据。2026-10-09 的配套编辑器协作仅更新文档；2026-10-17 的网站导览改版不修改编辑器或 `data.json`。
 
 ### 7.3 图片
 
@@ -410,7 +421,7 @@ JWT_SECRET=replace_with_a_long_random_secret
 JWT_EXPIRES_IN=7d
 ```
 
-代码默认端口为 3000，JWT 有效期为 7d；JWT_SECRET 有开发用回退值，部署时应显式配置。访问 `/`、`/map.html` 或 `/api/map-data` 可分别检查页面和地图数据入口。
+代码默认端口为 3000，JWT 有效期为 7d；JWT_SECRET 有开发用回退值，部署时应显式配置。访问 `/`、`/map.html` 可检查页面；校园地图使用同源 SVG 与地点目录，`/api/map-data` 只用于旧数据兼容。
 
 - 修改 server.js 需要重启服务；修改 public/ 静态文件刷新页面；修改 data.json 后下次 API 读取即生效。
 - data.db、data.json 的在线编辑结果、uploads/ 都是本地持久数据；部署需要可写、持久化的存储和 Node 服务。
@@ -442,8 +453,15 @@ JWT_EXPIRES_IN=7d
 | [#8 三元坊必吃榜菜谱上传](https://github.com/szzxvc/szzx-info/issues/8) | student 角色、multer 存储器、现有评价模型 | 菜品与店铺关联、学生上传权限、图片、去重及异常数据处理 |
 | [#9 消息箱](https://github.com/szzxvc/szzx-info/issues/9) | inbox.html、messages 表、论坛回复/点赞通知、profile.html 通知偏好、admin.html 发送系统通知、ui.js 消息铃 | 已实现：系统/评论/回复/点赞消息、聚合点赞、已读与未读计数、按天分组、类型过滤、通知偏好、super_admin 发送系统通知 |
 | [#10 头衔系统](https://github.com/szzxvc/szzx-info/issues/10) | 用户资料、后台用户管理、各用户内容渲染处 | 头衔目录/拥有关系/佩戴状态、授予撤销、自动规则、统一用户展示 |
+| [#11 优化地图UI](https://github.com/szzxvc/szzx-info/issues/11) | `map.html`、`public/js/pages/map.js`、`public/css/map.css`、`public/img/map/campus.svg`、`public/js/campus-places.js`、`tests/map-ui.mjs` | 已实现：重做为北向上完整 SVG 校园导览，补齐 28 个地点及手绘示意插画；支持名称/别名搜索、分类过滤、详情卡片、目录折叠、明暗主题与全景复位；移除旧楼层视图与设置项；优化 Mac 触控板平移与捏合/连续缩放；扩大篮球场并支持独立高度 |
 | [#19 个人中心拆分](https://github.com/szzxvc/szzx-info/issues/19) | profile.html、settings.html、public/js/pages/profile.js、public/js/pages/settings.js、ui.js 账户菜单 | 已实现：账户菜单新增「设置」（个人中心与管理后台之间），新建 settings.html（同构左侧菜单），将账号安全、网站设置、工单、消息通知、退出登录从个人中心迁出；profile.html 仅保留个人资料与我的头衔 |
-| [#20 个人中心重做](https://github.com/szzxvc/szzx-info/issues/20) | profile.html、public/js/pages/profile.js、public/css/site.css（.profile-hero / .profile-tabs） | 已实现：类 B 站布局，资料头部（头像 + 用户名/权限等级/昵称 + 个性签名，昵称与签名点击可编辑、失焦确认保存）+ 吸顶横向菜单栏（主页 / 收藏 / 头衔 / 设置）；主页、收藏为空页面，头衔沿用原面板，设置直接跳转 settings.html |
+| [#20 个人中心重做](https://github.com/szzxvc/szzx-info/issues/20) | profile.html、public/js/pages/profile.js、public/css/site.css（.profile-hero / .profile-tabs） | 已实现：类 B站布局，资料头部（头像 + 用户名/权限等级/昵称 + 个性签名，昵称与签名点击可编辑、失焦确认保存）+ 吸顶横向菜单栏（主页 / 收藏 / 头衔 / 设置）；主页、收藏为空页面，头衔沿用原面板，设置直接跳转 settings.html |
 | [#21 头像进入主页](https://github.com/szzxvc/szzx-info/issues/21) | public/js/ui.js（UI.userHref/UI.avatarLink）、forum/reviews 头像、user.html、public/js/pages/user.js、server.js 公开用户接口 | 已实现：论坛/评价等处头像可点击，本人 → profile.html、他人 → user.html?id=；他人主页与个人中心同版式但只读、权限等级按 show_role 显示、无设置、头衔只读；有足够权限且目标权重更低时追加「管理」（改角色 / 权限 / 发头衔 / 封号） |
 
-菜品目录、消息箱与必吃榜开关已开启。#6 姑苏区全域边界取自高德行政区 adcode 320508（GCJ-02、323 点），范围文案/地图/服务端地理围栏共用该多边形。全区分块检索得到 5,942 条高德餐饮 POI，地址及步行路线补全后 5,629 条通过初筛；正式导入 5,567 条，62 条同名项跳过。其余候选因地址格式、明确停业标记、名称长度或缺少最近地铁步行路线未导入（原因可能重叠）；数据代表高德可检索 POI，不保证涵盖所有实际店铺。数据库店铺均通过区界校验。页面具备可拖动/缩放的同源高德底图与近邻聚合点（显示店数、点击居中放大）、拼音 A–Z、店名/道路/商场搜索及本部距离/时间和互动指标筛选；地图代理不向浏览器泄漏 Web 服务 Key。#7 店铺详情双布局、#9 消息箱与 #10 头衔系统已实现；#8 店铺菜品关联仍待实施。回归入口：`npm run test:menu`（18 项）、`npm run test:titles`（14 项）、`npm run test:shops`（14 项）、`npm run test:shops:ui`（64 项）、`npm run test:ui`（363 项）。
+菜品目录、消息箱与必吃榜开关已开启。#6 姑苏区全域边界取自高德行政区 adcode 320508（GCJ-02、323 点），范围文案/地图/服务端地理围栏共用该多边形。全区分块检索得到 5,942 条高德餐饮 POI，地址及步行路线补全后 5,629 条通过初筛；正式导入 5,567 条，62 条同名项跳过。其余候选因地址格式、明确停业标记、名称长度或缺少最近地铁步行路线未导入（原因可能重叠）；数据代表高德可检索 POI，不保证涵盖所有实际店铺。数据库店铺均通过区界校验。页面具备可拖动/缩放的同源高德底图与近邻聚合点（显示店数、点击居中放大）、拼音 A–Z、店名/道路/商场搜索及本部距离/时间和互动指标筛选；地图代理不向浏览器泄漏 Web 服务 Key。#7 店铺详情双布局、#9 消息箱与 #10 头衔系统已实现；#8 店铺菜品关联仍待实施。回归入口：`npm test` 包含 `npm run test:menu`（18 项）、`npm run test:titles`（13 项）、`npm run test:shops`（14 项）、`npm run test:shops:ui`（64 项）、`npm run test:user`（28 项）、`npm run test:ui`（370 项）、`npm run test:map`（134 项）。
+
+## 2026-10-17 校园导览验证记录
+
+新增 `tests/map-ui.mjs`（`npm run test:map`），接入 `npm test`。最终单地图版本覆盖 28 个地点、别名搜索、分类、空结果、详情、焦点恢复、键盘/拖动/手机双指缩放、全景复位、尺寸变化、明暗主题、失败重试、旧视图和旧请求移除及篮球场尺寸。手势回归覆盖双轴滚动平移且不缩放、Ctrl / ⌘ 连续缩放、指针锚定、反向恢复、Safari 手势与重复滚轮抑制；Safari 事件在 Chromium 中模拟，未验证 Safari 引擎或实体 Mac 触控板。最新地图专项 **134 项**、全站浏览器 **370 项**均通过；全站回归确认默认楼层设置移除及其他偏好保存。地图覆盖 1440×1000、390×844、360×740、1280×900、844×390，明暗主题 axe、页面报错与横向溢出均为 0，桌面和手机截图已人工检查。
+
+本次重做还修正既有测试的浏览器平台选择、角色写入等待和个人中心过期选择器；共享 `UI.html.skeleton` 补齐 `role="status"`。此前同次改版已通过菜单后端 18 项、头衔后端 13 项、店铺后端 14 项、店铺浏览器 64 项、用户主页浏览器 28 项验证。所有测试使用隔离数据库和上传目录。最新报告为 `output/playwright/map/report.json`、`output/playwright/audit.json`，全站日志为 `output/playwright/map/ui-single-view.log`。

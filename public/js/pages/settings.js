@@ -45,10 +45,6 @@
     ].includes(page)
       ? page
       : "index.html";
-    var floor = Number(
-      me.default_floor || localStorage.getItem("defaultFloor"),
-    );
-    P.el("defaultFloor").value = floor >= 1 && floor <= 4 ? String(floor) : "1";
     var recipeView =
       me.recipe_default_view || localStorage.getItem("recipeDefaultView");
     if (["all", "reviews", "weekly"].indexOf(recipeView) === -1) recipeView = "all";
@@ -180,7 +176,6 @@
     );
     var body = {
       default_page: P.value("defaultPage"),
-      default_floor: Number(P.value("defaultFloor")),
       recipe_default_view: P.value("recipeDefaultView"),
       shop_default_sort: P.value("shopDefaultSort"),
       shop_default_type: P.value("shopDefaultType"),
@@ -195,7 +190,6 @@
     );
     if (r && r.ok) {
       localStorage.setItem("defaultPage", body.default_page);
-      localStorage.setItem("defaultFloor", body.default_floor);
       localStorage.setItem("recipeDefaultView", body.recipe_default_view);
       if (body.shop_default_sort)
         localStorage.setItem("shopDefaultSort", body.shop_default_sort);

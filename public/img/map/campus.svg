@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1540" class="campus-art">
+  <defs>
+    <pattern id="atlas-windows" width="20" height="24" patternUnits="userSpaceOnUse"><rect x="7" y="7" width="7" height="11" rx="1" fill="#8b9d9d" opacity=".8"/></pattern>
+    <pattern id="atlas-red-windows" width="20" height="24" patternUnits="userSpaceOnUse"><path d="M7 18V9a4 4 0 0 1 8 0v9Z" fill="#f7eee0"/><path d="M11 7v11" stroke="#b18370"/></pattern>
+    <symbol id="art-tree" viewBox="0 0 40 50"><ellipse cx="22" cy="44" rx="16" ry="5" fill="#6b8564" opacity=".1"/><path d="M20 25v20" stroke="#92a182" stroke-width="3"/><path d="M20 3C8 3 3 15 7 23 0 34 15 40 21 35c13 3 20-7 14-16C35 10 28 3 20 3Z" fill="#b4cbb0" stroke="#91ad8d" stroke-width="1.2"/><path d="m20 16 1 19m0-7-7-5" fill="none" stroke="#91ad8d" stroke-width="1.2"/></symbol>
+    <symbol id="art-teaching" viewBox="0 0 160 120">
+      <ellipse cx="82" cy="103" rx="72" ry="10" fill="#344334" opacity=".09"/>
+      <path d="m18 42 113-13 17 12-112 14Z" fill="#b3b9b1" stroke="#7d8b83" stroke-width="1.5"/>
+      <path d="M18 43v49l112 12V31Z" fill="#f5f0e2" stroke="#879189" stroke-width="1.5"/><path d="m130 31 18 12v48l-18 13Z" fill="#d0d5c9" stroke="#879189" stroke-width="1.5"/>
+      <path d="M26 48h95v45H26Z" fill="url(#atlas-windows)"/><path d="m18 67 112 5M18 87l112 11" stroke="#d2c8b4" stroke-width="3"/>
+      <path d="M73 80v17l17 2V80Z" fill="#7e938c"/><path d="m68 98 25 2 6 5-37-3Z" fill="#c1c4b6"/>
+    </symbol>
+    <symbol id="art-tower" viewBox="0 0 160 120"><ellipse cx="80" cy="106" rx="57" ry="8" fill="#344334" opacity=".09"/><path d="m35 23 68-10 25 16-67 12Z" fill="#9aa99e" stroke="#7f8d84" stroke-width="1.5"/><path d="M35 24v68l68 16V14Z" fill="#f1eddf" stroke="#879189" stroke-width="1.5"/><path d="m103 14 25 16v61l-25 17Z" fill="#cbd3c6" stroke="#879189" stroke-width="1.5"/><path d="M42 33h55v65H42Z" fill="url(#atlas-windows)"/><path d="m35 52 68 8m-68 14 68 12" stroke="#d6cdb9" stroke-width="3"/></symbol>
+    <symbol id="art-red" viewBox="0 0 160 120"><ellipse cx="80" cy="103" rx="74" ry="9" fill="#594637" opacity=".1"/><path d="M15 50v42l117 12V46Z" fill="#c78d76" stroke="#996b57" stroke-width="1.5"/><path d="m132 46 16 8v39l-16 11Z" fill="#ad7864" stroke="#996b57" stroke-width="1.5"/><path d="m8 49 19-23 108 1 20 25-23-7-117 8Z" fill="#b47762" stroke="#8e6453" stroke-width="1.5"/><path d="m27 26 105 19m-98-19 106 20m-96-20 103 20" stroke="#cb9981"/><path d="M21 55h105v43H21Z" fill="url(#atlas-red-windows)"/><path d="m15 75 117 7" stroke="#eedbc2" stroke-width="3"/><path d="M72 82v16l17 2V82Z" fill="#6e7168"/><path d="m63 99 35 4" stroke="#ddd3bd" stroke-width="4"/></symbol>
+    <symbol id="art-lab" viewBox="0 0 160 120"><use href="#art-teaching"/><path d="M50 40V15h-8m8 0h8m-5 0v25" fill="#c5d0c7" stroke="#879189" stroke-width="2"/><path d="M97 29V10h12v17" fill="#e3e8dd" stroke="#879189" stroke-width="1.5"/></symbol>
+    <symbol id="art-science" viewBox="0 0 160 120"><use href="#art-teaching"/><path d="M73 33V17h28v14" fill="#dae1d5" stroke="#839387" stroke-width="1.5"/><path d="M72 17a15 15 0 0 1 30 0Z" fill="#a4b8ad" stroke="#839387" stroke-width="1.5"/><path d="M87 3V0" stroke="#839387" stroke-width="2"/></symbol>
+    <symbol id="art-gate" viewBox="0 0 160 120"><ellipse cx="80" cy="100" rx="62" ry="8" fill="#344334" opacity=".08"/><path d="M27 96V50h14v46m78 0V50h14v46" fill="#e5e0d0" stroke="#8d968a" stroke-width="2"/><path d="M26 48h109v13H26Z" fill="#b8c3b0" stroke="#7f9382" stroke-width="2"/><path d="M42 64h77v31H42Z" fill="#edf0e5" stroke="#8d968a" stroke-width="1.5"/><path d="M50 66v29m10-29v29m10-29v29m10-29v29m10-29v29m10-29v29m10-29v29" stroke="#8c9e8b" stroke-width="2"/><path d="M25 45h111" stroke="#7a8d7e" stroke-width="4"/></symbol>
+    <symbol id="art-arch" viewBox="0 0 160 120"><ellipse cx="80" cy="102" rx="62" ry="8" fill="#344334" opacity=".08"/><path d="M35 100V42h15v58m60 0V42h15v58" fill="#e4d9bf" stroke="#9b967f" stroke-width="2"/><path d="M23 40h114v14H23Zm31-16h52v16H54Z" fill="#eee5d0" stroke="#9b967f" stroke-width="2"/><path d="m17 40 12-9 18 1 10-14h46l10 14 19-1 12 9M50 20l7-7h46l7 7" fill="#899b88" stroke="#738573" stroke-width="2"/><path d="M50 68h60" stroke="#bcb39a" stroke-width="6"/><path d="M63 29h34" stroke="#9b967f" stroke-width="3"/></symbol>
+    <symbol id="art-pavilion" viewBox="0 0 160 120"><ellipse cx="82" cy="109" rx="69" ry="8" fill="#344334" opacity=".1"/><path d="M38 68v33l85 5V66Z" fill="#e8d6b5" stroke="#907f68" stroke-width="1.5"/><path d="M54 38v30h54V38Z" fill="#dfbc97" stroke="#907f68" stroke-width="1.5"/><path d="M24 76q15-9 24-19l65 1q10 12 26 17l-17 6-84-3Z" fill="#7a8e80" stroke="#5e7567" stroke-width="1.5"/><path d="M36 42Q59 31 77 12h8q13 20 39 30l-17 6H53Z" fill="#7a8e80" stroke="#5e7567" stroke-width="1.5"/><path d="M56 82v20m21-20v21m24-21v22M66 46v16m16-16v16m14-16v16" stroke="#a07c5b" stroke-width="4"/><path d="m30 106 101 4m-97 0 95 4" stroke="#c7c3ac" stroke-width="3"/><path d="M74 14h12" stroke="#5e7567" stroke-width="3"/></symbol>
+    <symbol id="art-temple" viewBox="0 0 160 120"><ellipse cx="80" cy="108" rx="73" ry="8" fill="#344334" opacity=".1"/><path d="M25 67v32l113 7V65Z" fill="#e7d8bd" stroke="#968775" stroke-width="1.5"/><path d="M15 67q22-7 34-27h66q10 18 32 26l-10 10-111-6Z" fill="#84938a" stroke="#60766a" stroke-width="1.5"/><path d="M30 46q24-10 36-28h35q12 18 30 28l-15 7-68-4Z" fill="#8b9b90" stroke="#60766a" stroke-width="1.5"/><path d="M38 76v24m20-23v25m20-24v25m20-24v25m20-24v25" stroke="#a37e61" stroke-width="5"/><path d="m20 104 121 6m-116 0 112 5" stroke="#c7c3ac" stroke-width="3"/><path d="M67 18h34" stroke="#60766a" stroke-width="4"/></symbol>
+    <symbol id="art-library" viewBox="0 0 160 120"><use href="#art-teaching"/><path d="M58 38V24l24-8 26 10v15" fill="#ebe6d9" stroke="#879189" stroke-width="1.5"/><path d="M69 30q6-3 13 1 7-3 14 1v12q-7-4-14-1-6-4-13-2Z" fill="#faf8ed" stroke="#9b9b85" stroke-width="1.5"/><path d="M82 31v12" stroke="#9b9b85"/></symbol>
+    <symbol id="art-hall" viewBox="0 0 160 120"><use href="#art-teaching"/><path d="m16 48 10-24 106 4 17 17-19-6-105 14Z" fill="#b6b4a1" stroke="#8c9585" stroke-width="1.5"/><path d="m29 26 101 6" stroke="#d8d5c3" stroke-width="2"/></symbol>
+    <symbol id="art-studio" viewBox="0 0 160 120"><use href="#art-hall"/><path d="M32 57h75v27H32Z" fill="#c5d8d2" stroke="#899e93" stroke-width="2"/><path d="M57 57v27m25-27v27" stroke="#f1eadb" stroke-width="3"/></symbol>
+    <symbol id="art-residence" viewBox="0 0 160 120"><use href="#art-tower" x="-28" y="-8" width="140" height="105"/><use href="#art-teaching" x="20" y="20" width="140" height="100"/></symbol>
+    <symbol id="art-courtyard" viewBox="0 0 160 120"><ellipse cx="80" cy="105" rx="72" ry="10" fill="#344334" opacity=".09"/><path d="m18 48 58-23 67 29-60 38Z" fill="#d5dfcd" stroke="#9ba992"/><path d="m18 48 19-7 4 53-22 10Zm90-8 35 14-3 49-33-17Z" fill="#ebe5d5" stroke="#879189" stroke-width="1.5"/><path d="m9 47 22-14 17 5-9 13-21 4Zm88-10 12-7 44 18-9 12Z" fill="#9aab9b" stroke="#7b8d7e" stroke-width="1.5"/><use href="#art-hall" x="32" y="-5" width="105" height="75"/><use href="#art-tree" x="68" y="57" width="27" height="36"/></symbol>
+    <symbol id="art-gym" viewBox="0 0 160 120"><ellipse cx="80" cy="103" rx="74" ry="10" fill="#344334" opacity=".08"/><path d="M17 55v39l112 11V56Z" fill="#e4e5dc" stroke="#8e9d94" stroke-width="1.5"/><path d="m129 56 17-8v47l-17 10Z" fill="#baccc3" stroke="#8e9d94" stroke-width="1.5"/><path d="M13 55Q29 8 88 23q40 3 60 25l-18 15Z" fill="#a5bfc1" stroke="#7e9da1" stroke-width="1.5"/><path d="M35 56Q45 21 88 26m-30 32q8-29 41-27m-17 30q8-24 32-24m-8 27q7-16 21-22" fill="none" stroke="#d0ddda" stroke-width="2"/><path d="M28 72h87v20H28Z" fill="url(#atlas-windows)"/></symbol>
+    <symbol id="art-pond" viewBox="0 0 160 120"><path d="M12 59Q6 35 42 33t59-8q43-2 47 33t-28 31q-45 20-84 8T12 59Z" fill="#dce7d4"/><path d="M19 59Q14 42 47 42t54-8q36 0 38 27t-23 22q-46 19-78 6T19 59Z" fill="#bcd8d7" stroke="#91bbba" stroke-width="1.5"/><path d="M35 62h25m18-8h32M52 80h35m17-9h14" stroke="#e9f4eb" stroke-width="2" stroke-linecap="round"/><path d="M111 36q10-14 22-7m-14 12q7-14 20-8" fill="none" stroke="#89a77f" stroke-width="3"/><path d="M25 46q-7-14-14-12m20 9q-2-14-8-14" fill="none" stroke="#89a77f" stroke-width="3"/></symbol>
+    <symbol id="art-hill" viewBox="0 0 160 120"><ellipse cx="80" cy="96" rx="73" ry="13" fill="#d0dfc3"/><path d="M15 91q13-57 42-45 13-46 43-27 18 8 21 37 25 3 27 36Z" fill="#b6c9a5" stroke="#8ba37d" stroke-width="1.5"/><path d="M60 94q34-23 20-38T91 25" fill="none" stroke="#eee8d5" stroke-width="7"/><path d="m35 76 10-12m67 9 8 7" stroke="#8ba37d" stroke-width="2"/><use href="#art-tree" x="24" y="25" width="35" height="45"/><use href="#art-tree" x="104" y="18" width="35" height="45"/></symbol>
+    <symbol id="art-garden" viewBox="0 0 160 120"><path d="m12 90 39-30 94 23-44 28Z" fill="#d1dfbc" stroke="#a4bb8e" stroke-width="1.5"/><use href="#art-tree" x="28" y="22" width="40" height="60"/><use href="#art-tree" x="83" y="34" width="33" height="50"/><path d="m72 90 4-9m10 12 4-9m22 8 4-9" stroke="#92af80" stroke-width="2"/></symbol>
+    <symbol id="art-basketball-court" viewBox="0 0 140 72">
+      <rect x="1" y="1" width="138" height="70" rx="2" fill="#b6cfc1" stroke="#f5f7eb" stroke-width="1.5"/>
+      <path d="M70 1v70M1 21h22v30H1m138-30h-22v30h22" fill="none" stroke="#f5f7eb" stroke-width="1.5"/>
+      <circle cx="70" cy="36" r="10" fill="none" stroke="#f5f7eb" stroke-width="1.5"/>
+      <path d="M23 24a14 14 0 0 1 0 24m94-24a14 14 0 0 0 0 24M1 8h8a30 30 0 0 1 0 56H1m138-56h-8a30 30 0 0 0 0 56h8" fill="none" stroke="#e9f0df" stroke-width="1.2"/>
+      <path d="M4 30v12m132-12v12" stroke="#79958a" stroke-width="2"/>
+      <circle cx="8" cy="36" r="3" fill="none" stroke="#79958a"/><circle cx="132" cy="36" r="3" fill="none" stroke="#79958a"/>
+    </symbol>
+    <symbol id="art-basketball" viewBox="0 0 160 260" preserveAspectRatio="none">
+      <rect x="7" y="5" width="146" height="247" rx="7" fill="#c6d9cb" stroke="#91aa9c" stroke-width="1.5"/>
+      <use href="#art-basketball-court" x="13" y="12" width="134" height="70"/>
+      <use href="#art-basketball-court" x="13" y="93" width="134" height="70"/>
+      <use href="#art-basketball-court" x="13" y="174" width="134" height="70"/>
+      <path d="M17 87h126M17 168h126" stroke="#9bb7a3" stroke-width="1.4"/>
+    </symbol>
+    <symbol id="art-track" viewBox="0 0 160 120" preserveAspectRatio="none"><rect x="25" y="4" width="110" height="112" rx="49" fill="#cca99a" stroke="#b98f7e"/><rect x="32" y="10" width="96" height="100" rx="43" fill="none" stroke="#e8cfc0"/><rect x="39" y="16" width="82" height="88" rx="36" fill="none" stroke="#e8cfc0"/><rect x="46" y="22" width="68" height="76" rx="29" fill="#b2c99d" stroke="#f1ecdc"/><path d="M49 61h62M59 33h42v56H59Zm0 15h9v27h-9m42-27h-9v27h9" fill="none" stroke="#edf1df" stroke-width="1.2"/><circle cx="80" cy="61" r="9" fill="none" stroke="#edf1df" stroke-width="1.2"/></symbol>
+  </defs>
+  <!-- The campus boundary and paths follow the supplied rough north-up layout. -->
+  <path class="atlas-land" d="M180 95 320 66 582 30 825 20Q853 108 867 220L926 500 956 831 973 1170 974 1504Q832 1535 699 1512L394 1525Q201 1539 139 1480 78 1372 61 1228L52 1096Q58 1012 165 965L130 788 135 579 180 531 180 380Z"/>
+  <g class="atlas-green"><path d="M351 292h420v102H351Z"/><path d="M352 469q91-38 181 30l18 377-189 14Z"/><path d="M583 583q172-22 238 76l-28 162-192 54-50-72Z"/><path d="M581 1203h348v283H593Z"/><path d="M157 992h177v479H157Z"/></g>
+  <path class="atlas-temple-ground" d="m864 742-56 31-51 80-108 27 9 207 27 57 252 4-16-358Z"/>
+  <g class="atlas-path-edge" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M328 84 330 403 337 527 328 920 352 1023 379 1237 401 1508M568 68 562 379 558 431 579 583 565 875 603 1026 635 1252 662 1511M216 403 831 393 887 545M213 550l118 4 213 51 313-4M194 926l148-4 226-14M358 1067l252 11M391 1360l511-30"/></g>
+  <g class="atlas-path" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M328 84 330 403 337 527 328 920 352 1023 379 1237 401 1508M568 68 562 379 558 431 579 583 565 875 603 1026 635 1252 662 1511M216 403 831 393 887 545M213 550l118 4 213 51 313-4M194 926l148-4 226-14M358 1067l252 11M391 1360l511-30"/></g>
+  <path class="atlas-temple-boundary" d="m912 746-48-4-56 31-51 80-108 27 9 207 27 57 252 4"/>
+  <g id="atlas-trees" opacity=".82" aria-hidden="true">
+    <use href="#art-tree" x="362" y="170" width="32" height="45"/><use href="#art-tree" x="525" y="177" width="30" height="42"/>
+    <use href="#art-tree" x="750" y="270" width="34" height="46"/><use href="#art-tree" x="768" y="320" width="29" height="42"/>
+    <use href="#art-tree" x="354" y="430" width="35" height="48"/><use href="#art-tree" x="514" y="452" width="32" height="44"/>
+    <use href="#art-tree" x="355" y="606" width="36" height="48"/><use href="#art-tree" x="513" y="631" width="34" height="46"/>
+    <use href="#art-tree" x="590" y="629" width="35" height="48"/><use href="#art-tree" x="614" y="604" width="29" height="42"/>
+    <use href="#art-tree" x="775" y="655" width="38" height="50"/><use href="#art-tree" x="804" y="705" width="30" height="44"/>
+    <use href="#art-tree" x="358" y="764" width="29" height="44"/><use href="#art-tree" x="524" y="768" width="36" height="48"/>
+    <use href="#art-tree" x="598" y="808" width="38" height="52"/><use href="#art-tree" x="629" y="781" width="27" height="42"/>
+    <use href="#art-tree" x="361" y="873" width="35" height="48"/><use href="#art-tree" x="591" y="947" width="36" height="48"/>
+    <use href="#art-tree" x="907" y="906" width="35" height="48"/><use href="#art-tree" x="904" y="976" width="31" height="44"/>
+    <use href="#art-tree" x="705" y="1060" width="35" height="48"/><use href="#art-tree" x="875" y="1087" width="36" height="48"/>
+    <use href="#art-tree" x="600" y="1157" width="35" height="48"/><use href="#art-tree" x="598" y="1219" width="35" height="48"/>
+    <use href="#art-tree" x="695" y="1210" width="38" height="52"/><use href="#art-tree" x="727" y="1252" width="32" height="44"/>
+    <use href="#art-tree" x="882" y="1227" width="38" height="52"/><use href="#art-tree" x="857" y="1273" width="28" height="42"/>
+    <use href="#art-tree" x="98" y="1390" width="35" height="48"/><use href="#art-tree" x="300" y="1454" width="36" height="48"/>
+  </g>
+  <g class="atlas-surroundings" aria-hidden="true"><text x="965" y="285" transform="rotate(90 965 285)">人 民 路</text></g>
+  <g id="atlas-places"/>
+</svg>

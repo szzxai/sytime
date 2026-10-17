@@ -72,7 +72,7 @@ try {
   await api("/api/forum/posts", { token: target.token, method: "POST", body: { category: "讨论", title: "头像跳转测试帖", content: "正文内容" } });
   await api("/api/forum/posts", { token: dev.token, method: "POST", body: { category: "讨论", title: "开发者自己的帖子", content: "正文" } });
 
-  browser = await chromium.launch({ channel: "msedge" });
+  browser = await chromium.launch({ channel: process.platform === "win32" ? "msedge" : undefined });
   async function pageFor(login, url, width = 1280) {
     const ctx = await browser.newContext({ viewport: { width, height: 880 } });
     if (login) await ctx.addInitScript(({ login }) => { localStorage.setItem("token", login.token); localStorage.setItem("user", JSON.stringify(login.user)); }, { login });

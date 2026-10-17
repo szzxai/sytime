@@ -5,7 +5,7 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "test": "npm run test:menu && npm run test:titles && npm run test:shops && npm run test:shops:ui && npm run test:user && npm run test:ui",
+    "test": "npm run test:menu && npm run test:titles && npm run test:shops && npm run test:shops:ui && npm run test:user && npm run test:ui && npm run test:map",
     "test:menu": "node --test tests/menu.test.cjs",
     "test:titles": "node --test tests/titles.test.cjs",
     "test:shops": "node --test tests/shops.test.cjs tests/review-image.test.cjs",
@@ -15,7 +15,8 @@
     "test:menu:live": "node tests/menu-live.cjs",
     "build:menu-skill": "python tools/build-menu-skill.py",
     "test:menu-skill": "python tests/menu-skill.py",
-    "test:deploy": "node tests/node-deploy.cjs"
+    "test:deploy": "node tests/node-deploy.cjs",
+    "test:map": "node tests/map-ui.mjs"
   },
   "keywords": [],
   "author": "",

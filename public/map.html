@@ -2,113 +2,71 @@
 <html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1, viewport-fit=cover"
-    />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="theme-color" content="#085628" />
     <title>校园地图 · 校园信息网</title>
     <link rel="icon" href="/img/favicon.svg?v=su-085628-v3" type="image/svg+xml" />
-    <link rel="stylesheet" href="vendor/leaflet/leaflet.css" />
+    <link rel="stylesheet" href="/vendor/leaflet/leaflet.css" />
     <link rel="stylesheet" href="/css/site.css" />
+    <link rel="stylesheet" href="/css/map.css" />
   </head>
   <body data-nav="map" data-shell="app" data-page="map">
-    <noscript
-      ><div class="alert alert--warning">
-        <div class="alert__body">本站需要启用 JavaScript 才能正常使用。</div>
-      </div></noscript
-    >
-    <a class="skip-link" href="#map">跳到地图</a>
+    <noscript><div class="alert alert--warning">请启用 JavaScript 查看校园地图。</div></noscript>
+    <a class="skip-link" href="#guideMap">跳到地图</a>
     <div id="siteBanner"></div>
     <div id="siteHeader"></div>
-    <main class="map-page" id="main">
-      <h1 class="sr-only">校园地图</h1>
-      <div
-        id="map"
-        class="map-canvas"
-        role="application"
-        aria-label="校园地图，可用方向键或 W A S D 移动"
-      ></div>
-
-      <div class="map-ui map-ui--tr">
-        <div class="floor-switch" role="group" aria-label="切换楼层">
-          <span class="floor-switch__label">楼层</span>
-          <button
-            type="button"
-            class="floor-switch__btn"
-            id="floor4Btn"
-            aria-pressed="false"
-            onclick="setFloor(4)"
-          >
-            4F
-          </button>
-          <button
-            type="button"
-            class="floor-switch__btn"
-            id="floor3Btn"
-            aria-pressed="false"
-            onclick="setFloor(3)"
-          >
-            3F
-          </button>
-          <button
-            type="button"
-            class="floor-switch__btn"
-            id="floor2Btn"
-            aria-pressed="false"
-            onclick="setFloor(2)"
-          >
-            2F
-          </button>
-          <button
-            type="button"
-            class="floor-switch__btn"
-            id="floor1Btn"
-            aria-pressed="true"
-            onclick="setFloor(1)"
-          >
-            1F
-          </button>
+    <main class="campus-page" id="main">
+      <aside class="campus-sidebar" aria-label="地点目录">
+        <div class="campus-intro">
+          <p class="campus-eyebrow">SUZHOU HIGH SCHOOL</p>
+          <div class="campus-title-row"><h1>校园地图<span class="campus-title-dot"></span></h1><button type="button" id="placesToggle" aria-expanded="false" aria-controls="placesPanel">地点目录 <span aria-hidden="true">⌄</span></button></div>
+          <p class="campus-subtitle">循着书声，走进苏中。</p>
         </div>
-      </div>
-
-      <div class="map-ui map-ui--bl">
-        <button
-          type="button"
-          class="icon-btn map-help-btn"
-          id="helpBtn"
-          aria-label="操作提示"
-          aria-expanded="false"
-        >
-          <svg class="icon" aria-hidden="true">
-            <use href="/img/icons.svg#i-help"></use>
-          </svg>
-        </button>
-      </div>
-      <div class="map-ui map-ui--bl" id="helpPanel" hidden>
-        <div class="map-help">
-          <h2 class="map-help__title">操作提示</h2>
-          <ul>
-            <li>滚轮 / 双指：缩放</li>
-            <li>拖动：移动地图</li>
-            <li>
-              <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> 或方向键：移动
-            </li>
-            <li>点击建筑：查看介绍</li>
-          </ul>
+        <div class="campus-discovery">
+          <div class="campus-search">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4.5 4.5"/></svg>
+            <input id="placeSearch" type="search" placeholder="寻找校园里的一个地方" aria-label="搜索校园地点" autocomplete="off" />
+            <button type="button" id="clearSearch" aria-label="清空搜索" hidden>×</button>
+          </div>
+          <div class="campus-filters" role="group" aria-label="地点分类">
+            <button type="button" data-category="all" aria-pressed="true">全部</button>
+            <button type="button" data-category="study" aria-pressed="false">教学</button>
+            <button type="button" data-category="heritage" aria-pressed="false">人文</button>
+            <button type="button" data-category="nature" aria-pressed="false">园林</button>
+            <button type="button" data-category="life" aria-pressed="false">生活</button>
+            <button type="button" data-category="sport" aria-pressed="false">运动</button>
+          </div>
         </div>
-      </div>
-
-      <div class="map-ui map-ui--center" id="mapStatusWrap">
-        <div class="map-status" id="mapStatus">
-          <span class="spinner spinner--lg"></span><span>地图加载中…</span>
+        <div class="campus-places-panel" id="placesPanel">
+          <div class="campus-list-heading"><h2 id="placesHeading">探索校园</h2><span id="placesCount" role="status" aria-live="polite"></span></div>
+          <div class="campus-place-list" id="placeList"></div>
+          <div class="campus-empty" id="placesEmpty" hidden><strong>没有找到这个地点</strong><p>换个名称，或试试其他分类。</p><button type="button" id="resetSearch">查看全部地点</button></div>
         </div>
-      </div>
+        <div class="campus-sidebar-foot"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3Zm6-3v15m6-12v15"/></svg><span>本部校园<span class="campus-foot-separator">·</span>苏州 · 人民路</span></div>
+      </aside>
+      <section class="campus-stage" aria-label="校园导览">
+        <div id="guideMap" role="region" tabindex="0" aria-label="校园导览地图；方向键移动，加减键缩放，Home 键回到全景"></div>
+        <div class="campus-compass" id="guideCompass" aria-label="地图上方为北"><span>N</span><svg viewBox="0 0 40 40" aria-hidden="true"><path d="m20 5 8 28-8-6-8 6Z"/><path class="compass-half" d="m20 5 8 28-8-6Z"/></svg><span>北</span></div>
+        <div class="campus-controls" id="guideControls" role="group" aria-label="地图控制">
+          <button type="button" id="guideZoomIn" aria-label="放大导览地图"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+          <button type="button" id="guideZoomOut" aria-label="缩小导览地图"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/></svg></button>
+          <span></span>
+          <button type="button" id="guideReset" aria-label="回到校园全景"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4H4v5m11-5h5v5M4 15v5h5m11-5v5h-5"/><rect x="8" y="8" width="8" height="8" rx="1"/></svg></button>
+        </div>
+        <div class="campus-map-note" id="guideNote"><span class="campus-note-dot"></span>校园位置示意 · 建筑插画非实景还原</div>
+        <div class="campus-map-tip" id="guideTip">双指移动 <span>·</span> 捏合或 Ctrl / ⌘ + 滚轮缩放</div>
+        <div class="campus-guide-status" id="guideStatus" role="status">正在展开校园…</div>
+        <article class="campus-detail" id="placeDetail" aria-labelledby="detailName" hidden>
+          <button type="button" class="campus-detail-close" id="closeDetail" aria-label="关闭地点介绍">×</button>
+          <div class="campus-detail-art" id="detailArt" aria-hidden="true"></div>
+          <div class="campus-detail-body"><p class="campus-detail-category" id="detailCategory"></p><h2 id="detailName"></h2><p id="detailDescription"></p><div class="campus-detail-location"><span aria-hidden="true">↗</span><span id="detailLocation"></span></div></div>
+        </article>
+      </section>
     </main>
-    <script src="vendor/leaflet/leaflet.js"></script>
+    <script src="/vendor/leaflet/leaflet.js"></script>
     <script src="/js/ui.js"></script>
     <script src="/js/page.js"></script>
-
+    <script src="/js/campus-places.js"></script>
     <script src="/js/pages/map.js"></script>
   </body>
 </html>
