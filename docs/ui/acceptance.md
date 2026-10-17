@@ -82,3 +82,12 @@ Windows 默认使用已安装的 Microsoft Edge；其他平台先执行 `npx pla
 - 最新 `npm run test:map` **134 项通过**：增加单地图/旧请求移除、篮球场尺寸、双轴滚动平移、Ctrl / ⌘ 连续缩放与指针锚定、反向缩放恢复、Safari 手势与重复事件抑制验证，保留搜索、筛选、选点、键盘、触控、响应式、暗色与失败重试回归。1440×1000、1280×900、390×844、360×740、844×390 均通过；axe、横向溢出、页面报错均为 0。Safari 手势通过 Chromium 模拟事件验证，未运行 Safari 引擎或实体 Mac 触控板测试。
 - 最新 `npm run test:ui` **370 项通过**：覆盖单一地图的搜索和详情，确认旧默认楼层字段移除及其余网站偏好保存。测试使用隔离数据库与上传目录。`node --check`、`git diff --check` 通过。
 - 报告：`output/playwright/map/report.json`、`output/playwright/audit.json`；全站日志：`output/playwright/map/ui-single-view.log`。上节为前一版历史记录，本节为最终单地图版本结果。
+
+
+## 2026-10-17 追加变更说明：地标点选、镜头与介绍
+
+- 选中、悬停与键盘焦点光晕放到全部建筑下方，建筑组不重排；修复东红楼选中光晕遮挡相邻楼宇。
+- 保留当前缩放，可见且未被详情遮挡的地标不移动；离屏或遮挡时，根据实际卡片及控制条位置计算最短避让平移，460ms缓出动画，减少动态效果模式直接完成。边缘地点不再放大并强制居中。
+- 28个地点改为用途及文化背景介绍，目录显示用途并支持用途搜索；分段正文、来源链接及口径见 docs/map-sources.md。手机长文在卡内滚动，预留地图可见空间，标题及关闭按钮保留。
+- 最新 `npm run test:map` **169项通过**：新增绘制顺序及光晕层级、可见建筑不动且不缩放、边缘地点保留上下文、详情避让、动画中间帧、用途搜索、分段正文与引用、长文键盘滚动、南侧地点切换长介绍后的目标可见性验证。1440×1000、1280×900、390×844、360×740、844×390明暗主题检查通过，axe、横向溢出与页面报错均为0。人工检查东红楼相邻建筑、泮水居及手机详情、暗色长文截图。
+- `npm run test:ui` **370项通过**；`node --check` 与 `git diff --check` 通过。测试使用独立临时数据库与上传目录。最新报告为 output/playwright/map/report.json、output/playwright/audit.json；截图新增 east-red-selection.png、panshui-selection.png、360-dark-long-detail.png。Safari手势覆盖沿用Chromium模拟事件，未声称实体Mac或Safari引擎验证。

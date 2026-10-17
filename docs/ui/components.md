@@ -852,10 +852,11 @@ JS：`UI.userLine(user, {size, meta, href, large, showRole})`；meta 传 HTML �
 校园地图的当前规范见 [pages/map.md](./pages/map.md)。`public/css/map.css` 为页面专用样式，不影响必吃榜地图。
 
 - `.campus-search` + `.campus-filters`：关键词与分类联合过滤，按钮 `aria-pressed`，数量 `role=status`；无结果可重置。
-- `.campus-place-row`：SVG 缩略图、名称、分类或别名；选中背景和左侧细线同时提示状态。
+- `.campus-place-row`：SVG 缩略图、名称、用途摘要；用途摘要及别名可搜索，选中背景和左侧细线同时提示状态。
 - 单一地图无需视图切换器；旧楼层图及相关前端控件已移除。
 - `.campus-controls`：放大、缩小、回到全景；地图画布形成独立层叠上下文，不能覆盖这些按钮或详情。
-- `.campus-detail`：插画、分类、名称、说明、位置，带关闭按钮；打开后焦点进入标题，关闭后返回来源。
+- `.campus-detail`：插画、分类、名称、分段说明和资料来源链接，带关闭按钮；不显示方位行。标题及关闭入口固定，正文区域限制高度并可键盘滚动；打开后焦点进入标题，关闭后返回来源。
 - `.campus-places-panel`：桌面独立滚动，手机可折叠；`placesToggle` 的 `aria-expanded` 与显示状态一致。
 - `.campus-map-place`：SVG 地点组可点击与键盘激活；非搜索结果淡化、退出焦点顺序。标签随缩放调整以保证全景可读。地点可指定独立 `height`，篮球场和操场使用大面积场地插画。
+- `#atlas-highlights` 在全部建筑之前绘制光晕，悬停、焦点和选中不改变建筑顺序。点选保持当前缩放；地标已可见时不移动，仅在离屏或被详情卡遮挡时以最短距离缓动平移，减少动态效果模式立即完成。
 - 普通滚轮/双指滚动双轴平移，捏合或 Ctrl / ⌘ + 滚轮围绕指针连续缩放；Safari 手势期间抑制重复滚轮事件。自由平移配合全景复位，避免固定边界导致宽屏回弹。Leaflet 公共皮肤仍在 `site.css`。
