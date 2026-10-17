@@ -1,6 +1,6 @@
 # 店铺详情 · shop-detail.md（#7/#8：shop.html?id=）
 
-> 状态：新功能 ｜ 优先级：P1 ｜ issue：#7、#8（依赖 #5/#6）｜ 依赖：阶段 0；#7/#8 数据与接口 ｜ 壳：默认 ｜ data-nav：`shops` ｜ 容器：`container`
+> 状态：新功能 ｜ 优先级：P1 ｜ issue：#7、#8、#22、#23（依赖 #5/#6）｜ 依赖：阶段 0；#7/#8 数据与接口 ｜ 壳：默认 ｜ data-nav：`shops` ｜ 容器：`container`
 
 ## 需求对照表（PLAN #7/#8 → 本文档）
 
@@ -9,13 +9,14 @@
 | 店铺大致信息区（六要素） | §1 店铺头部 |
 | 样式一：纵向 + 横向导航（菜品/评价）+ 吸顶 + 联动高亮 + 连续滚动 | §2 |
 | 样式二：左右两栏同时查看 + 窄屏不破 | §3 |
-| 用户设置（选择/保存/再次进入自动应用） | §4 |
+| 用户设置（手动/自动，选择/保存/再次进入自动应用） | §4 |
+| #22 手动切换或按屏幕宽度自动切换（纯 CSS） | §3、§4 |
 | #8 菜品展示/添加（学生）/图片限制/失败提示/管理员删除 | §5 |
 | 依赖 #6 | shops.md |
 
 ## 用途与目标
 
-店铺详情页 shop.html?id=：两种可切换布局（纵向/双栏）+ 菜品浏览与学生上传 + 评价；覆盖 PLAN #7/#8 全部需求与验收标准。
+店铺详情页 shop.html?id=：两种可切换布局（纵向/双栏），并支持「手动 / 自动」样式——自动时由纯 CSS 按屏幕宽度切换；含菜品浏览与学生上传 + 评价；覆盖 PLAN #7/#8 与 #22 全部需求与验收标准。
 
 新页面：无旧代码钩子，「JS 钩子清单 / 需要修改的脚本行为」不适用；HTML 骨架分段给出（§1/§2/§3/§5/§6）。
 
@@ -80,15 +81,25 @@ stat-block 数字直接用原始数值（420 米 / 1.2 公里换算：**≥1000 
 
 - ≥900px：左菜品（可独立滚动 sticky）右评价，两栏同时可见；subnav 隐藏（CSS `.shop-wrap--split .subnav{display:none}`——外层容器加 `shop-wrap--split` 类或直接 `subnav[hidden]`，由脚本切换）。
 - <900px：grid 回单列（CSS 自动，`.shop-layout--split` 未命中断点即单列）+ **subnav 恢复显示** + 提示：切换到双栏但屏窄时 toast.info「屏幕较窄，已使用纵向布局」。
+- **自动模式（#22）**：容器类为 `.shop-layout shop-layout--auto`，同样的两 section 结构；不显示 segmented。CSS 在 `@media (min-width:900px)` 下套用双栏 + sticky + `.shop-wrap--auto .subnav{display:none}`，窄屏自动纵向并显示 subnav。纯 CSS 实现，窗口缩放不触发页面重渲染。
 
-## 4. 布局切换与持久化
+## 4. 布局样式（手动 / 自动）与持久化
+
+账号字段 `shop_layout_mode` 决定详情页使用哪种方式（设置 → 网站设置 → 店铺详情页样式）：
+
+| 模式 | 详情页表现 |
+| --- | --- |
+| `manual`（手动，默认） | 头部显示「纵向 / 双栏」segmented（`#layoutSwitch`）；初始值取账号 `shop_layout`（'stacked'/'split'）→ 无则 localStorage `shopLayout` → 都无则按屏宽：<900 stacked，≥900 split |
+| `auto`（自动） | 隐藏 segmented；容器使用 `.shop-layout--auto` + `shop-wrap--auto`，由 CSS `@media (min-width: 900px)` 决定双栏/纵向 |
 
 | 步骤 | 规则 |
 | --- | --- |
-| 初始值 | 账号设置 `shop_layout`（'stacked'/'split'）→ 无则 localStorage `shopLayout` → 都无则按屏宽：<900 stacked，≥900 split |
-| 切换 | 点 segmented：`applyLayout(v)`（换类/藏 subnav）+ localStorage 写 `shopLayout` + 登录则 PUT `/api/user/settings`（附加字段 shop_layout，失败仅 toast 不阻塞本地） |
-| profile 同步 | profile.md `#site` 的选择卡（双向：详情页切换后 profile 再进显示当前值） |
-| 未登录 | 仅 localStorage；下次进入应用 |
+| 手动切换 | 点 segmented：`setManualLayout(mode)`（换类/藏 subnav）+ localStorage 写 `shopLayout` + 登录则 PUT `/api/user/settings`（字段 `shop_layout`，失败仅 toast 不阻塞本地）；下次同账号进入保持上次选择 |
+| 自动切换 | 纯 CSS：≥900px 套用与双栏相同的两列/`sticky` 规则，<900px 回落到单列；subnav 仅在窄屏显示。窗口宽度变化时只由媒体查询重算，不重渲染页面、不丢输入内容 |
+| profile 同步 | 详情页经 `GET /api/user/profile` 读取 `shop_layout_mode` 与 `shop_layout` |
+| 未登录 | 固定手动模式，仅 localStorage；下次进入应用 |
+
+设置页「店铺详情页样式」只提供手动/自动二选一，不再直接选择纵向/双栏；保存网站设置不会覆盖详情页记录的 `shop_layout`。
 
 ## 5. 菜品区（#8）
 
@@ -133,6 +144,7 @@ stat-block 数字直接用原始数值（420 米 / 1.2 公里换算：**≥1000 
 - 评价列表 `.review`（user-line + stars + `点了：{{dish}}` + text + thumbs）+ 评价间分割线（内置）。
 - 头部汇总：`rating-line`（均分 + 人数）——接口提供 `rating_avg/review_count` 时显示。
 - 「写评价」：登录即可；学生及以上才能点赞与提交评价。入口在评价区头部（primary）与表单 `#reviewForm`；评分控件 `#shopRating1..5`（DOM 5→1，`row-reverse` 呈现 1→5），选中值即上传值，选中星及其左侧一起点亮。
+- **收藏（#23）**：点赞按钮右侧有「收藏」按钮（`.btn.btn--sm.btn--collect`，已收藏用主色高亮）；点击由 `ui.js` 全局委托打开统一收藏夹弹窗（列出 `GET /api/collections?section=shops`，可新建，确认后 `POST /api/collections/:id/items`）。所有登录用户可收藏，不受学生点赞门槛限制；未登录提示先登录。
 - **删除本人评价**：`my_review` 存在时，自己的评价卡显示删除按钮（`data-delete-my-review`），危险确认后 `DELETE /api/shops/:id/reviews/me`，重置表单并刷新列表。
 - 空：empty「暂无评价」/「还没有人评价这家店，来写第一条吧。」+ 写评价（登录时）。
 
@@ -146,14 +158,16 @@ stat-block 数字直接用原始数值（420 米 / 1.2 公里换算：**≥1000 
 | 加载失败 | 网络 | loadError + 重试 |
 | 菜品空/评价空 | — | 各区 empty |
 | 添加菜品对话框 | 见 §5.2 | |
-| 布局切换 | segmented | §4 |
-| 窄屏强制纵向 | <900 且选 split | stacked 呈现 + 一次性 toast.info「屏幕较窄，已使用纵向布局」 |
+| 布局切换 | 账号 `manual` | segmented（§4） |
+| 自动布局 | 账号 `auto` | 隐藏 segmented；纯 CSS 按宽度切换 |
+| 窄屏手动双栏 | <900 且选 split | stacked 呈现 + 一次性 toast.info「屏幕较窄，已使用纵向布局」 |
 
 ## 8. 响应式
 
 - 360：hero 数字块换行；菜品网格 1–2 列；subnav 吸顶；无横向滚动。
 - 768：2 列菜品。
-- 900：样式二生效（若选中）；左栏 sticky 内滚。
+- 900：手动选双栏或自动模式在宽屏生效；左栏 sticky 内滚。
+- 自动模式：<900 纵向、≥900 双栏，均由 CSS 媒体查询决定；窗口缩放不重渲染、不丢表单内容。
 - 双栏下菜品行式列表（dish-list）。
 
 ## 9. 边界场景
@@ -174,11 +188,13 @@ stat-block 数字直接用原始数值（420 米 / 1.2 公里换算：**≥1000 
 ## 11. 验收清单
 
 - [ ] 头部六要素齐全（含 location_note 可选行）。
-- [ ] 样式一：吸顶 subnav + 点击滚动 + 滚动联动高亮 + 连续浏览不受阻。
-- [ ] 样式二：两栏同时可见；窄屏自动纵向 + 提示；无横向滚动。
-- [ ] 布局选择持久化（localStorage + 账号设置双向同步）。
+- [ ] 样式一（手动 · 纵向）：吸顶 subnav + 点击滚动 + 滚动联动高亮 + 连续浏览不受阻。
+- [ ] 样式二（手动 · 双栏）：两栏同时可见；窄屏自动纵向 + 提示；无横向滚动。
+- [ ] 自动：≥900 双栏、<900 纵向；隐藏 segmented；缩放时输入不丢。
+- [ ] 手动/自动模式与上次纵向/双栏选择持久化（localStorage + 账号同步）。
 - [ ] 添加菜品（权限、必填图、2MB、409 同名、成功重载）；管理员编辑/删除。
 - [ ] 评价列表 + 写评价 + 空态；评分控件选中值与上传一致、左侧星同亮；作者可删除本人评价。
+- [ ] 点赞按钮右侧收藏按钮：未登录提示；弹窗列出/新建收藏夹并确认写入；已收藏时高亮（#23）。
 - [ ] 404/缺 id/失败态正确。
 - [ ] 360/900/1280 正常；axe=0；零报错。
 

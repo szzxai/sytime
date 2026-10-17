@@ -35,6 +35,9 @@
       "</span></button>"
     );
   };
+  F.collectButton = function (p) {
+    return UI.collections.button("forum", p.id, { className: "card__action" });
+  };
   F.like = async function (root, id) {
     if (!UI.session.token()) {
       UI.toast.warning("请先登录");

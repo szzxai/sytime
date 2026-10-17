@@ -159,16 +159,18 @@
       subnav() +
       '<div class="shop-layout" id="shopLayout">' +
       dishesSection() +
-      reviewSection() +
+      reviewSection(shop) +
       "</div>"
     );
   }
 
-  function reviewSection() {
+  function reviewSection(shop) {
     return (
       '<section class="card shop-review-card shop-section" id="reviewsPanel" aria-labelledby="reviewsTitle">' +
       '<div class="shop-section__head"><div><h2 class="section__title" id="reviewsTitle">同学评价</h2><p class="u-muted u-fs-sm" id="reviewSummary" role="status"></p></div></div>' +
-      '<div class="shop-review-actions"><button type="button" class="btn btn--sm" id="likeShopButton" hidden></button><span class="u-muted u-fs-sm" id="reviewAccess"></span></div>' +
+      '<div class="shop-review-actions"><button type="button" class="btn btn--sm" id="likeShopButton" hidden></button>' +
+      UI.collections.button("shops", shop.id, { variant: "btn" }) +
+      '<span class="u-muted u-fs-sm" id="reviewAccess"></span></div>' +
       '<form class="shop-review-form" id="reviewForm" hidden>' +
       '<fieldset class="shop-rating-fieldset"><legend class="field__label">评分（必选）</legend><div class="shop-rating-choices" role="radiogroup" aria-label="评分 1 到 5 星">' +
       [5, 4, 3, 2, 1].map(function (value) { return '<input class="shop-rating-input" type="radio" name="rating" id="shopRating' + value + '" value="' + value + '"><label class="shop-rating-choice" for="shopRating' + value + '"><span class="sr-only">' + value + ' 星</span><span aria-hidden="true">★</span></label>'; }).join("") +
@@ -266,51 +268,70 @@
   }
 
   var LAYOUTS = ["stacked", "split"];
-  function setLayoutMode(mode, persist) {
-    var split = mode === "split";
+  var layoutMode = "manual"; // manual：详情页显示纵向/双栏开关；auto：纯 CSS 按宽度切换
+  var manualLayout = "stacked";
+  function localMode() {
+    var stored = localStorage.getItem("shopLayout");
+    return LAYOUTS.indexOf(stored) !== -1
+      ? stored
+      : window.innerWidth >= 900
+        ? "split"
+        : "stacked";
+  }
+  // 自动模式不写 JS 断点：只切换类名，由 CSS 媒体查询按宽度选择双栏/纵向
+  function applyLayout() {
+    var auto = layoutMode === "auto";
+    var split = !auto && manualLayout === "split";
     var layout = page.el("shopLayout");
-    if (layout) layout.classList.toggle("shop-layout--split", split);
+    if (layout) {
+      layout.classList.toggle("shop-layout--split", split);
+      layout.classList.toggle("shop-layout--auto", auto);
+    }
     body.classList.toggle("shop-wrap--split", split);
+    body.classList.toggle("shop-wrap--auto", auto);
     var sw = page.el("layoutSwitch");
     if (sw) {
+      sw.hidden = auto;
       UI.qsa("[data-layout]", sw).forEach(function (btn) {
-        btn.setAttribute("aria-pressed", btn.getAttribute("data-layout") === mode ? "true" : "false");
+        btn.setAttribute("aria-pressed", btn.getAttribute("data-layout") === manualLayout ? "true" : "false");
       });
     }
+  }
+  function setManualLayout(mode, persist) {
+    if (LAYOUTS.indexOf(mode) === -1) return;
+    manualLayout = mode;
     try { localStorage.setItem("shopLayout", mode); } catch (e) { /* ignore */ }
     if (persist && UI.session.token()) {
       UI.api("/api/user/settings", { method: "PUT", body: { shop_layout: mode }, on401: false });
     }
+    applyLayout();
   }
   function wireLayout() {
     var sw = page.el("layoutSwitch");
     if (sw) {
       sw.addEventListener("click", function (e) {
+        if (layoutMode === "auto") return;
         var btn = e.target.closest("[data-layout]");
         if (!btn) return;
         var mode = btn.getAttribute("data-layout");
         if (mode === "split" && window.innerWidth < 900)
           UI.toast.info("屏幕较窄，已使用纵向布局");
-        setLayoutMode(mode, true);
+        setManualLayout(mode, true);
       });
     }
     var sub = page.el("shopSubnav");
     if (sub) UI.scrollSpy(sub, [page.el("shopDishes"), page.el("reviewsPanel")]);
-    function localMode() {
-      var stored = localStorage.getItem("shopLayout");
-      return LAYOUTS.indexOf(stored) !== -1
-        ? stored
-        : window.innerWidth >= 900
-          ? "split"
-          : "stacked";
-    }
     if (UI.session.token()) {
       UI.api("/api/user/profile", { on401: false }).then(function (r) {
-        var account = r.ok && r.data.user ? r.data.user.shop_layout : null;
-        setLayoutMode(LAYOUTS.indexOf(account) !== -1 ? account : localMode(), false);
+        var user = r.ok && r.data.user ? r.data.user : null;
+        layoutMode = user && user.shop_layout_mode === "auto" ? "auto" : "manual";
+        manualLayout = user && LAYOUTS.indexOf(user.shop_layout) !== -1 ? user.shop_layout : localMode();
+        applyLayout();
       });
     } else {
-      setLayoutMode(localMode(), false);
+      layoutMode = "manual";
+      manualLayout = localMode();
+      applyLayout();
     }
   }
 

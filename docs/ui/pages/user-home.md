@@ -10,6 +10,7 @@
 - 权限等级仅在**该用户勾选显示**（`show_role`）时展示（复用 `UI.roleTag`）。
 - 无「设置」入口。
 - 「头衔」分区只列出该用户**已拥有的全部头衔**（只读，无佩戴/撤销）。
+- 「收藏」分区**仅当该用户存在公开收藏夹时显示**（`is_public=1`）；只读展示公开收藏夹与内容（版块/收藏夹双层菜单 + 卡片网格，无公开开关）。
 - 若**当前访问者**权限足够（且目标权重低于自己、非本人），横向菜单栏追加**「管理」**项，内容与[管理后台](admin.md)一致：修改权限等级、发放特殊权限、发放头衔、封号/解封。
 
 ## 入口（头像跳转，全站）
@@ -57,12 +58,12 @@
   </header>
   <nav class="profile-tabs" aria-label="用户主页分区" id="userNav" hidden>
     <a class="side-nav__item" href="#home" data-panel="home">主页</a>
-    <a class="side-nav__item" href="#favorites" data-panel="favorites">收藏</a>
+    <a class="side-nav__item" href="#favorites" data-panel="favorites" id="favoritesNav" hidden>收藏</a>
     <a class="side-nav__item" href="#titles" data-panel="titles">头衔</a>
     <a class="side-nav__item" href="#manage" data-panel="manage" id="manageNav" hidden>管理</a>
   </nav>
   <section class="view" id="view-home" hidden></section>       <!-- 空页面 -->
-  <section class="view" id="view-favorites" hidden></section>  <!-- 空页面 -->
+  <section class="view" id="view-favorites" hidden></section>  <!-- UI.collectionsBrowser：公开收藏 -->
   <section class="view" id="view-titles" hidden><div class="panel"><div class="panel__body" id="userTitles"></div></div></section>
   <section class="view" id="view-manage" hidden><div id="manageBox"></div></section>
 </main>
@@ -73,6 +74,10 @@
 ### #view-titles 头衔（只读）
 
 拉取 `GET /api/users/:id/titles`，以徽章列出（佩戴中的额外标「佩戴中」）。空 → `UI.html.empty({icon:'award', ...})`。
+
+### #view-favorites 收藏（只读）
+
+资料加载后请求 `GET /api/users/:id/collections`（公开接口，仅返回 `is_public=1` 的收藏夹）；有公开收藏夹时才取消 `#favoritesNav` 的 `hidden`。首次进入分区时调用 `UI.collectionsBrowser(#view-favorites, { mode: "public", userId })`：与个人中心相同的左右分栏 / 双层菜单 / 网格，但不显示公开开关（显示「公开」徽章）；`GET /api/collections/:id/items` 对公开收藏夹允许匿名读取。
 
 ### #view-manage 管理
 
@@ -89,7 +94,7 @@
 
 1. 读取 `?id=`；非数字 → 404 空状态。
 2. 登录时先 `GET /api/me` 判定是否本人（本人 → 跳转个人中心）；再 `GET /api/users/:id/profile`（公开）渲染头部与菜单。
-3. 头衔、管理面板懒加载（进入对应分区时请求）。
+3. 头衔、收藏、管理面板懒加载（进入对应分区时请求）；收藏标签在公开收藏夹查询成功后才显示。
 4. 所有写操作经 `UI.api`；错误 → `UI.errorText` + toast；与改角色/封号一致，不能操作自己或权重不低于自己的人（后端二次校验，前端仅相应隐藏/禁用）。
 
 ## 状态矩阵
@@ -105,7 +110,8 @@
 
 ## 接口与存储
 
-- 公开：`GET /api/users/:id/profile`（id/display_id/username/nickname/avatar_url/signature/role/show_role/status/title）、`GET /api/users/:id/titles`（已拥有头衔）。
+- 公开：`GET /api/users/:id/profile`（id/display_id/username/nickname/avatar_url/signature/role/show_role/status/title）、`GET /api/users/:id/titles`（已拥有头衔）、`GET /api/users/:id/collections`（公开收藏夹）。
+- 公开收藏内容：`GET /api/collections/:id/items?page=`（收藏夹 `is_public=1` 时允许匿名）。
 - 登录：`GET /api/me`（角色 + 权限）。
 - 管理（`user_manage`）：`GET /api/admin/users/:id`、`GET /api/admin/permissions`、`PUT /api/admin/users/role`、`PUT /api/admin/users/permissions`、`PUT /api/admin/users/ban`、`PUT /api/admin/users/unban`。
 - 管理（`title_manage`）：`GET /api/admin/titles`、`POST /api/admin/users/:id/titles`、`POST /api/admin/users/:id/titles/custom`、`DELETE /api/admin/users/:id/titles/:titleId`。
@@ -125,6 +131,7 @@
 - [ ] 论坛 / 评价处点击他人头像进入其主页，点击自己头像进入个人中心。
 - [ ] 他人主页只读，权限等级按 `show_role` 显示，无「设置」。
 - [ ] 头衔分区只读，列出全部已拥有头衔。
+- [ ] 存在公开收藏夹时显示「收藏」标签；只读展示公开收藏夹与内容，无公开开关与设置入口（#23）。
 - [ ] 有权限者出现「管理」并可用（改等级 / 权限 / 封号 / 发头衔）。
 - [ ] 访问本人 id 跳转个人中心；匿名只读。
 - [ ] 360/1280 正常；axe=0；零报错。回归：`npm run test:user`。

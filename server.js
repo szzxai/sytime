@@ -21,6 +21,8 @@ const {
 } = require("./lib/titles/store");
 const { mountTitleRoutes } = require("./lib/titles/routes");
 const { evaluateAutoTitles } = require("./lib/titles/rules");
+const { migrate: migrateCollections } = require("./lib/collections/store");
+const { mountCollectionRoutes } = require("./lib/collections/routes");
 const { localDay, shiftDay } = require("./lib/menu/schedule");
 
 const app = express();
@@ -49,6 +51,9 @@ CREATE TABLE IF NOT EXISTS users (
   shop_default_sort TEXT NOT NULL DEFAULT 'campus',
   shop_default_type TEXT NOT NULL DEFAULT '',
   shop_layout TEXT NOT NULL DEFAULT 'stacked',
+  shop_layout_mode TEXT NOT NULL DEFAULT 'manual',
+  default_collection_forum INTEGER,
+  default_collection_shops INTEGER,
   status TEXT NOT NULL DEFAULT 'active',
   ban_reason TEXT NOT NULL DEFAULT '',
   ban_image TEXT NOT NULL DEFAULT '',
@@ -78,6 +83,9 @@ CREATE TABLE IF NOT EXISTS users (
       shop_default_sort TEXT NOT NULL DEFAULT 'campus',
       shop_default_type TEXT NOT NULL DEFAULT '',
       shop_layout TEXT NOT NULL DEFAULT 'stacked',
+      shop_layout_mode TEXT NOT NULL DEFAULT 'manual',
+      default_collection_forum INTEGER,
+      default_collection_shops INTEGER,
       status TEXT NOT NULL DEFAULT 'active',
       ban_reason TEXT NOT NULL DEFAULT '',
       ban_image TEXT NOT NULL DEFAULT '',
@@ -111,6 +119,9 @@ CREATE TABLE IF NOT EXISTS users (
   }
   if (cols.indexOf("shop_layout") === -1) {
     db.exec("ALTER TABLE users ADD COLUMN shop_layout TEXT NOT NULL DEFAULT 'stacked'");
+  }
+  if (cols.indexOf("shop_layout_mode") === -1) {
+    db.exec("ALTER TABLE users ADD COLUMN shop_layout_mode TEXT NOT NULL DEFAULT 'manual'");
   }
   if (cols.indexOf("display_id") === -1) {
     db.exec("ALTER TABLE users ADD COLUMN display_id TEXT");
@@ -340,6 +351,9 @@ migrateShops(db);
 
 // 头衔系统（#10）：头衔目录、拥有关系与佩戴状态
 migrateTitles(db);
+
+// 收藏夹（#23）：collections / collection_items 与默认收藏夹字段
+migrateCollections(db);
 
 const UPLOAD_DIR = path.join(__dirname, "uploads");
 if (!fs.existsSync(UPLOAD_DIR)) {
@@ -1254,7 +1268,7 @@ app.get("/api/admin/pending-counts", requireLogin, function (req, res) {
 
 app.get("/api/user/profile", requireLogin, function (req, res) {
   const user = db
-    .prepare("SELECT id, display_id, username, nickname, avatar_url, signature, role, default_page, default_floor, recipe_default_view, shop_default_sort, shop_default_type, shop_layout, show_role, status FROM users WHERE id = ?")
+    .prepare("SELECT id, display_id, username, nickname, avatar_url, signature, role, default_page, default_floor, recipe_default_view, shop_default_sort, shop_default_type, shop_layout, shop_layout_mode, default_collection_forum, default_collection_shops, show_role, status FROM users WHERE id = ?")
     .get(req.user.id);
   if (!user) {
     res.status(404).json({ error: "user not found" });
@@ -1309,7 +1323,7 @@ app.get("/api/users/:id/titles", function (req, res) {
 app.put("/api/user/settings", requireLogin, function (req, res) {
   const body = req.body || {};
   const current = db
-    .prepare("SELECT default_page, default_floor, recipe_default_view, shop_default_sort, shop_default_type, shop_layout, show_role FROM users WHERE id = ?")
+    .prepare("SELECT default_page, default_floor, recipe_default_view, shop_default_sort, shop_default_type, shop_layout, shop_layout_mode, show_role FROM users WHERE id = ?")
     .get(req.user.id);
   if (!current) {
     res.status(404).json({ error: "user not found" });
@@ -1342,13 +1356,17 @@ app.put("/api/user/settings", requireLogin, function (req, res) {
   if (body.shop_layout !== undefined) {
     shopLayout = body.shop_layout === "split" ? "split" : "stacked";
   }
+  let shopLayoutMode = current.shop_layout_mode;
+  if (body.shop_layout_mode !== undefined) {
+    shopLayoutMode = body.shop_layout_mode === "auto" ? "auto" : "manual";
+  }
   let showRole = current.show_role;
   if (body.show_role !== undefined) {
     showRole = body.show_role === 0 || body.show_role === false || body.show_role === "0" ? 0 : 1;
   }
-  db.prepare("UPDATE users SET default_page = ?, default_floor = ?, recipe_default_view = ?, shop_default_sort = ?, shop_default_type = ?, shop_layout = ?, show_role = ? WHERE id = ?")
-    .run(defaultPage, defaultFloor, recipeView, shopSort, shopType, shopLayout, showRole, req.user.id);
-  res.json({ default_page: defaultPage, default_floor: defaultFloor, recipe_default_view: recipeView, shop_default_sort: shopSort, shop_default_type: shopType, shop_layout: shopLayout, show_role: showRole });
+  db.prepare("UPDATE users SET default_page = ?, default_floor = ?, recipe_default_view = ?, shop_default_sort = ?, shop_default_type = ?, shop_layout = ?, shop_layout_mode = ?, show_role = ? WHERE id = ?")
+    .run(defaultPage, defaultFloor, recipeView, shopSort, shopType, shopLayout, shopLayoutMode, showRole, req.user.id);
+  res.json({ default_page: defaultPage, default_floor: defaultFloor, recipe_default_view: recipeView, shop_default_sort: shopSort, shop_default_type: shopType, shop_layout: shopLayout, shop_layout_mode: shopLayoutMode, show_role: showRole });
 });
 
 app.post("/api/user/avatar", requireLogin, function (req, res) {
@@ -1488,6 +1506,7 @@ app.delete("/api/forum/posts/:id", requireLogin, function (req, res) {
   }
   db.prepare("DELETE FROM forum_replies WHERE post_id = ?").run(id);
   db.prepare("DELETE FROM post_likes WHERE post_id = ?").run(id);
+  db.prepare("DELETE FROM collection_items WHERE item_type = 'forum_post' AND item_id = ?").run(id);
   db.prepare("DELETE FROM messages WHERE target_kind = 'post' AND target_id = ?").run(id);
   db.prepare("DELETE FROM forum_posts WHERE id = ?").run(id);
   res.json({ ok: true });
@@ -1884,6 +1903,13 @@ mountTitleRoutes(app, db, {
   authenticate: checkRole(),
   requirePermission: requirePermission,
   checkTarget: checkTarget
+});
+
+// 收藏夹（#23）
+mountCollectionRoutes(app, db, {
+  requireLogin: requireLogin,
+  authenticate: checkRole(),
+  attachAuthors: attachAuthors
 });
 app.use("/api", function (req, res) {
   res.status(404).json({ error: "not found" });

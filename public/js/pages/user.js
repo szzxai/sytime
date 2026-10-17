@@ -4,6 +4,7 @@
   var status = P.el("userStatus");
   var params = new URLSearchParams(location.search);
   var userId = parseInt(params.get("id"), 10);
+  var initialHash = location.hash;
   var me = null,
     target = null,
     adminUser = null;
@@ -75,11 +76,21 @@
       title: (target.nickname || target.username || "该用户") + " 的主页",
       desc: "这里会展示该用户的动态与发布内容。",
     });
-    P.el("view-favorites").innerHTML = UI.html.empty({
-      icon: "star",
-      title: "收藏",
-      desc: "该用户收藏的内容会显示在这里。",
+    // 只有存在公开收藏夹时才显示「收藏」标签（#23）
+    UI.api("/api/users/" + encodeURIComponent(userId) + "/collections", { auth: false }).then(function (cr) {
+      if (cr.ok && (cr.data.collections || []).length) {
+        P.el("favoritesNav").hidden = false;
+        if (initialHash === "#favorites") P.el("favoritesNav").click();
+      }
     });
+  }
+
+  /* ---------- 收藏（只读，公开收藏夹） ---------- */
+  var favoritesLoaded = false;
+  function loadPublicFavorites() {
+    if (favoritesLoaded) return;
+    favoritesLoaded = true;
+    UI.collectionsBrowser(P.el("view-favorites"), { mode: "public", userId: userId });
   }
 
   /* ---------- 头衔（只读） ---------- */
@@ -415,6 +426,7 @@
   });
 
   P.panels(P.el("userNav"), function (name) {
+    if (name === "favorites") loadPublicFavorites();
     if (name === "titles") loadTitles();
     if (name === "manage") loadManage();
   });

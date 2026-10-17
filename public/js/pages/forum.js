@@ -34,6 +34,7 @@
       UI.esc(p.content) +
       '</p><footer class="post__foot">' +
       F.likeButton(p) +
+      F.collectButton(p) +
       '<button type="button" class="action-btn card__action" aria-expanded="false" aria-label="展开回复" data-replies-toggle>' +
       UI.icon("message") +
       "<span data-reply-count>" +

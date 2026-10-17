@@ -1,10 +1,10 @@
 # 帖子详情 · post.html
 
-> 状态：现有改版 ｜ 优先级：P0 ｜ issue：#4（#9/#10 增量）｜ 依赖：阶段 0 ｜ 壳：默认 ｜ data-nav：`forum` ｜ 容器：`container--prose`
+> 状态：现有改版 ｜ 优先级：P0 ｜ issue：#4、#23（#9/#10 增量）｜ 依赖：阶段 0 ｜ 壳：默认 ｜ data-nav：`forum` ｜ 容器：`container--prose`
 
 ## 用途与目标
 
-单帖阅读：完整标题、作者行（user-line）、正文（prose）、点赞、回复列表**常显**（不再折叠）、底部回复框（登录后）。回复支持 `#reply-<id>` 深链高亮（#9 消息跳转的目标）。删除入口（作者/管理员）在标题行 ⋯ 菜单。
+单帖阅读：完整标题、作者行（user-line）、正文（prose）、点赞与收藏（收藏按钮在点赞右侧，打开统一收藏夹弹窗，#23）、回复列表**常显**（不再折叠）、底部回复框（登录后）。回复支持 `#reply-<id>` 深链高亮（#9 消息跳转的目标）。删除入口（作者/管理员）在标题行 ⋯ 菜单。
 
 ## 布局
 
@@ -56,6 +56,7 @@ function renderPost(p) {
       '<div class="post-detail__body prose">' + UI.esc(p.content) + '</div>' +
       '<div class="post-detail__actions">' +
         '<button type="button" class="action-btn" aria-pressed="' + (p.is_liked ? "true" : "false") + '" data-like>' + UI.icon('heart') + '<span data-like-count>' + (p.like_count || 0) + '</span></button>' +
+        UI.collections.button("forum", p.id) +
         '<span class="grow"></span>' +
         (canDelete ? '<button type="button" class="action-btn" data-delete>' + UI.icon('trash') + '删除</button>' : '') +
       '</div>' +
@@ -80,6 +81,7 @@ function renderPost(p) {
 | #detail | 详情容器 | 同 ID | 保留 |
 | 动态 #repliesBox / #replyList / #replyInput / #replySubmit / #replyMsg | 回复区 | `#replyList` + composer（#replyInput/#replySubmit/#replyMsg → composer 内控件；#replyMsg 删除改 toast） | 迁移 |
 | `[data-like-toggle] [data-like-count]` | 点赞 | `data-like` / `data-like-count` | 改名 |
+| `[data-collect]` | 收藏按钮 | `UI.collections.button("forum", p.id)`；由 ui.js 全局委托打开收藏弹窗（#23） | 新增 |
 | `[data-replies-toggle]` | 折叠回复 | 删除（回复常显） | 删除 |
 | `.back` | 返回 | `.back-link` | 替换 |
 | 👍 字符 | 点赞图标 | `i-heart` 图标 | 替换 |
@@ -95,6 +97,7 @@ function renderPost(p) {
 ## 接口清单（保留）与补充钩子
 
 - 接口：GET /api/forum/posts/:id（详情，含 is_liked）；GET /api/forum/posts/:id/replies；POST /api/forum/posts/:id/replies；POST /api/forum/posts/:id/like；DELETE /api/forum/posts/:id/like；DELETE /api/forum/posts/:id（删除）。
+- 收藏（#23）：`GET /api/collections?section=forum`、`POST /api/collections`、`POST /api/collections/:id/items`，由共享收藏弹窗调用。
 - DOM 钩子补充：详情 article 保留 `data-post-id`（脚本统一取 id）；旧 `data-loaded`（回复懒加载标记）随回复常显**删除**。
 
 ## 状态矩阵
@@ -130,7 +133,7 @@ function renderPost(p) {
 
 ## 无障碍要点
 
-- 点赞按钮 aria-pressed；删除按钮 aria-label 已有文字；回复列表 `aria-live="polite"` 不必（重载手动）。
+- 点赞按钮 aria-pressed；收藏按钮 aria-pressed/aria-label（已收藏时主色高亮）；删除按钮 aria-label 已有文字；回复列表 `aria-live="polite"` 不必（重载手动）。
 - `#reply-x` 聚焦后读屏读到回复内容（li 有内容）。
 
 ## 验收清单
@@ -139,6 +142,7 @@ function renderPost(p) {
 - [ ] 回复常显 + 未登录 callout + 发布回复全流程。
 - [ ] `post.html?id=1#reply-2` 定位高亮。
 - [ ] 点赞乐观/回滚；作者与管理员的删除入口及二次确认。
+- [ ] 点赞右侧收藏按钮：未登录提示；弹窗列出收藏夹、可新建、确认写入；已收藏时高亮（#23）。
 - [ ] 无 alert/confirm/prompt；360/1280 正常；axe=0。
 
 > 2026-10-17 共享加载状态修正：本页使用的 `UI.html.skeleton` 已补齐 `role="status"`，保留加载名称与 `aria-busy`，避免加载过程中的无障碍属性违规；外观与业务流程不变。

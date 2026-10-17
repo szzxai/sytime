@@ -464,6 +464,21 @@ JS：`UI.userLine(user, {size, meta, href, large, showRole})`；meta 传 HTML �
 
 **禁止**：dialog 内再嵌 dialog（用 toast 或先关再开）；把长流程表单塞进 confirm。
 
+### Collection 收藏按钮与选择弹窗（#23）
+
+- 按钮：`UI.collections.button(section, itemId, { variant, className })`；`section` 为 `forum` / `shops`，生成 `[data-collect][data-section][data-item-id]` 按钮。列表 / 帖子用 `.action-btn.action-btn--collect`；店铺详情操作区传 `{variant:"btn"}` 用 `.btn.btn--sm.btn--collect`。已收藏时 `aria-pressed="true"`，用主色 `--primary` 高亮（区别于点赞的红色）。
+- 弹窗：点击任意 `[data-collect]` 由 `ui.js` 全局委托调用 `UI.collections.open({section, itemId, button})`，使用 `dialog dialog--sheet dialog--wide`：列出 `GET /api/collections?section=` 的收藏夹（单选 `.choice`），可展开「新建收藏夹」（`.field` + `.input` + `.btn`），底部「取消 / 确认收藏」；确认调用 `POST /api/collections/:id/items`，成功后高亮触发按钮并 toast。
+- 未登录：toast「请先登录后再收藏」，不打开弹窗。收藏状态在浏览器 localStorage 按账号缓存（`collected:<userId>:<section>:<itemId>`），用于页面加载时恢复高亮。
+
+### Collections Browser 收藏浏览（#23）
+
+`UI.collectionsBrowser(container, { mode, userId, defaultSection })`（`public/js/collections-view.js`），个人中心与用户主页共用：
+
+- `mode: "owner"`：拉取当前用户两个版块的收藏夹（`GET /api/collections?section=`），右侧公开开关可写；`mode: "public"`：拉取目标用户的公开收藏夹（`GET /api/users/:id/collections`），只读并显示「公开」徽章。
+- 结构复用 `.shell`（左 15rem 侧栏 + 右内容）、`.side-nav`（版块 + 收藏夹双层菜单）、`.breadcrumb`、`.switch-row`、`.grid`、`.pager`；不新增 CSS 类。
+- 论坛卡片：`card` + `card__link`，标题 `var(--fs-lg)`，作者/时间 `u-muted u-fs-xs`，正文开头 `prose u-fs-sm`；固定高 `12rem`、最大宽 `20rem`。店铺卡片复用 `UI.shopCard()`（不显示收藏按钮）。
+- 移动端（`UI.isMobile`）隐藏侧栏，顶部改用 `.select` 下拉（按版块分组）。
+
 ### Sheet 底部面板
 
 即 `dialog--sheet` 在手机端的形态（同一元素，桌面自动居中圆角浮层）。宽度全屏、底部对齐；把手条自动渲染。用于发帖、写评价、添加菜品、封禁等表单。

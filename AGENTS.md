@@ -85,6 +85,8 @@ npm test                 # 全量回归
 npm run test:menu        # 菜单后端
 npm run test:titles      # 头衔后端
 npm run test:shops       # 店铺后端
+npm run test:collections # 收藏夹后端
+npm run test:collections:ui # 收藏按钮与弹窗浏览器回归
 npm run test:shops:ui    # 店铺页面浏览器回归
 npm run test:user        # 用户主页与头像跳转浏览器回归
 npm run test:ui          # 全站浏览器回归

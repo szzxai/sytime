@@ -20,6 +20,53 @@
         .join("");
     select.value = types.indexOf(current) !== -1 ? current : "";
   }
+  async function loadCollectionDefaults(user) {
+    var results = await Promise.all([
+      UI.api("/api/collections?section=forum", { on401: false }),
+      UI.api("/api/collections?section=shops", { on401: false }),
+    ]);
+    fillCollectionSelect(
+      "defaultCollectionForum",
+      results[0],
+      user.default_collection_forum,
+    );
+    fillCollectionSelect(
+      "defaultCollectionShops",
+      results[1],
+      user.default_collection_shops,
+    );
+  }
+  function fillCollectionSelect(id, res, selectedId) {
+    var select = P.el(id);
+    if (!select) return;
+    if (!res || !res.ok) {
+      select.innerHTML = '<option value="">收藏夹加载失败</option>';
+      select.disabled = true;
+      return;
+    }
+    var collections = res.data.collections || [];
+    select.innerHTML = collections
+      .map(function (c) {
+        return '<option value="' + UI.esc(c.id) + '">' + UI.esc(c.name) + "</option>";
+      })
+      .join("");
+    var fallback =
+      collections.filter(function (c) {
+        return c.name === "默认收藏夹";
+      })[0] || collections[0];
+    var chosen = null;
+    collections.forEach(function (c) {
+      if (
+        selectedId !== null &&
+        selectedId !== undefined &&
+        Number(c.id) === Number(selectedId)
+      )
+        chosen = c.id;
+    });
+    if (chosen === null && fallback) chosen = fallback.id;
+    select.value = chosen === null ? "" : String(chosen);
+    select.disabled = collections.length === 0;
+  }
   async function loadSettings() {
     main.setAttribute("aria-busy", "true");
     UI.qsa('form button[type="submit"]', main).forEach(function (btn) {
@@ -58,14 +105,13 @@
       await loadShopTypeOptions(
         me.shop_default_type || localStorage.getItem("shopDefaultType") || "",
       );
-      var shopLayout =
-        me.shop_layout || localStorage.getItem("shopLayout") || "stacked";
-      if (shopLayout !== "split") shopLayout = "stacked";
-      var layoutInput = main.querySelector(
-        'input[name="shopLayout"][value="' + shopLayout + '"]',
+      var layoutMode = me.shop_layout_mode === "auto" ? "auto" : "manual";
+      var modeInput = main.querySelector(
+        'input[name="shopLayoutMode"][value="' + layoutMode + '"]',
       );
-      if (layoutInput) layoutInput.checked = true;
+      if (modeInput) modeInput.checked = true;
     }
+    await loadCollectionDefaults(me);
     // 权限等级标签：普通用户强制展示（不可关闭），其余角色可自行选择
     var forceRole = me.role === "user";
     var showRole = me.show_role;
@@ -171,22 +217,21 @@
   });
   P.el("siteForm").addEventListener("submit", async function (e) {
     e.preventDefault();
-    var layoutChoice = main.querySelector(
-      'input[name="shopLayout"]:checked',
+    var modeChoice = main.querySelector(
+      'input[name="shopLayoutMode"]:checked',
     );
     var body = {
       default_page: P.value("defaultPage"),
       recipe_default_view: P.value("recipeDefaultView"),
       shop_default_sort: P.value("shopDefaultSort"),
       shop_default_type: P.value("shopDefaultType"),
-      shop_layout: layoutChoice ? layoutChoice.value : "stacked",
+      shop_layout_mode: modeChoice ? modeChoice.value : "manual",
       show_role: P.el("showRole").checked ? 1 : 0,
     };
     var r = await P.request(
       P.el("siteSubmit"),
       "/api/user/settings",
       { method: "PUT", body: body },
-      "网站设置已保存到账号",
     );
     if (r && r.ok) {
       localStorage.setItem("defaultPage", body.default_page);
@@ -194,9 +239,29 @@
       if (body.shop_default_sort)
         localStorage.setItem("shopDefaultSort", body.shop_default_sort);
       localStorage.setItem("shopDefaultType", body.shop_default_type || "");
-      localStorage.setItem("shopLayout", body.shop_layout);
+      localStorage.setItem("shopLayoutMode", body.shop_layout_mode);
       localStorage.setItem("showRole", body.show_role ? "1" : "0");
       UI.session.patch(body);
+      var collectionBody = {};
+      var forumSelect = P.el("defaultCollectionForum");
+      var shopsSelect = P.el("defaultCollectionShops");
+      if (forumSelect && !forumSelect.disabled && forumSelect.value)
+        collectionBody.default_collection_forum = Number(forumSelect.value);
+      if (shopsSelect && !shopsSelect.disabled && shopsSelect.value)
+        collectionBody.default_collection_shops = Number(shopsSelect.value);
+      var cr = await UI.api("/api/user/settings/collection", {
+        method: "PUT",
+        body: collectionBody,
+        on401: false,
+      });
+      UI.session.patch(collectionBody);
+      if (!cr || !cr.ok) {
+        UI.toast.error(
+          cr ? UI.errorText(cr, "收藏默认页保存失败") : "收藏默认页保存失败",
+        );
+        return;
+      }
+      UI.toast.success("网站设置已保存到账号");
     }
   });
   P.el("ticketForm").addEventListener("submit", async function (e) {

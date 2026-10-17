@@ -69,7 +69,7 @@
   </nav>
   <div class="shell__main">
     <section class="view" id="view-home" hidden></section>       <!-- UI.html.empty：个人主页 -->
-    <section class="view" id="view-favorites" hidden></section>  <!-- UI.html.empty：我的收藏 -->
+    <section class="view" id="view-favorites" hidden></section>  <!-- UI.collectionsBrowser：我的收藏（#23） -->
     <section class="view" id="view-titles" hidden>…我的头衔…</section>
   </div>
 </main>
@@ -80,13 +80,28 @@
 
 见 [titles.md](titles.md) §2。侧栏项 `#titlesNav` 在 `features.titles` 关闭时 `hidden`。
 
+### #view-favorites 我的收藏（#23）
+
+首次切到「收藏」时调用 `UI.collectionsBrowser(#view-favorites, { mode: "owner" })`（`public/js/collections-view.js`），只复用 `site.css` 的 `.shell` / `.side-nav` / `.breadcrumb` / `.switch-row` / `.grid` / `.card` / `.pager`。
+
+- **左右分栏**：`.shell`（桌面 15rem + 内容；窄屏单列）。左侧 `.shell__nav` 为双层菜单：
+  - 第一层 `.side-nav`：论坛 / 必吃榜；点击切换版块。
+  - 第二层 `.side-nav`：当前版块的收藏夹名 + 条目数；点击刷新右侧。当前项用 `.is-active` / `aria-current="page"`。
+- **右侧顶部**：`.breadcrumb` 显示「版块 · 收藏夹」；右侧 `.switch-row` 的 `.switch` 控制 `is_public`（`PUT /api/collections/:id/public`）。
+- **内容**：`.grid`（`--grid-min:20rem`）网格，每页 20 条，`.pager` 分页。
+  - 论坛卡片：标题 `var(--fs-lg)`（近黑），作者 + 发布时间用 `u-muted u-fs-xs`，正文开头用 `prose u-fs-sm`；卡片 `height:12rem; max-width:20rem` 固定，`card__link` 整卡跳 `post.html?id=`。
+  - 店铺卡片：直接复用必吃榜列表的 `UI.shopCard()`（不显示收藏按钮）。
+- **移动端（UA 识别）**：`UI.isMobile` 为真时隐藏左右侧栏，顶部显示「选择收藏夹」下拉（`optgroup` 按版块分组），切换后刷新内容。
+- **默认**：进入时默认论坛；若账号设置了 `default_collection_forum` 则选中它，否则选中第一个（自动创建的「默认收藏夹」）。
+- 加载/空/错误：骨架 / `UI.html.empty` / callout + 重试；公开切换失败回滚开关。
+
 ## 脚本行为
 
 1. 分区切换由 `UI.page.panels(#profileNav)` 统一处理：`data-panel` 点击 → 切 `.view.is-active` + `history.replaceState(null,'','#<name>')`；初始按 `location.hash` 选择，否则 `home`。**「设置」为普通链接**（无 `data-panel`），点击直接跳转 `settings.html`，无返回键。
 2. 进页 `P.requireLogin()`；`GET /api/user/profile` 载入后填充用户名（`<h1>`）、权限等级标签、头像、昵称与签名编辑框。
 3. 昵称 / 签名：`bindInlineEdit`（见上）。所有 fetch → `UI.api`；错误 → `UI.errorText`。
 4. 头像上传：`#chooseAvatar` → `#avatarFile`，校验 2 MB / 类型后 `POST /api/user/avatar`（multipart），成功刷新头像与页头。
-5. 「头衔」分区进入时拉取 `GET /api/user/titles`；「主页 / 收藏」进入时显示 `UI.html.empty` 空状态。
+5. 「头衔」分区进入时拉取 `GET /api/user/titles`；「收藏」分区首次进入时构建 `UI.collectionsBrowser`（拉取论坛 / 必吃榜收藏夹及当前收藏夹内容）；「主页」显示 `UI.html.empty` 空状态。
 
 ## 状态矩阵
 
@@ -99,12 +114,17 @@
 | 头像上传中/成功/失败 | 选文件 | busy/toast 三态 |
 | 头衔加载 | 切到「头衔」 | skeleton → 列表 / 空 / loadError |
 | 头衔佩戴保存 | 保存佩戴 | busy → toast「佩戴已更新」 |
-| 主页 / 收藏 | 切换 | 空状态卡片 |
+| 主页 | 切换 | 空状态卡片 |
+| 收藏加载 | 切到「收藏」 | 骨架 → 双层菜单 + 卡片网格；空 → 空状态；失败 → 重试 |
+| 收藏公开切换 | 拨动开关 | busy → toast「已设为公开 / 已设为私密」；失败回滚 |
+| 收藏分页 | 点击页码 | 重新拉取当前页（每页 20） |
+| 手机 UA | 进入「收藏」 | 隐藏左侧菜单，顶部下拉选择收藏夹 |
 | 无 titles 分区 | features 关 | 菜单项 `#titlesNav` hidden |
 
 ## 接口与存储（保留清单）
 
 - 接口：`GET /api/user/profile`；`POST /api/user/avatar`；`PUT /api/user/nickname`；`PUT /api/user/signature`；`GET /api/user/titles`、`PUT /api/user/title`（#10）。
+- 收藏（#23）：`GET /api/collections?section=forum|shops`；`GET /api/collections/:id/items?page=`；`PUT /api/collections/:id/public`。
 - localStorage：token、user。
 
 ## 响应式
@@ -121,15 +141,19 @@
 
 ## 无障碍要点
 
-- 全页仅 1 个可见 `<h1>`（用户名）；面板标题用 `<h2>`。
+- 全页仅 1 个可见 `<h1>`（用户名）；面板与收藏卡片标题用 `<h2>`；版块/收藏夹菜单当前项 `aria-current="page"`。
 - 昵称 / 签名为 `role="textbox"` + `aria-label`，可键盘聚焦与编辑；菜单栏当前项 `aria-current="page"`。
-- 头像上传按钮 `aria-label="更换头像"`。
+- 头像上传按钮 `aria-label="更换头像"`；收藏公开开关为原生 checkbox + `.switch`。
 
 ## 验收清单
 
 - [ ] 头部：头像（含编辑按钮）、用户名、权限等级、昵称、签名正确显示。
 - [ ] 昵称/签名点击编辑，失焦弹确认；保存写入后端、取消还原。
 - [ ] 横向菜单栏滚动时吸顶，当前项高亮。
-- [ ] 主页/收藏为空页面；头衔为原「我的头衔」；设置跳转 `settings.html`。
+- [ ] 主页为空页面；头衔为原「我的头衔」；设置跳转 `settings.html`。
+- [ ] 收藏：左右分栏 + 双层菜单（论坛/必吃榜、收藏夹）；切换版块/收藏夹刷新右侧。
+- [ ] 收藏顶部显示「版块 · 收藏夹」路径与公开开关；切换公开写入账号。
+- [ ] 论坛卡片固定宽高（标题 `fs-lg`、作者/时间、正文开头）；店铺卡片复用必吃榜样式；点击跳详情。
+- [ ] 收藏网格每页 20 条，分页器可用；手机 UA 降级为单列 + 顶部下拉。
 - [ ] hash 深链 `#home/#favorites/#titles` 刷新保持。
 - [ ] 360/768+ 正常；无 alert/confirm；axe=0；零报错。

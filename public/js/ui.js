@@ -497,6 +497,242 @@
     });
   };
 
+  /* ---------- 收藏夹（#23） ---------- */
+  var COLLECT_ITEM_TYPE = { forum: "forum_post", shops: "shop" };
+  UI.collections = {
+    key: function (section, itemId) {
+      var me = UI.session.user();
+      var uid = me && me.id !== undefined && me.id !== null ? me.id : "guest";
+      return "collected:" + uid + ":" + section + ":" + itemId;
+    },
+    isCollected: function (section, itemId) {
+      try { return localStorage.getItem(UI.collections.key(section, itemId)) === "1"; } catch (e) { return false; }
+    },
+    mark: function (section, itemId, value) {
+      try {
+        if (value === false) localStorage.removeItem(UI.collections.key(section, itemId));
+        else localStorage.setItem(UI.collections.key(section, itemId), "1");
+      } catch (e) { /* localStorage 不可用时忽略 */ }
+    },
+    // 收藏按钮：action-btn（列表/帖子）或 btn--sm（详情页操作区）；已收藏用主色高亮
+    button: function (section, itemId, opt) {
+      opt = opt || {};
+      var pressed = UI.collections.isCollected(section, itemId);
+      var cls = opt.variant === "btn" ? "btn btn--sm btn--collect" : "action-btn action-btn--collect";
+      if (opt.className) cls += " " + opt.className;
+      return '<button type="button" class="' + cls + '" aria-pressed="' + pressed +
+        '" aria-label="' + (pressed ? "已收藏" : "收藏") + '" data-collect data-section="' + UI.esc(section) +
+        '" data-item-id="' + UI.esc(itemId) + '">' + UI.icon("star") +
+        '<span data-collect-label>' + (pressed ? "已收藏" : "收藏") + "</span></button>";
+    },
+    open: function (opt) {
+      opt = opt || {};
+      if (!UI.session.token()) {
+        UI.toast.warning("请先登录后再收藏");
+        return;
+      }
+      var section = opt.section === "shops" ? "shops" : "forum";
+      var itemType = COLLECT_ITEM_TYPE[section];
+      var itemId = Number(opt.itemId);
+      if (!itemId) return;
+      var id = UI.uid("collection");
+      var collections = [];
+      var defaults = {};
+      var selectedId = null;
+      var d = document.createElement("dialog");
+      d.className = "dialog dialog--sheet dialog--wide";
+      d.innerHTML =
+        '<form class="dialog__form" method="dialog">' +
+        '<div class="dialog__head"><h2 class="dialog__title" id="' + id + '-t">收藏</h2>' +
+        '<button type="button" class="icon-btn icon-btn--sm" data-close aria-label="关闭">' + UI.icon("close") + "</button></div>" +
+        '<div class="dialog__body"><div class="stack collection-dialog__list" data-list>' + UI.html.skeleton("row", 2) + "</div>" +
+        '<div class="field" data-new-field hidden>' +
+        '<label class="field__label" for="' + id + '-new">新建收藏夹</label>' +
+        '<div class="row row--sm"><input class="input grow" id="' + id + '-new" maxlength="40" placeholder="收藏夹名称">' +
+        '<button type="button" class="btn btn--sm" data-create>新建</button></div>' +
+        '<div class="field__error" data-new-error>' + UI.icon("alert-circle") + "<span></span></div></div>" +
+        '<button type="button" class="btn btn--ghost btn--sm" data-new-toggle>' + UI.icon("plus", "icon--sm") + "新建收藏夹</button>" +
+        "</div>" +
+        '<div class="dialog__foot"><span class="status-text" data-status role="status"></span>' +
+        '<button type="button" class="btn" data-cancel>取消</button>' +
+        '<button type="submit" class="btn btn--primary" data-confirm>确认收藏</button></div></form>';
+      d.setAttribute("aria-labelledby", id + "-t");
+      document.body.appendChild(d);
+      d.addEventListener("close", function () {
+        setTimeout(function () { if (d.parentNode) d.parentNode.removeChild(d); }, 0);
+      });
+      d.addEventListener("mousedown", function (e) { d._downOnBackdrop = e.target === d; });
+      d.addEventListener("click", function (e) {
+        if (e.target === d && d._downOnBackdrop) UI.dialog.close(d, "cancel");
+      });
+
+      var list = d.querySelector("[data-list]");
+      var newField = d.querySelector("[data-new-field]");
+      var newInput = d.querySelector("#" + id + "-new");
+      var createBtn = d.querySelector("[data-create]");
+
+      function choiceItem(item, checked) {
+        return '<label class="choice"><input class="choice__input" type="radio" name="collectionChoice" value="' +
+          UI.esc(item.id) + '"' + (checked ? " checked" : "") + '><span class="choice__body">' +
+          '<span class="choice__title">' + UI.esc(item.name) + UI.icon("check-circle", "choice__check") + "</span>" +
+          '<span class="choice__desc">' + UI.esc(item.items_count || 0) + " 条内容 · " +
+          (item.is_public ? "公开" : "私密") + "</span></span></label>";
+      }
+
+      function renderList() {
+        if (!collections.length) {
+          list.innerHTML = '<div class="callout"><span class="callout__text">还没有收藏夹，先新建一个吧。</span></div>';
+          return;
+        }
+        var selected = Number(selectedId);
+        if (!selected || !collections.some(function (c) { return Number(c.id) === selected; })) {
+          selected = Number(defaults[section]);
+          if (!selected || !collections.some(function (c) { return Number(c.id) === selected; })) {
+            selected = Number(collections[0].id);
+          }
+        }
+        selectedId = selected;
+        list.innerHTML = '<div class="choice-group choice-group--compact" role="radiogroup" aria-label="选择收藏夹">' +
+          collections.map(function (c) { return choiceItem(c, Number(c.id) === selected); }).join("") + "</div>";
+      }
+
+      function loadList() {
+        list.innerHTML = UI.html.skeleton("row", 2);
+        UI.api("/api/collections?section=" + encodeURIComponent(section), { on401: false }).then(function (r) {
+          if (!r.ok) {
+            list.innerHTML = '<div class="callout"><span class="callout__text">' + UI.esc(UI.errorText(r, "收藏夹加载失败")) + "</span></div>";
+            return;
+          }
+          collections = r.data.collections || [];
+          defaults = r.data.defaults || {};
+          renderList();
+        });
+      }
+
+      list.addEventListener("change", function (e) {
+        var input = e.target.closest && e.target.closest('input[name="collectionChoice"]');
+        if (input) selectedId = Number(input.value);
+      });
+      d.querySelector("[data-new-toggle]").addEventListener("click", function () {
+        newField.hidden = false;
+        newInput.focus();
+      });
+      newInput.addEventListener("input", function () { UI.form.clearField(newInput); });
+      newInput.addEventListener("keydown", function (e) {
+        if (e.key === "Enter") { e.preventDefault(); createBtn.click(); }
+      });
+      createBtn.addEventListener("click", function () {
+        var name = newInput.value.trim();
+        if (!name) { UI.form.fieldError(newInput, "请填写收藏夹名称"); return; }
+        createBtn.disabled = true;
+        UI.api("/api/collections", { method: "POST", body: { section: section, name: name }, on401: false }).then(function (r) {
+          createBtn.disabled = false;
+          if (!r.ok) { UI.toast.error(UI.errorText(r, "新建收藏夹失败")); return; }
+          collections.push(r.data.collection);
+          selectedId = Number(r.data.collection.id);
+          newInput.value = "";
+          newField.hidden = true;
+          UI.form.clearField(newInput);
+          renderList();
+          UI.toast.success("已新建收藏夹");
+        });
+      });
+      d.querySelector("[data-close]").addEventListener("click", function () { UI.dialog.close(d, "cancel"); });
+      d.querySelector("[data-cancel]").addEventListener("click", function () { UI.dialog.close(d, "cancel"); });
+      d.querySelector("form").addEventListener("submit", function (e) {
+        e.preventDefault();
+        if (!selectedId) { UI.toast.warning("请先选择收藏夹"); return; }
+        var confirmBtn = d.querySelector("[data-confirm]");
+        if (confirmBtn.disabled) return;
+        confirmBtn.disabled = true;
+        UI.api("/api/collections/" + encodeURIComponent(selectedId) + "/items", {
+          method: "POST",
+          body: { item_type: itemType, item_id: itemId },
+          on401: false
+        }).then(function (r) {
+          confirmBtn.disabled = false;
+          if (!r.ok) { UI.toast.error(UI.errorText(r, "收藏失败")); return; }
+          UI.collections.mark(section, itemId);
+          if (opt.button) {
+            opt.button.setAttribute("aria-pressed", "true");
+            opt.button.setAttribute("aria-label", "已收藏");
+            var label = opt.button.querySelector("[data-collect-label]");
+            if (label) label.textContent = "已收藏";
+          }
+          UI.toast.success(r.data.added === false ? "已在收藏夹中" : "已收藏");
+          UI.dialog.close(d, "ok");
+          if (typeof opt.onDone === "function") opt.onDone(r.data);
+        });
+      });
+      UI.dialog.open(d);
+      loadList();
+    }
+  };
+  // 统一委托：任何页面的 [data-collect] 按钮都打开收藏夹选择器
+  document.addEventListener("click", function (e) {
+    var btn = e.target.closest && e.target.closest("[data-collect]");
+    if (!btn) return;
+    var section = btn.getAttribute("data-section");
+    var itemId = Number(btn.getAttribute("data-item-id"));
+    if (!section || !itemId) return;
+    e.preventDefault();
+    UI.collections.open({ section: section, itemId: itemId, button: btn });
+  });
+
+  /* ---------- 收藏页共用：移动端判断 / 店铺卡片 / 分页器 ---------- */
+  UI.isMobile = /Mobi|Android|iPhone|iPad|iPod|Windows Phone/i.test(navigator.userAgent);
+  UI.shopHue = function (type) {
+    var map = { 面馆: "teal", 小吃: "ochre", 饮品: "wisteria", 快餐: "indigo", 甜点: "rose", 正餐: "vermilion" };
+    return map[type] || "stone";
+  };
+  // 与 shops.html 列表共用的店铺卡片；opt.collect 控制是否显示收藏按钮
+  UI.shopCard = function (shop, opt) {
+    opt = opt || {};
+    var ratingText = shop.rating_avg === null || shop.rating_avg === undefined
+      ? "暂无"
+      : Number(shop.rating_avg).toFixed(1) + " / 5";
+    return (
+      '<article class="card card--interactive shop">' +
+      '<div class="shop__top">' +
+      '<h2 class="card__title"><a class="card__link" href="shop.html?id=' + encodeURIComponent(shop.id) + '">' + UI.esc(shop.name) + "</a></h2>" +
+      '<span class="tag" data-hue="' + UI.shopHue(shop.type) + '">' + UI.esc(shop.type) + "</span>" +
+      "</div>" +
+      '<p class="shop__addr">' + UI.icon("map-pin") + "<span>" + UI.esc(shop.address) +
+      (shop.location_note ? "<small>" + UI.esc(shop.location_note) + "</small>" : "") +
+      "</span></p>" +
+      '<div class="shop__stats">' +
+      '<span class="stat">' + UI.icon("route") + "<b>" + UI.esc(UI.formatDistance(shop.campus_distance_m)) +
+      "</b><small>" + UI.esc("距苏州中学本部 · 步行 " + UI.formatMinutes(shop.campus_walk_min)) + "</small></span>" +
+      "</div>" +
+      '<p class="shop__addr">' + UI.icon("compass") + "<span>最近地铁：" + UI.esc(shop.metro_station + " " + shop.metro_exit) +
+      "<small>步行 " + UI.esc(UI.formatDistance(shop.metro_distance_m)) + " · " + UI.esc(UI.formatMinutes(shop.metro_walk_min)) + "</small></span></p>" +
+      (shop.dianping_url ? '<a class="shop__dianping" href="' + UI.esc(shop.dianping_url) + '" target="_blank" rel="noopener noreferrer">' + UI.icon("external", "icon--sm") + "大众点评</a>" : "") +
+      '<div class="shop__engagement" aria-label="店铺互动统计">' +
+      '<span>' + UI.icon("heart") + "<b>" + UI.esc(shop.likes_count || 0) + "</b><small>点赞</small></span>" +
+      '<span>' + UI.icon("message") + "<b>" + UI.esc(shop.reviews_count || 0) + "</b><small>评价</small></span>" +
+      '<span>' + UI.icon("star") + "<b>" + UI.esc(ratingText) + "</b><small>" + UI.esc(shop.ratings_count || 0) + " 次评分</small></span>" +
+      "</div>" +
+      (opt.collect ? '<div class="row row--end">' + UI.collections.button("shops", shop.id, { className: "card__action" }) + "</div>" : "") +
+      "</article>"
+    );
+  };
+  // 与 shops.html 相同的分页器骨架（首/末页 + 当前页 ±2）
+  UI.pagerHtml = function (current, totalPages) {
+    if (totalPages <= 1) return "";
+    var pages = [];
+    for (var p = 1; p <= totalPages; p++) {
+      if (p === 1 || p === totalPages || Math.abs(p - current) <= 2) pages.push(p);
+      else if (pages[pages.length - 1] !== "gap") pages.push("gap");
+    }
+    var html = '<button type="button" class="btn btn--sm" data-page="' + (current - 1) + '"' + (current <= 1 ? " disabled" : "") + ' aria-label="上一页">' + UI.icon("chevron-left", "icon--sm") + "</button>";
+    pages.forEach(function (p) {
+      if (p === "gap") html += '<span class="pager__gap" aria-hidden="true">…</span>';
+      else html += '<button type="button" class="btn btn--sm' + (p === current ? " btn--primary" : "") + '" data-page="' + p + '"' + (p === current ? ' aria-current="page"' : "") + ">" + p + "</button>";
+    });
+    html += '<button type="button" class="btn btn--sm" data-page="' + (current + 1) + '"' + (current >= totalPages ? " disabled" : "") + ' aria-label="下一页">' + UI.icon("chevron-right", "icon--sm") + "</button>";
+    return html;
+  };
+
   /* ---------- 8. Toast ---------- */
   var toastLast = { msg: '', at: 0 };
   function toastHost() {

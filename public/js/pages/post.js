@@ -55,6 +55,7 @@
       UI.esc(p.content) +
       '</div><div class="post-detail__actions">' +
       F.likeButton(p) +
+      F.collectButton(p) +
       '<span class="grow"></span>' +
       (F.canDelete(p)
         ? '<button type="button" class="action-btn" data-delete>' +
