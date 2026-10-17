@@ -7,6 +7,18 @@ body[data-page="map"] {
   --atlas-path: #faf9f2;
   --atlas-path-edge: #e1e2d4;
   --atlas-temple: #e8e8dc;
+  --atlas-roof: #d8d3c4;
+  --atlas-roof-edge: #a39f8f;
+  --atlas-wall: #efeadc;
+  --atlas-lawn: #d6e4c6;
+  --atlas-hedge: #b4c8a1;
+  --atlas-water: #b9d6d5;
+  --atlas-water-edge: #94b9b6;
+  --atlas-plot: #dcb8bf;
+  --atlas-track: #cba89a;
+  --atlas-marking: #f5f6e9;
+  --atlas-garden-walk: #faf9f2;
+  --atlas-court: #a8c9b6;
   --atlas-label: #38483e;
   --atlas-soft-label: #788376;
   --atlas-panel: rgba(255,255,255,.92);
@@ -28,6 +40,18 @@ body[data-page="map"] {
   --atlas-path: #41483d;
   --atlas-path-edge: #293329;
   --atlas-temple: #383e32;
+  --atlas-roof: #66695b;
+  --atlas-roof-edge: #929883;
+  --atlas-wall: #7e8270;
+  --atlas-lawn: #40533a;
+  --atlas-hedge: #556d49;
+  --atlas-water: #446c6c;
+  --atlas-water-edge: #769893;
+  --atlas-plot: #71555f;
+  --atlas-track: #82675b;
+  --atlas-marking: #afbea4;
+  --atlas-garden-walk: #7b8971;
+  --atlas-court: #577965;
   --atlas-label: #e3e9dc;
   --atlas-soft-label: #a4b19f;
   --atlas-panel: rgba(30,38,33,.94);
@@ -94,11 +118,44 @@ body[data-page="map"] {
 .atlas-path { stroke: var(--atlas-path); stroke-width: 19; }
 .atlas-temple-ground { fill: var(--atlas-temple); }
 .atlas-temple-boundary { stroke: var(--atlas-edge); stroke-width: 2; stroke-dasharray: 8 6; fill: none; }
+.atlas-street { fill: var(--atlas-path-edge); }
+.atlas-street-line { fill: none; stroke: var(--atlas-paper); stroke-width: 2; stroke-dasharray: 14 12; }
+.atlas-context-building { fill: var(--atlas-edge); opacity: .28; }
+.atlas-paving { fill: var(--atlas-path); stroke: var(--atlas-path-edge); stroke-width: 1.5; }
+.atlas-roof { fill: var(--atlas-roof); stroke: var(--atlas-roof-edge); stroke-width: 1.7; stroke-linejoin: round; }
+.atlas-building-shadow { fill: var(--atlas-label); opacity: .08; }
+.atlas-ridge { fill: none; stroke: var(--atlas-roof-edge); stroke-width: 1.3; stroke-linejoin: round; }
+.atlas-fine { fill: none; stroke: var(--atlas-roof-edge); stroke-width: 1; }
+.atlas-wall, .atlas-bridge { fill: var(--atlas-wall); stroke: var(--atlas-roof-edge); stroke-width: 1.2; }
+.atlas-roof-detail { fill: var(--atlas-wall); stroke: var(--atlas-roof-edge); }
+.atlas-lawn { fill: var(--atlas-lawn); stroke: var(--atlas-hedge); stroke-width: 1.3; }
+.atlas-hedge, .atlas-bamboo-ground { fill: var(--atlas-hedge); }
+.atlas-grass-line { fill: none; stroke: var(--atlas-hedge); stroke-width: 1; opacity: .28; }
+.atlas-garden-path { fill: none; stroke: var(--atlas-garden-walk); stroke-width: 5; stroke-linejoin: round; }
+.atlas-contour { fill: none; stroke: var(--atlas-hedge); stroke-width: 1.2; }
+.atlas-water { fill: var(--atlas-water); stroke: var(--atlas-water-edge); stroke-width: 1.4; }
+.atlas-water-line { fill: none; stroke: var(--atlas-path); stroke-width: 1.5; opacity: .7; stroke-linecap: round; }
+.atlas-blue-detail { fill: var(--atlas-water); opacity: .75; }
+.atlas-unnamed-plot { fill: var(--atlas-plot); stroke: var(--atlas-roof-edge); stroke-width: 1.4; }
+.atlas-plot-seam { fill: none; stroke: var(--atlas-wall); opacity: .6; }
+.atlas-sport-base { fill: var(--atlas-hedge); stroke: var(--atlas-edge); stroke-width: 1.3; }
+.atlas-court-surface, #art-basketball-court > rect { fill: var(--atlas-court); }
+.atlas-court-lines { fill: none; stroke: var(--atlas-marking); stroke-width: 1; }
+.atlas-gym-roof { fill: var(--atlas-water); stroke: var(--atlas-water-edge); stroke-width: 1.5; }
+.atlas-gym-rib { fill: none; stroke: var(--atlas-path); stroke-width: 1.3; opacity: .5; }
+.atlas-book { fill: var(--atlas-path); stroke: var(--atlas-roof-edge); stroke-width: 1.5; }
+.atlas-stele, .atlas-colonnade { fill: var(--atlas-roof-edge); opacity: .65; }
+.atlas-precinct-wall { stroke: var(--atlas-roof-edge); stroke-width: 2; }
+.atlas-track { fill: var(--atlas-track); stroke: var(--atlas-roof-edge); stroke-width: 1.5; }
+.atlas-track-line { fill: none; stroke: var(--atlas-wall); stroke-width: 1; }
+.atlas-pitch { fill: var(--atlas-lawn); stroke: var(--atlas-marking); stroke-width: 1.2; }
+.atlas-pitch-line { fill: none; stroke: var(--atlas-marking); stroke-width: 1.3; }
+.atlas-small-label, .atlas-ground-label { font-family: var(--font-sans); font-size: 15px; fill: var(--atlas-soft-label); letter-spacing: 1px; }
 .atlas-surroundings { fill: var(--atlas-soft-label); font-size: 20px; letter-spacing: 5px; }
 .campus-map-place { cursor: pointer; transition: opacity .2s; outline: none; }
 .campus-map-place.is-muted { opacity: .16; }
 .campus-map-halo { fill: transparent; stroke: transparent; stroke-width: 3; }
-.campus-map-place:hover .campus-map-halo, .campus-map-place:focus-visible .campus-map-halo, .campus-map-place.is-selected .campus-map-halo { fill: var(--atlas-green); stroke: var(--atlas-halo); stroke-dasharray: 5 5; }
+.campus-map-halo.is-hovered, .campus-map-halo.is-focused, .campus-map-halo.is-selected { fill: var(--atlas-green); stroke: var(--atlas-halo); stroke-dasharray: 5 5; }
 .campus-map-label { font-family: var(--font-sans); font-size: 23px; font-weight: 550; letter-spacing: .5px; fill: var(--atlas-label); paint-order: stroke; stroke: var(--atlas-land); stroke-width: 7px; stroke-linejoin: round; }
 .campus-map-place.is-selected .campus-map-label { font-weight: 750; }
 .campus-compass { position: absolute; z-index: 2; right: 28px; top: 28px; display: grid; justify-items: center; color: var(--atlas-ui-muted); font-size: 9px; font-weight: 550; line-height: 1; gap: 2px; pointer-events: none; }
@@ -115,15 +172,20 @@ body[data-page="map"] {
 .campus-map-tip span { padding: 0 5px; }
 .campus-guide-status { position: absolute; z-index: 5; inset: 50% auto auto 50%; transform: translate(-50%,-50%); background: var(--atlas-panel-solid); border: 1px solid var(--atlas-ui-line); padding: 20px 26px; border-radius: 16px; box-shadow: var(--atlas-shadow); text-align: center; font-size: 13px; white-space: nowrap; }
 .campus-guide-status button { display: block; margin: 10px auto 0; min-height: 44px; color: var(--atlas-accent); text-decoration: underline; }
-.campus-detail { position: absolute; z-index: 4; bottom: 58px; left: 26px; width: 330px; max-width: calc(100% - 112px); padding: 22px; border-radius: 22px; background: var(--atlas-panel); border: 1px solid var(--atlas-ui-line); box-shadow: var(--atlas-shadow); backdrop-filter: blur(20px); }
+.campus-detail { position: absolute; z-index: 4; bottom: 58px; left: 26px; width: 330px; max-width: calc(100% - 112px); max-height: min(460px, calc(100% - 88px)); display: flex; flex-direction: column; padding: 22px; border-radius: 22px; background: var(--atlas-panel); border: 1px solid var(--atlas-ui-line); box-shadow: var(--atlas-shadow); backdrop-filter: blur(20px); }
+.campus-detail-header { flex: none; }
+.campus-detail-content { min-height: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: var(--atlas-edge) transparent; margin-top: 10px; padding: 2px; outline-offset: -2px; }
+.campus-detail-content:focus-visible { outline: 2px solid var(--atlas-accent); }
 .campus-detail-close { position: absolute; right: 10px; top: 9px; width: 36px; height: 36px; border-radius: 50%; color: var(--atlas-ui-muted); font-size: 23px; }
 .campus-detail-close:hover { background: var(--atlas-ui-hover); }
 .campus-detail-art { height: 92px; display: grid; place-items: center; margin: -6px 0 9px; }
 .campus-detail-art svg { width: 135px; height: 100px; }
 .campus-detail-category { color: var(--atlas-accent); font-size: 10px; letter-spacing: .08em; margin-bottom: 5px; }
 .campus-detail h2 { font-size: 22px; font-weight: 600; letter-spacing: -.02em; outline: none; }
-#detailDescription { margin-top: 10px; font-size: 12px; color: var(--atlas-ui-muted); line-height: 1.85; }
-.campus-detail-location { display: flex; gap: 7px; align-items: center; border-top: 1px solid var(--atlas-ui-line); margin-top: 15px; padding-top: 12px; font-size: 10px; color: var(--atlas-ui-muted); }
+#detailDescription { font-size: 12px; color: var(--atlas-ui-muted); line-height: 1.85; }
+#detailDescription p + p { margin-top: 10px; }
+.campus-detail-sources { display: flex; flex-wrap: wrap; gap: 4px 12px; border-top: 1px solid var(--atlas-ui-line); margin-top: 14px; padding-top: 8px; }
+.campus-detail-sources a { display: inline-flex; align-items: center; min-height: 28px; color: var(--atlas-accent); font-size: 10px; text-decoration: underline; text-underline-offset: 3px; }
 @media (min-width: 1600px) { .campus-sidebar { flex-basis: 340px; } .campus-intro { padding-top: 40px; } }
 @media (max-width: 1100px) { .campus-map-tip { display: none; } .campus-sidebar { flex-basis: 280px; } .campus-filters button { padding-inline: 6px; } }
 @media (max-width: 700px) {
@@ -148,13 +210,14 @@ body[data-page="map"] {
   .campus-controls { right: 12px; bottom: 40px; padding: 3px; border-radius: 13px; }
   .campus-controls button { width: 38px; height: 40px; }
   .campus-map-note { left: 14px; bottom: max(14px, env(safe-area-inset-bottom)); font-size: 9px; }
-  .campus-detail { left: 12px; bottom: 40px; width: calc(100% - 76px); max-width: none; padding: 15px; border-radius: 17px; }
-  .campus-detail-art { float: left; width: 64px; height: 60px; margin: 0 12px 5px -3px; }
+  .campus-detail { left: 12px; bottom: 40px; width: calc(100% - 76px); max-width: none; max-height: min(340px, max(160px, calc(100% - 180px))); padding: 15px; border-radius: 17px; }
+  .campus-detail-header { display: flex; align-items: center; gap: 10px; padding-right: 10px; }
+  .campus-detail-art { flex: 0 0 64px; width: 64px; height: 60px; margin: 0 0 0 -3px; }
   .campus-detail-art svg { width: 75px; height: 63px; }
   .campus-detail-category { padding-top: 3px; font-size: 9px; margin-right: 15px; }
   .campus-detail h2 { font-size: 19px; margin-right: 12px; }
-  #detailDescription { clear: both; font-size: 11px; margin-top: 8px; line-height: 1.7; }
-  .campus-detail-location { margin-top: 10px; padding-top: 9px; font-size: 9px; }
+  #detailDescription { font-size: 12px; line-height: 1.8; }
+  .campus-detail-content { margin-top: 8px; }
   .campus-detail-close { width: 32px; height: 32px; top: 5px; right: 5px; }
 }
 @media (max-height: 520px) and (orientation: landscape) {
@@ -164,7 +227,7 @@ body[data-page="map"] {
   .campus-title-row h1 { font-size: 24px; }
   .campus-discovery { padding-bottom: 4px; }
   .campus-detail { bottom: 18px; padding: 16px; width: 280px; }
-  .campus-detail-art, .campus-detail-location { display: none; }
+  .campus-detail-art { display: none; }
 }
 @media (prefers-reduced-motion: reduce) { .campus-page *, .campus-page *::before, .campus-page *::after { transition: none !important; animation: none !important; } }
 
