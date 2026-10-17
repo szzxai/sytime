@@ -1,4 +1,5 @@
-/* North-up illustrative coordinates (1000 × 1540). Building artwork is schematic.
+/* North-up illustrative coordinates (1000 × 1540), calibrated to the maintainer’s site reference.
+   Building footprints and internal details are schematic.
    Current uses supplied by the campus maintainer; public references recorded in docs/map-sources.md. */
 window.CampusSources = {
   "history": {
@@ -49,39 +50,45 @@ window.CampusPlaces = [
     "name": "伟长门",
     "category": "gate",
     "icon": "gate",
-    "x": 320,
-    "y": 75,
-    "size": 100,
+    "x": 345,
+    "y": 102,
+    "size": 84,
     "area": "校园西北侧",
     "description": "主要服务伟长实验部师生的校园出入口，承担日常上下学和教学活动的通行功能。\n\n与伟长楼一样，名称承载着苏中对杰出校友钱伟长先生的纪念，也成为伟长实验部师生熟悉的校园标识。",
-    "summary": "伟长实验部通行入口"
+    "summary": "伟长实验部通行入口",
+    "height": 63,
+    "labelY": -9
   },
   {
     "id": "north-gate",
     "name": "北门",
     "category": "gate",
     "icon": "gate",
-    "x": 600,
-    "y": 50,
-    "size": 100,
+    "x": 568,
+    "y": 66,
+    "size": 84,
     "area": "校园北侧",
     "description": "校园日常出入口之一，供师生及后勤人员通行，连接校内学习生活与周边街巷。\n\n入校管理和通行安排由学校统一执行；参加校内活动或来访时，可按校方通知确认使用的入口。",
-    "summary": "师生与后勤通行"
+    "summary": "师生与后勤通行",
+    "height": 63,
+    "labelY": 42
   },
   {
     "id": "west-ziyang",
     "name": "西紫阳楼",
     "category": "study",
     "icon": "teaching",
-    "x": 440,
-    "y": 150,
-    "size": 164,
+    "x": 452,
+    "y": 157,
+    "size": 177,
     "area": "北部教学区 · 西侧",
     "description": "高一年级的主要教学区域之一，承担班级日常课程、班会与学习活动，也是新生开始高中学习生活的重要场所。\n\n“紫阳”之名延续苏中的书院传统：1713年，江苏巡抚张伯行在苏州府学创设紫阳书院。今天的教学楼名称，让这段教育文脉继续融入日常课堂。",
     "summary": "高一教学区域",
     "sources": [
       "history"
-    ]
+    ],
+    "height": 105,
+    "labelY": 42
   },
   {
     "id": "east-ziyang",
@@ -89,60 +96,70 @@ window.CampusPlaces = [
     "category": "study",
     "icon": "teaching",
     "x": 660,
-    "y": 130,
-    "size": 164,
+    "y": 142,
+    "size": 177,
     "area": "北部教学区 · 东侧",
     "description": "与西紫阳楼共同构成高一年级的主要教学区域，承载日常授课、班级学习与师生交流。新生在这里逐步适应高中课程与校园生活。\n\n楼名承袭紫阳书院的历史。校方校史记载，书院创办于1713年，曾从府学中选拔生员入院研习经学，是苏中办学传统的重要组成部分。",
     "summary": "高一教学区域",
     "sources": [
       "history"
-    ]
+    ],
+    "height": 105,
+    "labelY": 42
   },
   {
     "id": "weichang",
     "name": "伟长楼",
     "category": "study",
-    "icon": "tower",
-    "x": 230,
-    "y": 230,
-    "size": 140,
+    "icon": "weichang-plan",
+    "x": 269,
+    "y": 239,
+    "size": 158,
     "area": "校园西北侧",
     "description": "以杰出校友钱伟长先生命名，主要作为伟长实验部的教学与研讨场所，服务拔尖创新人才的早期培养。这里既有日常班级课程，也承载师生交流与教研活动。\n\n校方公开报道曾记录伟长楼初一班级的课堂展示，以及初高中教师联合听课、评课的过程，体现了实验部贯通培养与教学研究的特点。",
     "summary": "伟长实验部教学与研讨",
     "sources": [
       "teaching"
-    ]
+    ],
+    "height": 230,
+    "labelY": 0,
+    "labelSize": 20
   },
   {
     "id": "sanyuan",
     "name": "三元楼",
     "category": "study",
-    "icon": "tower",
-    "x": 835,
-    "y": 220,
-    "size": 142,
+    "icon": "sanyuan-plan",
+    "x": 815,
+    "y": 242,
+    "size": 80,
     "area": "校园东北侧",
     "description": "教师日常办公、备课与教研的重要场所，同时设有教学及综合办公空间，并承接学术报告、党团集会等活动。\n\n“三元”之名取意苏州府学先贤钱棨连中三元的典故，寄托着学校对读书治学与人才成长的期许。到访具体办公室或参加报告时，可依据老师及活动通知查找房间。",
     "summary": "教师办公与学术报告",
     "alias": "教师办公室 报告厅",
     "sources": [
       "views"
-    ]
+    ],
+    "height": 290,
+    "labelY": 0,
+    "labelSize": 20
   },
   {
     "id": "west-red",
     "name": "西红楼",
     "category": "study",
     "icon": "red",
-    "x": 440,
-    "y": 260,
-    "size": 170,
+    "x": 452,
+    "y": 239,
+    "size": 177,
     "area": "北部教学区 · 西侧",
     "description": "高二年级的主要教学区域之一，承担常规课程、班级学习与师生交流。进入高中学习的深化阶段，同学们在这里继续完成日常课堂与学科学习。\n\n红楼建于20世纪50年代，是苏中校园极具辨识度的红砖建筑。东、西红楼长期作为核心高中教学楼使用，既是学习空间，也承载了不同届学生的校园记忆。",
     "summary": "高二教学区域",
     "sources": [
       "views"
-    ]
+    ],
+    "height": 90,
+    "labelY": 30
   },
   {
     "id": "east-red",
@@ -150,103 +167,117 @@ window.CampusPlaces = [
     "category": "study",
     "icon": "red",
     "x": 660,
-    "y": 245,
-    "size": 170,
+    "y": 224,
+    "size": 177,
     "area": "北部教学区 · 东侧",
     "description": "与西红楼共同承担高二年级的主要教学任务，用于班级授课、班会及日常学习活动，是高中阶段重要的学习场所。\n\n建于20世纪50年代的红砖建筑已成为苏中的校园标识。它不仅记录着一届届学生的课堂生活，也常与楼前草坪一起出现在校园照片与毕业记忆中。",
     "summary": "高二教学区域",
     "sources": [
       "views"
-    ]
+    ],
+    "height": 90,
+    "labelY": 30
   },
   {
     "id": "west-lawn",
     "name": "西红楼草坪",
     "category": "nature",
-    "icon": "garden",
-    "x": 440,
-    "y": 350,
-    "size": 105,
+    "icon": "lawn",
+    "x": 453,
+    "y": 334,
+    "size": 177,
     "area": "西红楼南侧",
     "description": "教学区的开敞绿地，为紧凑的课堂生活留出一片可以放松、交谈和欣赏草木的空间。课间休息、毕业合影与小型露天交流，都让这里成为校园生活的一部分。\n\n草坪与红砖教学楼共同形成苏中鲜明的校园景观：四季植物的变化，与一届届学生的学习生活相伴。",
-    "summary": "课间休憩与校园活动"
+    "summary": "课间休憩与校园活动",
+    "height": 124,
+    "labelY": 5
   },
   {
     "id": "east-lawn",
     "name": "东红楼草坪",
     "category": "nature",
-    "icon": "garden",
+    "icon": "lawn",
     "x": 660,
-    "y": 340,
-    "size": 105,
+    "y": 319,
+    "size": 177,
     "area": "东红楼南侧",
     "description": "师生课余休憩、交流与校园合影的绿地，也可承载小型露天沙龙和校园文化活动。开敞的草坪让教学楼之间有了舒展的呼吸空间。\n\n红砖、绿地与四季树木相互映衬，是苏中日常风景中亲切的一部分；毕业季的合影也常将这份校园记忆保留下来。",
-    "summary": "休憩交流与毕业合影"
+    "summary": "休憩交流与毕业合影",
+    "height": 124,
+    "labelY": 5
   },
   {
     "id": "zhide",
     "name": "智德之门",
     "category": "heritage",
     "icon": "arch",
-    "x": 565,
-    "y": 420,
-    "size": 120,
+    "x": 559,
+    "y": 408,
+    "size": 82,
     "area": "红楼草坪与科学楼之间",
     "description": "承袭古府学文脉而复建的标志性仪门，是苏中校园具有代表性的文化地标，也是师生日常步行通行的一部分。\n\n仪门将传统府学的建筑意象融入今天的校园。“智”与“德”的并置，也让这里成为理解学校求知与育人传统的一处直观入口。",
     "summary": "府学仪门与文化地标",
     "sources": [
       "views",
       "heritage"
-    ]
+    ],
+    "height": 62,
+    "labelY": -7
   },
   {
     "id": "laboratory",
     "name": "实验楼",
     "category": "study",
-    "icon": "lab",
-    "x": 230,
-    "y": 455,
-    "size": 165,
+    "icon": "lab-plan",
+    "x": 273,
+    "y": 452,
+    "size": 156,
     "area": "校园西侧 · 伟长楼以南",
     "description": "承担物理、化学、生物等学科的实验教学，为观察现象、动手操作、验证规律与科学探究提供专门空间。理科实验操作考核和学生探究课题也与这里的教学功能紧密相关。\n\n实验课程将书本知识转化为可以操作、记录与讨论的过程。进入实验室应按课程安排，在老师指导下使用仪器与实验材料。",
-    "summary": "理科实验与探究学习"
+    "summary": "理科实验与探究学习",
+    "height": 170,
+    "labelY": 0
   },
   {
     "id": "science",
     "name": "科学楼",
     "category": "study",
-    "icon": "science",
-    "x": 680,
-    "y": 490,
-    "size": 200,
+    "icon": "science-plan",
+    "x": 677,
+    "y": 471,
+    "size": 218,
     "area": "校园中部偏东",
     "description": "始建于1936年的民国风貌建筑，兼具行政办公、科学教育与学术交流功能，也承载科技创新实验、学科竞赛集训、量子科学教育和专题研讨等活动。\n\n校方公开报道记录了在科学楼开展的教师培训、教研交流与研究生工作站活动。它所承载的功能并不限于名称中的“科学”，也连接着学校管理、教师发展与跨校学术合作。",
     "summary": "行政办公与科学教育",
     "alias": "行政办公楼 科创 学术交流",
     "sources": [
       "workstation"
-    ]
+    ],
+    "height": 126,
+    "labelY": 5
   },
   {
     "id": "east-gate",
     "name": "东门",
     "category": "gate",
     "icon": "gate",
-    "x": 925,
-    "y": 445,
-    "size": 90,
+    "x": 865,
+    "y": 436,
+    "size": 76,
     "area": "校园东侧",
     "description": "学校主要出入口之一，承担师生日常出入和访客接待通道的功能，是来校参加活动、办理事务时常用的入校节点。\n\n校园实行统一的门禁与来访管理。访客可按照校方通知完成登记，并确认活动地点及接待安排。",
-    "summary": "学校主入口与访客接待"
+    "summary": "学校主入口与访客接待",
+    "height": 57,
+    "labelY": 40
   },
   {
     "id": "xiwen",
     "name": "希文楼",
     "category": "life",
-    "icon": "teaching",
-    "x": 865,
-    "y": 590,
-    "size": 132,
+    "icon": "xiwen-plan",
+    "x": 844,
+    "y": 565,
+    "size": 79,
     "area": "校园东侧 · 科学楼东南",
     "description": "提供特色餐饮与便民服务，风味面档是师生日常生活中熟悉的一部分；楼内也承载教工活动、学术交流与研讨等功能。想在校园里吃一碗面，这里是值得记住的名字。\n\n“希文”是范仲淹的字。范仲淹于1035年捐宅地创办苏州府学，楼名将日常生活与苏中的办学源流联系起来。",
     "summary": "风味面档与师生交流",
@@ -255,38 +286,45 @@ window.CampusPlaces = [
       "menu",
       "faculty",
       "history"
-    ]
+    ],
+    "height": 95,
+    "labelY": 60,
+    "labelSize": 20
   },
   {
     "id": "chunyu",
     "name": "春雨池",
     "category": "nature",
-    "icon": "pond",
-    "x": 440,
-    "y": 555,
-    "size": 155,
+    "icon": "chunyu-plan",
+    "x": 458,
+    "y": 546,
+    "size": 181,
     "area": "道山北侧",
     "description": "与道山、碧霞池共同构成校园富有江南气息的山水景观。池水、树影与四季草木，为师生日常学习生活带来一份安静与舒展。\n\n它既是校园园林的一部分，也提供了观察水体、植物和季节变化的自然环境。校方校园风貌介绍专门收录了春雨池，记录这处延续至今的校园风景。",
     "summary": "古典园林水景",
     "sources": [
       "views"
-    ]
+    ],
+    "height": 62,
+    "labelY": 6
   },
   {
     "id": "daoshan",
     "name": "道山",
     "category": "nature",
-    "icon": "hill",
-    "x": 445,
-    "y": 700,
-    "size": 160,
+    "icon": "daoshan-plan",
+    "x": 465,
+    "y": 655,
+    "size": 198,
     "area": "春雨池与碧霞池之间",
     "description": "苏中校园的核心园林地标，承续五代吴越钱氏南园的历史记忆。古柏、池水与亭阁共同构成“千年庭院”的独特风貌，也是府学文脉与校园生态交融的象征。\n\n“道山”也进入今天的育人实践：学校以道山书院及道山文史课程基地组织阅读、文史研习与文化教育，让历史园林与当代课堂继续发生联系。",
     "summary": "千年庭院的园林象征",
     "sources": [
       "history",
       "reading"
-    ]
+    ],
+    "height": 139,
+    "labelY": 5
   },
   {
     "id": "zunjing",
@@ -294,80 +332,90 @@ window.CampusPlaces = [
     "alias": "校史馆",
     "category": "heritage",
     "icon": "pavilion",
-    "x": 700,
-    "y": 710,
-    "size": 195,
+    "x": 685,
+    "y": 779,
+    "size": 143,
     "area": "道山东侧 · 文庙北侧",
     "description": "复建的历史阁楼建筑，现作为苏州中学校史馆，展示从苏州府学、紫阳书院、江苏师范学堂到现代苏中的办学历程，以及校友事迹、历史文献与相关文物。\n\n以尊经阁为核心的历史文化区，还通过府学碑廊和历史碑刻呈现传统教育的价值。了解苏中的校史与人物，这里是重要的一站。",
     "summary": "校史馆与府学文献",
     "sources": [
       "heritage",
       "history"
-    ]
+    ],
+    "height": 98,
+    "labelY": 58
   },
   {
     "id": "basketball",
     "name": "篮球场",
     "category": "sport",
-    "icon": "basketball",
-    "x": 229,
-    "y": 750,
-    "size": 210,
-    "height": 330,
+    "icon": "courts-plan",
+    "x": 276,
+    "y": 744,
+    "size": 132,
+    "height": 292,
     "area": "校园西侧 · 实验楼以南",
-    "description": "室外篮球运动场地，服务日常体育教学、篮球练习与课余锻炼。同学们可以在这里练习运球、投篮与团队配合，享受课堂之外的运动时光。\n\n球场也是校园体育生活中活跃的交流空间。教学、训练与自由活动可按学校安排使用；地图中的场地数量和标线为示意。",
-    "summary": "体育课与课余篮球"
+    "description": "室外篮球运动场地，服务日常体育教学、篮球练习与课余锻炼。同学们可以在这里练习运球、投篮与团队配合，享受课堂之外的运动时光。\n\n球场也是校园体育生活中活跃的交流空间。教学、训练与自由活动可按学校安排使用；地图按位置参考图细化为成组球场与南侧独立场地，具体标线为示意。",
+    "summary": "体育课与课余篮球",
+    "labelY": 120
   },
   {
     "id": "bixia",
     "name": "碧霞池",
     "category": "nature",
-    "icon": "pond",
-    "x": 445,
-    "y": 835,
-    "size": 155,
+    "icon": "bixia-plan",
+    "x": 468,
+    "y": 790,
+    "size": 192,
     "area": "道山南侧 · 图书馆以北",
     "description": "校园传统山水格局中的一处水景，与春雨池、道山共同营造江南园林的意境。水面映照树木与建筑，也让学习生活与自然景观保持亲近。\n\n池边适合欣赏四季变化、观察水生生态与短暂休憩。它所带来的不只是观赏体验，也是苏中园林校园日常可感的宁静。",
-    "summary": "园林水景与自然观察"
+    "summary": "园林水景与自然观察",
+    "height": 115,
+    "labelY": 7
   },
   {
     "id": "library",
     "name": "图书馆",
     "category": "study",
-    "icon": "library",
-    "x": 490,
-    "y": 980,
-    "size": 185,
+    "icon": "library-plan",
+    "x": 499,
+    "y": 910,
+    "size": 198,
     "area": "校园中南部 · 碧霞池以南",
     "description": "学校藏书与阅读服务中心，为师生提供纸质及电子文献检索、阅读、自习和研讨空间，支持课堂学习、课外阅读与学术探究。\n\n苏中持续建设书香校园，将图书馆与道山书院、文史阅读空间等资源相联系。阅读不只发生在课堂，也成为校园文化与个人成长的一部分。",
     "summary": "借阅检索与阅读研讨",
     "sources": [
       "reading"
-    ]
+    ],
+    "height": 116,
+    "labelY": 6
   },
   {
     "id": "temple",
     "name": "苏州文庙",
     "category": "heritage",
-    "icon": "temple",
-    "x": 795,
-    "y": 955,
-    "size": 230,
+    "icon": "temple-plan",
+    "x": 758,
+    "y": 987,
+    "size": 278,
     "area": "校园东侧的文庙区域",
     "description": "苏州府学文庙是全国重点文物保护单位，历史上与府学共同构成传统教育与祭祀文化空间。现存的大成殿与碑刻群，保存着儒学文化、地方教育和城市历史的重要记忆。\n\n苏中由范仲淹于1035年创办的苏州府学发展而来，文庙与学校的历史相互关联。文博参观与校园通行各有管理安排，实际开放范围以现场公布为准。",
     "summary": "儒学文化与碑刻展示",
     "sources": [
       "history"
-    ]
+    ],
+    "height": 316,
+    "labelY": 55,
+    "labelX": 48
   },
   {
     "id": "laixiu",
     "name": "来秀坊",
     "category": "life",
-    "icon": "hall",
-    "x": 490,
-    "y": 1130,
-    "size": 185,
+    "icon": "hall-plan",
+    "x": 499,
+    "y": 1022,
+    "size": 198,
     "area": "图书馆与体育馆之间",
     "description": "校园多功能礼堂与艺术活动舞台，承办文艺汇演、学术讲座、学生活动答辩、毕业季演出及各类集会，是许多师生共同记忆中的舞台。\n\n校方公开报道记录了在来秀坊举办的文艺汇演和教育集团工作总结会。这里既容纳正式交流，也见证校园艺术与集体生活的热闹时刻。",
     "summary": "礼堂 · 演出与大型活动",
@@ -375,72 +423,81 @@ window.CampusPlaces = [
     "sources": [
       "views",
       "auditorium"
-    ]
+    ],
+    "height": 102,
+    "labelY": 5
   },
   {
     "id": "daomeng",
     "name": "道梦空间",
     "category": "life",
-    "icon": "studio",
-    "x": 790,
-    "y": 1170,
-    "size": 160,
+    "icon": "studio-plan",
+    "x": 735,
+    "y": 1171,
+    "size": 222,
     "area": "文庙南侧",
     "description": "学校生态化心理教育课程基地，将学生心理成长融入课程、环境与日常生活。这里通过互动体验、心理教育与放松活动，帮助同学认识自我、调节情绪并获得成长支持。\n\n校方介绍将其概括为“问心系统、动心课程、养心环境”，其中包括线上研修、风竹密语互动装置及跨学科课程。它不仅是一处空间，也是一套持续开展的心理教育实践。",
     "summary": "心理教育与减压放松",
     "alias": "心理健康 课程基地",
     "sources": [
       "psychology"
-    ]
+    ],
+    "height": 46,
+    "labelY": 5
   },
   {
     "id": "gym",
     "name": "体育馆",
     "category": "sport",
-    "icon": "gym",
+    "icon": "gym-plan",
     "x": 510,
-    "y": 1280,
-    "size": 190,
+    "y": 1165,
+    "size": 183,
     "area": "校园南部 · 操场东侧",
     "description": "室内综合体育场馆，为羽毛球、乒乓球、排球等运动提供活动空间，支持体育课程、训练与校内赛事，也让雨天及天气不佳时的体育活动有了室内选择。\n\n课程、社团与赛事可能共用场地，使用时按学校安排协调。这里与室外球场、田径场一起构成校园完整的体育生活。",
-    "summary": "室内体育教学与赛事"
+    "summary": "室内体育教学与赛事",
+    "height": 132,
+    "labelY": 20
   },
   {
     "id": "track",
     "name": "操场",
     "category": "sport",
-    "icon": "track",
-    "x": 225,
-    "y": 1210,
-    "size": 290,
-    "height": 370,
+    "icon": "track-plan",
+    "x": 232,
+    "y": 1191,
+    "size": 310,
+    "height": 568,
     "area": "校园西南侧",
     "description": "环形田径跑道与内部足球场共同组成的室外运动场，承载体育教学、跑步训练、早操、校运动会及全校性室外集会。\n\n从日常慢跑到运动会竞赛，操场让不同年级的同学在运动中相遇。它既是锻炼身体的场地，也是校园集体活动的重要空间。",
     "summary": "田径 · 足球 · 校运动会",
     "sources": [
       "views"
-    ]
+    ],
+    "labelY": -8
   },
   {
     "id": "caiqin",
     "name": "采芹园",
     "category": "life",
-    "icon": "courtyard",
-    "x": 540,
-    "y": 1440,
-    "size": 190,
+    "icon": "caiqin-plan",
+    "x": 520,
+    "y": 1372,
+    "size": 193,
     "area": "校园南侧 · 体育馆以南",
     "description": "学校学生公寓与生活园区，为住宿生提供日常起居、休息与同伴相处的空间，并与校园生活及劳动实践环境相联系。\n\n“采芹”取意《诗经·鲁颂·泮水》中的“思乐泮水，薄采其芹”，沿用传统学校文化中的求学意象，寄托学子勤学笃志、修身成长的期许。",
     "summary": "学生住宿与生活园区",
-    "alias": "学生公寓 宿舍"
+    "alias": "学生公寓 宿舍",
+    "height": 210,
+    "labelY": 8
   },
   {
     "id": "panshui",
     "name": "泮水居",
     "category": "life",
-    "icon": "residence",
-    "x": 820,
-    "y": 1420,
+    "icon": "panshui-plan",
+    "x": 743,
+    "y": 1383,
     "size": 190,
     "area": "校园东南侧",
     "description": "校园大食堂，为学生和教职工提供早、中、晚三餐，是日常餐饮保障的重要场所。早餐点心、正餐菜肴与风味供应随每周菜单调整。\n\n“泮水”出自《诗经·鲁颂·泮水》，与传统学校文化相联系。想了解具体吃什么，可以查看本站“菜品与食谱”；菜式、价格与供应安排以当周公布为准。",
@@ -449,6 +506,60 @@ window.CampusPlaces = [
     "sources": [
       "views",
       "menu"
+    ],
+    "height": 190,
+    "labelY": 35
+  },
+  {
+    "id": "zhengdao",
+    "name": "政道楼",
+    "category": "study",
+    "icon": "zhengdao-plan",
+    "x": 273,
+    "y": 570,
+    "size": 112,
+    "height": 49,
+    "labelY": 9,
+    "labelSize": 20,
+    "area": "实验楼与篮球场之间",
+    "summary": "北京大学中学物理实验教学中心",
+    "description": "北京大学中学物理实验教学中心，承载中学物理实验教学与实践交流。\n\n楼名“政道”寓意“文正之道”，同时致敬诺贝尔物理学奖得主李政道先生。这里曾称“墨子馆”，现以“政道楼”之名延续校园的科学教育与人文传统。",
+    "alias": "墨子馆 物理实验 北京大学"
+  },
+  {
+    "id": "stele-gallery",
+    "name": "府学碑廊",
+    "category": "heritage",
+    "icon": "stele-plan",
+    "x": 794,
+    "y": 796,
+    "size": 49,
+    "height": 99,
+    "labelY": 0,
+    "labelX": 61,
+    "labelSize": 18,
+    "alias": "碑廊 府学碑",
+    "area": "尊经阁东侧",
+    "summary": "府学碑刻与历史文化",
+    "description": "以历史碑刻呈现府学传统的文化空间，与尊经阁校史展示共同连接苏州中学的教育记忆。碑文将学校、人物与地方文脉留在石上，也是了解传统读书治学与育人观念的实物线索。\n\n观赏碑刻时可留意题名、书体与文意，在字里行间认识府学的历史积累。文物和展示设施应保持原状，参观范围以现场安排为准。",
+    "sources": [
+      "heritage"
     ]
+  },
+  {
+    "id": "panchi",
+    "name": "泮池与泮桥",
+    "category": "heritage",
+    "icon": "panchi-plan",
+    "x": 729,
+    "y": 1251,
+    "size": 192,
+    "height": 86,
+    "labelY": 8,
+    "labelSize": 20,
+    "alias": "泮池 泮桥",
+    "area": "道梦空间与泮水居之间",
+    "summary": "水院 · 府学文化意象",
+    "description": "水面与中央桥道共同组成的庭院景观。泮池、泮桥是传统学校文化中常见的空间意象，与校园里的“泮水”“采芹”等名称相互呼应。\n\n“思乐泮水，薄采其芹”出自《诗经·鲁颂·泮水》，后来逐渐成为求学与学校教育的文化表达。水院让这段文脉也成为日常可见的校园风景。"
   }
 ];

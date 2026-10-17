@@ -256,9 +256,11 @@
       // Every highlight is below every building, regardless of selection or hover.
       var halo = svgNode('ellipse', { cx: p.x, cy: p.y - 4, rx: p.size * 0.57, ry: height * 0.5, class: 'campus-map-halo', 'data-map-highlight': p.id });
       highlights.appendChild(halo);
-      group.appendChild(svgNode('rect', { x: -p.size / 2, y: -height / 2, width: p.size, height: height + 40, fill: 'transparent', rx: 10 }));
+      // The footprint and its text are targets; do not extend over adjacent plots.
+      group.appendChild(svgNode('rect', { x: -p.size / 2, y: -height / 2, width: p.size, height: height, fill: 'transparent', rx: 4 }));
       group.appendChild(svgNode('use', { href: '#art-' + p.icon, x: -p.size / 2, y: -height / 2, width: p.size, height: height, 'pointer-events': 'none', preserveAspectRatio: 'none' }));
-      var label = svgNode('text', { x: 0, y: p.height ? height / 2 + 18 : height * 0.4 + 14, class: 'campus-map-label', 'text-anchor': 'middle', 'aria-hidden': 'true' });
+      var label = svgNode('text', { x: p.labelX || 0, y: p.labelY == null ? height / 2 + 18 : p.labelY, class: 'campus-map-label', 'data-label-size': p.labelSize || 23, 'text-anchor': 'middle', 'aria-hidden': 'true' });
+      if (p.labelSize) label.style.fontSize = p.labelSize + 'px';
       label.textContent = p.name;
       group.appendChild(label);
       group.addEventListener('click', function (e) {
@@ -296,7 +298,7 @@
       bindMapGestures();
       function sizeLabels() {
         var fontSize = Math.min(34, Math.max(23, 10.5 / Math.pow(2, map.getZoom())));
-        scene.querySelectorAll('.campus-map-label').forEach(function (label) { label.style.fontSize = fontSize + 'px'; });
+        scene.querySelectorAll('.campus-map-label').forEach(function (label) { label.style.fontSize = fontSize * Number(label.dataset.labelSize) / 23 + 'px'; });
       }
       fitCampus();
       sizeLabels();

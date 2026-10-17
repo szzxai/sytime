@@ -43,15 +43,48 @@ try {
     page.on('request', request => { if (request.url().includes('/api/map-data') || request.url().includes('/map-floor.js')) oldMapRequests.push(request.url()); });
     await page.goto(base + '/map.html', { waitUntil: 'networkidle' });
     await page.waitForSelector('body[data-guide-ready="true"]');
-    check('all reference locations included', await page.locator('[data-map-place]').count() === 28);
+    check('all reference locations included', await page.locator('[data-map-place]').count() === 31);
     check('all landmarks have substantive introductions', await page.evaluate(() => CampusPlaces.every(p => p.summary && p.description.length >= 65 && !p.description.includes(p.area))));
     check('view switcher and floor map removed', await page.locator('#floorView, #guideViewBtn, #floorViewBtn, .campus-view-switch').count() === 0);
     const courtBounds = await page.locator('[data-map-place="basketball"] > use').boundingBox();
     const trackBounds = await page.locator('[data-map-place="track"] > use').boundingBox();
-    check('basketball fills a large vertical area', courtBounds.height > trackBounds.height * 0.8 && courtBounds.width > trackBounds.width * 0.65);
+    check('reference sports proportions: large courts and dominant southern track', courtBounds.height > trackBounds.height * 0.45 && trackBounds.height > courtBounds.height * 1.8 && trackBounds.width > courtBounds.width * 2);
+    check('six grouped courts and a separate southern court', await page.locator('#art-courts-plan [data-court="grouped"]').count() === 6 && await page.locator('#art-courts-plan [data-court="separate"]').count() === 1);
+    check('reference terrain subdivisions exist', await page.locator('#atlas-unnamed-plot, #atlas-woodland, #atlas-bamboo, #atlas-paths').count() === 4);
+    check('reference spatial relationships are preserved', await page.evaluate(() => {
+      const p = Object.fromEntries(CampusPlaces.map(p => [p.id, p]));
+      return p.weichang.y < p.laboratory.y && p.laboratory.y < p.zhengdao.y && p.zhengdao.y < p.basketball.y
+        && p['west-red'].y < p['west-lawn'].y && p['east-red'].y < p['east-lawn'].y
+        && p.chunyu.y < p.daoshan.y && p.daoshan.y < p.bixia.y
+        && p.zunjing.x > p.daoshan.x && p.zunjing.y > p.daoshan.y && p['stele-gallery'].x > p.zunjing.x
+        && p.library.y < p.laixiu.y && p.laixiu.y < p.gym.y && p.gym.y < p.caiqin.y
+        && p.temple.y < p.daomeng.y && p.daomeng.y < p.panchi.y && p.panchi.y < p.panshui.y
+        && p.sanyuan.height > p.sanyuan.size * 3;
+    }));
+    check('no unknown label invented for pink plot', await page.locator('#atlas-unnamed-plot text, [data-map-place="unnamed"]').count() === 0);
+    check('all places reference existing vector artwork', await page.evaluate(() => CampusPlaces.every(p => document.getElementById('art-' + p.icon))));
     check('map has usable height', (await page.locator('#guideMap').boundingBox()).height > 200);
     await page.screenshot({ path: path.join(output, `${width}-${theme}.png`) });
     await audit(page, `${width}/${theme}/overview`);
+    const basketballLabel = page.locator('[data-map-place="basketball"] text');
+    check('basketball label stays clear of the track footprint', await basketballLabel.evaluate(el => {
+      const label = el.getBoundingClientRect();
+      const track = document.querySelector('[data-map-place="track"] > rect').getBoundingClientRect();
+      return label.bottom < track.top;
+    }));
+    const labelBox = await basketballLabel.boundingBox();
+    await page.mouse.click(labelBox.x + labelBox.width / 2, labelBox.y + labelBox.height - 2);
+    check('bottom of basketball label selects basketball instead of track', await page.locator('#detailName').textContent() === '篮球场');
+    await page.locator('#closeDetail').click();
+    await page.locator('#guideReset').click();
+    await page.locator('#placeSearch').fill('墨子馆');
+    check('former name finds renamed Zhengdao building', await page.locator('.campus-place-row').count() === 1 && (await page.locator('.campus-place-row').textContent()).includes('政道楼'));
+    await page.locator('.campus-place-row').click();
+    check('Zhengdao description includes confirmed identity and dedication', await page.locator('#detailName').textContent() === '政道楼' && await page.locator('#detailDescription').evaluate(el => ['文正之道', '李政道', '诺贝尔物理学奖', '北京大学中学物理实验教学中心'].every(text => el.textContent.includes(text))));
+    await page.locator('#closeDetail').click();
+    await page.locator('#placeSearch').fill('');
+    if (width < 700) await page.locator('#placesToggle').click();
+    await page.locator('#guideReset').click();
     await page.locator('#placeSearch').fill('校史馆');
     check('alias search finds museum', await page.locator('.campus-place-row').count() === 1);
     check('search highlights corresponding place', await page.locator('[data-map-place]:not(.is-muted)').count() === 1);
@@ -68,7 +101,7 @@ try {
     await page.locator('#placeSearch').fill('不存在的校园地点');
     check('empty search state', await page.locator('#placesEmpty').isVisible());
     await page.locator('#resetSearch').click();
-    check('reset search restores places', await page.locator('.campus-place-row').count() === 28);
+    check('reset search restores places', await page.locator('.campus-place-row').count() === 31);
     await page.locator('[data-category="sport"]').click();
     check('sports category', await page.locator('.campus-place-row').count() === 3);
     await page.locator('[data-category="all"]').click();
@@ -174,6 +207,12 @@ try {
       check('illustration click opens location', await page.locator('#detailName').textContent() === '尊经阁');
       await page.locator('#closeDetail').click();
       await page.locator('#guideReset').click();
+      for (const [id, name] of [['zhengdao', '政道楼'], ['stele-gallery', '府学碑廊'], ['panchi', '泮池与泮桥']]) {
+        await page.locator('[data-map-place="' + id + '"]').click();
+        check('new reference landmark opens its own detail: ' + id, await page.locator('#detailName').textContent() === name);
+        await page.locator('#closeDetail').click();
+        await page.locator('#guideReset').click();
+      }
     }
     await page.locator('[data-map-place="panshui"]').focus();
     await page.keyboard.press('Enter');

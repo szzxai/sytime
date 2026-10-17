@@ -7,6 +7,18 @@ body[data-page="map"] {
   --atlas-path: #faf9f2;
   --atlas-path-edge: #e1e2d4;
   --atlas-temple: #e8e8dc;
+  --atlas-roof: #d8d3c4;
+  --atlas-roof-edge: #a39f8f;
+  --atlas-wall: #efeadc;
+  --atlas-lawn: #d6e4c6;
+  --atlas-hedge: #b4c8a1;
+  --atlas-water: #b9d6d5;
+  --atlas-water-edge: #94b9b6;
+  --atlas-plot: #dcb8bf;
+  --atlas-track: #cba89a;
+  --atlas-marking: #f5f6e9;
+  --atlas-garden-walk: #faf9f2;
+  --atlas-court: #a8c9b6;
   --atlas-label: #38483e;
   --atlas-soft-label: #788376;
   --atlas-panel: rgba(255,255,255,.92);
@@ -28,6 +40,18 @@ body[data-page="map"] {
   --atlas-path: #41483d;
   --atlas-path-edge: #293329;
   --atlas-temple: #383e32;
+  --atlas-roof: #66695b;
+  --atlas-roof-edge: #929883;
+  --atlas-wall: #7e8270;
+  --atlas-lawn: #40533a;
+  --atlas-hedge: #556d49;
+  --atlas-water: #446c6c;
+  --atlas-water-edge: #769893;
+  --atlas-plot: #71555f;
+  --atlas-track: #82675b;
+  --atlas-marking: #afbea4;
+  --atlas-garden-walk: #7b8971;
+  --atlas-court: #577965;
   --atlas-label: #e3e9dc;
   --atlas-soft-label: #a4b19f;
   --atlas-panel: rgba(30,38,33,.94);
@@ -94,6 +118,39 @@ body[data-page="map"] {
 .atlas-path { stroke: var(--atlas-path); stroke-width: 19; }
 .atlas-temple-ground { fill: var(--atlas-temple); }
 .atlas-temple-boundary { stroke: var(--atlas-edge); stroke-width: 2; stroke-dasharray: 8 6; fill: none; }
+.atlas-street { fill: var(--atlas-path-edge); }
+.atlas-street-line { fill: none; stroke: var(--atlas-paper); stroke-width: 2; stroke-dasharray: 14 12; }
+.atlas-context-building { fill: var(--atlas-edge); opacity: .28; }
+.atlas-paving { fill: var(--atlas-path); stroke: var(--atlas-path-edge); stroke-width: 1.5; }
+.atlas-roof { fill: var(--atlas-roof); stroke: var(--atlas-roof-edge); stroke-width: 1.7; stroke-linejoin: round; }
+.atlas-building-shadow { fill: var(--atlas-label); opacity: .08; }
+.atlas-ridge { fill: none; stroke: var(--atlas-roof-edge); stroke-width: 1.3; stroke-linejoin: round; }
+.atlas-fine { fill: none; stroke: var(--atlas-roof-edge); stroke-width: 1; }
+.atlas-wall, .atlas-bridge { fill: var(--atlas-wall); stroke: var(--atlas-roof-edge); stroke-width: 1.2; }
+.atlas-roof-detail { fill: var(--atlas-wall); stroke: var(--atlas-roof-edge); }
+.atlas-lawn { fill: var(--atlas-lawn); stroke: var(--atlas-hedge); stroke-width: 1.3; }
+.atlas-hedge, .atlas-bamboo-ground { fill: var(--atlas-hedge); }
+.atlas-grass-line { fill: none; stroke: var(--atlas-hedge); stroke-width: 1; opacity: .28; }
+.atlas-garden-path { fill: none; stroke: var(--atlas-garden-walk); stroke-width: 5; stroke-linejoin: round; }
+.atlas-contour { fill: none; stroke: var(--atlas-hedge); stroke-width: 1.2; }
+.atlas-water { fill: var(--atlas-water); stroke: var(--atlas-water-edge); stroke-width: 1.4; }
+.atlas-water-line { fill: none; stroke: var(--atlas-path); stroke-width: 1.5; opacity: .7; stroke-linecap: round; }
+.atlas-blue-detail { fill: var(--atlas-water); opacity: .75; }
+.atlas-unnamed-plot { fill: var(--atlas-plot); stroke: var(--atlas-roof-edge); stroke-width: 1.4; }
+.atlas-plot-seam { fill: none; stroke: var(--atlas-wall); opacity: .6; }
+.atlas-sport-base { fill: var(--atlas-hedge); stroke: var(--atlas-edge); stroke-width: 1.3; }
+.atlas-court-surface, #art-basketball-court > rect { fill: var(--atlas-court); }
+.atlas-court-lines { fill: none; stroke: var(--atlas-marking); stroke-width: 1; }
+.atlas-gym-roof { fill: var(--atlas-water); stroke: var(--atlas-water-edge); stroke-width: 1.5; }
+.atlas-gym-rib { fill: none; stroke: var(--atlas-path); stroke-width: 1.3; opacity: .5; }
+.atlas-book { fill: var(--atlas-path); stroke: var(--atlas-roof-edge); stroke-width: 1.5; }
+.atlas-stele, .atlas-colonnade { fill: var(--atlas-roof-edge); opacity: .65; }
+.atlas-precinct-wall { stroke: var(--atlas-roof-edge); stroke-width: 2; }
+.atlas-track { fill: var(--atlas-track); stroke: var(--atlas-roof-edge); stroke-width: 1.5; }
+.atlas-track-line { fill: none; stroke: var(--atlas-wall); stroke-width: 1; }
+.atlas-pitch { fill: var(--atlas-lawn); stroke: var(--atlas-marking); stroke-width: 1.2; }
+.atlas-pitch-line { fill: none; stroke: var(--atlas-marking); stroke-width: 1.3; }
+.atlas-small-label, .atlas-ground-label { font-family: var(--font-sans); font-size: 15px; fill: var(--atlas-soft-label); letter-spacing: 1px; }
 .atlas-surroundings { fill: var(--atlas-soft-label); font-size: 20px; letter-spacing: 5px; }
 .campus-map-place { cursor: pointer; transition: opacity .2s; outline: none; }
 .campus-map-place.is-muted { opacity: .16; }
