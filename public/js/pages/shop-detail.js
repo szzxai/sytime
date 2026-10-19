@@ -528,7 +528,7 @@
       }
       var shop = r.data.shop;
       currentShop = shop;
-      document.title = shop.name + " · 三元坊必吃榜 · 校园信息网";
+      document.title = shop.name + " · 三元坊必吃榜 · 拾光酥糕";
       body.innerHTML = detail(shop);
       configureInteractions(shop, r.data.can_interact || shop.can_interact);
       wireLayout();

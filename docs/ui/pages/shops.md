@@ -1,6 +1,10 @@
 # 三元坊必吃榜 · shops.md（#6：shops.html 与 shop-new.html）
 
-> 状态：新功能 ｜ 优先级：P1 ｜ issue：#6（#7/#8 依赖）｜ 依赖：阶段 0；#6 数据与接口 ｜ 壳：默认 ｜ data-nav：`shops` ｜ 容器：`container` / `container--form`
+## 当前视觉与布局 · 2026-10-17
+
+列表改为 `.workspace--shops`：330px 左栏放标题、创建入口、分类、排序和搜索范围；右栏为附近地图、统计、店铺网格与分页。手机左栏变为顶部控制区，范围输入两列。保留全部筛选、地图聚合、分页和权限逻辑。 全站品牌字标为「拾光酥糕」，详细公共尺寸见 [UI.md](../../../UI.md)。本轮验证结果见 [验收记录](../acceptance.md) 和根目录 [MAP.md](../../../MAP.md)。
+
+> 状态：新功能 ｜ 优先级：P1 ｜ issue：#6（#7/#8 依赖）｜ 依赖：阶段 0；#6 数据与接口 ｜ 壳：默认 ｜ data-nav：`shops` ｜ 容器：`workspace--shops` / `container--form`
 
 ## 需求对照表（PLAN #6 → 本文档）
 
@@ -27,7 +31,7 @@
 ```html
 <div class="page-head">
   <div class="page-head__main">
-    <span class="page-head__eyebrow">Sanyuanfang · Must-Eat</span>
+    <span class="page-head__eyebrow">校园周边美食</span>
     <h1 class="page-head__title">三元坊必吃榜</h1>
     <p class="page-head__desc">同学们推荐的学校周边美食，距离和步行时间以高德步行路线为准。</p>
   </div>

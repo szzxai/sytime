@@ -1,5 +1,5 @@
-﻿/* ==========================================================================
-   校园信息网 · ui.js  (交互层参考实现 v1.0)
+/* ==========================================================================
+   拾光酥糕 · ui.js  (公共交互层 v2.0)
    - 唯一全局：window.UI。无依赖、无构建，需配合 site.css 与 img/icons.svg。
    - 页面里只做三件事：引入本文件 → 写 <body data-nav="..."> → 用 UI.* 工具函数。
    - 所有拼接进 innerHTML 的动态字符串必须先过 UI.esc()。
@@ -9,16 +9,16 @@
 
   /* ---------- 0. 配置（按功能上线进度翻转 features） ---------- */
   var UI = {
-    version: '1.0',
+    version: '2.0',
     config: {
-      brand: '校园信息网',
-      iconsUrl: '/img/icons.svg?v=brand-su-2026-10-03',
+      brand: '拾光酥糕',
+      iconsUrl: '/img/icons.svg?v=shstime-20261018',
       features: {
         shops: true,     // #6 三元坊必吃榜（列表 / 详情 / 添加店铺）
         dishes: true,    // #5 菜品目录已上线；详情与店铺关联后续实现
         inbox: true,     // #9 消息箱已上线
         titles: true,    // #10 头衔系统
-        theme: false     // 深色主题（P2）
+        theme: true      // 浅色 / 深色 / 跟随系统
       },
       api: {
         profile: '/api/user/profile',
@@ -904,33 +904,76 @@
     if (z) { e.preventDefault(); UI.viewer.open(z.getAttribute('data-zoom'), z.getAttribute('data-caption') || z.getAttribute('alt') || ''); }
   });
 
-  /* ---------- 12. 主题（P2：features.theme 打开后可用） ---------- */
+  /* ---------- 12. 主题（浅色 / 深色 / 跟随系统） ---------- */
   UI.theme = {
-    get: function () { try { return localStorage.getItem('theme') || 'light'; } catch (e) { return 'light'; } },
+    get: function () { try { return localStorage.getItem('theme') || 'auto'; } catch (e) { return 'auto'; } },
     apply: function () {
       var m = UI.theme.get();
       var dark = m === 'dark' || (m === 'auto' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
       document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
       var meta = document.querySelector('meta[name="theme-color"]');
-      if (meta) meta.setAttribute('content', dark ? '#103A22' : '#085628');
+      if (meta) meta.setAttribute('content', dark ? '#14532D' : '#218653');
+      UI.qsa('[data-theme-choice]').forEach(function (button) { button.setAttribute('aria-pressed', String(button.dataset.themeChoice === m)); });
+      UI.qsa('[data-theme-toggle]').forEach(function (button) { button.innerHTML = UI.icon(dark ? 'moon' : 'sun'); button.setAttribute('aria-label', dark ? '切换至浅色主题' : '切换至深色主题'); });
     },
-    set: function (m) { try { localStorage.setItem('theme', m); } catch (e) { /* ignore */ } UI.theme.apply(); }
+    set: function (m) {
+      function commit() {
+        try { localStorage.setItem('theme', m); } catch (e) { /* ignore */ }
+        UI.theme.apply();
+      }
+      if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) { commit(); return; }
+      if (document.startViewTransition) {
+        document.documentElement.classList.add('theme-transitioning');
+        document.startViewTransition(commit).finished.finally(function () { document.documentElement.classList.remove('theme-transitioning'); });
+        return;
+      }
+      document.documentElement.classList.add('theme-transitioning');
+      commit();
+      window.setTimeout(function () { document.documentElement.classList.remove('theme-transitioning'); }, 300);
+    }
   };
+
+  document.addEventListener('click', function (event) {
+    var choice = event.target.closest('[data-theme-choice]');
+    if (choice) UI.theme.set(choice.dataset.themeChoice);
+    if (event.target.closest('[data-theme-toggle]')) UI.theme.set(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark');
+  });
+
+  // Keep both documents visible during a sideways navigation transition.
+  var pageOrder = ['index', 'map', 'forum', 'recipe', 'shops', 'announcements'];
+  document.addEventListener('click', function (event) {
+    var link = event.target.closest('a[href]');
+    if (!link || link.tagName !== 'A' || event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey ||
+        (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches)) return;
+    var destination;
+    try { destination = new URL(link.href, location.href); } catch (e) { return; }
+    if (destination.origin !== location.origin || destination.pathname === location.pathname || link.target || link.hasAttribute('download')) return;
+    var from = pageOrder.indexOf(location.pathname.split('/').pop().replace(/\.html$/, ''));
+    var to = pageOrder.indexOf(destination.pathname.split('/').pop().replace(/\.html$/, ''));
+    var direction = to >= 0 && from >= 0 && to < from ? 'back' : 'forward';
+    document.documentElement.dataset.pageDirection = direction;
+    try {
+      sessionStorage.setItem('fuxue-page-direction', JSON.stringify({ direction: direction, target: destination.pathname, at: Date.now() }));
+      var banner = document.getElementById('siteBanner');
+      sessionStorage.setItem('fuxue-banner-height', String(banner ? banner.getBoundingClientRect().height : 0));
+    } catch (e) { /* ignore */ }
+  });
+  if (window.matchMedia) window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function () { if (UI.theme.get() === 'auto') UI.theme.apply(); });
+  window.addEventListener('storage', function (event) { if (event.key === 'theme') UI.theme.apply(); });
 
   /* ---------- 13. 页壳：页头 / 抽屉 / 用户菜单 / 横幅 / 页脚 ---------- */
   UI.nav = [
     { key: 'home', href: 'index.html', label: '首页', full: '首页', icon: 'home', onlyDrawer: true },
-    { key: 'map', href: 'map.html', label: '地图', full: '校园地图', icon: 'map' },
+    { key: 'map', href: 'map.html', label: '地图', full: '地图', icon: 'map' },
     { key: 'forum', href: 'forum.html', label: '论坛', full: '论坛', icon: 'message' },
-    { key: 'recipe', href: 'recipe.html', label: '菜谱', full: '菜品与食谱', icon: 'utensils' },
+    { key: 'recipe', href: 'recipe.html', label: '菜谱', full: '菜谱', icon: 'utensils' },
     { key: 'shops', href: 'shops.html', label: '必吃榜', full: '三元坊必吃榜', icon: 'store', feature: 'shops' },
-    { key: 'announce', href: 'announcements.html', label: '公告', full: '更新公告', icon: 'megaphone' }
+    { key: 'announce', href: 'announcements.html', label: '更新公告', full: '更新公告', icon: 'megaphone' }
   ];
   function navItems() { return UI.nav.filter(function (n) { return !n.feature || UI.config.features[n.feature]; }); }
 
-  function brandMark() { return '<svg class="brand__mark" aria-hidden="true"><use href="' + UI.config.iconsUrl + '#brand-mark"></use></svg>'; }
   function brandHtml(extra) {
-    return '<a class="brand" href="index.html" aria-label="' + UI.config.brand + ' 首页">' + brandMark() + '<span class="brand__text"><span class="brand__name">' + UI.config.brand + '</span><span class="brand__sub">SZZX · INFO</span></span></a>' + (extra || '');
+    return '<a class="brand" href="index.html" aria-label="' + UI.config.brand + ' 首页"><img class="brand__mark" src="/img/suzhou-high-school-mark.png?v=20261018" alt="" width="40" height="40"></a>' + (extra || '');
   }
 
   function accountLinks(user) {
@@ -944,7 +987,7 @@
   function authHtml() {
     var token = UI.session.token(), user = UI.session.user();
     if (!token || !user) {
-      return '<a class="btn btn--ghost btn--sm" href="' + UI.config.loginUrl + '">登录</a><a class="btn btn--primary btn--sm" href="register.html">注册</a>';
+      return '<a class="btn btn--primary btn--sm header-login" href="' + UI.config.loginUrl + '">登录' + UI.icon('arrow-right') + '</a>';
     }
     var bell = UI.config.features.inbox ? '<a class="icon-btn" href="inbox.html" id="inboxBell" aria-label="消息">' + UI.icon('bell') + '<span class="count-badge" id="inboxCount" hidden></span></a>' : '';
     var items = accountLinks(user).map(function (l) {
@@ -958,7 +1001,7 @@
   function drawerHtml(active) {
     var user = UI.session.user(), token = UI.session.token();
     var nav = navItems().map(function (n) {
-      return '<a class="drawer-link" href="' + n.href + '"' + (n.key === active ? ' aria-current="page"' : '') + '>' + UI.icon(n.icon) + UI.esc(n.full) + '</a>';
+      return '<a class="drawer-link" href="' + n.href + '"' + (n.key === active ? ' aria-current="page"' : '') + '>' + UI.icon(n.icon) + UI.esc(n.label) + '</a>';
     }).join('');
     var account = '';
     if (token && user) {
@@ -972,10 +1015,20 @@
       '<nav class="drawer__body" aria-label="主导航">' + nav + account + '</nav><div class="drawer__foot">' + UI.config.brand + ' · AGPL-3.0</div></dialog>';
   }
 
+  function themeControls() {
+    return '<div class="theme-switch" role="group" aria-label="外观主题">' +
+      [['auto', '跟随系统', 'monitor'], ['light', '浅色', 'sun'], ['dark', '深色', 'moon']].map(function (t) {
+        return '<button type="button" data-theme-choice="' + t[0] + '" aria-label="' + t[1] + '" aria-pressed="' + (UI.theme.get() === t[0]) + '" title="' + t[1] + '">' + UI.icon(t[2]) + '</button>';
+      }).join('') + '</div>';
+  }
   function footerHtml() {
-    return '<footer class="site-footer"><div class="container container--wide site-footer__inner"><div class="site-footer__brand">' + brandMark() + '<span>' + UI.config.brand + '</span></div>' +
-      '<nav class="site-footer__links" aria-label="页脚"><a href="index.html#about">关于我们</a><a href="announcements.html">更新公告</a><a href="settings.html#tickets">提交工单</a></nav>' +
-      '<p class="site-footer__note">© ' + new Date().getFullYear() + ' ' + UI.config.brand + ' · 以 AGPL-3.0 协议开源</p></div></footer>';
+    return '<footer class="site-footer"><div class="site-footer__inner"><div class="site-footer__top">' +
+      '<div class="site-footer__identity">' + brandHtml() + '<p>由苏州中学学生共同维护</p><a class="footer-project" href="about.html">' + UI.icon('graduation') + '校园里的事，在这里相遇</a></div>' +
+      '<nav class="site-footer__columns" aria-label="页脚">' +
+      '<div><h2>交流与反馈</h2><a href="forum.html">校园论坛</a><a href="settings.html#tickets">提交工单</a><a href="announcements.html">更新公告</a></div>' +
+      '<div><h2>校园生活</h2><a href="map.html">校园地图</a><a href="recipe.html">食堂菜谱</a><a href="shops.html">三元坊必吃榜</a><a href="inbox.html">消息箱</a></div>' +
+      '<div><h2>关于我们</h2><a href="about.html">拾光酥糕</a><a href="profile.html">个人中心</a><a href="student_verify.html">学生认证</a><a href="settings.html">网站设置</a></div></nav></div>' +
+      '<div class="site-footer__bottom"><p>© 2026 苏州中学 VC 编程。</p>' + themeControls() + '</div></div></footer>';
   }
 
   UI.shell = {
@@ -989,13 +1042,14 @@
         body.insertBefore(headerHost, body.firstChild);
       }
       headerHost.innerHTML = '<header class="site-header"><div class="site-header__inner container container--wide">' +
-        '<button type="button" class="icon-btn site-header__menu" data-dialog-open="navDrawer" aria-label="打开菜单">' + UI.icon('menu') + '</button>' +
         brandHtml('<nav class="site-nav" aria-label="主导航">' + navItems().filter(function (n) { return !n.onlyDrawer; }).map(function (n) {
           return '<a class="site-nav__link" href="' + n.href + '"' + (n.key === active ? ' aria-current="page"' : '') + ' title="' + UI.esc(n.full) + '">' + UI.esc(n.label) + '</a>';
         }).join('') + '</nav>') +
-        '<div class="site-header__actions" id="authArea">' + authHtml() + '</div></div></header>' + drawerHtml(active);
+        '<button type="button" class="icon-btn site-header__menu" data-dialog-open="navDrawer" aria-label="打开菜单">' + UI.icon('menu') + '</button>' +
+        '<div class="site-header__tools"><button type="button" class="icon-btn theme-toggle" data-theme-toggle aria-label="切换明暗主题" title="切换明暗主题">' + UI.icon('sun') + '</button><div class="site-header__actions" id="authArea">' + authHtml() + '</div></div></div></header>' + drawerHtml(active);
       var footHost = document.getElementById('siteFooter');
       if (footHost && !footHost.firstChild && body.getAttribute('data-shell') !== 'app') footHost.innerHTML = footerHtml();
+      UI.theme.apply();
       UI.shell.mounted = true;
       UI.shell.refreshAuth();
       UI.shell.loadBanner();
@@ -1044,7 +1098,7 @@
     d._wired = true;
     d.addEventListener('click', function (e) { if (e.target === d) UI.dialog.close(d); });
     // 窗口变宽到桌面布局时自动关闭
-    window.addEventListener('resize', function () { if (d.open && window.innerWidth >= 768) UI.dialog.close(d); });
+    window.addEventListener('resize', function () { if (d.open && window.innerWidth > 992) UI.dialog.close(d); });
   }
 
   // 退出登录

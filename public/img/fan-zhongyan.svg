@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 390" fill="none">
+  <title>范仲淹像</title>
+  <desc>以白色简笔勾勒冠帽、长髯、宽袖与石座，左上受光，衣袍右侧以柔和灰绿表现阴影。</desc>
+  <defs>
+    <linearGradient id="porcelain" x1=".14" y1=".08" x2=".92" y2=".86" gradientUnits="objectBoundingBox">
+      <stop stop-color="#fff"/>
+      <stop offset=".48" stop-color="#fff"/>
+      <stop offset="1" stop-color="#cedbd1"/>
+    </linearGradient>
+    <linearGradient id="sunlight" x1=".04" y1=".05" x2=".62" y2=".72" gradientUnits="objectBoundingBox">
+      <stop stop-color="#fff" stop-opacity=".8"/>
+      <stop offset="1" stop-color="#fff" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="shade" x1=".08" y1=".1" x2=".94" y2=".54" gradientUnits="objectBoundingBox">
+      <stop stop-color="#829b89" stop-opacity="0"/>
+      <stop offset="1" stop-color="#536f5b" stop-opacity=".55"/>
+    </linearGradient>
+  </defs>
+  <path fill="url(#porcelain)" d="m54 34 5-15 15-9 18 5 13 14 1 11-8-3-1-13-9-7-15 2-9 9-1 10-9 4z"/>
+  <path fill="url(#porcelain)" d="M61 40q15-8 35 0l-2 24q-3 12-14 15-10-3-16-14l-3-25z"/>
+  <path fill="#fff" d="M66 72q8 8 16 8t15-8l-2 20-13 27-13-27z"/>
+  <path fill="#e4ece6" d="M84 80q8-1 13-8l-2 20-11 24z"/>
+  <path fill="url(#porcelain)" d="m64 88-15 8q-13 8-17 24l-15 45q-2 10 7 18l17 14-4 93-13 39q34 15 57 15t57-15l-12-40-4-92 18-15q8-8 5-17l-15-45q-4-16-18-24l-14-8-19 31z"/>
+  <path fill="url(#sunlight)" d="m64 91-13 8q-11 8-14 22l-13 42q-2 8 6 16l19 15-3 92-11 37q17 8 36 11l1-221z"/>
+  <path fill="url(#shade)" d="m96 93 13-5 14 8q14 9 18 25l15 45q3 10-5 18l-17 15 4 92 11 37q-16 7-37 12l-8-222z"/>
+  <path d="M67 48q11-5 24 0M69 57q3 2 6 0m10 0q3 2 6 0M72 69q10 8 19 0" stroke="#6e8c76" stroke-opacity=".58" stroke-width="2" stroke-linecap="round"/>
+  <path d="m63 87 17 17 18-18M68 124l12 10 14-10M78 134l-7 112m11-102 9 121m-31-118 5 105" stroke="#64816c" stroke-opacity=".48" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="m47 158 25 15-2 6-27-12m67-9-26 16 2 6 28-14" fill="#c7d5cb" fill-opacity=".6"/>
+  <path fill="url(#porcelain)" d="M49 344h62l8 10H41zm-9 14h80v24H40z"/>
+  <path fill="#c4d2c8" fill-opacity=".7" d="M88 345h23l8 9H89zm5 13h27v24H93z"/>
+  <path d="M42 389h76" stroke="#fff" stroke-opacity=".86" stroke-width="2"/>
+</svg>

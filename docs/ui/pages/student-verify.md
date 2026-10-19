@@ -1,5 +1,9 @@
 # 学生认证 · student_verify.html
 
+## 当前视觉与布局 · 2026-10-17
+
+学生认证沿用原申请与邀请码流程，改为无外部大阴影的居中表单，所有审核状态和中文提示使用新版组件。 全站品牌字标为「拾光酥糕」，详细公共尺寸见 [UI.md](../../../UI.md)。本轮验证结果见 [验收记录](../acceptance.md) 和根目录 [MAP.md](../../../MAP.md)。
+
 > 状态：现有改版 ｜ 优先级：P0 ｜ issue：#4 ｜ 依赖：阶段 0 ｜ 壳：默认 ｜ data-nav：无 ｜ 容器：`container--form`
 
 ## 用途与目标
@@ -34,9 +38,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#F5F3EE">
-<title>学生认证 · 校园信息网</title>
-<link rel="icon" href="img/favicon.svg" type="image/svg+xml">
+<meta name="theme-color" content="#FFFFFF">
+<title>学生认证 · 拾光酥糕</title>
+<link rel="icon" href="/img/suzhou-high-school-mark.png?v=20261018" type="image/png">
 <link rel="stylesheet" href="css/site.css">
 </head>
 <body>

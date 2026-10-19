@@ -1,5 +1,9 @@
 # 注册 · register.html
 
+## 当前视觉与布局 · 2026-10-17
+
+注册页使用居中窄表单、绿色「府」字章与细边框输入；保留昵称、用户名、密码与注册后登录流程，账户页共享新页脚和主题切换。 全站品牌字标为「拾光酥糕」，详细公共尺寸见 [UI.md](../../../UI.md)。本轮验证结果见 [验收记录](../acceptance.md) 和根目录 [MAP.md](../../../MAP.md)。
+
 > 状态：现有改版 ｜ 优先级：P0 ｜ issue：#4 ｜ 依赖：阶段 0 ｜ 壳：默认 ｜ data-nav：无 ｜ 容器：`container--narrow` + `.auth`
 
 ## 用途与目标
@@ -18,9 +22,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#F5F3EE">
-<title>注册 · 校园信息网</title>
-<link rel="icon" href="img/favicon.svg" type="image/svg+xml">
+<meta name="theme-color" content="#FFFFFF">
+<title>注册 · 拾光酥糕</title>
+<link rel="icon" href="/img/suzhou-high-school-mark.png?v=20261018" type="image/png">
 <link rel="stylesheet" href="css/site.css">
 </head>
 <body>

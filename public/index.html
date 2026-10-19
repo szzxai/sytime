@@ -1,163 +1,49 @@
 <!doctype html>
 <html lang="zh-CN">
-  <head>
-    <meta charset="UTF-8" />
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1, viewport-fit=cover"
-    />
-    <meta name="theme-color" content="#085628" />
-    <title>校园信息网</title>
-    <link rel="icon" href="/img/favicon.svg?v=su-085628-v3" type="image/svg+xml" />
-    <link rel="stylesheet" href="/css/site.css" />
-  </head>
-  <body data-nav="home">
-    <noscript
-      ><div class="alert alert--warning">
-        <div class="alert__body">本站需要启用 JavaScript 才能正常使用。</div>
-      </div></noscript
-    >
-    <a class="skip-link" href="#main">跳到正文</a>
-    <div id="siteBanner"></div>
-    <div id="siteHeader"></div>
-    <main id="main" class="main container">
-      <section class="hero">
-        <svg class="hero__mark" aria-hidden="true">
-          <use href="/img/icons.svg?v=brand-su-2026-10-03#brand-glyph"></use>
-        </svg>
-        <div class="hero__inner">
-          <span class="hero__eyebrow">苏州中学 · 三元坊</span>
-          <h1 class="hero__title">校园信息，<br />一站集成。</h1>
-          <p class="hero__lead">
-            校园地图、论坛、食堂菜谱、周边美食——一站式解决问题。
-          </p>
-          <div class="hero__actions">
-            <a class="btn btn--primary btn--lg" href="map.html"
-              ><svg class="icon" aria-hidden="true">
-                <use href="/img/icons.svg#i-map"></use></svg
-              >打开校园地图</a
-            >
-            <a class="btn btn--lg" href="forum.html">逛逛论坛</a>
-          </div>
+<head>
+  <script src="/js/page-transition.js"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#218653" />
+  <meta name="description" content="拾光酥糕，苏州中学的校园信息平台。探索校园地图、交流校园生活、发现食堂菜谱与三元坊美食。" />
+  <title>拾光酥糕 · 苏州中学校园信息平台</title>
+  <link rel="icon" href="/img/suzhou-high-school-mark.png?v=20261018" type="image/png" />
+  <link rel="stylesheet" href="/css/site.css?v=shstime-20261018" />
+</head>
+<body data-nav="home" data-page="home">
+  <noscript><div class="alert alert--warning"><div class="alert__body">本站需要启用 JavaScript 才能正常使用。</div></div></noscript>
+  <a class="skip-link" href="#main">跳到正文</a>
+  <div id="siteBanner"></div><div id="siteHeader"></div>
+  <main id="main" class="landing">
+    <section class="landing-hero" aria-labelledby="homeTitle">
+      <img class="landing-hero__statue" src="/img/fan-zhongyan-user.png" alt="范仲淹像的绿色与白色剪影" width="160" height="390" fetchpriority="high" />
+      <h1 id="homeTitle">苏州中学最大的<br />校园信息平台</h1>
+    </section>
+    <div class="landing-content">
+      <section class="landing-about" id="about" aria-labelledby="aboutTitle">
+        <h2 id="aboutTitle">关于我们</h2>
+        <p>我们是一群苏州中学的学生，想让校园信息更容易找到。<br class="desktop-break" />从每天的食堂菜谱，到校园里的一处风景，<br class="desktop-break" />我们一起建设、完善和维护 拾光酥糕。</p>
+        <a class="btn btn--sm" href="about.html">了解更多</a>
+      </section>
+      <section class="landing-row" aria-labelledby="teamTitle">
+        <div class="landing-row__intro"><h2 id="teamTitle">开发团队</h2><p>由热爱技术的同学共同开发与维护，把想法写成代码，让校园生活更方便一点。</p></div>
+        <ul class="landing-teams" aria-label="开发团队">
+          <li class="landing-team"><img src="/img/team-vc.svg" alt="橙子切面标志" width="48" height="48" /><span>苏州中学 VC 团队</span></li>
+          <li class="landing-team"><img src="/img/team-software.svg" alt="苏州中学软件开发社简化标志" width="48" height="48" /><span>苏州中学软件开发社</span></li>
+        </ul>
+      </section>
+      <section class="landing-row" aria-labelledby="involvedTitle">
+        <div class="landing-row__intro"><h2 id="involvedTitle">一起完善</h2><p>一个由同学共同维护的校园信息平台。你的每一次分享，都让大家的校园生活方便一点。</p></div>
+        <div class="landing-accordion">
+          <details><summary>分享校园生活<svg class="icon" aria-hidden="true"><use href="/img/icons.svg#i-chevron-down"></use></svg></summary><div><div class="landing-accordion__inner">分享一个新发现，提出一个好问题，或回应另一位同学。<a href="forum.html">去校园论坛</a></div></div></details>
+          <details><summary>留下你的推荐<svg class="icon" aria-hidden="true"><use href="/img/icons.svg#i-chevron-down"></use></svg></summary><div><div class="landing-accordion__inner">为吃过的菜写下真实评价，也把三元坊值得一去的小店推荐给大家。<a href="shops.html">发现周边美食</a>，或<a href="recipe.html">评价食堂菜品</a>。</div></div></details>
+          <details><summary>反馈问题与建议<svg class="icon" aria-hidden="true"><use href="/img/icons.svg#i-chevron-down"></use></svg></summary><div><div class="landing-accordion__inner">发现信息有误，或有新的想法？登录后提交工单，我们会在站内回复。<a href="settings.html#tickets">提交反馈</a></div></div></details>
         </div>
       </section>
-
-      <section class="section">
-        <div class="section__head">
-          <h2 class="section__title">功能入口</h2>
-        </div>
-        <div class="grid grid--sm">
-          <article class="card card--interactive tile" data-hue="teal">
-            <span class="tile__icon"
-              ><svg class="icon icon--lg" aria-hidden="true">
-                <use href="/img/icons.svg#i-map"></use></svg
-            ></span>
-            <h3 class="tile__title">
-              <a class="card__link" href="map.html">校园地图</a
-              ><svg class="icon" aria-hidden="true">
-                <use href="/img/icons.svg#i-arrow-right"></use>
-              </svg>
-            </h3>
-            <p class="tile__desc">楼层切换，点击建筑查看介绍</p>
-          </article>
-          <article class="card card--interactive tile" data-hue="wisteria">
-            <span class="tile__icon"
-              ><svg class="icon icon--lg" aria-hidden="true">
-                <use href="/img/icons.svg#i-message"></use></svg
-            ></span>
-            <h3 class="tile__title">
-              <a class="card__link" href="forum.html">论坛</a
-              ><svg class="icon" aria-hidden="true">
-                <use href="/img/icons.svg#i-arrow-right"></use>
-              </svg>
-            </h3>
-            <p class="tile__desc">分享校园发现，一起讨论与提问</p>
-          </article>
-          <article class="card card--interactive tile" data-hue="ochre">
-            <span class="tile__icon"
-              ><svg class="icon icon--lg" aria-hidden="true">
-                <use href="/img/icons.svg#i-utensils"></use></svg
-            ></span>
-            <h3 class="tile__title">
-              <a class="card__link" href="recipe.html">菜谱评价</a
-              ><svg class="icon" aria-hidden="true">
-                <use href="/img/icons.svg#i-arrow-right"></use>
-              </svg>
-            </h3>
-            <p class="tile__desc">看看评价，找到今天想吃的菜</p>
-          </article>
-          <article class="card card--interactive tile" data-hue="bamboo">
-            <span class="tile__icon"
-              ><svg class="icon icon--lg" aria-hidden="true">
-                <use href="/img/icons.svg#i-store"></use></svg
-            ></span>
-            <h3 class="tile__title">
-              <a class="card__link" href="shops.html">必吃榜</a
-              ><svg class="icon" aria-hidden="true">
-                <use href="/img/icons.svg#i-arrow-right"></use>
-              </svg>
-            </h3>
-            <p class="tile__desc">搜索苏中本部周边餐饮和步行路线</p>
-          </article>
-          <article class="card card--interactive tile" data-hue="indigo">
-            <span class="tile__icon"
-              ><svg class="icon icon--lg" aria-hidden="true">
-                <use href="/img/icons.svg#i-megaphone"></use></svg
-            ></span>
-            <h3 class="tile__title">
-              <a class="card__link" href="announcements.html">更新公告</a
-              ><svg class="icon" aria-hidden="true">
-                <use href="/img/icons.svg#i-arrow-right"></use>
-              </svg>
-            </h3>
-            <p class="tile__desc">查看网站的最新变化</p>
-          </article>
-        </div>
-      </section>
-
-      <section class="section" id="about">
-        <div class="section__head">
-          <h2 class="section__title">关于我们</h2>
-        </div>
-        <div class="card">
-          <section class="about">
-            <h3 class="about__label">我们是什么</h3>
-            <div class="about__body">
-              <p>
-                「校园信息网」是一个由学生维护的校园信息站，集成了可切换楼层的交互式校园地图、论坛、菜谱评价与更新公告，并配套一套完整的账号与权限系统。
-              </p>
-              <p>
-                我们希望把校园里分散的信息集中到一个简洁、清爽的地方，用最少的视觉干扰，呈现最有用的内容。
-              </p>
-            </div>
-          </section>
-          <section class="about">
-            <h3 class="about__label">发起原因</h3>
-            <div class="about__body">
-              <p>
-                最初它只是一个纯静态的校园地图页面，为了让地图数据便于维护与更新，逐步改造为动态站点，把几何数据抽离出来。
-              </p>
-              <p>
-                此后我们陆续加入账号系统、论坛与回复、菜谱评价、更新公告、学生认证、全站横幅与个人设置等功能，希望让它从一个地图工具成长为一个真正好用的校园信息平台。
-              </p>
-            </div>
-          </section>
-          <section class="about">
-            <h3 class="about__label">联系与反馈</h3>
-            <div class="about__body">
-              <p>
-                遇到问题或有建议？欢迎通过<a href="settings.html#tickets">工单</a
-                >联系网站管理人员。
-              </p>
-            </div>
-          </section>
-        </div>
-      </section>
-    </main>
-    <div id="siteFooter"></div>
-    <script src="/js/ui.js"></script>
-    <script src="/js/page.js"></script>
-
-    <script src="/js/pages/index.js"></script>
-  </body>
+      <section class="landing-note" aria-labelledby="noteTitle"><h2 id="noteTitle">在苏中，记录属于我们的拾光</h2><p>从人民路到道山，从教室到食堂。<br />愿每一份分享，都成为后来同学的路标。</p></section>
+    </div>
+  </main>
+  <div id="siteFooter"></div>
+  <script src="/js/ui.js?v=shstime-20261018"></script><script src="/js/page.js"></script><script src="/js/pages/index.js"></script>
+</body>
 </html>

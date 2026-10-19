@@ -1,17 +1,18 @@
 <!doctype html>
 <html lang="zh-CN">
   <head>
+  <script src="/js/page-transition.js"></script>
     <meta charset="UTF-8" />
     <meta
       name="viewport"
       content="width=device-width, initial-scale=1, viewport-fit=cover"
     />
-    <meta name="theme-color" content="#085628" />
-    <title>论坛 · 校园信息网</title>
-    <link rel="icon" href="/img/favicon.svg?v=su-085628-v3" type="image/svg+xml" />
-    <link rel="stylesheet" href="/css/site.css" />
+    <meta name="theme-color" content="#218653" />
+    <title>论坛 · 拾光酥糕</title>
+    <link rel="icon" href="/img/suzhou-high-school-mark.png?v=20261018" type="image/png" />
+    <link rel="stylesheet" href="/css/site.css?v=shstime-20261018" />
   </head>
-  <body data-nav="forum">
+  <body data-page="forum" data-nav="forum">
     <noscript
       ><div class="alert alert--warning">
         <div class="alert__body">本站需要启用 JavaScript 才能正常使用。</div>
@@ -20,10 +21,11 @@
     <a class="skip-link" href="#main">跳到正文</a>
     <div id="siteBanner"></div>
     <div id="siteHeader"></div>
-    <main id="main" class="main container container--prose">
+    <main id="main" class="workspace workspace--forum">
+      <aside class="workspace__sidebar" aria-label="论坛分类">
       <div class="page-head">
         <div class="page-head__main">
-          <span class="page-head__eyebrow">Forum</span>
+          <span class="page-head__eyebrow">校园交流</span>
           <h1 class="page-head__title">论坛</h1>
         </div>
         <div class="page-head__actions">
@@ -68,12 +70,15 @@
         >
       </div>
 
+      </aside>
+      <div class="workspace__content">
       <div class="stack stack--md" id="postList" aria-live="polite"></div>
       <div class="load-more" id="loadMore" hidden>
         <button type="button" class="btn" id="moreBtn">加载更多</button
         ><span id="moreInfo"></span>
       </div>
 
+      </div>
       <dialog
         class="dialog dialog--sheet dialog--wide"
         id="postDialog"
@@ -140,7 +145,7 @@
       </dialog>
     </main>
     <div id="siteFooter"></div>
-    <script src="/js/ui.js"></script>
+    <script src="/js/ui.js?v=shstime-20261018"></script>
     <script src="/js/page.js"></script>
 
     <script src="/js/forum.js"></script>

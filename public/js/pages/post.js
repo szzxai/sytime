@@ -5,7 +5,7 @@
     detail = P.el("detail"),
     id = new URLSearchParams(location.search).get("id");
   function missing(title) {
-    document.title = title + " · 校园信息网";
+    document.title = title + " · 拾光酥糕";
     detail.innerHTML =
       '<h1 class="sr-only">' +
       UI.esc(title) +
@@ -39,7 +39,7 @@
       return;
     }
     var p = r.data.post;
-    document.title = p.title + " · 校园信息网";
+    document.title = p.title + " · 拾光酥糕";
     detail.innerHTML =
       '<a class="back-link" href="forum.html">' +
       UI.icon("arrow-left", "icon--sm") +

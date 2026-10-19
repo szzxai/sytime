@@ -1,5 +1,9 @@
 # 系统页面与全局状态 · system-pages.md
 
+## 当前视觉与布局 · 2026-10-17
+
+404 页使用新版中文品牌、窄容器、绿色主操作与公共页脚，保留返回首页与地图入口；离线、异常、空状态继承新令牌。 全站品牌字标为「拾光酥糕」，详细公共尺寸见 [UI.md](../../../UI.md)。本轮验证结果见 [验收记录](../acceptance.md) 和根目录 [MAP.md](../../../MAP.md)。
+
 > 状态：新建（404）+ 全局规则 ｜ 优先级：P0（404、noscript、旧浏览器）；其余随场景触发 ｜ issue：#4
 
 > 本页为系统页与全局状态集合，不套用模板 G 的单页结构，各小节的定位如下：
@@ -17,8 +21,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>页面不存在 · 校园信息网</title>
-<link rel="icon" href="img/favicon.svg" type="image/svg+xml">
+<title>页面不存在 · 拾光酥糕</title>
+<link rel="icon" href="/img/suzhou-high-school-mark.png?v=20261018" type="image/png">
 <link rel="stylesheet" href="css/site.css">
 </head>
 <body>

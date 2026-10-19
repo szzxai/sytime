@@ -231,3 +231,16 @@ body[data-page="map"] {
 }
 @media (prefers-reduced-motion: reduce) { .campus-page *, .campus-page *::before, .campus-page *::after { transition: none !important; animation: none !important; } }
 
+
+/* 拾光酥糕共享工作区：保留校园地理插画，只统一目录和控件。 */
+body[data-page="map"] { --atlas-panel-solid: var(--surface); --atlas-ui-ink: var(--ink); --atlas-ui-muted: var(--ink-3); --atlas-ui-line: var(--line); --atlas-ui-hover: var(--surface-2); --atlas-accent: var(--primary-ink); }
+.campus-map-note, .campus-map-tip { color: var(--ink-2); }
+:root[data-theme="dark"] body[data-page="map"] { --atlas-panel-solid: var(--surface); --atlas-ui-ink: var(--ink); --atlas-ui-muted: var(--ink-3); --atlas-ui-line: var(--line); --atlas-ui-hover: var(--surface-2); --atlas-accent: var(--primary-ink); }
+.campus-title-row h1 { font-size: 26px; font-weight: 600; }
+.campus-eyebrow { font-size: 11px; letter-spacing: .04em; font-weight: 400; }
+.campus-search, .campus-filters button, .campus-place-row, .campus-place-thumb { border-radius: var(--r-2); }
+.campus-search { border-color: var(--line); background: var(--surface); }
+.campus-filters button[aria-pressed="true"] { background: var(--primary-50); color: var(--primary-ink); }
+.campus-detail, .campus-controls { border-radius: var(--r-3); }
+.campus-place-row[aria-pressed="true"] { background: var(--primary-50); }
+.campus-place-row[aria-pressed="true"] .campus-place-text > span { color: var(--ink-2); }

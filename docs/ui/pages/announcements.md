@@ -1,5 +1,9 @@
 # 更新公告 · announcements.html
 
+## 当前视觉与布局 · 2026-10-17
+
+公告使用 280px 左侧列表与右侧正文，选中项浅绿，无卡片大阴影；手机依次排列。标题上方英文改为「网站动态」，详情切换与管理入口不变。 全站品牌字标为「拾光酥糕」，详细公共尺寸见 [UI.md](../../../UI.md)。本轮验证结果见 [验收记录](../acceptance.md) 和根目录 [MAP.md](../../../MAP.md)。
+
 > 状态：现有改版 ｜ 优先级：P0 ｜ issue：#4 ｜ 依赖：阶段 0 ｜ 壳：默认 ｜ data-nav：`announce` ｜ 容器：`container`
 
 ## 用途与目标
@@ -31,9 +35,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#F5F3EE">
-<title>更新公告 · 校园信息网</title>
-<link rel="icon" href="img/favicon.svg" type="image/svg+xml">
+<meta name="theme-color" content="#FFFFFF">
+<title>更新公告 · 拾光酥糕</title>
+<link rel="icon" href="/img/suzhou-high-school-mark.png?v=20261018" type="image/png">
 <link rel="stylesheet" href="css/site.css">
 </head>
 <body data-nav="announce">
@@ -43,7 +47,7 @@
 <main id="main" class="main container">
   <div class="page-head">
     <div class="page-head__main">
-      <span class="page-head__eyebrow">Changelog</span>
+      <span class="page-head__eyebrow">网站动态</span>
       <h1 class="page-head__title">更新公告</h1>
     </div>
   </div>
@@ -192,3 +196,5 @@ window.addEventListener("hashchange", function () {
 - [ ] 无 alert/confirm；零报错；360/900 正常。
 
 > 2026-10-17 共享加载状态修正：本页使用的 `UI.html.skeleton` 已补齐 `role="status"`，保留加载名称与 `aria-busy`，避免加载过程中的无障碍属性违规；外观与业务流程不变。
+
+2026-10-17 精校：公告选中项的日期使用更深的次要文字色，在浅绿选中底上保持可读性；顶栏与按钮采用 UI.md v2.1 的统一尺寸。

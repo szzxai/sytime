@@ -1,16 +1,16 @@
 <svg xmlns="http://www.w3.org/2000/svg">
-<!-- 校园信息网 图标库 v1.0 · 24x24 栅格 · 线性 1.75 · 圆角端点。样式由 .icon 提供（fill:none; stroke:currentColor）。
+<!-- 拾光酥糕 图标库 v2.0 · 24x24 栅格 · 线性 1.75 · 圆角端点。样式由 .icon 提供（fill:none; stroke:currentColor）。
      注意：外部引用时根节点不能带 display:none（否则 <use> 不渲染）；内联进页面时请包一层 width=0 height=0 position:absolute 的 <svg>。 -->
 
-<!-- 品牌印章：朱底 + 几何“中”字（32x32），颜色取自 CSS 变量 seal 与 ink-inverse（自带回退值） -->
+<!-- 品牌字章：绿色底 + “拾”字（32x32），颜色取自 CSS 变量 seal 与 ink-inverse（自带回退值） -->
 <symbol id="brand-mark" viewBox="0 0 32 32">
-  <rect width="32" height="32" rx="8" style="fill:var(--seal,#085628)"/>
-  <text x="16" y="16" text-anchor="middle" dominant-baseline="central" style="fill:var(--ink-inverse,#FFFFFF);font-family:'Noto Sans CJK TC','Microsoft JhengHei','PingFang TC','Microsoft YaHei',sans-serif;font-size:20px;font-weight:700">蘇</text>
+  <rect width="32" height="32" rx="8" style="fill:var(--seal,#218653)"/>
+  <text x="16" y="16" text-anchor="middle" dominant-baseline="central" style="fill:var(--ink-inverse,#FFFFFF);font-family:'Noto Sans CJK TC','Microsoft JhengHei','PingFang TC','Microsoft YaHei',sans-serif;font-size:20px;font-weight:700">拾</text>
 </symbol>
 
 <!-- 品牌字形（仅笔画，用于首页水印等装饰），颜色取自 CSS 变量 seal -->
 <symbol id="brand-glyph" viewBox="0 0 32 32">
-  <text x="16" y="16" text-anchor="middle" dominant-baseline="central" style="fill:var(--seal,#085628);font-family:'Noto Sans CJK TC','Microsoft JhengHei','PingFang TC','Microsoft YaHei',sans-serif;font-size:20px;font-weight:700">蘇</text>
+  <text x="16" y="16" text-anchor="middle" dominant-baseline="central" style="fill:var(--seal,#218653);font-family:'Noto Sans CJK TC','Microsoft JhengHei','PingFang TC','Microsoft YaHei',sans-serif;font-size:20px;font-weight:700">拾</text>
 </symbol>
 
 <!-- 导航与操作 -->
@@ -96,4 +96,5 @@
 <symbol id="i-award" viewBox="0 0 24 24"><circle cx="12" cy="9" r="5.5"/><path d="M8.7 13.4L7.5 21l4.5-2.5 4.5 2.5-1.2-7.6"/></symbol>
 <symbol id="i-trophy" viewBox="0 0 24 24"><path d="M8 4.5h8v5a4 4 0 0 1-8 0z"/><path d="M8 6.5H5.5a1 1 0 0 0-1 1V8A3 3 0 0 0 8 11M16 6.5h2.5a1 1 0 0 1 1 1V8A3 3 0 0 1 16 11M12 13.5V17M9 20.5h6M10 17h4"/></symbol>
 <symbol id="i-flag" viewBox="0 0 24 24"><path d="M5 21V4.5M5 5h11.5l-2 3.5 2 3.5H5"/></symbol>
+<symbol id="i-monitor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></symbol>
 </svg>
