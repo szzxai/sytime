@@ -227,16 +227,19 @@
                     </div>
                     <div class="field">
                       <span class="field__label">店铺详情页样式</span>
-                      <div class="choice-group choice-group--2" id="shopLayoutChoices">
-                        <label class="choice">
+                      <div
+                        class="choice-group choice-group--2"
+                        id="shopLayoutModeChoices"
+                      >
+                        <label class="choice" title="手动切换样式">
                           <input
                             class="choice__input"
                             type="radio"
-                            name="shopLayout"
-                            value="stacked"
+                            name="shopLayoutMode"
+                            value="manual"
                           /><span class="choice__body"
                             ><span class="choice__title"
-                              >样式一 · 纵向<svg
+                              >手动<svg
                                 class="icon choice__check"
                                 aria-hidden="true"
                               >
@@ -244,19 +247,19 @@
                                   href="/img/icons.svg#i-check-circle"
                                 ></use></svg></span
                             ><span class="choice__desc"
-                              >手机友好，菜品与评价上下排列</span
+                              >在店铺详情页手动切换纵向或双栏</span
                             ></span
                           >
                         </label>
-                        <label class="choice">
+                        <label class="choice" title="根据屏幕宽度自动切换">
                           <input
                             class="choice__input"
                             type="radio"
-                            name="shopLayout"
-                            value="split"
+                            name="shopLayoutMode"
+                            value="auto"
                           /><span class="choice__body"
                             ><span class="choice__title"
-                              >样式二 · 双栏<svg
+                              >自动<svg
                                 class="icon choice__check"
                                 aria-hidden="true"
                               >
@@ -264,15 +267,41 @@
                                   href="/img/icons.svg#i-check-circle"
                                 ></use></svg></span
                             ><span class="choice__desc"
-                              >电脑友好，左右并排查看</span
+                              >根据屏幕宽度自动切换纵向或双栏</span
                             ></span
                           >
                         </label>
                       </div>
                       <span class="field__hint"
-                        >浏览三元坊必吃榜店铺详情时默认使用的布局</span
+                        >选择手动时，可在店铺详情页切换纵向/双栏并记住上次选择；选择自动时按屏幕宽度自动选用布局</span
                       >
                     </div>
+                  </div>
+                  <div class="field" id="collectionDefaultFields">
+                    <span class="field__label">收藏默认页</span>
+                    <div class="stack stack--sm">
+                      <div class="field">
+                        <label class="field__label" for="defaultCollectionForum"
+                          >论坛默认收藏夹</label
+                        ><select
+                          class="select"
+                          id="defaultCollectionForum"
+                          name="defaultCollectionForum"
+                        ></select>
+                      </div>
+                      <div class="field">
+                        <label class="field__label" for="defaultCollectionShops"
+                          >必吃榜默认收藏夹</label
+                        ><select
+                          class="select"
+                          id="defaultCollectionShops"
+                          name="defaultCollectionShops"
+                        ></select>
+                      </div>
+                    </div>
+                    <span class="field__hint"
+                      >进入个人中心「收藏」时默认打开的收藏夹</span
+                    >
                   </div>
                   <div class="field">
                     <span class="field__label">显示权限等级</span>

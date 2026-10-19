@@ -4,7 +4,7 @@
 
 列表改为 `.workspace--shops`：330px 左栏放标题、创建入口、分类、排序和搜索范围；右栏为附近地图、统计、店铺网格与分页。手机左栏变为顶部控制区，范围输入两列。保留全部筛选、地图聚合、分页和权限逻辑。 全站品牌字标为「拾光酥糕」，详细公共尺寸见 [UI.md](../../../UI.md)。本轮验证结果见 [验收记录](../acceptance.md) 和根目录 [MAP.md](../../../MAP.md)。
 
-> 状态：新功能 ｜ 优先级：P1 ｜ issue：#6（#7/#8 依赖）｜ 依赖：阶段 0；#6 数据与接口 ｜ 壳：默认 ｜ data-nav：`shops` ｜ 容器：`workspace--shops` / `container--form`
+> 状态：新功能 ｜ 优先级：P1 ｜ issue：#6、#23（#7/#8 依赖）｜ 依赖：阶段 0；#6 数据与接口 ｜ 壳：默认 ｜ data-nav：`shops` ｜ 容器：`workspace--shops` / `container--form`
 
 ## 需求对照表（PLAN #6 → 本文档）
 
@@ -83,7 +83,9 @@ function shopCard(s) {
     '<div class="shop__stats">' +
       '<span class="stat">' + UI.icon('route') + '<b>' + UI.esc(UI.formatDistance(s.campus_distance_m)) + '</b><small>距本部 · 步行 ' + UI.esc(UI.formatMinutes(s.campus_walk_min)) + '</small></span>' +
       '<span class="stat">' + UI.icon('walk') + '<b>' + UI.esc(UI.formatDistance(s.metro_distance_m)) + '</b><small>距' + UI.esc(s.metro_station + ' ' + s.metro_exit) + ' · 步行 ' + UI.esc(UI.formatMinutes(s.metro_walk_min)) + '</small></span>' +
-    '</div></article>';
+    '</div>' +
+    '<div class="row row--end">' + UI.collections.button("shops", s.id, { className: "card__action" }) + '</div>' +
+    '</article>';
 }
 ```
 `typeHue`：固定映射（面馆 teal / 小吃 ochre / 饮品 wisteria / 快餐 indigo / 甜点 rose / 正餐 vermilion / 其它 stone）——写在页面脚本顶部常量；自定义类型 → stone。
@@ -105,6 +107,12 @@ function shopCard(s) {
 - 失败：loadError + 重试。
 - 分页：每页 20 条，页码器含首页/末页与当前页 ±2、上一页/下一页与省略号；筛选、排序或搜索后回到第 1 页。当前页通过 URL `?page=` 保留。
 - 类型筛选空结果：`empty`（icon 'filter'，title「没有{{类型}}类的店铺」，desc「换个分类看看，或切换回全部。」，action「查看全部」重置筛选）。
+
+### 1.6 收藏（#23）
+
+- 每张店铺卡片底部右侧有「收藏」按钮（`.action-btn.action-btn--collect` + `card__action`；已收藏用主色 `--primary` 高亮），点击由 `ui.js` 的全局委托打开统一收藏夹弹窗。
+- 弹窗：列出 `GET /api/collections?section=shops` 的收藏夹（首访自动建「默认收藏夹」）；可选择、可在弹窗内新建（统一 `.field` + `.input` + `.btn`）；确认后调用 `POST /api/collections/:id/items`，成功后按钮 `aria-pressed="true"` 并显示「已收藏」。
+- 未登录：toast「请先登录后再收藏」，不打开弹窗。
 
 ## 2. shops.html 页面骨架（简）
 
@@ -243,6 +251,7 @@ UI.guardUnsaved(document.getElementById("shopForm"));
 
 - [ ] 列表：骨架/空/失败/分页；筛选与排序 + URL 同步 + 非法回退。
 - [ ] 店铺卡五要素 + 整卡可点 + 类型色正确；rank 规则正确。
+- [ ] 卡片收藏按钮：未登录提示；弹窗列出/新建收藏夹并确认写入；已收藏时高亮（#23）。
 - [ ] 权限：student 可见入口；user/guest 不可见；后端 403 有文案。
 - [ ] 添加页全字段校验（含地址正则、数字范围、自定义类型）；409 处理。
 - [ ] 未保存离开提醒；提交 busy；成功跳详情。

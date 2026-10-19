@@ -101,38 +101,8 @@
     history.replaceState(null, "", location.pathname + (query.length ? "?" + query.join("&") : ""));
   }
 
-  function stat(icon, big, small) {
-    return (
-      '<span class="stat">' + UI.icon(icon) + "<b>" + UI.esc(big) + "</b><small>" + UI.esc(small) + "</small></span>"
-    );
-  }
-
   function shopCard(shop) {
-    var ratingText = shop.rating_avg === null || shop.rating_avg === undefined
-      ? "暂无"
-      : Number(shop.rating_avg).toFixed(1) + " / 5";
-    return (
-      '<article class="card card--interactive shop">' +
-      '<div class="shop__top">' +
-      '<h2 class="card__title"><a class="card__link" href="shop.html?id=' + encodeURIComponent(shop.id) + '">' + UI.esc(shop.name) + "</a></h2>" +
-      '<span class="tag" data-hue="' + ShopsMap.hue(shop.type) + '">' + UI.esc(shop.type) + "</span>" +
-      "</div>" +
-      '<p class="shop__addr">' + UI.icon("map-pin") + "<span>" + UI.esc(shop.address) +
-      (shop.location_note ? "<small>" + UI.esc(shop.location_note) + "</small>" : "") +
-      "</span></p>" +
-      '<div class="shop__stats">' +
-      stat("route", UI.formatDistance(shop.campus_distance_m), "距苏州中学本部 · 步行 " + UI.formatMinutes(shop.campus_walk_min)) +
-      "</div>" +
-      '<p class="shop__addr">' + UI.icon("compass") + "<span>最近地铁：" + UI.esc(shop.metro_station + " " + shop.metro_exit) +
-      "<small>步行 " + UI.esc(UI.formatDistance(shop.metro_distance_m)) + " · " + UI.esc(UI.formatMinutes(shop.metro_walk_min)) + "</small></span></p>" +
-      (shop.dianping_url ? '<a class="shop__dianping" href="' + UI.esc(shop.dianping_url) + '" target="_blank" rel="noopener noreferrer">' + UI.icon("external", "icon--sm") + "大众点评</a>" : "") +
-      '<div class="shop__engagement" aria-label="店铺互动统计">' +
-      '<span>' + UI.icon("heart") + '<b>' + UI.esc(shop.likes_count || 0) + '</b><small>点赞</small></span>' +
-      '<span>' + UI.icon("message") + '<b>' + UI.esc(shop.reviews_count || 0) + '</b><small>评价</small></span>' +
-      '<span>' + UI.icon("star") + '<b>' + UI.esc(ratingText) + '</b><small>' + UI.esc(shop.ratings_count || 0) + ' 次评分</small></span>' +
-      "</div>" +
-      "</article>"
-    );
+    return UI.shopCard(shop, { collect: true });
   }
 
   function renderFilters(types, current) {

@@ -12,4 +12,24 @@
       document.documentElement.dataset.pageDirection = pending.direction;
     }
   } catch (e) { /* Storage may be unavailable. */ }
+
+  function guardTransition(vt) {
+    if (!vt) return;
+    if (vt.ready && typeof vt.ready.catch === 'function') vt.ready.catch(function () {});
+    if (vt.finished && typeof vt.finished.catch === 'function') vt.finished.catch(function () {});
+  }
+  if ('onpagereveal' in window) {
+    window.addEventListener('pagereveal', function (e) { guardTransition(e.viewTransition); });
+  }
+  if ('onpageswap' in window) {
+    window.addEventListener('pageswap', function (e) { guardTransition(e.viewTransition); });
+  }
+  window.addEventListener('unhandledrejection', function (e) {
+    if (e && e.reason && (
+      (typeof e.reason.message === 'string' && e.reason.message.indexOf('Transition was aborted') !== -1) ||
+      e.reason.name === 'AbortError'
+    )) {
+      e.preventDefault();
+    }
+  });
 })();

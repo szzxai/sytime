@@ -4,11 +4,11 @@
 
 论坛改为 `.workspace--forum`：桌面左侧 290px 放标题、发帖按钮、讨论/提问分类及登录提示，右侧为细边框帖子流；手机顺排，分类横向。帖子、行内回复、发帖对话框和权限钩子不变。 全站品牌字标为「拾光酥糕」，详细公共尺寸见 [UI.md](../../../UI.md)。本轮验证结果见 [验收记录](../acceptance.md) 和根目录 [MAP.md](../../../MAP.md)。
 
-> 状态：现有改版 ｜ 优先级：P0 ｜ issue：#4（#9/#10 落地时增量）｜ 依赖：阶段 0 ｜ 壳：默认 ｜ data-nav：`forum` ｜ 容器：`workspace--forum`
+> 状态：现有改版 ｜ 优先级：P0 ｜ issue：#4、#23（#9/#10 落地时增量）｜ 依赖：阶段 0 ｜ 壳：默认 ｜ data-nav：`forum` ｜ 容器：`workspace--forum`
 
 ## 用途与目标
 
-讨论/提问两个分类的帖子流；发帖改为对话框；行内展开回复；点赞乐观更新；删除入口从右键菜单改为 ⋯ 菜单；未登录全程可浏览。
+讨论/提问两个分类的帖子流；发帖改为对话框；行内展开回复；点赞乐观更新；点赞右侧新增「收藏」按钮（打开统一收藏夹选择弹窗，#23）；删除入口从右键菜单改为 ⋯ 菜单；未登录全程可浏览。
 
 ## 页面结构
 
@@ -23,7 +23,7 @@
 | #publishPanel / #collapsePostBtn / #postForm / #title / #category / #content / #postSubmit / #formMsg | 发帖面板 | `#postDialog`（dialog--sheet）内同 ID；#formMsg 删除 | 迁移 |
 | #loginHint | 未登录提示 | `callout#loginHint`（hidden 属性） | 迁移 |
 | #postList | 列表容器 | 同 ID（stack） | 保留 |
-| `[data-post-id] [data-user-id] [data-like-toggle] [data-like-count] [data-replies-toggle] [data-replies] [data-replies-loaded] [data-reply-count] [data-reply-input] [data-reply-list] [data-reply-msg] [data-reply-submit]` | 卡片内交互 | `data-like`(原 like-toggle)、`data-replies`(hidden 属性)、`data-reply-input/submit/count` 保留；`data-replies-loaded` 保留；`data-reply-list`→`[data-replies]` 内部直渲染；`data-reply-msg` 删除（toast） | 迁移 |
+| `[data-post-id] [data-user-id] [data-like-toggle] [data-like-count] [data-collect] [data-replies-toggle] [data-replies] [data-replies-loaded] [data-reply-count] [data-reply-input] [data-reply-list] [data-reply-msg] [data-reply-submit]` | 卡片内交互 | `data-like`(原 like-toggle)、`data-collect`（#23，`data-section`/`data-item-id`，由 ui.js 全局委托）、`data-replies`(hidden 属性)、`data-reply-input/submit/count` 保留；`data-replies-loaded` 保留；`data-reply-list`→`[data-replies]` 内部直渲染；`data-reply-msg` 删除（toast） | 迁移 |
 | `.ctx-menu` / contextmenu 事件 | 右键删除 | `⋯ menu` + `UI.confirm` | 替换（删除 ctx-menu 代码） |
 | `formatTime / escapeHtml` | 工具 | `UI.timeEl / UI.esc` | 替换 |
 | `.active` 类 | 切换态 | `aria-selected / aria-pressed / aria-expanded` | 替换 |
@@ -80,7 +80,7 @@
 
 ## 无障碍要点
 
-- 帖子标题是 h2（页面 h1=论坛）；卡内链接可聚焦；点赞/回复按钮有 aria-pressed/aria-expanded；⋯ 有 aria-label；回复输入框计数器与 1000 上限同步；骨架 aria-busy；列表容器 `aria-live="polite"`（新帖追加播报）。
+- 帖子标题是 h2（页面 h1=论坛）；卡内链接可聚焦；点赞/回复按钮有 aria-pressed/aria-expanded；收藏按钮有 aria-pressed/aria-label（已收藏时主色高亮）；⋯ 有 aria-label；回复输入框计数器与 1000 上限同步；骨架 aria-busy；列表容器 `aria-live="polite"`（新帖追加播报）。
 - 回复楼层号「N 楼」为纯视觉，读屏可忽略。
 
 ## 验收清单
@@ -89,6 +89,7 @@
 - [ ] 未登录：可浏览；点赞/回复/发帖均给出登录引导（callout/toast）。
 - [ ] 发帖对话框全流程（校验、busy、成功、失败、取消、Esc）。
 - [ ] 点赞乐观更新 + 失败回滚 + 弹跳动画。
+- [ ] 收藏按钮位于点赞右侧：未登录提示登录；登录后弹窗列出收藏夹、可新建并确认收藏；已收藏时按钮高亮（#23）。
 - [ ] 回复展开/收起 + 逐楼渲染 + 回复发布。
 - [ ] 作者/管理员有 ⋯ 菜单 → UI.confirm → 删除成功/失败文案正确；其他人无菜单。
 - [ ] 加载更多：20/批，计数正确，到底显示「已显示全部」。

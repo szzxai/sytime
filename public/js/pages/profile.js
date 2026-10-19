@@ -168,11 +168,14 @@
     title: "个人主页",
     desc: "这里会展示你的动态与发布内容。",
   });
-  P.el("view-favorites").innerHTML = UI.html.empty({
-    icon: "star",
-    title: "我的收藏",
-    desc: "收藏的帖子与店铺会显示在这里。",
-  });
+
+  /* ---------- 收藏（#23）：左右分栏 + 双层菜单 ---------- */
+  var favoritesLoaded = false;
+  function loadFavorites() {
+    if (favoritesLoaded) return;
+    favoritesLoaded = true;
+    UI.collectionsBrowser(P.el("view-favorites"), { mode: "owner" });
+  }
 
   var titles = { owned: [], locked: [], equippedId: "", selected: "" };
 
@@ -304,6 +307,7 @@
   }
 
   P.panels(P.el("profileNav"), function (name) {
+    if (name === "favorites") loadFavorites();
     if (name === "titles") loadTitles();
   });
 

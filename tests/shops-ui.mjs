@@ -238,6 +238,72 @@ try {
   check("普通用户可见权限说明", (await ordinaryCtx.page.textContent("#addHint")).includes("暂无此权限"));
   await ordinaryCtx.ctx.close();
 
+  /* 2.6 #22 店铺详情页样式：手动 / 自动 */
+  const layoutCtx = await context(developer);
+  const lp = layoutCtx.page;
+  await lp.goto(base + "/settings.html", { waitUntil: "networkidle" });
+  await lp.click('#settingsNav [data-panel="site"]');
+  await lp.waitForSelector('#shopPrefFields:not([hidden]) input[name="shopLayoutMode"]');
+  check("设置提供手动/自动两种样式", (await lp.$$eval('input[name="shopLayoutMode"]', (els) => els.map((e) => e.value))).join(",") === "manual,auto");
+  check("手动悬停提示", (await lp.getAttribute('#shopLayoutModeChoices label[title="手动切换样式"]', "title")) === "手动切换样式");
+  check("自动悬停提示", (await lp.getAttribute('#shopLayoutModeChoices label[title="根据屏幕宽度自动切换"]', "title")) === "根据屏幕宽度自动切换");
+  let saved = lp.waitForResponse((r) => r.url().endsWith("/api/user/settings") && r.request().method() === "PUT");
+  await lp.click('#shopLayoutModeChoices label.choice:has(input[value="auto"])');
+  check("自动样式已选中", await lp.$eval('input[name="shopLayoutMode"][value="auto"]', (el) => el.checked));
+  await lp.click("#siteSubmit");
+  check("自动样式保存成功", (await saved).ok());
+  check("自动样式写入账号", (await api("/api/user/profile", { token: developer.token })).data.user.shop_layout_mode === "auto");
+
+  await lp.goto(base + "/shop.html?id=" + shopId, { waitUntil: "networkidle" });
+  await lp.waitForSelector("#shopLayout");
+  check("自动模式隐藏纵向/双栏开关", await lp.$eval("#layoutSwitch", (el) => el.hidden));
+  check("自动模式使用 auto 布局类", await lp.$eval("#shopLayout", (el) => el.classList.contains("shop-layout--auto")));
+  const positions = () =>
+    lp.evaluate(() => {
+      const a = document.getElementById("shopDishes").getBoundingClientRect();
+      const b = document.getElementById("reviewsPanel").getBoundingClientRect();
+      return { a: { top: a.top, left: a.left, right: a.right }, b: { top: b.top, left: b.left } };
+    });
+  let box = await positions();
+  check("宽屏自动为双栏", Math.abs(box.b.top - box.a.top) < 5 && box.b.left >= box.a.right - 2);
+  check("宽屏自动隐藏分段导航", await lp.$eval("#shopSubnav", (el) => getComputedStyle(el).display === "none"));
+  await lp.waitForSelector("#reviewForm:not([hidden])");
+  await lp.fill("#reviewContent", "窗口宽度变化测试");
+  await lp.setViewportSize({ width: 360, height: 900 });
+  await lp.waitForTimeout(150);
+  box = await positions();
+  check("窄屏自动为纵向", box.b.top > box.a.top + 20 && Math.abs(box.b.left - box.a.left) < 2);
+  check("窄屏自动显示分段导航", await lp.$eval("#shopSubnav", (el) => getComputedStyle(el).display !== "none"));
+  check("宽度变化不丢失输入内容", (await lp.inputValue("#reviewContent")) === "窗口宽度变化测试");
+
+  await lp.setViewportSize({ width: 1280, height: 900 });
+  await lp.goto(base + "/settings.html", { waitUntil: "networkidle" });
+  await lp.click('#settingsNav [data-panel="site"]');
+  await lp.waitForSelector('#shopPrefFields:not([hidden]) input[name="shopLayoutMode"]');
+  saved = lp.waitForResponse((r) => r.url().endsWith("/api/user/settings") && r.request().method() === "PUT");
+  await lp.click('#shopLayoutModeChoices label.choice:has(input[value="manual"])');
+  await lp.click("#siteSubmit");
+  check("手动样式保存成功", (await saved).ok());
+  check("手动样式写入账号", (await api("/api/user/profile", { token: developer.token })).data.user.shop_layout_mode === "manual");
+
+  await lp.goto(base + "/shop.html?id=" + shopId, { waitUntil: "networkidle" });
+  await lp.waitForSelector("#layoutSwitch:not([hidden])");
+  check("手动模式显示纵向/双栏开关", !(await lp.$eval("#layoutSwitch", (el) => el.hidden)));
+  await lp.click('#layoutSwitch [data-layout="split"]');
+  await lp.waitForFunction(() => document.getElementById("shopLayout").classList.contains("shop-layout--split"));
+  check("手动选择双栏写入账号", (await api("/api/user/profile", { token: developer.token })).data.user.shop_layout === "split");
+  check("手动双栏宽屏并排", await lp.evaluate(() => {
+    const a = document.getElementById("shopDishes").getBoundingClientRect();
+    const b = document.getElementById("reviewsPanel").getBoundingClientRect();
+    return Math.abs(b.top - a.top) < 5 && b.left >= a.right - 2;
+  }));
+  await lp.reload({ waitUntil: "networkidle" });
+  await lp.waitForSelector("#shopLayout");
+  check("再次进入保持上次双栏选择", await lp.$eval("#shopLayout", (el) => el.classList.contains("shop-layout--split")));
+  await audit(lp, "shop.html 自动/手动布局 1280");
+  check("布局设置无控制台报错", lp.consoleErrors.length === 0);
+  await layoutCtx.ctx.close();
+
   /* 3. 手机宽度 */  const mobile = await context(null, 360);
   await mobile.page.goto(base + "/shops.html", { waitUntil: "networkidle" });
   await mobile.page.waitForSelector(".shop.card");
