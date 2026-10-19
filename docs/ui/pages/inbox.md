@@ -1,5 +1,9 @@
 # 消息箱 · inbox.md（#9）
 
+## 当前视觉与布局 · 2026-10-17
+
+消息页标题上方改为「与你有关的消息」，消息分组使用细边框面板和浅绿未读状态；继承新导航、页脚、明暗主题，已读/筛选/跳转行为保持。 全站品牌字标为「拾光酥糕」，详细公共尺寸见 [UI.md](../../../UI.md)。本轮验证结果见 [验收记录](../acceptance.md) 和根目录 [MAP.md](../../../MAP.md)。
+
 > 状态：新功能 ｜ 优先级：P1 ｜ issue：#9 ｜ 依赖：阶段 0；#9 数据与接口 ｜ 落点：inbox.html（新页）+ 页头消息铃 + settings.html#messages 设置（#19 起从个人中心迁出）+ admin.html#notify 发送面板
 
 ## 需求对照表（PLAN #9 → 本文档）
@@ -55,7 +59,7 @@
 …页头…
 <main id="main" class="main container container--prose">
   <div class="page-head">
-    <div class="page-head__main"><span class="page-head__eyebrow">Inbox</span><h1 class="page-head__title">消息箱</h1></div>
+    <div class="page-head__main"><span class="page-head__eyebrow">与你有关的消息</span><h1 class="page-head__title">消息箱</h1></div>
   </div>
   <div class="tabs" role="tablist" aria-label="消息类型" style="margin-bottom:var(--sp-4)">
     <button type="button" class="tab" role="tab" data-filter="" aria-selected="true">全部<span class="tab__count tab__count--alert" id="cntAll" hidden></span></button>

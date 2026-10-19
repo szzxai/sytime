@@ -1,5 +1,7 @@
 # 组件规范 · components.md
 
+> 当前共享视觉：拾光酥糕 v2.3（2026-10-18），颜色、字号、圆角与断点以 [UI.md](../../UI.md) 和 `public/css/site.css` 为准。下列组件钩子与状态继续适用。
+
 > 事实来源：[assets/site.css](./assets/site.css)（类名、变体、状态、数值）与 [assets/ui.js](./assets/ui.js)（脚本 API）。本文与之逐字一致；发现不一致以这两个文件为准，并回改本文。视觉基准：[assets/specimen.html](./assets/specimen.html)。
 
 ## 组件使用总则
@@ -74,7 +76,7 @@ JS 写法：`UI.icon('search')`、`UI.icon('search', 'icon--sm')`。
 | 类 | 作用 |
 | --- | --- |
 | `btn` | 次要（白底 + 灰线） |
-| `btn--primary` | 主按钮（黛青实心）；**每视图最多 1 个** |
+| `btn--primary` | 主按钮（品牌绿实心）；**每视图最多 1 个** |
 | `btn--ghost` | 无边框灰字（工具栏、卡片角落） |
 | `btn--danger` | 危险实心（对话框内的确认删除/封禁） |
 | `btn--danger-quiet` | 危险幽灵（列表内的删除入口） |
@@ -84,7 +86,7 @@ JS 写法：`UI.icon('search')`、`UI.icon('search', 'icon--sm')`。
 | `btn--icon` | 正方形 40（配图标） |
 | `is-loading` | 加载中（前置转圈；配合 `aria-busy="true"` 与 disabled） |
 
-状态：默认 → hover（底 `--surface-2`、线加深）→ active（下移 1px）→ focus-visible（黛青描边）→ disabled（`--sunken` 底 `--ink-3` 字）。触屏下 min-height 自动 44。
+状态：默认 → hover（底 `--surface-2`、线加深）→ active（下移 1px）→ focus-visible（品牌绿描边）→ disabled（`--sunken` 底 `--ink-3` 字）。触屏下 min-height 自动 44。
 
 尺寸：高 40（默认）、字 15；sm 32/13；lg 48/16；圆角 `--r-2`（sm 为 8px）；图标与文字间距 `--sp-2`。
 
@@ -136,7 +138,7 @@ JS 写法：`UI.icon('search')`、`UI.icon('search', 'icon--sm')`。
 ```html
 <input class="input" id="x" type="text" placeholder="{{提示}}" autocomplete="off">
 ```
-规格：高 44、圆角 `--r-2`、边 `--line-strong`（hover 加深，focus 黛青 + `--ring`）、字 **16px**、底 `--surface`；disabled（`--sunken` 底灰字）与 `readonly`（`--surface-2` 底）。错误态由 `.field.is-invalid` 或 `aria-invalid="true"` 驱动。**禁止**改字号（防 iOS 聚焦缩放）。带图标/单位/尾部按钮用 `input--icon / input--unit / input--end` + `input-group__icon / input-group__unit / input-group__end`（见 components.md「Search 搜索框」「Password 密码框」）。
+规格：高 44、圆角 `--r-2`、边 `--line-strong`（hover 加深，focus 品牌绿 + `--ring`）、字 **16px**、底 `--surface`；disabled（`--sunken` 底灰字）与 `readonly`（`--surface-2` 底）。错误态由 `.field.is-invalid` 或 `aria-invalid="true"` 驱动。**禁止**改字号（防 iOS 聚焦缩放）。带图标/单位/尾部按钮用 `input--icon / input--unit / input--end` + `input-group__icon / input-group__unit / input-group__end`（见 components.md「Search 搜索框」「Password 密码框」）。
 
 ### Textarea 多行输入
 
@@ -160,7 +162,7 @@ JS 写法：`UI.icon('search')`、`UI.icon('search', 'icon--sm')`。
   <span class="check-row__text">允许申请解封<span class="check-row__desc">被封用户可在登录页提交申诉</span></span>
 </label>
 ```
-`check`（方 20px 圆角 6）与 `radio`（圆 20px）；选中实心黛青 + 白勾/白点；行内文字 15px、辅助说明 `check-row__desc` 12px。触点整行（label 包裹）。键盘：空格切换；焦点环 2px 黛青。
+`check`（方 20px 圆角 6）与 `radio`（圆 20px）；选中实心品牌绿 + 白勾/白点；行内文字 15px、辅助说明 `check-row__desc` 12px。触点整行（label 包裹）。键盘：空格切换；焦点环 2px 品牌绿。
 
 ### Switch 开关
 
@@ -170,14 +172,14 @@ JS 写法：`UI.icon('search')`、`UI.icon('search', 'icon--sm')`。
   <input type="checkbox" class="switch" role="switch" checked aria-label="评论通知">
 </div>
 ```
-44×26 轨道，选中黛青；开关行之间用 1px 分割线（自动）。**必须有 `role="switch"` 与可读的 label**（title 即说明时也要 `aria-label`）。
+44×26 轨道，选中品牌绿；开关行之间用 1px 分割线（自动）。**必须有 `role="switch"` 与可读的 label**（title 即说明时也要 `aria-label`）。
 
 ### Chip 胶囊选项
 
 ```html
 <label class="chip"><input class="chip__input" type="radio" name="type" value="面馆" checked><span class="chip__face">面馆</span></label>
 ```
-36 高胶囊；选中黛青浅底+黛青字；组容器 `.chips`；触屏 44。单选用 radio、多选用 checkbox + `[]` 命名。键盘：radio 组内方向键。常见错误：input 不包在 label 里（无法点）。
+36 高胶囊；选中品牌绿浅底+品牌绿字；组容器 `.chips`；触屏 44。单选用 radio、多选用 checkbox + `[]` 命名。键盘：radio 组内方向键。常见错误：input 不包在 label 里（无法点）。
 
 ### Choice 选择卡片
 
@@ -191,7 +193,7 @@ JS 写法：`UI.icon('search')`、`UI.icon('search', 'icon--sm')`。
   </span>
 </label>
 ```
-容器 `.choice-group`（`.choice-group--2` 双列，≥560px 生效）；选中黛青描边 + 浅底 + 右上角勾（`.choice__check` 默认隐藏）；`.choice--locked`（未获得的头衔）：灰化 + 锁图标 + 禁用 input。预览小图用 `.choice__preview`（内放 `<i>` 灰条，`i.is-strong` 深条，`.cols` 两列）。键盘：focus 环在卡片上。
+容器 `.choice-group`（`.choice-group--2` 双列，≥560px 生效）；选中品牌绿描边 + 浅底 + 右上角勾（`.choice__check` 默认隐藏）；`.choice--locked`（未获得的头衔）：灰化 + 锁图标 + 禁用 input。预览小图用 `.choice__preview`（内放 `<i>` 灰条，`i.is-strong` 深条，`.cols` 两列）。键盘：focus 环在卡片上。
 
 ### Segmented 分段控件
 
@@ -268,7 +270,7 @@ JS 写法：`UI.icon('search')`、`UI.icon('search', 'icon--sm')`。
   <div class="card__foot">{{脚注：stat、按钮、时间}}</div>
 </article>
 ```
-变体：`card--flush`（去内边距+裁圆角，配媒体/表格）；`card--soft`（次级底）；`card--tint`（黛青浅底强调块，每页 ≤2 张）；`card--interactive`（hover 抬升，仅可点卡片）；整卡可点 = 标题内 `<a class="card__link">`（伪元素铺满）+ 其它可点元素加 `.card__action`。内边距 16（手机）/20（桌面）；圆角 14；边 1px `--line`。**静止无阴影**。媒体区 `.card__media`（4:3，内描边自动）。
+变体：`card--flush`（去内边距+裁圆角，配媒体/表格）；`card--soft`（次级底）；`card--tint`（品牌绿浅底强调块，每页 ≤2 张）；`card--interactive`（hover 抬升，仅可点卡片）；整卡可点 = 标题内 `<a class="card__link">`（伪元素铺满）+ 其它可点元素加 `.card__action`。内边距 16（手机）/20（桌面）；圆角 14；边 1px `--line`。**静止无阴影**。媒体区 `.card__media`（4:3，内描边自动）。
 
 常见错误：① 整卡可点但没加 `card__link`（键盘不可达）；② 卡内可点元素没加 `card__action`（被伪元素挡住）；③ 用卡片装「设置分组」（应该用 Panel）。
 
@@ -393,7 +395,7 @@ JS：`UI.userLine(user, {size, meta, href, large, showRole})`；meta 传 HTML �
 ```html
 <span class="rank rank--top">1</span>
 ```
-28px 方块；前三 `rank--top` 朱印底白字；其余 `--sunken` 底。**只用于榜单排序场景**（必吃榜综合排序）。
+28px 方块；前三 `rank--top` 绿色字章底白字；其余 `--sunken` 底。**只用于榜单排序场景**（必吃榜综合排序）。
 
 ### Thumb 缩略图
 
@@ -493,7 +495,7 @@ JS：`UI.userLine(user, {size, meta, href, large, showRole})`；meta 传 HTML �
     <div class="drawer-sep"></div>
     …
   </nav>
-  <div class="drawer__foot">校园信息网 · AGPL-3.0</div>
+  <div class="drawer__foot">拾光酥糕 · AGPL-3.0</div>
 </dialog>
 ```
 左滑入 320px；由 ui.js 页头汉堡触发（`data-dialog-open="navDrawer"`）；≥768 窗口自动关闭。
@@ -526,7 +528,7 @@ JS：`UI.userLine(user, {size, meta, href, large, showRole})`；meta 传 HTML �
 
 ### Spinner 与进度条
 
-`.spinner`（20px 黛青弧）/`.spinner--lg`（36）；居中块 `.loading-block`（spinner + 一句「正在加载…」）。`.progress > .progress__bar`（`style="--p:62%"`）仅上传等有进度的场景（当前未用，保留）。
+`.spinner`（20px 品牌绿弧）/`.spinner--lg`（36）；居中块 `.loading-block`（spinner + 一句「正在加载…」）。`.progress > .progress__bar`（`style="--p:62%"`）仅上传等有进度的场景（当前未用，保留）。
 
 ### Callout 行动提示条
 
@@ -540,7 +542,7 @@ JS：`UI.userLine(user, {size, meta, href, large, showRole})`；meta 传 HTML �
 
 ### Banner 站点横幅
 
-`<div class="site-banner" role="region" aria-label="站点公告"><div class="container container--wide site-banner__inner">icon + .site-banner__text + 关闭 icon-btn</div></div>`；黛青浅底、13px、可多行；由 `UI.shell.loadBanner()` 自动插入与记忆关闭（`bannerDismissed:<用户名>` + 版本号）。
+`<div class="site-banner" role="region" aria-label="站点公告"><div class="container container--wide site-banner__inner">icon + .site-banner__text + 关闭 icon-btn</div></div>`；品牌绿浅底、13px、可多行；由 `UI.shell.loadBanner()` 自动插入与记忆关闭（`bannerDismissed:<用户名>` + 版本号）。
 
 ### Offline Bar 离线条
 
@@ -550,29 +552,15 @@ JS：`UI.userLine(user, {size, meta, href, large, showRole})`；meta 传 HTML �
 
 # 导航
 
-### Site Header 页头
+### Site Header 页头与主导航
 
-由 `UI.shell.mount()` 生成，页面只放 `<div id="siteHeader"></div>`。结构（生成的）：
+由 `UI.shell.mount()` 生成。`#siteHeader` 宿主吸顶，内部 `.site-header` 为纯色背景，首页无分隔线，功能页保留 1px 下边线。所有尺寸高度均为 56px。左上使用 32px 的苏州中学校徽图标，距顶栏左边 28px、顶部 15px，链接通过中文 aria-label 标注首页。桌面五个导航右对齐：「地图、论坛、菜谱、必吃榜、更新公告」，当前链接使用绿色下划线；手机保留汉堡抽屉和全部功能入口。
 
-```html
-<header class="site-header">
-  <div class="site-header__inner container container--wide">
-    <button class="icon-btn site-header__menu" data-dialog-open="navDrawer" aria-label="打开菜单">…</button>
-    <a class="brand" href="index.html" aria-label="校园信息网 首页">
-      <svg class="brand__mark"><use href="img/icons.svg#brand-mark"></use></svg>
-      <span class="brand__text"><span class="brand__name">校园信息网</span><span class="brand__sub">SZZX · INFO</span></span>
-    </a>
-    <nav class="site-nav" aria-label="主导航">…site-nav__link…</nav>
-    <div class="site-header__actions" id="authArea">…</div>
-  </div>
-</header>
-```
+`.site-header__tools` 包含主题按钮和 `#authArea`。未登录显示绿色「登录 →」，注册入口保留在登录页和移动抽屉；已登录显示消息铃与头像菜单。账号权限与退出流程不变。主导航使用指定短名称；同源站内页面切换仅让顶栏与公告下方的内容以 420ms 同步左右滑动。跳转时记录公告高度，在目标页首帧提前预留，公告异步返回前顶栏位置不变；新顶栏快照保持可见，防止短暂空白。减少动态效果模式直接跳转。
 
-规格：sticky 顶部、高 56/64、毛玻璃（`--header-bg` + blur）、1px 下边；z 40。汉堡仅 <768；`site-nav` 仅 ≥768（当前项黛青浅底 `aria-current="page"`）；品牌字标 17px 粗 + 「SZZX · INFO」小字（<768 隐藏）。右侧：未登录=登录(ghost)+注册(primary) 小按钮；登录=消息铃(开关)+头像按钮。**禁止**页面自写页头。
+### Theme 主题
 
-### Site Nav 主导航
-
-`site-nav__link`：圆角胶囊 hover 灰底；当前项 `aria-current="page"` 黛青浅底粗体。项：地图/论坛/菜谱/必吃榜(开关)/公告；文案用短词（全称在 title 属性）。
+顶栏 `[data-theme-toggle]` 切换明暗；页脚 `.theme-switch` 的三个按钮为跟随系统、浅色、深色，用 `aria-pressed` 表达选中态。默认 `auto`；`UI.theme.set` 保存本地设置；监听系统媒体查询和 `storage` 事件。图标使用现有 sun/moon 与新增 monitor。主题切换使用 280ms View Transition，旧浏览器以颜色渐变降级；深色首页首屏绿为 `#14532D`，减少动态效果模式即时切换。
 
 ### Menu 下拉菜单
 
@@ -588,7 +576,7 @@ JS：`UI.userLine(user, {size, meta, href, large, showRole})`；meta 传 HTML �
   </div>
 </div>
 ```
-白底圆角 14 阴影 `--sh-3`；右对齐（`menu__panel--left` 左对齐）；动效 pop-in 120ms。行为由 ui.js 委托：点击触发器开/关、外部点击关、Esc 关并还焦点、↑↓ 移动焦点。触屏项 44。**删除等危险项加 `menu__item--danger`（红字红底 hover）**。
+面板底圆角 8 阴影 `--sh-3`；右对齐（`menu__panel--left` 左对齐）；动效 pop-in 120ms。行为由 ui.js 委托：点击触发器开/关、外部点击关、Esc 关并还焦点、↑↓ 移动焦点。触屏项 44。**删除等危险项加 `menu__item--danger`（红字红底 hover）**。
 
 ### Tabs 标签页
 
@@ -597,7 +585,7 @@ JS：`UI.userLine(user, {size, meta, href, large, showRole})`；meta 传 HTML �
   <button type="button" class="tab" role="tab" id="tab-all" data-tab="all" aria-controls="panel-all" aria-selected="true">全部<span class="tab__count">24</span></button>
 </div>
 ```
-下划线式：底 1px 线 + 选中 2px 黛青；可横向滚动（隐藏滚动条）；`tab__count` 灰胶囊计数、告警数 `tab__count--alert`（红底白字）。JS：`UI.tabs(list, {onChange})`（自动切换面板 hidden + 方向键）。吸顶版 = 包一层 `.subnav`。
+下划线式：底 1px 线 + 选中 2px 品牌绿；可横向滚动（隐藏滚动条）；`tab__count` 灰胶囊计数、告警数 `tab__count--alert`（红底白字）。JS：`UI.tabs(list, {onChange})`（自动切换面板 hidden + 方向键）。吸顶版 = 包一层 `.subnav`。
 
 ### Subnav 吸顶二级导航
 
@@ -611,7 +599,7 @@ JS：`UI.userLine(user, {size, meta, href, large, showRole})`；meta 传 HTML �
   <a class="side-nav__item" href="#" aria-current="page"><svg class="icon">…</svg>学生认证<span class="side-nav__count">3</span></a>
 </nav>
 ```
-双形态：桌面（≥900）静置于 `.shell` 左列（分组标题 `side-nav__group` 12px 灰、项 44 圆角 hover、当前黛青浅底）；手机（<900）自动变吸顶横向滚动条（毛玻璃）。待办计数 `side-nav__count` 红胶囊（>99 显示 99+）。个人中心/设置/后台共用。
+双形态：桌面（≥900）静置于 `.shell` 左列（分组标题 `side-nav__group` 12px 灰、项 44 圆角 hover、当前品牌绿浅底）；手机（<900）自动变吸顶横向滚动条（毛玻璃）。待办计数 `side-nav__count` 红胶囊（>99 显示 99+）。个人中心/设置/后台共用。
 
 ### Profile Tabs 个人中心头部与吸顶横向菜单栏
 
@@ -647,7 +635,15 @@ JS：`UI.userLine(user, {size, meta, href, large, showRole})`；meta 传 HTML �
 
 ### Site Footer 页脚
 
-由 ui.js 生成（`<div id="siteFooter"></div>` 占位）：品牌行 + 链接（关于我们/更新公告/提交工单）+ 版权行（AGPL-3.0）。应用壳自动不渲染。
+由 `footerHtml()` 生成，最大宽度 1136px，顶部细线，64px 顶部留白。`.site-footer__top` 左侧校徽品牌图标、维护说明和关于链接，右侧 `.site-footer__columns` 三列「交流与反馈 / 校园生活 / 关于我们」；`.site-footer__bottom` 使用固定版权文案「© 2026 苏州中学 VC 编程。」及主题按钮。手机品牌与链接列顺排，三列仍并列。所有链接指向现有站内页面，不显示虚构的在线状态。地图应用壳无页脚。
+
+### Landing 首页布局
+
+`.landing-hero` 为通栏白到绿渐变，左下 h1、右下带左上高光和右侧灰绿阴影的范仲淹像；桌面底部内距 32px，雕像高度约首屏 80%、右距 100px。`.landing-about` 居中，`.landing-row` 两等分列，`.landing-accordion` 用原生 details 加 200ms 高度动画，一次只展开一项，`.landing-note` 居中；`.landing-teams` 显示两组 48px SVG 团队标志及名称，宽屏列距 64–120px（手机 44px）。手机降低首屏高度，行区块顺排；具体尺寸见根目录 UI.md。
+
+### Workspace 筛选与结果工作区
+
+论坛与菜谱 `.workspace` 为 290px 侧栏 + 弹性内容列，必吃榜为 330px。`.workspace__sidebar` 只包含现有标题、筛选与操作，`.workspace__content` 放真实数据。桌面侧栏吸顶且独立滚动，小于 768px 变为顺排。DOM ID 保持不变，对话框放在两列之外。卡片 8px 圆角、1px 边框、无大阴影；输入与按钮 4px 圆角。
 
 ### Filter Bar 筛选条
 
@@ -661,7 +657,7 @@ JS：`UI.userLine(user, {size, meta, href, large, showRole})`；meta 传 HTML �
   <a class="is-empty">C</a>   <!-- 无数据的字母：非链接 -->
 </nav>
 ```
-右缘竖排胶囊浮层（毛玻璃）；每项 ≥24px；当前项黛青实底。仅桌面/平板显示有意义的字母；缺 `initial` 数据时整个隐藏。配合 `.az-group`（标题 `.az-group__letter` 大字母 + 计数 + 右延伸线）与 `.az-layout/.az-list`（右内边距 28px 防遮挡）。
+右缘竖排索引；菜品工作区使用小圆角、细边框浮层；每项 ≥24px；当前项品牌绿实底。仅桌面/平板显示有意义的字母；缺 `initial` 数据时整个隐藏。配合 `.az-group`（标题 `.az-group__letter` 大字母 + 计数 + 右延伸线）与 `.az-layout/.az-list`（右内边距 28px 防遮挡）。
 
 ---
 
@@ -716,7 +712,7 @@ JS：`UI.userLine(user, {size, meta, href, large, showRole})`；meta 传 HTML �
 ```html
 <button type="button" class="action-btn" aria-pressed="false">heart 图标 <span>12</span></button>
 ```
-胶囊 36 高；按压态（`aria-pressed="true"`）红色实心心形；展开态（回复区开）黛青浅底；弹跳动画 `is-popping`（点赞瞬间加一次）；触屏 44。
+胶囊 36 高；按压态（`aria-pressed="true"`）红色实心心形；展开态（回复区开）品牌绿浅底；弹跳动画 `is-popping`（点赞瞬间加一次）；触屏 44。
 
 ### Review Card 评价卡
 
@@ -796,7 +792,7 @@ JS：`UI.userLine(user, {size, meta, href, large, showRole})`；meta 传 HTML �
   </a>
 </li>
 ```
-未读 = 黛青浅底 + 红点（is-unread）；系统类不用头像，用 `msg__icon`（megaphone 等）；kind 小徽章指明类型（评论 message 青 / 点赞 heart 朱 / 系统 megaphone 赭黄）。**点击即已读**（页面脚本）。
+未读 = 品牌绿浅底 + 红点（is-unread）；系统类不用头像，用 `msg__icon`（megaphone 等）；kind 小徽章指明类型（评论 message 青 / 点赞 heart 朱 / 系统 megaphone 赭黄）。**点击即已读**（页面脚本）。
 
 ### Hero 首页主视觉
 
@@ -811,7 +807,7 @@ JS：`UI.userLine(user, {size, meta, href, large, showRole})`；meta 传 HTML �
   </div>
 </section>
 ```
-黛青渐变浅底、右上 12% 透明度印章水印（brand-glyph）、眉标带朱红短划。字阶：手机 30 / ≥768 40 / ≥1100 52。
+品牌绿渐变浅底、右上 12% 透明度印章水印（brand-glyph）、眉标带朱红短划。字阶：手机 30 / ≥768 40 / ≥1100 52。
 
 ### Tile 入口方块
 
@@ -822,7 +818,7 @@ JS：`UI.userLine(user, {size, meta, href, large, showRole})`；meta 传 HTML �
   <p class="tile__desc">探索校园，点击地点查看介绍</p>
 </article>
 ```
-图标 44 圆角 10 tint 底；hover 箭头右移 3px 变黛青。
+图标 44 圆角 10 tint 底；hover 箭头右移 3px 变品牌绿。
 
 ### Master-Detail 主从视图
 
@@ -841,7 +837,7 @@ JS：`UI.userLine(user, {size, meta, href, large, showRole})`；meta 传 HTML �
   </article>
 </div>
 ```
-≥900 双列（列表 20rem sticky）；<900 单列二选一：容器加 `is-detail` 显示详情（隐藏列表），否则显示列表。当前项左侧 3px 黛青竖条。
+≥900 双列（列表 20rem sticky）；<900 单列二选一：容器加 `is-detail` 显示详情（隐藏列表），否则显示列表。当前项左侧 3px 品牌绿竖条。
 
 ### Queue Item 待办项
 
@@ -877,3 +873,16 @@ JS：`UI.userLine(user, {size, meta, href, large, showRole})`；meta 传 HTML �
 - 普通滚轮/双指滚动双轴平移，捏合或 Ctrl / ⌘ + 滚轮围绕指针连续缩放；Safari 手势期间抑制重复滚轮事件。自由平移配合全景复位，避免固定边界导致宽屏回弹。Leaflet 公共皮肤仍在 `site.css`。
 
 地图地表使用页面局部的屋面、墙体、草坪、绿篱、水面、园路、运动标线与球场颜色；深色模式保留园内曲径和足球场线条的可读性。文庙以独立围合地块呈现殿堂、廊道与庭院；未命名地块、林地和竹林为非交互底图，不伪造地点名称。
+
+## 2026-10-17 共享壳与首页精校
+
+- 本地 InterVariable（中文系统回退）、正常标题字距、中性灰文字；品牌 24px/580，导航和普通按钮 13px/500、32px 高、4px 圆角。导航悬停背景以 100ms ease-in-out 淡入淡出，品牌悬停透明度 0.8。活动下划线距控件底部 12px，两端内缩 12px。
+- 导航断点为 992px；手机排列为品牌、菜单、主题与账户入口。窗口变宽后关闭抽屉的逻辑同步该断点。首页去除顶栏分界线，首屏观察顶栏和横幅占高，确保桌面首屏恰好填满可用高度。
+- 首页折叠标题 18px、悬停 150ms 透明度变化；箭头 20px、200ms 旋转；内容 16px/1.6、底部 16px，200ms ease-out 展开和收起。关闭期间立即 inert，支持连续反转和文字换行。减少动态效果时直接结算。
+- 团队并排间隔 64px；首页介绍文字 16px/24px。页脚列间隔 64px、列内 12px，链接 14px；手机间距按内容收缩并保持三列，无横向溢出。
+
+深色背景与参考站统一为中性锌灰（#18181B），标题白色、辅助文字 #A1A1AA，品牌区域保留绿色。折叠内容的行内动作链接保留细下划线，避免链接仅靠颜色区分。
+
+## 2026-10-18 · 品牌与页面切换
+
+顶栏与抽屉的首页链接只展示透明校徽 PNG，顶栏为 32×32px，抽屉与页脚为 40×40px，使用「拾光酥糕 首页」作为可访问名称；favicon 复用同一文件。页脚身份区同样只放校徽，页脚关于链接写「拾光酥糕」。同源跨文档导航使用下方内容 420ms 水平滑动；顶栏与公告静止；减少动态效果时直接切页。主题切换仍为 280ms 淡入淡出。

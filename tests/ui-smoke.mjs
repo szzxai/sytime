@@ -83,7 +83,7 @@ async function context(login, width = 1280, theme = "light") {
   });
   await ctx.addInitScript(
     ({ login, theme }) => {
-      localStorage.setItem("theme", theme);
+      if (!localStorage.getItem("theme")) localStorage.setItem("theme", theme);
       if (login) {
         localStorage.setItem("token", login.token);
         localStorage.setItem("user", JSON.stringify(login.user));
@@ -244,6 +244,9 @@ try {
   });
   const files = [
     "index",
+    "about",
+    "settings",
+    "inbox",
     "login",
     "register",
     "student_verify",
@@ -259,7 +262,7 @@ try {
   for (const width of [360, 1280]) {
     for (const theme of ["light", "dark"]) {
       for (const file of files) {
-        const login = ["profile", "admin", "student_verify"].includes(file)
+        const login = ["profile", "admin", "student_verify", "settings", "inbox"].includes(file)
           ? admin
           : null;
         const url = `/${file}.html${file === "post" ? "?id=" + post.id : ""}`;
@@ -278,6 +281,281 @@ try {
       console.log(`Page layouts audited: ${width}px / ${theme}`);
     }
   }
+  // The new landing page and workspace shell must remain usable beyond the
+  // two legacy layout sizes, including keyboard navigation and theme changes.
+  for (const width of [360, 768, 1440]) {
+    const landing = await pageFor(null, "/index.html", width);
+    check("Chinese homepage title", (await landing.page.locator("h1").innerText()) === "苏州中学最大的\n校园信息平台");
+    check("shared navigation uses logo only", await landing.page.locator(".site-header .brand").evaluate(el =>
+      el.textContent.trim() === "" && el.getAttribute("aria-label") === "拾光酥糕 首页" && el.querySelector("img")?.complete && el.querySelector("img")?.naturalWidth > 0));
+    check("header logo has comfortable top and left spacing", await landing.page.locator(".site-header .brand").evaluate(el => {
+      const icon = el.getBoundingClientRect(), header = document.getElementById("siteHeader").getBoundingClientRect();
+      return icon.width === 32 && icon.left - header.left >= 28 && icon.top - header.top >= 12;
+    }));
+    check("school mark is the favicon", await landing.page.locator('link[rel="icon"]').getAttribute("href") === "/img/suzhou-high-school-mark.png?v=20261018");
+    check("short Chinese primary navigation", width > 992
+      ? (await landing.page.locator(".site-nav__link").allTextContents()).join("|") === "地图|论坛|菜谱|必吃榜|更新公告"
+      : (await landing.page.locator("#navDrawer .drawer-link").allTextContents()).slice(0, 6).join("|") === "首页|地图|论坛|菜谱|必吃榜|更新公告");
+    check("local Noto Sans SC is applied", await landing.page.evaluate(async () => {
+      await document.fonts.load('16px "NotoSansSC"', "苏州中学地图论坛");
+      await document.fonts.load('600 32px "NotoSansSC"', "校园信息平台");
+      const chineseFace = [...document.fonts].find(face => face.family.replaceAll('"', '') === "NotoSansSC");
+      return document.fonts.check('16px "NotoSansSC"', "苏州中学地图论坛") && chineseFace?.weight === "100 900";
+    }));
+    check("requested fixed footer credit", await landing.page.locator(".site-footer__bottom").innerText().then(text => text.includes("© 2026 苏州中学 VC 编程。")));
+    check("original campus illustration loaded", await landing.page.locator(".landing-hero__statue").evaluate(img => img.complete && img.naturalWidth > 0));
+    check("user-supplied statue illustration", (await landing.page.locator(".landing-hero__statue").getAttribute("src")) === "/img/fan-zhongyan-user.png");
+    check("both development teams credited", (await landing.page.locator(".landing-team").allTextContents()).join("|") === "苏州中学 VC 团队|苏州中学软件开发社");
+    check("both team marks loaded", await landing.page.locator(".landing-team img").evaluateAll(imgs => imgs.length === 2 && imgs.every(img => img.complete && img.naturalWidth > 0)));
+    // Even the full illustration box stays clear of the heading.
+    check("hero title has its own horizontal space", await landing.page.evaluate(() => {
+      const title = document.querySelector(".landing-hero h1");
+      const range = document.createRange();
+      range.selectNodeContents(title);
+      const textRight = Math.max(...Array.from(range.getClientRects(), r => r.right));
+      const art = document.querySelector(".landing-hero__statue").getBoundingClientRect();
+      return textRight < art.left;
+    }));
+    const summary = landing.page.locator(".landing-accordion summary").first();
+    await summary.focus();
+    await summary.press("Enter");
+    check("home contribution accordion opens from keyboard", await landing.page.locator(".landing-accordion details").first().evaluate(el => el.open));
+    check("open accordion provides real destination", await landing.page.locator(".landing-accordion details").first().getByRole("link", { name: "去校园论坛" }).getAttribute("href") === "forum.html");
+    await audit(landing.page, `landing/${width}/expanded`);
+    await summary.press("Enter");
+    check("home contribution accordion closes from keyboard", !await landing.page.locator(".landing-accordion details").first().evaluate(el => el.open));
+    await landing.page.locator('[data-theme-choice="dark"]').click();
+    check("dark theme activates", await landing.page.locator("html").getAttribute("data-theme") === "dark");
+    check("hero green shifts darker in dark mode", await landing.page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue("--hero-green").trim() === "#14532D"));
+    await audit(landing.page, `landing/${width}/dark`);
+    await landing.page.reload({ waitUntil: "networkidle" });
+    check("theme survives reload", await landing.page.locator("html").getAttribute("data-theme") === "dark");
+    await landing.page.locator('[data-theme-toggle]').click();
+    check("header restores light theme", await landing.page.locator("html").getAttribute("data-theme") === "light");
+    await landing.page.waitForFunction(() => !document.documentElement.classList.contains("theme-transitioning"));
+    await landing.page.emulateMedia({ reducedMotion: "no-preference" });
+    check("page slide uses a smooth 420ms duration", await landing.page.evaluate(() => getComputedStyle(document.documentElement, "::view-transition-new(root)").animationDuration === "0.42s"));
+    await landing.page.emulateMedia({ reducedMotion: "reduce" });
+    if (width === 1440) {
+      await landing.page.emulateMedia({ reducedMotion: "no-preference" });
+      await landing.page.evaluate(() => { document.startViewTransition = undefined; });
+      await landing.page.locator('[data-theme-toggle]').click();
+      check("theme color fallback animates without View Transition support", await landing.page.evaluate(() =>
+        document.documentElement.classList.contains("theme-transitioning") &&
+        getComputedStyle(document.querySelector(".site-header")).transitionDuration.includes("0.28s")));
+      await landing.page.waitForFunction(() => !document.documentElement.classList.contains("theme-transitioning"));
+    }
+    await landing.page.locator('[data-theme-choice="auto"]').click();
+    await landing.page.emulateMedia({ colorScheme: "dark" });
+    await landing.page.waitForFunction(() => document.documentElement.dataset.theme === "dark");
+    check("system preference followed", await landing.page.locator('[data-theme-choice="auto"]').getAttribute("aria-pressed") === "true");
+    await landing.page.emulateMedia({ colorScheme: "light" });
+    await landing.page.waitForFunction(() => document.documentElement.dataset.theme === "light");
+    await audit(landing.page, `landing/${width}/light`);
+    await landing.page.screenshot({ path: path.join(output, `fuxue-home-${width}.png`), fullPage: true });
+    if (width === 360) {
+      await landing.page.getByRole("button", { name: "打开菜单" }).click();
+      check("mobile drawer retains registration", await landing.page.locator("#navDrawer").getByRole("link", { name: "注册", exact: true }).isVisible());
+      await landing.page.keyboard.press("Escape");
+      check("drawer returns focus to opener", await landing.page.getByRole("button", { name: "打开菜单" }).evaluate(el => el === document.activeElement));
+    }
+    await landing.page.getByRole("link", { name: "了解更多", exact: true }).click();
+    check("about page is reachable without a redirect loop", landing.page.url().endsWith("/about.html") && await landing.page.getByRole("heading", { level: 1, name: "关于 拾光酥糕" }).isVisible());
+    check("about page reuses the supplied statue", await landing.page.locator(".about-page__art").evaluate(img =>
+      img.getAttribute("src") === "/img/fan-zhongyan-user.png" && img.complete && img.naturalWidth > 0));
+    await landing.ctx.close();
+    for (const route of ["forum", "recipe", "shops"]) {
+      const workspace = await pageFor(null, `/${route}.html`, width);
+      check(`${route} workspace adapts at ${width}`, await workspace.page.evaluate(() => {
+        const side = document.querySelector(".workspace__sidebar").getBoundingClientRect();
+        const content = document.querySelector(".workspace__content").getBoundingClientRect();
+        return innerWidth < 768 ? content.top >= side.bottom - 1 : content.left >= side.right - 1;
+      }));
+      if (width !== 360) await audit(workspace.page, `${route}/${width}/workspace`);
+      await workspace.page.screenshot({ path: path.join(output, `fuxue-${route}-${width}.png`), fullPage: false });
+      await workspace.ctx.close();
+    }
+  }
+  // Hero sizing must react to async banners, dismissal, wrapping and resizing.
+  const fitted = await context(null, 1440);
+  const fittingPage = await fitted.newPage();
+  let releaseBanner;
+  const bannerReady = new Promise(resolve => { releaseBanner = resolve; });
+  let bannerText = "首屏尺寸验证公告";
+  await fittingPage.route("**/api/settings/banner", async route => {
+    await bannerReady;
+    await route.fulfill({ json: { banner: bannerText, version: "hero-fit" } });
+  });
+  await fittingPage.goto(base + "/index.html", { waitUntil: "domcontentloaded" });
+  const fitsViewport = () => fittingPage.evaluate(() => Math.abs(document.querySelector(".landing-hero").getBoundingClientRect().bottom + scrollY - innerHeight) < 1);
+  await fittingPage.waitForFunction(() => document.querySelector(".landing-hero").style.getPropertyValue("--landing-top"));
+  check("hero fills desktop without a banner", await fitsViewport());
+  releaseBanner();
+  await fittingPage.getByRole("button", { name: "关闭横幅" }).waitFor();
+  for (const [width, height] of [[1024, 600], [1280, 720], [1440, 1000], [1920, 1080], [2560, 1440]]) {
+    await fittingPage.setViewportSize({ width, height });
+    await fittingPage.waitForFunction(() => Math.abs(document.querySelector(".landing-hero").getBoundingClientRect().bottom - innerHeight) < 1);
+    check(`hero reaches viewport bottom at ${width}x${height}`, await fitsViewport());
+    check(`wide team logos remain separated at ${width}`, await fittingPage.locator(".landing-team").evaluateAll(es => {
+      const [a, b] = es.map(e => e.getBoundingClientRect());
+      return Math.abs(a.y - b.y) > 1 || b.left - a.right >= 63;
+    }));
+  }
+  await fittingPage.getByRole("button", { name: "关闭横幅" }).click();
+  await fittingPage.waitForFunction(() => Math.abs(document.querySelector(".landing-hero").getBoundingClientRect().bottom - innerHeight) < 1);
+  check("hero refills after banner dismissal", await fitsViewport());
+  bannerText = "用于验证多行公告出现时首屏仍然与窗口底部对齐。".repeat(12);
+  await fittingPage.evaluate(() => localStorage.removeItem("bannerDismissed:guest"));
+  await fittingPage.setViewportSize({ width: 1024, height: 700 });
+  await fittingPage.reload({ waitUntil: "networkidle" });
+  check("wrapped banner is included in hero height", await fittingPage.locator("#siteBanner").evaluate(el => el.offsetHeight > 32) && await fitsViewport());
+  await fittingPage.getByRole("button", { name: "关闭横幅" }).click();
+  await fittingPage.setViewportSize({ width: 1440, height: 1000 });
+  await fittingPage.evaluate(() => scrollTo(0, 0));
+  await fittingPage.waitForFunction(() => document.querySelector(".landing-hero").getBoundingClientRect().bottom === innerHeight);
+  const sharp = (await import("sharp")).default;
+  const column = await fittingPage.screenshot({ clip: { x: 1, y: 55, width: 1, height: 945 } });
+  const pixels = await sharp(column).removeAlpha().raw().toBuffer();
+  let maxStep = 0;
+  for (let i = 3; i < pixels.length; i++) maxStep = Math.max(maxStep, Math.abs(pixels[i] - pixels[i - 3]));
+  check("header and gradient join continuously without color bands", pixels[0] === 255 && pixels[1] === 255 && pixels[2] === 255 && maxStep <= 3);
+  check("home header has no divider", await fittingPage.locator(".site-header").evaluate(el => getComputedStyle(el).borderBottomWidth === "0px"));
+  for (const width of [992, 993]) {
+    await fittingPage.setViewportSize({ width, height: 850 });
+    check(`navigation breakpoint at ${width}`, await fittingPage.locator(".site-nav").isVisible() === (width > 992));
+  }
+  await fittingPage.setViewportSize({ width: 1440, height: 1000 });
+  await fittingPage.emulateMedia({ reducedMotion: "no-preference" });
+  const navLink = fittingPage.locator(".site-nav__link").first();
+  await navLink.hover();
+  await fittingPage.waitForFunction(() => getComputedStyle(document.querySelector(".site-nav__link"), "::after").opacity === "1");
+  check("navigation hover fades in over 100ms", await navLink.evaluate(el => getComputedStyle(el, "::after").transitionDuration === "0.1s"));
+  await fittingPage.mouse.move(0, 150);
+  await fittingPage.waitForFunction(() => getComputedStyle(document.querySelector(".site-nav__link"), "::after").opacity === "0");
+  check("navigation hover fades out", await navLink.evaluate(el => getComputedStyle(el, "::after").opacity === "0"));
+  const motion = await fittingPage.evaluate(async () => {
+    const items = [...document.querySelectorAll(".landing-accordion details")];
+    const first = items[0], content = first.querySelector("summary").nextElementSibling;
+    first.querySelector("summary").click();
+    await new Promise(requestAnimationFrame);
+    const opening = content.getAnimations()[0];
+    opening.pause(); opening.currentTime = 100;
+    const mid = content.getBoundingClientRect().height;
+    const timing = opening.effect.getTiming();
+    opening.finish();
+    await new Promise(requestAnimationFrame);
+    const full = content.getBoundingClientRect().height;
+    items[1].querySelector("summary").click();
+    const closing = content.getAnimations()[0];
+    closing.pause(); closing.currentTime = 100;
+    const closingMid = content.getBoundingClientRect().height;
+    closing.finish();
+    await new Promise(requestAnimationFrame);
+    const closed = !first.open && content.inert;
+    // Reversing repeatedly should finish in the user's last requested state.
+    first.querySelector("summary").click();
+    first.querySelector("summary").click();
+    first.querySelector("summary").click();
+    content.getAnimations()[0].finish();
+    await new Promise(requestAnimationFrame);
+    return { opening: mid > 0 && mid < full, closing: closingMid > 0 && closingMid < full,
+      timing: timing.duration === 200 && timing.easing === "ease-out", closed,
+      lastState: first.open && !content.inert && !first.hasAttribute("data-closing") };
+  });
+  check("accordion animates expansion through an intermediate height", motion.opening);
+  check("accordion animates collapse through an intermediate height", motion.closing);
+  check("accordion matches 200ms ease-out reference timing", motion.timing);
+  check("opening another item closes the previous item and removes its tab stops", motion.closed);
+  check("rapid accordion reversal preserves final intent", motion.lastState);
+  await fittingPage.emulateMedia({ reducedMotion: "reduce" });
+  await fittingPage.locator(".landing-accordion summary").first().click();
+  check("reduced motion closes immediately", await fittingPage.locator(".landing-accordion details").first().evaluate(el => !el.open && el.getAnimations({ subtree: true }).length === 0));
+  await fittingPage.evaluate(() => { document.startViewTransition = () => { window.__unexpectedThemeTransition = true; }; });
+  await fittingPage.locator('[data-theme-toggle]').click();
+  check("reduced motion skips theme transition", await fittingPage.evaluate(() => !window.__unexpectedThemeTransition && !document.documentElement.classList.contains("theme-transitioning")));
+  await fitted.close();
+  // Request interception disables Chromium's cross-document transition path.
+  // Use a clean context after the async-banner layout checks above.
+  const sliding = await pageFor(null, "/index.html", 1440);
+  await sliding.page.emulateMedia({ reducedMotion: "no-preference" });
+  const sourceBannerHeight = await sliding.page.locator("#siteBanner").evaluate(el => el.offsetHeight);
+  await sliding.page.addInitScript(() => {
+    addEventListener("pagereveal", event => {
+      window.__headerFrames = [];
+      let frame = 0;
+      function recordHeader() {
+        window.__headerFrames.push({
+          top: document.getElementById("siteHeader")?.getBoundingClientRect().top,
+          bannerHeight: document.getElementById("siteBanner")?.offsetHeight,
+        });
+        if (++frame < 10) requestAnimationFrame(recordHeader);
+      }
+      requestAnimationFrame(recordHeader);
+      requestAnimationFrame(() => { window.__pageSlide = {
+        present: !!event.viewTransition,
+        direction: document.documentElement.dataset.pageDirection,
+        oldName: getComputedStyle(document.documentElement, "::view-transition-old(root)").animationName,
+        newName: getComputedStyle(document.documentElement, "::view-transition-new(root)").animationName,
+        headerName: getComputedStyle(document.documentElement, "::view-transition-old(stationary-header)").animationName,
+        headerTransform: getComputedStyle(document.documentElement, "::view-transition-old(stationary-header)").transform,
+        bannerTransform: getComputedStyle(document.documentElement, "::view-transition-old(stationary-banner)").transform,
+        incomingHeaderOpacity: getComputedStyle(document.documentElement, "::view-transition-new(stationary-header)").opacity,
+      }; });
+    });
+  });
+  const mapNavigation = sliding.page.waitForURL("**/map.html");
+  await sliding.page.locator(".site-nav__link").first().click();
+  await mapNavigation;
+  await sliding.page.waitForFunction(() => window.__pageSlide);
+  await sliding.page.waitForFunction(() => window.__headerFrames?.length === 10);
+  const pageSlide = await sliding.page.evaluate(() => window.__pageSlide);
+  check("primary navigation slides old and new full pages sideways: " + JSON.stringify(pageSlide),
+    pageSlide.present && pageSlide.direction === "forward" && pageSlide.oldName === "page-slide-out-left" &&
+    pageSlide.newName === "page-slide-in-right" && pageSlide.headerName === "none" &&
+    pageSlide.headerTransform === "none" && pageSlide.bannerTransform === "none" &&
+    pageSlide.incomingHeaderOpacity === "1");
+  check("banner reservation prevents header jump while destination loads", await sliding.page.evaluate(expected =>
+    expected > 0 && window.__headerFrames.every(frame => frame.top === expected && frame.bannerHeight === expected), sourceBannerHeight));
+  await sliding.page.waitForTimeout(450);
+  const homeNavigation = sliding.page.waitForURL("**/index.html");
+  await sliding.page.locator(".site-header .brand").click();
+  await homeNavigation;
+  await sliding.page.waitForFunction(() => window.__pageSlide);
+  const returnSlide = await sliding.page.evaluate(() => window.__pageSlide);
+  check("return navigation slides the full pages in reverse: " + JSON.stringify(returnSlide),
+    returnSlide.present && returnSlide.direction === "back" && returnSlide.oldName === "page-slide-out-right" &&
+    returnSlide.newName === "page-slide-in-left");
+  await sliding.ctx.close();
+  const delayedContext = await browser.newContext({
+    viewport: { width: 1440, height: 850 },
+    reducedMotion: "no-preference",
+  });
+  const delayedPage = await delayedContext.newPage();
+  await delayedPage.goto(base + "/index.html", { waitUntil: "networkidle" });
+  const delayedBanner = { ctx: delayedContext, page: delayedPage };
+  const delayedSourceHeight = await delayedBanner.page.locator("#siteBanner").evaluate(el => el.offsetHeight);
+  await delayedBanner.page.route("**/api/settings/banner", async route => {
+    await new Promise(resolve => setTimeout(resolve, 250));
+    await route.continue();
+  });
+  await delayedBanner.page.addInitScript(() => {
+    addEventListener("pagereveal", () => {
+      window.__delayedHeaderTops = [];
+      let frame = 0;
+      function measure() {
+        window.__delayedHeaderTops.push(document.getElementById("siteHeader")?.getBoundingClientRect().top);
+        if (++frame < 18) requestAnimationFrame(measure);
+      }
+      requestAnimationFrame(measure);
+    });
+  });
+  const delayedNavigation = delayedBanner.page.waitForURL("**/map.html");
+  await delayedBanner.page.locator(".site-nav__link").first().click();
+  await delayedNavigation;
+  await delayedBanner.page.waitForFunction(() => window.__delayedHeaderTops?.length === 18);
+  check("header stays fixed while the next page announcement is delayed", await delayedBanner.page.evaluate(expected =>
+    expected > 0 && window.__delayedHeaderTops.every(top => top === expected), delayedSourceHeight));
+  await delayedBanner.ctx.close();
   const { ctx, page } = await pageFor(ordinary, "/forum.html", 360);
   check(
     "first feed batch has 20 posts",

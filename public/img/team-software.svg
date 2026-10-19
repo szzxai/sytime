@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <title>苏州中学软件开发社 · 简化标志</title>
+  <defs><clipPath id="round"><circle cx="50" cy="50" r="49"/></clipPath></defs>
+  <g clip-path="url(#round)">
+    <circle cx="50" cy="50" r="49" fill="#eff9db"/>
+    <path d="M0 0h100v27H0Zm0 74h100v26H0Z" fill="#aff16b"/>
+    <g fill="#25852b"><circle cx="27" cy="15" r="12"/><circle cx="74" cy="15" r="12"/><circle cx="88" cy="39" r="12"/><circle cx="28" cy="91" r="14"/></g>
+    <g fill="#9bdc42"><circle cx="13" cy="39" r="12"/><circle cx="57" cy="90" r="15"/></g>
+    <circle cx="50" cy="15" r="12" fill="#c0f992"/>
+    <g fill="#247c32"><rect x="27" y="30" width="23" height="21" rx="5"/><rect x="53" y="30" width="23" height="21" rx="5"/><rect x="14" y="55" width="23" height="21" rx="5"/><rect x="40" y="55" width="23" height="21" rx="5"/></g>
+    <rect x="66" y="55" width="23" height="21" rx="5" fill="#a6e738"/>
+    <!-- Vector letterforms preserve the SZ / RJS arrangement without a font dependency. -->
+    <g fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="square" stroke-linejoin="round">
+      <path d="M41 35h-5a2 2 0 0 0 0 4h3a2 2 0 0 1 0 4h-5M61 35h7l-7 8h7M22 68v-8h4a2 2 0 0 1 0 4h-4m4 0 3 4M54 60v6a2 2 0 0 1-4 0M81 60h-5a2 2 0 0 0 0 4h3a2 2 0 0 1 0 4h-5"/>
+    </g>
+  </g>
+</svg>

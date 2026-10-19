@@ -1,17 +1,18 @@
 <!doctype html>
 <html lang="zh-CN">
   <head>
+  <script src="/js/page-transition.js"></script>
     <meta charset="UTF-8" />
     <meta
       name="viewport"
       content="width=device-width, initial-scale=1, viewport-fit=cover"
     />
-    <meta name="theme-color" content="#085628" />
-    <title>三元坊必吃榜 · 校园信息网</title>
-    <link rel="icon" href="/img/favicon.svg?v=su-085628-v3" type="image/svg+xml" />
-    <link rel="stylesheet" href="/css/site.css?v=interactive-map-2" />
+    <meta name="theme-color" content="#218653" />
+    <title>三元坊必吃榜 · 拾光酥糕</title>
+    <link rel="icon" href="/img/suzhou-high-school-mark.png?v=20261018" type="image/png" />
+    <link rel="stylesheet" href="/css/site.css?v=shstime-20261018" />
   </head>
-  <body data-nav="shops">
+  <body data-page="shops" data-nav="shops">
     <noscript
       ><div class="alert alert--warning">
         <div class="alert__body">本站需要启用 JavaScript 才能正常使用。</div>
@@ -20,10 +21,11 @@
     <a class="skip-link" href="#main">跳到正文</a>
     <div id="siteBanner"></div>
     <div id="siteHeader"></div>
-    <main id="main" class="main container">
+    <main id="main" class="workspace workspace--shops">
+      <aside class="workspace__sidebar" aria-label="美食筛选">
       <div class="page-head">
         <div class="page-head__main">
-          <span class="page-head__eyebrow">Sanyuanfang · Must-Eat</span>
+          <span class="page-head__eyebrow">校园周边美食</span>
           <h1 class="page-head__title">三元坊必吃榜</h1>
           <p class="page-head__desc">
             同学们推荐的学校周边美食。距离与步行时间按高德地图步行路线填写，均为步行距离而非直线距离。
@@ -31,24 +33,6 @@
         </div>
         <div class="page-head__actions" id="createAction"></div>
       </div>
-
-      <section class="card u-mb-6" aria-labelledby="mapTitle">
-        <div class="row row--between u-mb-4">
-          <div>
-            <h2 class="section__title" id="mapTitle">附近地图</h2>
-            <p class="u-muted u-fs-sm" id="areaText">覆盖范围：加载中…</p>
-          </div>
-        </div>
-        <div
-          class="shop-map"
-          id="shopMap"
-          role="region"
-          aria-label="店铺地图"
-        >
-          <div class="shop-map__state u-muted">地图加载中…</div>
-        </div>
-        <div class="shop-map-legend u-mt-4" id="mapLegend" hidden></div>
-      </section>
 
       <div class="row row--between row--top u-mb-4">
         <div
@@ -68,7 +52,7 @@
           <label class="u-fs-sm u-muted" for="sortSelect">排序</label>
           <select class="select select--sm" id="sortSelect" aria-label="排序">
             <option value="campus">距苏州中学本部最近</option>
-            <option value="az">A–Z</option>
+            <option value="az">拼音排序</option>
             <option value="metro">距地铁最近</option>
             <option value="likes">按点赞数</option>
             <option value="reviews">按评价数</option>
@@ -128,6 +112,26 @@
         </div>
       </section>
 
+      </aside>
+      <div class="workspace__content">
+      <section class="card u-mb-6" aria-labelledby="mapTitle">
+        <div class="row row--between u-mb-4">
+          <div>
+            <h2 class="section__title" id="mapTitle">附近地图</h2>
+            <p class="u-muted u-fs-sm" id="areaText">覆盖范围：加载中…</p>
+          </div>
+        </div>
+        <div
+          class="shop-map"
+          id="shopMap"
+          role="region"
+          aria-label="店铺地图"
+        >
+          <div class="shop-map__state u-muted">地图加载中…</div>
+        </div>
+        <div class="shop-map-legend u-mt-4" id="mapLegend" hidden></div>
+      </section>
+
       <p class="u-muted u-fs-sm u-mb-4" id="shopSummary" role="status"></p>
       <span class="sr-only" aria-live="polite" id="shopLive"></span>
 
@@ -138,9 +142,10 @@
         <span class="callout__text" id="addHintText"></span>
         <span class="callout__actions" id="addHintActions"></span>
       </div>
+      </div>
     </main>
     <div id="siteFooter"></div>
-    <script src="/js/ui.js"></script>
+    <script src="/js/ui.js?v=shstime-20261018"></script>
     <script src="/js/page.js"></script>
     <script src="/js/shops-map-interactive.js?v=cluster-map-2"></script>
     <script src="/js/shops-map.js?v=interactive-map-2"></script>

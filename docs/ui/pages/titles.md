@@ -1,5 +1,9 @@
 # 头衔系统 · titles.md（#10）
 
+## 当前视觉与布局 · 2026-10-17
+
+头衔选择、预览和管理面板继承新版细边框、小圆角及明暗主题；徽章保留语义色，规则、进度、专属头衔和权限不变。 全站品牌字标为「拾光酥糕」，详细公共尺寸见 [UI.md](../../../UI.md)。本轮验证结果见 [验收记录](../acceptance.md) 和根目录 [MAP.md](../../../MAP.md)。
+
 > 状态：已实现 ｜ 优先级：P1 ｜ issue：#10 ｜ 依赖：阶段 0；#10 数据与接口 ｜ 落点：统一用户组件 + profile.html#titles + admin.html#titles-mgmt
 >
 > 实施范围与验收见 [issue-10-plan.md](../../issue-10-plan.md)，变更记录见 [progress.md](../../progress.md) 第 59 条。
