@@ -2,7 +2,7 @@
 
 ## 当前视觉与布局 · 2026-10-17
 
-注册页使用居中窄表单、绿色「府」字章与细边框输入；保留昵称、用户名、密码与注册后登录流程，账户页共享新页脚和主题切换。 全站品牌字标为「拾光酥糕」，详细公共尺寸见 [UI.md](../../../UI.md)。本轮验证结果见 [验收记录](../acceptance.md) 和根目录 [MAP.md](../../../MAP.md)。
+注册页使用居中窄表单、青柠切面标志与细边框输入；保留昵称、用户名、密码与注册后登录流程，账户页共享新页脚和主题切换。 全站品牌字标为「拾光酥糕」，详细公共尺寸见 [UI.md](../../../UI.md)。本轮验证结果见 [验收记录](../acceptance.md) 和根目录 [MAP.md](../../../MAP.md)。
 
 > 状态：现有改版 ｜ 优先级：P0 ｜ issue：#4 ｜ 依赖：阶段 0 ｜ 壳：默认 ｜ data-nav：无 ｜ 容器：`container--narrow` + `.auth`
 
@@ -24,7 +24,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#FFFFFF">
 <title>注册 · 拾光酥糕</title>
-<link rel="icon" href="/img/suzhou-high-school-mark.png?v=20261018" type="image/png">
+<link rel="icon" href="/img/brand-lime.svg?v=20261019" type="image/svg+xml">
 <link rel="stylesheet" href="css/site.css">
 </head>
 <body>
@@ -147,3 +147,8 @@ UI.qsa('[data-counter]').forEach(UI.form.counter);
 - [ ] 成功后自动登录并跳 next（`?next=` 生效）。
 - [ ] 昵称计数器工作；密码显隐切换正常。
 - [ ] 无 alert/confirm；控制台零报错；360/768 正常。
+
+
+### 2026-10-19 · 共享标识与运营声明
+
+浏览器图标改为 `brand-lime.svg` 青柠切面；共享顶栏、抽屉、页脚及登录/注册卡片复用该图形，首页链接名称仍为「拾光酥糕 首页」。有页脚的页面展示完整学生自主运营、与校方无隶属关系、知识产权和信息参考声明，勘误邮箱可点击。地图应用壳与极简 404 页继续不显示页脚。完整文字见 [文案规范](../copy.md)。

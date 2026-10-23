@@ -40,7 +40,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#FFFFFF">
 <title>学生认证 · 拾光酥糕</title>
-<link rel="icon" href="/img/suzhou-high-school-mark.png?v=20261018" type="image/png">
+<link rel="icon" href="/img/brand-lime.svg?v=20261019" type="image/svg+xml">
 <link rel="stylesheet" href="css/site.css">
 </head>
 <body>
@@ -203,3 +203,8 @@ UI.qsa('[data-counter]').forEach(UI.form.counter);
 - [ ] 直通 approved：toast + 成功态 + 页头刷新。
 - [ ] 429：toast + 按钮倒计时并恢复。
 - [ ] 计数器工作；无 alert/confirm；控制台零报错。
+
+
+### 2026-10-19 · 共享标识与运营声明
+
+浏览器图标改为 `brand-lime.svg` 青柠切面；共享顶栏、抽屉、页脚及登录/注册卡片复用该图形，首页链接名称仍为「拾光酥糕 首页」。有页脚的页面展示完整学生自主运营、与校方无隶属关系、知识产权和信息参考声明，勘误邮箱可点击。地图应用壳与极简 404 页继续不显示页脚。完整文字见 [文案规范](../copy.md)。

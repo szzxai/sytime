@@ -292,7 +292,7 @@ try {
       const icon = el.getBoundingClientRect(), header = document.getElementById("siteHeader").getBoundingClientRect();
       return icon.width === 32 && icon.left - header.left >= 28 && icon.top - header.top >= 12;
     }));
-    check("school mark is the favicon", await landing.page.locator('link[rel="icon"]').getAttribute("href") === "/img/suzhou-high-school-mark.png?v=20261018");
+    check("lime mark is the favicon", await landing.page.locator('link[rel="icon"]').getAttribute("href") === "/img/brand-lime.svg?v=20261019");
     check("short Chinese primary navigation", width > 992
       ? (await landing.page.locator(".site-nav__link").allTextContents()).join("|") === "地图|论坛|菜谱|必吃榜|更新公告"
       : (await landing.page.locator("#navDrawer .drawer-link").allTextContents()).slice(0, 6).join("|") === "首页|地图|论坛|菜谱|必吃榜|更新公告");
@@ -302,6 +302,9 @@ try {
       const chineseFace = [...document.fonts].find(face => face.family.replaceAll('"', '') === "NotoSansSC");
       return document.fonts.check('16px "NotoSansSC"', "苏州中学地图论坛") && chineseFace?.weight === "100 900";
     }));
+    check("all shared logos use lime artwork", await landing.page.locator(".brand__mark").evaluateAll(imgs => imgs.length >= 3 && imgs.every(img => img.getAttribute("src") === "/img/brand-lime.svg?v=20261019" && img.complete && img.naturalWidth > 0)));
+    check("complete independent operation notice", (await landing.page.locator(".site-footer__identity > p").innerText()) === "本站系学生自主运营的校园资讯聚合平台，与江苏省苏州中学官方无隶属关系。“苏州中学”名称、校徽及相关标识的知识产权均归原权利主体所有。所载信息仅供参考，不代表校方立场，权威资讯及具体事宜请以学校官方发布渠道为准。如有疑问或勘误，请致信 baimoqilin@gmail.com，我们将于核实后及时妥善处理。");
+    check("footer correction email link", await landing.page.locator('.site-footer__identity a[href="mailto:baimoqilin@gmail.com"]').count() === 1);
     check("requested fixed footer credit", await landing.page.locator(".site-footer__bottom").innerText().then(text => text.includes("© 2026 苏州中学 VC 编程。")));
     check("original campus illustration loaded", await landing.page.locator(".landing-hero__statue").evaluate(img => img.complete && img.naturalWidth > 0));
     check("user-supplied statue illustration", (await landing.page.locator(".landing-hero__statue").getAttribute("src")) === "/img/fan-zhongyan-user.png");

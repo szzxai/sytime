@@ -37,7 +37,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#FFFFFF">
 <title>更新公告 · 拾光酥糕</title>
-<link rel="icon" href="/img/suzhou-high-school-mark.png?v=20261018" type="image/png">
+<link rel="icon" href="/img/brand-lime.svg?v=20261019" type="image/svg+xml">
 <link rel="stylesheet" href="css/site.css">
 </head>
 <body data-nav="announce">
@@ -198,3 +198,8 @@ window.addEventListener("hashchange", function () {
 > 2026-10-17 共享加载状态修正：本页使用的 `UI.html.skeleton` 已补齐 `role="status"`，保留加载名称与 `aria-busy`，避免加载过程中的无障碍属性违规；外观与业务流程不变。
 
 2026-10-17 精校：公告选中项的日期使用更深的次要文字色，在浅绿选中底上保持可读性；顶栏与按钮采用 UI.md v2.1 的统一尺寸。
+
+
+### 2026-10-19 · 共享标识与运营声明
+
+浏览器图标改为 `brand-lime.svg` 青柠切面；共享顶栏、抽屉、页脚及登录/注册卡片复用该图形，首页链接名称仍为「拾光酥糕 首页」。有页脚的页面展示完整学生自主运营、与校方无隶属关系、知识产权和信息参考声明，勘误邮箱可点击。地图应用壳与极简 404 页继续不显示页脚。完整文字见 [文案规范](../copy.md)。

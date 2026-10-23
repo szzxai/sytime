@@ -1212,7 +1212,7 @@
   function navItems() { return UI.nav.filter(function (n) { return !n.feature || UI.config.features[n.feature]; }); }
 
   function brandHtml(extra) {
-    return '<a class="brand" href="index.html" aria-label="' + UI.config.brand + ' 首页"><img class="brand__mark" src="/img/suzhou-high-school-mark.png?v=20261018" alt="" width="40" height="40"></a>' + (extra || '');
+    return '<a class="brand" href="index.html" aria-label="' + UI.config.brand + ' 首页"><img class="brand__mark" src="/img/brand-lime.svg?v=20261019" alt="" width="40" height="40"></a>' + (extra || '');
   }
 
   function accountLinks(user) {
@@ -1262,7 +1262,7 @@
   }
   function footerHtml() {
     return '<footer class="site-footer"><div class="site-footer__inner"><div class="site-footer__top">' +
-      '<div class="site-footer__identity">' + brandHtml() + '<p>由苏州中学学生共同维护</p><a class="footer-project" href="about.html">' + UI.icon('graduation') + '校园里的事，在这里相遇</a></div>' +
+      '<div class="site-footer__identity">' + brandHtml() + '<p>本站系学生自主运营的校园资讯聚合平台，与江苏省苏州中学官方无隶属关系。“苏州中学”名称、校徽及相关标识的知识产权均归原权利主体所有。所载信息仅供参考，不代表校方立场，权威资讯及具体事宜请以学校官方发布渠道为准。如有疑问或勘误，请致信 <a href="mailto:baimoqilin@gmail.com">baimoqilin@gmail.com</a>，我们将于核实后及时妥善处理。</p><a class="footer-project" href="about.html">' + UI.icon('graduation') + '校园里的事，在这里相遇</a></div>' +
       '<nav class="site-footer__columns" aria-label="页脚">' +
       '<div><h2>交流与反馈</h2><a href="forum.html">校园论坛</a><a href="settings.html#tickets">提交工单</a><a href="announcements.html">更新公告</a></div>' +
       '<div><h2>校园生活</h2><a href="map.html">校园地图</a><a href="recipe.html">食堂菜谱</a><a href="shops.html">三元坊必吃榜</a><a href="inbox.html">消息箱</a></div>' +

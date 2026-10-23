@@ -2,7 +2,7 @@
 
 ## 当前视觉与布局 · 2026-10-17
 
-登录页改为居中窄表单，无外部投影卡片，28px 标题和绿色「府」字章；顶栏单一登录入口，表单下仍提供注册，所有校验与封禁申诉保留。 全站品牌字标为「拾光酥糕」，详细公共尺寸见 [UI.md](../../../UI.md)。本轮验证结果见 [验收记录](../acceptance.md) 和根目录 [MAP.md](../../../MAP.md)。
+登录页改为居中窄表单，无外部投影卡片，28px 标题和青柠切面标志；顶栏单一登录入口，表单下仍提供注册，所有校验与封禁申诉保留。 全站品牌字标为「拾光酥糕」，详细公共尺寸见 [UI.md](../../../UI.md)。本轮验证结果见 [验收记录](../acceptance.md) 和根目录 [MAP.md](../../../MAP.md)。
 
 > 状态：现有改版 ｜ 优先级：P0 ｜ issue：#4 ｜ 依赖：阶段 0 ｜ 壳：默认 ｜ data-nav：无 ｜ 容器：`container--narrow` + `.auth`
 
@@ -38,7 +38,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#FFFFFF">
 <title>登录 · 拾光酥糕</title>
-<link rel="icon" href="/img/suzhou-high-school-mark.png?v=20261018" type="image/png">
+<link rel="icon" href="/img/brand-lime.svg?v=20261019" type="image/svg+xml">
 <link rel="stylesheet" href="css/site.css">
 </head>
 <body>
@@ -238,3 +238,8 @@ document.getElementById("appealSubmit").addEventListener("click", function () {
 - [ ] 申诉全流程：理由校验、图片选择/预览/移除、DataURL 提交、成功/失败/限流倒计时。
 - [ ] 无 alert/confirm；错误文案全中文；360px 正常。
 - [ ] 页头未登录态（登录 ghost + 注册 primary）正确显示。
+
+
+### 2026-10-19 · 共享标识与运营声明
+
+浏览器图标改为 `brand-lime.svg` 青柠切面；共享顶栏、抽屉、页脚及登录/注册卡片复用该图形，首页链接名称仍为「拾光酥糕 首页」。有页脚的页面展示完整学生自主运营、与校方无隶属关系、知识产权和信息参考声明，勘误邮箱可点击。地图应用壳与极简 404 页继续不显示页脚。完整文字见 [文案规范](../copy.md)。
