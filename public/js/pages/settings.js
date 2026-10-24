@@ -5,6 +5,7 @@
   var main = P.el("main"),
     status = P.el("settingsStatus"),
     me;
+  var collectionPublicToggle = P.el("collectionDefaultPublic");
   var SHOP_SORTS = ["campus", "az", "metro", "likes", "reviews", "rating", "new"];
   async function loadShopTypeOptions(current) {
     var select = P.el("shopDefaultType");
@@ -69,6 +70,7 @@
   }
   async function loadSettings() {
     main.setAttribute("aria-busy", "true");
+    collectionPublicToggle.disabled = true;
     UI.qsa('form button[type="submit"]', main).forEach(function (btn) {
       btn.disabled = true;
     });
@@ -82,6 +84,7 @@
     }
     me = r.data.user;
     UI.session.save(me);
+    collectionPublicToggle.checked = me.collection_default_public === 1;
     var page =
       me.default_page || localStorage.getItem("defaultPage") || "index.html";
     P.el("defaultPage").value = [
@@ -130,6 +133,7 @@
     UI.qsa('form button[type="submit"]', main).forEach(function (btn) {
       btn.disabled = false;
     });
+    collectionPublicToggle.disabled = false;
     status.innerHTML = "";
   }
   async function loadTickets() {
@@ -163,6 +167,31 @@
   P.panels(P.el("settingsNav"), function (name) {
     if (name === "tickets") loadTickets();
     if (name === "messages") loadPrefs();
+  });
+  collectionPublicToggle.addEventListener("change", async function () {
+    if (!me) return;
+    var previous = me.collection_default_public === 1 ? 1 : 0;
+    var value = collectionPublicToggle.checked ? 1 : 0;
+    collectionPublicToggle.disabled = true;
+    collectionPublicToggle.setAttribute("aria-busy", "true");
+    P.el("siteMsg").textContent = "正在保存默认公开设置…";
+    var result = await UI.api("/api/user/settings", {
+      method: "PUT",
+      body: { collection_default_public: value },
+      on401: false,
+    });
+    collectionPublicToggle.disabled = false;
+    collectionPublicToggle.removeAttribute("aria-busy");
+    if (result.ok) {
+      me.collection_default_public = value;
+      UI.session.patch({ collection_default_public: value });
+      P.el("siteMsg").textContent = "默认公开设置已保存";
+      UI.toast.success("默认公开设置已保存");
+    } else {
+      collectionPublicToggle.checked = previous === 1;
+      P.el("siteMsg").textContent = "未能保存默认公开设置，已恢复原设置。";
+      UI.toast.error(UI.errorText(result, "默认公开设置保存失败"));
+    }
   });
   ["prefComment", "prefReply", "prefLike"].forEach(function (id) {
     var key = id.replace("pref", "").toLowerCase();

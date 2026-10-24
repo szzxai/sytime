@@ -10,6 +10,8 @@ const multer = require("multer");
 const { DatabaseSync } = require("node:sqlite");
 const { MenuService } = require("./lib/menu/service");
 const { mountMenuRoutes } = require("./lib/menu/routes");
+const dishStore = require("./lib/dishes/store");
+const { mountDishRoutes } = require("./lib/dishes/routes");
 const { migrate: migrateShops } = require("./lib/shops/store");
 const { mountShopRoutes } = require("./lib/shops/routes");
 const {
@@ -54,6 +56,7 @@ CREATE TABLE IF NOT EXISTS users (
   shop_layout_mode TEXT NOT NULL DEFAULT 'manual',
   default_collection_forum INTEGER,
   default_collection_shops INTEGER,
+  collection_default_public INTEGER NOT NULL DEFAULT 0,
   status TEXT NOT NULL DEFAULT 'active',
   ban_reason TEXT NOT NULL DEFAULT '',
   ban_image TEXT NOT NULL DEFAULT '',
@@ -86,6 +89,7 @@ CREATE TABLE IF NOT EXISTS users (
       shop_layout_mode TEXT NOT NULL DEFAULT 'manual',
       default_collection_forum INTEGER,
       default_collection_shops INTEGER,
+      collection_default_public INTEGER NOT NULL DEFAULT 0,
       status TEXT NOT NULL DEFAULT 'active',
       ban_reason TEXT NOT NULL DEFAULT '',
       ban_image TEXT NOT NULL DEFAULT '',
@@ -1268,7 +1272,7 @@ app.get("/api/admin/pending-counts", requireLogin, function (req, res) {
 
 app.get("/api/user/profile", requireLogin, function (req, res) {
   const user = db
-    .prepare("SELECT id, display_id, username, nickname, avatar_url, signature, role, default_page, default_floor, recipe_default_view, shop_default_sort, shop_default_type, shop_layout, shop_layout_mode, default_collection_forum, default_collection_shops, show_role, status FROM users WHERE id = ?")
+    .prepare("SELECT id, display_id, username, nickname, avatar_url, signature, role, default_page, default_floor, recipe_default_view, shop_default_sort, shop_default_type, shop_layout, shop_layout_mode, default_collection_forum, default_collection_shops, collection_default_public, show_role, status FROM users WHERE id = ?")
     .get(req.user.id);
   if (!user) {
     res.status(404).json({ error: "user not found" });
@@ -1323,13 +1327,21 @@ app.get("/api/users/:id/titles", function (req, res) {
 app.put("/api/user/settings", requireLogin, function (req, res) {
   const body = req.body || {};
   const current = db
-    .prepare("SELECT default_page, default_floor, recipe_default_view, shop_default_sort, shop_default_type, shop_layout, shop_layout_mode, show_role FROM users WHERE id = ?")
+    .prepare("SELECT default_page, default_floor, recipe_default_view, shop_default_sort, shop_default_type, shop_layout, shop_layout_mode, collection_default_public, show_role FROM users WHERE id = ?")
     .get(req.user.id);
   if (!current) {
     res.status(404).json({ error: "user not found" });
     return;
   }
   const allowedPages = ["index.html", "map.html", "forum.html", "recipe.html"];
+  let collectionDefaultPublic = current.collection_default_public;
+  if (body.collection_default_public !== undefined) {
+    if (body.collection_default_public !== 0 && body.collection_default_public !== 1) {
+      res.status(400).json({ error: "默认公开设置只能是 0 或 1" });
+      return;
+    }
+    collectionDefaultPublic = body.collection_default_public;
+  }
   let defaultPage = current.default_page;
   if (body.default_page !== undefined) {
     defaultPage = allowedPages.indexOf(body.default_page) === -1 ? "index.html" : body.default_page;
@@ -1364,9 +1376,9 @@ app.put("/api/user/settings", requireLogin, function (req, res) {
   if (body.show_role !== undefined) {
     showRole = body.show_role === 0 || body.show_role === false || body.show_role === "0" ? 0 : 1;
   }
-  db.prepare("UPDATE users SET default_page = ?, default_floor = ?, recipe_default_view = ?, shop_default_sort = ?, shop_default_type = ?, shop_layout = ?, shop_layout_mode = ?, show_role = ? WHERE id = ?")
-    .run(defaultPage, defaultFloor, recipeView, shopSort, shopType, shopLayout, shopLayoutMode, showRole, req.user.id);
-  res.json({ default_page: defaultPage, default_floor: defaultFloor, recipe_default_view: recipeView, shop_default_sort: shopSort, shop_default_type: shopType, shop_layout: shopLayout, shop_layout_mode: shopLayoutMode, show_role: showRole });
+  db.prepare("UPDATE users SET default_page = ?, default_floor = ?, recipe_default_view = ?, shop_default_sort = ?, shop_default_type = ?, shop_layout = ?, shop_layout_mode = ?, collection_default_public = ?, show_role = ? WHERE id = ?")
+    .run(defaultPage, defaultFloor, recipeView, shopSort, shopType, shopLayout, shopLayoutMode, collectionDefaultPublic, showRole, req.user.id);
+  res.json({ default_page: defaultPage, default_floor: defaultFloor, recipe_default_view: recipeView, shop_default_sort: shopSort, shop_default_type: shopType, shop_layout: shopLayout, shop_layout_mode: shopLayoutMode, collection_default_public: collectionDefaultPublic, show_role: showRole });
 });
 
 app.post("/api/user/avatar", requireLogin, function (req, res) {
@@ -1618,22 +1630,26 @@ app.post("/api/recipes", requireLogin, function (req, res) {
       return;
     }
     const body = req.body || {};
-    const name = body.name;
-    const rating = parseInt(body.rating, 10);
-    const comment = body.comment || null;
+    function reject(message) {
+      if (req.file) {
+        try { fs.unlinkSync(req.file.path); }
+        catch (error) { if (error.code !== "ENOENT") console.error("评价图片清理失败", error.code); }
+      }
+      return res.status(400).json({ error: message });
+    }
+    const dish = dishStore.findDish(db, body.dish_id);
+    const rating = Number(body.rating);
+    const comment = typeof body.comment === "string" ? body.comment.trim() || null : null;
     const isWeekly = body.is_weekly === "1" || body.is_weekly === "true" || body.is_weekly === true ? 1 : 0;
-    if (!name) {
-      res.status(400).json({ error: "name is required" });
-      return;
-    }
-    if (isNaN(rating) || rating < 0 || rating > 5) {
-      res.status(400).json({ error: "rating must be between 0 and 5" });
-      return;
-    }
+    if (!dish) return reject("请从下拉列表选择已有菜品");
+    if (!["string", "number"].includes(typeof body.rating) || String(body.rating).trim() === "" ||
+        !Number.isInteger(rating) || rating < 0 || rating > 5) return reject("评分必须是 0 到 5 的整数");
+    if (body.comment !== undefined && typeof body.comment !== "string") return reject("评论格式无效");
+    if (comment && comment.length > 500) return reject("评论不能超过 500 字");
     const imageUrl = req.file ? "/uploads/" + req.file.filename : null;
     const info = db
-      .prepare("INSERT INTO recipes (user_id, username, name, rating, comment, image_url, is_weekly) VALUES (?, ?, ?, ?, ?, ?, ?)")
-      .run(req.user.id, req.user.username, name, rating, comment, imageUrl, isWeekly);
+      .prepare("INSERT INTO recipes (dish_id, user_id, username, name, rating, comment, image_url, is_weekly) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
+      .run(dish.id, req.user.id, req.user.username, dish.name, rating, comment, imageUrl, isWeekly);
     evaluateAutoTitles(db, req.user.id);
     const recipe = db.prepare("SELECT * FROM recipes WHERE id = ?").get(Number(info.lastInsertRowid));
     res.status(201).json({ recipe: recipe });
@@ -1883,6 +1899,8 @@ app.post("/api/admin/notifications", requirePermission("announcement_publish"), 
 });
 
 const menuService = new MenuService(db, __dirname);
+dishStore.migrate(db);
+mountDishRoutes(app, db, attachAuthors);
 mountMenuRoutes(app, db, menuService, checkRole());
 mountShopRoutes(app, db, {
   root: __dirname,

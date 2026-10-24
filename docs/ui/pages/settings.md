@@ -103,6 +103,13 @@
         </div>
         <span class="field__hint">进入个人中心「收藏」时默认打开的收藏夹</span>
       </div>
+      <div class="switch-row">
+        <div class="switch-row__text">
+          <label class="switch-row__title" for="collectionDefaultPublic">新建收藏夹默认公开</label>
+          <span class="switch-row__desc" id="collectionDefaultPublicHint">仅影响之后新建的收藏夹，新建时仍可单独调整；已有收藏夹不变。</span>
+        </div>
+        <input type="checkbox" class="switch" role="switch" id="collectionDefaultPublic" name="collectionDefaultPublic" aria-describedby="collectionDefaultPublicHint" disabled>
+      </div>
       <div class="field">
         <span class="field__label">显示权限等级</span>
         <label class="check-row"><input class="check" type="checkbox" id="showRole" name="showRole"><span class="check-row__text">在论坛、评价等位置显示我的权限等级标签</span></label>
@@ -122,6 +129,8 @@
 「收藏默认页」（`#collectionDefaultFields`，`#23`）：两个 `.select` 分别对应 `default_collection_forum` / `default_collection_shops`。加载设置页时并行请求 `GET /api/collections?section=forum|shops`（无收藏夹时后端会自动创建「默认收藏夹」），用返回的收藏夹名称填充选项；若账号未设置某版块默认收藏夹，则回退选中该版块的「默认收藏夹」（首个收藏夹）。保存时先提交网站设置，再调用 `PUT /api/user/settings/collection` 写入两个默认收藏夹；成功后统一 toast「网站设置已保存到账号」。收藏夹列表加载失败时对应下拉禁用并显示「收藏夹加载失败」。
 
 设置保存：请求体 `{default_page, recipe_default_view, shop_default_sort, shop_default_type, shop_layout_mode, show_role}`；后端按传入字段部分更新。**本表单不再提交 `shop_layout`**，因此保存网站设置不会覆盖详情页记录的「纵向 / 双栏」选择。随后提交 `PUT /api/user/settings/collection`，请求体 `{default_collection_forum, default_collection_shops}`。成功后同步 localStorage 键（defaultPage/recipeDefaultView/shopDefaultSort/shopDefaultType/shopLayoutMode/showRole）+ toast「网站设置已保存到账号」。必吃榜偏好与样式面板（`#shopPrefFields`）在 `features.shops` 时显示；`shopDefaultType` 选项由 `/api/shops/meta` 动态填充。
+
+「新建收藏夹默认公开」（2026-10-24，`#29`）：位于「收藏默认页」下、显示权限等级上，`#collectionDefaultPublic` 为原生 `.switch`。`GET /api/user/profile` 回填数值 `collection_default_public`，只在等于 1 时勾选，旧账号默认 0。加载时禁用；`change` 立即单独调用 `PUT /api/user/settings`，只发送 `{collection_default_public: 0|1}`，无需按「保存」，也不提交其他未保存的表单字段。保存期间禁用并标记 `aria-busy`，成功更新会话与状态提示，失败恢复上次已保存状态并提示。底部普通保存不提交这个字段，后端省略时保留原值；仅影响之后主动新建的收藏夹，已有收藏夹不变。
 
 2026-10-17 起移除「校园地图默认楼层」，不再读取、提交或写入本地楼层偏好。后端 `default_floor` 字段保留兼容，当前校园地图不使用此字段。
 
@@ -168,6 +177,8 @@
 | 加载设置 | 首次 | `#settingsStatus` 载入中；出错 → `P.error` 可重试 |
 | 密码修改 | 保存 | 校验/成功/失败三态（见上） |
 | 网站设置保存 | 保存 | busy → toast「网站设置已保存到账号」 |
+| 默认公开加载 | 读取账号设置 | 开关禁用；成功回填，失败保持禁用并允许重试加载 |
+| 默认公开即时保存 | 切换开关或键盘空格 | 开关禁用及 busy → 单字段保存；成功提示，失败恢复已保存值 |
 | 工单提交 | 提交 | busy → toast「工单已提交，请等待处理」 |
 | 工单空/加载失败 | — | empty / loadError |
 | 消息偏好保存 | 切换 switch | toast「偏好已保存」；失败回滚 |

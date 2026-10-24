@@ -1,9 +1,8 @@
 (function () {
   "use strict";
   var P = UI.page,
-    list = P.el("recipeList"),
-    form = P.el("recipeForm"),
-    dialog = P.el("reviewDialog");
+    list = P.el("recipeList");
+  var writer = UI.dishReview({ onPublished: function () { load(); } });
   var view = "all",
     recipes = [],
     shown = 0,
@@ -44,7 +43,9 @@
     var letters = Array.from(groups.keys());
     list.innerHTML = '<div class="az-layout dish-directory"><div class="az-list">' + letters.map(function (letter) {
       var id = "dish-group-" + (letter === "#" ? "other" : letter), group = groups.get(letter);
-      return '<section class="az-group" id="' + id + '" aria-labelledby="' + id + '-title"><h2 class="az-group__letter" id="' + id + '-title">' + letter + '<span class="az-group__count">' + group.length + ' 道</span></h2><ul class="dish-list">' + group.map(function (d) { return '<li class="dish-row" data-dish-id="' + d.id + '"><span class="dish-row__name">' + highlight(d.name) + '</span></li>'; }).join("") + '</ul></section>';
+      return '<section class="az-group" id="' + id + '" aria-labelledby="' + id + '-title"><h2 class="az-group__letter" id="' + id + '-title">' + letter + '<span class="az-group__count">' + group.length + ' 道</span></h2><ul class="dish-list">' + group.map(function (dish) {
+        return '<li class="dish-row" data-dish-id="' + dish.id + '"><a class="dish-row__name card__link" href="dish.html?id=' + encodeURIComponent(dish.id) + '">' + highlight(dish.name) + '</a></li>';
+      }).join("") + '</ul></section>';
     }).join("") + '</div></div>';
     rail.innerHTML = letters.map(function (letter) { return '<a href="#dish-group-' + (letter === "#" ? "other" : letter) + '" aria-label="跳到 ' + (letter === "#" ? "其他" : letter) + ' 类菜品">' + letter + '</a>'; }).join("");
     spy = new IntersectionObserver(function (entries) {
@@ -56,12 +57,7 @@
     list.querySelectorAll(".az-group").forEach(function (group) { spy.observe(group); });
   }
   function open() {
-    if (!UI.session.token()) {
-      UI.toast.warning("请先登录");
-      setTimeout(UI.goLogin, 900);
-      return;
-    }
-    UI.dialog.open(dialog);
+    writer.open();
   }
   function card(r) {
     var url = UI.safeUrl(r.image_url);
@@ -247,32 +243,6 @@
       "已删除",
     );
     if (r && (r.ok || r.status === 404)) load();
-  });
-  form.addEventListener("submit", async function (e) {
-    e.preventDefault();
-    var btn = P.el("recipeSubmit");
-    if (btn.disabled || !P.validate(form, [["name", "请填写菜名"]])) return;
-    var data = new FormData();
-    data.append("name", P.value("name"));
-    data.append("comment", P.value("comment"));
-    data.append(
-      "rating",
-      (form.querySelector('[name="rating"]:checked') || {}).value || "5",
-    );
-    var upload = form.querySelector("[data-upload]"),
-      file = UI.upload.get(upload);
-    if (file) data.append("image", file);
-    var r = await P.request(
-      btn,
-      "/api/recipes",
-      { method: "POST", form: data },
-      "已发布",
-    );
-    if (r && r.ok) {
-      UI.dialog.close(dialog);
-      P.reset(form);
-      load();
-    }
   });
   async function initial() {
     if (["all", "reviews", "weekly"].includes(params.get("view")) || params.has("q")) {

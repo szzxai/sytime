@@ -1,6 +1,6 @@
 # 组件规范 · components.md
 
-> 当前共享视觉：拾光酥糕 v2.3（2026-10-18），颜色、字号、圆角与断点以 [UI.md](../../UI.md) 和 `public/css/site.css` 为准。下列组件钩子与状态继续适用。
+> 当前共享视觉：拾光酥糕 v2.3（2026-10-24，含收藏默认公开开关），颜色、字号、圆角与断点以 [UI.md](../../UI.md) 和 `public/css/site.css` 为准。下列组件钩子与状态继续适用。
 
 > 事实来源：[assets/site.css](./assets/site.css)（类名、变体、状态、数值）与 [assets/ui.js](./assets/ui.js)（脚本 API）。本文与之逐字一致；发现不一致以这两个文件为准，并回改本文。视觉基准：[assets/specimen.html](./assets/specimen.html)。
 
@@ -472,6 +472,14 @@ JS：`UI.userLine(user, {size, meta, href, large, showRole})`；meta 传 HTML �
 - 弹窗：点击任意 `[data-collect]` 由 `ui.js` 全局委托调用 `UI.collections.open({section, itemId, button})`，使用 `dialog dialog--sheet dialog--wide`：列出 `GET /api/collections?section=` 的收藏夹（单选 `.choice`），可展开「新建收藏夹」（`.field` + `.input` + `.btn`），底部「取消 / 确认收藏」；确认调用 `POST /api/collections/:id/items`，成功后高亮触发按钮并 toast。
 - 未登录：toast「请先登录后再收藏」，不打开弹窗。收藏状态在浏览器 localStorage 按账号缓存（`collected:<userId>:<section>:<itemId>`），用于页面加载时恢复高亮。
 
+#### 新建时的公开选择（2026-10-24，#29）
+
+- 名称输入下复用 `.switch-row` / `.switch`，标签「公开」绑定唯一 ID，原生 checkbox 带 `role="switch"`，通过 `aria-describedby` 关联说明；钩子为 `[data-new-public]`、`[data-new-public-hint]`。
+- 每次新建表单由隐藏转为展开，都重新请求 `GET /api/user/profile`。只在账号 `collection_default_public === 1` 时勾选；不从旧会话缓存或上一次手动选择推断。已展开时再次点击入口仅聚焦名称，不覆盖选择。
+- 加载期间 `[data-new-field]` 为 `aria-busy`，开关与创建按钮禁用，显示「正在读取默认公开设置…」；失败回退不公开并说明，可手动改为公开。等待结束后才允许创建，避免迟到响应覆盖用户选择。
+- `POST /api/collections` 明确提交数值 `is_public: 0|1`。创建期间禁用开关；失败保留名称和选择，成功选中新收藏夹并隐藏表单，下次展开重读账号默认值。既有确认收藏、取消、Esc、焦点归还不变。
+- 网站设置的对应开关复用同一组件，位于「收藏默认页」下；以 `#collectionDefaultPublic` 读取并单字段即时保存，失败回滚，具体状态见 [设置页](pages/settings.md)。
+
 ### Collections Browser 收藏浏览（#23）
 
 `UI.collectionsBrowser(container, { mode, userId, defaultSection })`（`public/js/collections-view.js`），个人中心与用户主页共用：
@@ -737,6 +745,31 @@ JS：`UI.userLine(user, {size, meta, href, large, showRole})`；meta 传 HTML �
 </li>
 ```
 卡用于网格（店铺详情菜品区）、行用于目录（A–Z）。占位底色：按店铺类型/名称 `UI.hueFor` 取 tint。
+
+2026-10-24：「全部菜品」工作区的 `.dish-row__name` 单独使用 `--font-sans-system`，排除本地精简的 `NotoSansSC` 子集，确保动态菜名不会逐字混用不同中文字体。字重为 `--fw-regular`（400），保留桌面 14px、手机 13px 与长名称换行；搜索 `mark` 继承相同字体、字号和字重。不修改共享菜品行在其他页面的样式，也不改变 A–Z 标题和索引的视觉层级。验证记录见 [验收记录](./acceptance.md)。
+
+### Dish Detail 与已有菜品评价 · 2026-10-24
+
+上节卡片为组合样张；当前「全部菜品」目录仅显示名称，不放虚构的缩略图、店铺或评分。实际目录结构为：
+
+```html
+<li class="dish-row" data-dish-id="{{id}}">
+  <a class="dish-row__name card__link" href="dish.html?id={{id}}">{{name}}</a>
+</li>
+```
+
+使用现有扩展链接覆盖整行；保留 `li` 原生列表项语义，不添加按钮角色或额外 Tab 停靠点。链接可回车激活、在新标签页打开，并使用既有焦点环。原字体、边框、网格和字母索引保留。
+
+详情使用 `.dish-detail` 与 `.dish-review`：页面标题和动态评价使用完整系统中文字体栈，摘要及作者行可换行，评论保留换行、不截断，配图使用 `UI.page.picture` 和 `UI.viewer`，最大 24rem 且不超容器。没有评价时不渲染虚构评分。原 `.review-card` 的结构及四行文本截断保持不变。
+
+共用写评价组件 `UI.dishReview(options)` 由 `public/js/dish-review.js` 提供，在菜谱和详情初始化时各创建一个原生对话框；保留原评分、评论、上传及发布控件。返回的 `open(dish)` 可预选当前菜品，发布成功调用 `onPublished` 刷新当前页或跳往改选菜品。
+
+- `.dish-picker__control` 包含可编辑 `role="combobox"` 输入、隐藏的 `dish_id` 与候选浮层。`aria-expanded`、`aria-controls` 和活动后代反映展开及键盘选中状态；候选容器为 `listbox`，用 `tabindex="-1"` 避免滚动容器占用 Tab 顺序，候选为 `option` 并带选中状态。
+- 候选从真实目录加载，支持菜名、拼音和首字母筛选。未筛选或筛选后的首批均最多 50 条，`#dishPickerMore`「显示更多」每次追加最多 50 条，保留结果顺序和滚动位置，状态显示总数与已显示数；末批、不足 50 条、无匹配及加载失败时隐藏入口。重新输入、结束输入法组合或收起后重新展开恢复首批，不改变全量目录和后端接口。
+- 上下方向键可遍历所有已显示项，回车确认。Tab 可访问浮层中独立于 `listbox` 的「显示更多」或重试按钮；移出选菜区域才关闭，不暗中选菜。输入或浮层按钮上的 Escape 先关闭候选；末批按钮隐藏后焦点回到输入框。鼠标选择后关闭浮层，输入法组合期间不提前选中。
+- 输入文本不等于选中已有菜品；编辑后立即清空隐藏身份，发布时同时核对 ID 和规范名称。长菜名保留完整选择，不使用原 20 字计数。
+- 浮层使用现有背景、线条、阴影及 `--z-drop`，列表最大高度取 16rem 与 32vh 的较小值并独立滚动。手机沿用底部面板，明暗主题使用同一套令牌。
+- 发布失败或取消保留草稿，成功重置选择、评论与上传预览；登录、必选身份和后端校验独立生效。文案见 [copy.md](./copy.md)，逐页行为见 [dish-detail.md](./pages/dish-detail.md)。
 
 ### Shop Card 店铺卡
 

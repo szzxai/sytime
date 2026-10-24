@@ -5,6 +5,8 @@
 const test = require("node:test"), assert = require("node:assert/strict");
 const fs = require("node:fs"), os = require("node:os"), path = require("node:path");
 const { spawn } = require("node:child_process");
+const { DatabaseSync } = require("node:sqlite");
+const collectionStore = require("../lib/collections/store");
 
 const root = path.resolve(__dirname, "..");
 const temp = fs.mkdtempSync(path.join(os.tmpdir(), "szzx-collections-test-"));
@@ -303,4 +305,102 @@ test("删除论坛帖子会同时清理收藏项", async () => {
 
   const after = await api("/api/collections/" + id + "/items", { token: user.token });
   assert.equal(after.data.total, 19);
+});
+
+test("旧账号迁移默认私密，重复迁移保留偏好和已有公开状态", () => {
+  const database = new DatabaseSync(":memory:");
+  try {
+    database.exec("CREATE TABLE users (id INTEGER PRIMARY KEY); INSERT INTO users VALUES (1)");
+    collectionStore.migrate(database);
+    const column = database.prepare("PRAGMA table_info(users)").all().find(entry => entry.name === "collection_default_public");
+    assert.equal(column.type, "INTEGER");
+    assert.equal(column.notnull, 1);
+    assert.equal(column.dflt_value, "0");
+    assert.equal(database.prepare("SELECT collection_default_public FROM users WHERE id = 1").get().collection_default_public, 0);
+    collectionStore.create(database, 1, "forum", "已有私密", 0);
+    collectionStore.create(database, 1, "forum", "已有公开", 1);
+    database.exec("UPDATE users SET collection_default_public = 1 WHERE id = 1");
+    collectionStore.migrate(database);
+    assert.equal(database.prepare("SELECT collection_default_public FROM users WHERE id = 1").get().collection_default_public, 1);
+    assert.deepEqual(database.prepare("SELECT is_public FROM collections ORDER BY id").all().map(entry => entry.is_public), [0, 1]);
+    database.exec("INSERT INTO users (id) VALUES (2)");
+    assert.equal(database.prepare("SELECT collection_default_public FROM users WHERE id = 2").get().collection_default_public, 0);
+  } finally { database.close(); }
+});
+
+test("默认公开设置需要登录并支持回显、单字段保存及账号隔离", async () => {
+  assert.equal((await api("/api/user/profile")).status, 401);
+  assert.equal((await api("/api/user/settings", { method: "PUT", body: { collection_default_public: 1 } })).status, 401);
+  const original = (await api("/api/user/profile", { token: user.token })).data.user;
+  assert.equal(original.collection_default_public, 0);
+  try {
+    const saved = await api("/api/user/settings", { token: user.token, method: "PUT", body: { collection_default_public: 1 } });
+    assert.equal(saved.status, 200);
+    assert.equal(saved.data.collection_default_public, 1);
+    assert.equal(saved.data.default_page, original.default_page);
+    assert.equal((await api("/api/user/profile", { token: user.token })).data.user.collection_default_public, 1);
+    const unrelated = await api("/api/user/settings", { token: user.token, method: "PUT", body: { default_page: "forum.html" } });
+    assert.equal(unrelated.data.collection_default_public, 1);
+    assert.equal((await api("/api/user/profile", { token: other.token })).data.user.collection_default_public, 0);
+  } finally {
+    await api("/api/user/settings", { token: user.token, method: "PUT", body: { collection_default_public: 0, default_page: original.default_page } });
+  }
+});
+
+test("默认公开与创建公开参数只接受整数零或一，无效请求不改写数据", async () => {
+  const before = (await api("/api/user/profile", { token: user.token })).data.user;
+  const count = (await api("/api/collections?section=forum", { token: user.token })).data.collections.length;
+  for (const value of [null, true, false, "0", "1", "", -1, 2, 0.5, [], {}]) {
+    const settings = await api("/api/user/settings", { token: user.token, method: "PUT",
+      body: { collection_default_public: value, default_page: "map.html" } });
+    assert.equal(settings.status, 400, JSON.stringify(value));
+    assert.match(settings.data.error, /只能是 0 或 1/);
+    const created = await api("/api/collections", { token: user.token, method: "POST",
+      body: { section: "forum", name: "不应创建", is_public: value } });
+    assert.equal(created.status, 400, JSON.stringify(value));
+    assert.match(created.data.message, /只能是 0 或 1/);
+  }
+  const after = (await api("/api/user/profile", { token: user.token })).data.user;
+  assert.equal(after.collection_default_public, before.collection_default_public);
+  assert.equal(after.default_page, before.default_page);
+  assert.equal((await api("/api/collections?section=forum", { token: user.token })).data.collections.length, count);
+});
+
+test("两个版块创建收藏夹遵循最新账号默认值，明确零或一均可覆盖", async () => {
+  const existing = (await api("/api/collections?section=forum", { token: user.token })).data.collections;
+  try {
+    for (const defaultPublic of [0, 1]) {
+      await api("/api/user/settings", { token: user.token, method: "PUT", body: { collection_default_public: defaultPublic } });
+      for (const section of ["forum", "shops"]) {
+        for (const explicit of [undefined, 0, 1]) {
+          const body = { section, name: section + " 默认 " + defaultPublic + " 覆盖 " + explicit };
+          if (explicit !== undefined) body.is_public = explicit;
+          const created = await api("/api/collections", { token: user.token, method: "POST", body });
+          assert.equal(created.status, 201);
+          assert.equal(created.data.collection.is_public, (explicit === undefined ? defaultPublic : explicit) === 1);
+        }
+      }
+    }
+    const isolated = await api("/api/collections", { token: other.token, method: "POST",
+      body: { section: "forum", name: "不读取其他账号的默认值", user_id: user.user.id, collection_default_public: 1 } });
+    assert.equal(isolated.data.collection.is_public, false);
+    const after = (await api("/api/collections?section=forum", { token: user.token })).data.collections;
+    for (const entry of existing) assert.equal(after.find(collection => collection.id === entry.id).is_public, entry.is_public);
+  } finally {
+    await api("/api/user/settings", { token: user.token, method: "PUT", body: { collection_default_public: 0 } });
+  }
+});
+
+test("创建时选定的公开状态立即控制他人和匿名读取", async () => {
+  const publicResult = await api("/api/collections", { token: user.token, method: "POST",
+    body: { section: "forum", name: "创建即公开", is_public: 1 } });
+  const privateResult = await api("/api/collections", { token: user.token, method: "POST",
+    body: { section: "forum", name: "创建即私密", is_public: 0 } });
+  const publicId = publicResult.data.collection.id, privateId = privateResult.data.collection.id;
+  assert.equal((await api("/api/collections/" + publicId + "/items")).status, 200);
+  assert.equal((await api("/api/collections/" + privateId + "/items")).status, 401);
+  assert.equal((await api("/api/collections/" + privateId + "/items", { token: other.token })).status, 403);
+  const visible = (await api("/api/users/" + user.user.id + "/collections")).data.collections;
+  assert.ok(visible.some(collection => collection.id === publicId));
+  assert.ok(!visible.some(collection => collection.id === privateId));
 });

@@ -550,6 +550,10 @@
         '<label class="field__label" for="' + id + '-new">新建收藏夹</label>' +
         '<div class="row row--sm"><input class="input grow" id="' + id + '-new" maxlength="40" placeholder="收藏夹名称">' +
         '<button type="button" class="btn btn--sm" data-create>新建</button></div>' +
+        '<div class="switch-row"><div class="switch-row__text">' +
+        '<label class="switch-row__title" for="' + id + '-new-public">公开</label>' +
+        '<span class="switch-row__desc" id="' + id + '-new-public-hint" data-new-public-hint>公开后，其他人可以在你的主页查看此收藏夹。</span></div>' +
+        '<input type="checkbox" class="switch" role="switch" id="' + id + '-new-public" data-new-public aria-describedby="' + id + '-new-public-hint" disabled></div>' +
         '<div class="field__error" data-new-error>' + UI.icon("alert-circle") + "<span></span></div></div>" +
         '<button type="button" class="btn btn--ghost btn--sm" data-new-toggle>' + UI.icon("plus", "icon--sm") + "新建收藏夹</button>" +
         "</div>" +
@@ -570,6 +574,8 @@
       var newField = d.querySelector("[data-new-field]");
       var newInput = d.querySelector("#" + id + "-new");
       var createBtn = d.querySelector("[data-create]");
+      var newPublicToggle = d.querySelector("[data-new-public]");
+      var newPublicHint = d.querySelector("[data-new-public-hint]");
 
       function choiceItem(item, checked) {
         return '<label class="choice"><input class="choice__input" type="radio" name="collectionChoice" value="' +
@@ -614,19 +620,36 @@
         if (input) selectedId = Number(input.value);
       });
       d.querySelector("[data-new-toggle]").addEventListener("click", function () {
+        if (!newField.hidden) { newInput.focus(); return; }
         newField.hidden = false;
+        newField.setAttribute("aria-busy", "true");
+        newPublicToggle.checked = false;
+        newPublicToggle.disabled = true;
+        createBtn.disabled = true;
+        newPublicHint.textContent = "正在读取默认公开设置…";
         newInput.focus();
+        UI.api("/api/user/profile", { on401: false }).then(function (result) {
+          newPublicToggle.checked = result.ok && result.data.user.collection_default_public === 1;
+          newPublicToggle.disabled = false;
+          createBtn.disabled = false;
+          newField.removeAttribute("aria-busy");
+          newPublicHint.textContent = result.ok ? "公开后，其他人可以在你的主页查看此收藏夹。" :
+            "默认设置读取失败，本次默认不公开，可手动调整。";
+        });
       });
       newInput.addEventListener("input", function () { UI.form.clearField(newInput); });
       newInput.addEventListener("keydown", function (e) {
         if (e.key === "Enter") { e.preventDefault(); createBtn.click(); }
       });
       createBtn.addEventListener("click", function () {
+        if (createBtn.disabled) return;
         var name = newInput.value.trim();
         if (!name) { UI.form.fieldError(newInput, "请填写收藏夹名称"); return; }
         createBtn.disabled = true;
-        UI.api("/api/collections", { method: "POST", body: { section: section, name: name }, on401: false }).then(function (r) {
+        newPublicToggle.disabled = true;
+        UI.api("/api/collections", { method: "POST", body: { section: section, name: name, is_public: newPublicToggle.checked ? 1 : 0 }, on401: false }).then(function (r) {
           createBtn.disabled = false;
+          newPublicToggle.disabled = false;
           if (!r.ok) { UI.toast.error(UI.errorText(r, "新建收藏夹失败")); return; }
           collections.push(r.data.collection);
           selectedId = Number(r.data.collection.id);

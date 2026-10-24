@@ -90,8 +90,9 @@
   --viewer-chip-hover: rgba(255, 255, 255, 0.24);
 
   /* 字体 */
-  --font-sans: "InterVariable", "NotoSansSC", "PingFang SC", "HarmonyOS Sans SC", "Noto Sans SC",
-               "Microsoft YaHei UI", "Microsoft YaHei", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-sans-system: "PingFang SC", "HarmonyOS Sans SC", "Noto Sans SC",
+                      "Microsoft YaHei UI", "Microsoft YaHei", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-sans: "InterVariable", "NotoSansSC", var(--font-sans-system);
   --font-mono: ui-monospace, "SF Mono", "Cascadia Mono", Consolas, "Microsoft YaHei UI", monospace;
 
   /* 字号（rem，1rem = 16px） */
@@ -1960,7 +1961,24 @@ dialog .toast-host { position: absolute; top: var(--sp-3); }
 .az-rail a.is-empty { color: var(--line-strong); pointer-events: none; }
 .az-layout .az-list { padding-right: 1.75rem; }
 .dish-directory .dish-row__name { white-space: normal; overflow-wrap: anywhere; }
+.dish-directory a.dish-row__name { color: var(--ink); }
 .dish-directory .dish-list { list-style: none; padding: 0; }
+.dish-picker__control { position: relative; }
+.dish-picker input, .dish-picker__option { font-family: var(--font-sans-system); }
+.dish-picker__popup { position: absolute; top: calc(100% + var(--sp-1)); inset-inline: 0; z-index: var(--z-drop); overflow: hidden; border: 1px solid var(--line-strong); border-radius: var(--r-2); background: var(--surface); box-shadow: var(--sh-2); }
+.dish-picker__options { max-height: min(16rem, 32vh); overflow-y: auto; overscroll-behavior: contain; }
+.dish-picker__option { padding: var(--sp-2) var(--sp-3); color: var(--ink); overflow-wrap: anywhere; cursor: pointer; }
+.dish-picker__option:hover, .dish-picker__option.is-active { background: var(--primary-50); color: var(--primary-ink); }
+.dish-picker__status { margin: 0; padding: var(--sp-2) var(--sp-3); border-top: 1px solid var(--line); color: var(--ink-2); font-size: var(--fs-xs); }
+#dishPickerRetry { margin: 0 var(--sp-3) var(--sp-2); }
+.dish-detail .page-head__title { font-family: var(--font-sans-system); overflow-wrap: anywhere; }
+.dish-detail__summary { display: flex; align-items: center; flex-wrap: wrap; gap: var(--sp-3); margin-top: var(--sp-2); color: var(--ink-2); font-size: var(--fs-md); }
+.dish-review { display: grid; gap: var(--sp-3); font-family: var(--font-sans-system); }
+.dish-review__head { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: var(--sp-3); }
+.dish-review__head .user-line { min-width: 0; }
+.dish-review__text { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--ink); }
+.dish-review__image { display: block; width: min(100%, 24rem); aspect-ratio: 4 / 3; padding: 0; border: 0; border-radius: var(--r-2); overflow: hidden; background: var(--sunken); cursor: zoom-in; }
+.dish-review__image img { display: block; width: 100%; height: 100%; object-fit: contain; }
 #dishSearchArea { position: sticky; top: var(--header-h); z-index: var(--z-sticky); background: var(--bg); padding-right: 1.75rem; padding-top: var(--sp-2); }
 #dishSearchArea .search-bar { position: static; }
 .dish-directory .az-group { scroll-margin-top: calc(var(--header-h) + 8rem); }
@@ -2826,7 +2844,7 @@ body[data-page="home"] .site-header { border-bottom: 0; }
 /* Catalog-style workspaces: all existing control IDs and data interactions remain intact. */
 .workspace { display: grid; grid-template-columns: 290px minmax(0, 1fr); width: 100%; min-height: calc(100svh - var(--header-h)); align-items: start; }
 .workspace__sidebar { position: sticky; top: var(--header-h); max-height: calc(100dvh - var(--header-h)); min-height: calc(100dvh - var(--header-h)); overflow-y: auto; padding: 28px 24px; border-right: 1px solid var(--line); min-width: 0; align-self: start; background: var(--surface); }
-.workspace__sidebar .page-head { display: block; margin-bottom: 28px; }
+.workspace__sidebar .page-head { display: block; margin-bottom: 20px; }
 .workspace__sidebar .page-head__title { font-size: 24px; }
 .workspace__sidebar .page-head__actions { margin-top: 20px; }
 .workspace__sidebar .page-head__desc { font-size: 12px; }
@@ -2843,7 +2861,8 @@ body[data-page="home"] .site-header { border-bottom: 0; }
 .workspace--recipe #dishSearchArea { position: static; padding: 0; background: transparent; }
 .workspace--recipe #dishSearchArea .search-bar { display: block; }
 .workspace--recipe .dish-directory .dish-list { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
-.workspace--recipe .dish-directory .dish-row { border: 1px solid var(--line); border-radius: var(--r-2); padding: 16px; min-height: 56px; }
+.workspace--recipe .dish-directory .dish-row { border: 1px solid var(--line); border-radius: var(--r-2); padding: 16px; min-height: 56px; cursor: pointer; transition: background 0.15s ease; }
+.workspace--recipe .dish-directory .dish-row__name { font-family: var(--font-sans-system); font-weight: var(--fw-regular); }
 .workspace--recipe .az-group { margin-bottom: 32px; }
 .workspace--recipe .az-group__letter { font-size: 18px; margin-bottom: 12px; }
 .workspace--recipe .az-rail { right: 8px; border: 1px solid var(--line); border-radius: var(--r-2); }
@@ -2880,9 +2899,8 @@ body[data-page="home"] .site-header { border-bottom: 0; }
   .page-head__title { font-size: 24px; }
   .workspace, .workspace--shops { display: block; min-height: 0; }
   .workspace__sidebar { position: static; max-height: none; min-height: 0; overflow: visible; padding: 24px 16px 16px; border-right: 0; border-bottom: 1px solid var(--line); }
-  .workspace__sidebar .page-head { display: flex; margin-bottom: 20px; }
-  .workspace__sidebar .page-head__main { flex-basis: 10rem; }
-  .workspace__sidebar .page-head__actions { margin-top: 0; }
+  .workspace__sidebar .page-head { display: block; margin-bottom: 20px; }
+  .workspace__sidebar .page-head__actions { margin-top: 16px; }
   .workspace__sidebar .segmented { flex-direction: row; background: var(--surface-2); padding: 3px; gap: 2px; margin-bottom: 16px; }
   .workspace__sidebar .segmented__item { flex: 1; text-align: center; padding-inline: 8px; }
   .workspace__sidebar .callout { flex-direction: row; margin-top: 16px; }

@@ -254,6 +254,7 @@ try {
     "forum",
     "post",
     "recipe",
+    "dish",
     "profile",
     "admin",
     "map",
@@ -265,9 +266,32 @@ try {
         const login = ["profile", "admin", "student_verify", "settings", "inbox"].includes(file)
           ? admin
           : null;
-        const url = `/${file}.html${file === "post" ? "?id=" + post.id : ""}`;
+        const url = `/${file}.html${file === "post" ? "?id=" + post.id : file === "dish" ? "?id=1" : ""}`;
         const { ctx, page } = await pageFor(login, url, width, theme);
         await audit(page, `${file}/${width}/${theme}`);
+        if (file === "recipe") {
+          await page.waitForFunction(() => document.querySelectorAll(".dish-row__name").length === 1243);
+          const typography = await page.locator(".dish-directory .dish-row__name").evaluateAll(labels => {
+            const expectedFamily = getComputedStyle(document.documentElement)
+              .getPropertyValue("--font-sans-system").trim().replace(/\s+/g, " ");
+            return {
+              expectedFamily,
+              styles: labels.map(label => {
+                const style = getComputedStyle(label);
+                return { family: style.fontFamily, weight: style.fontWeight, size: style.fontSize };
+              }),
+            };
+          });
+          check(`dish names use complete system fonts (${width}/${theme})`,
+            !!typography.expectedFamily && !/NotoSansSC|InterVariable/.test(typography.expectedFamily) &&
+            typography.styles.length === 1243 &&
+            typography.styles.every(style => style.family === typography.expectedFamily));
+          check(`dish names use regular weight (${width}/${theme})`,
+            typography.styles.every(style => style.weight === "400"));
+          check(`dish names retain responsive size (${width}/${theme})`,
+            typography.styles.every(style => style.size === (width === 360 ? "13px" : "14px")));
+          await page.screenshot({ path: path.join(output, `dishes-${width}-${theme}.png`) });
+        }
         if (
           theme === "light" &&
           ["index", "forum", "admin", "map", "profile"].includes(file)
@@ -961,13 +985,21 @@ try {
   await recipe.page.locator("#dishSearch").fill("牛肉");
   await recipe.page.waitForFunction(() => !!document.querySelector("#recipeList mark"));
   check("Chinese query highlighted safely", true);
+  check("Chinese search highlights inherit dish typography", await recipe.page.locator("#recipeList mark").evaluateAll(highlights =>
+    highlights.length > 0 && highlights.every(highlight => {
+      const highlightStyle = getComputedStyle(highlight);
+      const nameStyle = getComputedStyle(highlight.closest(".dish-row__name"));
+      return highlightStyle.fontFamily === nameStyle.fontFamily &&
+        highlightStyle.fontWeight === nameStyle.fontWeight && highlightStyle.fontSize === nameStyle.fontSize;
+    })));
   await recipe.page.reload({waitUntil: "networkidle"});
   check("query restored after refresh", await recipe.page.locator("#dishSearch").inputValue() === "牛肉");
   await recipe.page.setViewportSize({width: 360, height: 850});
   await recipe.page.locator("#reviewsBtn").click();
   await recipe.page.locator("#writeBtn").click();
   await audit(recipe.page, "recipe/dialog/360");
-  await recipe.page.locator("#name").fill("清蒸鱼");
+  await recipe.page.locator("#name").fill("红烧牛肉面");
+  await recipe.page.locator("#dishOptions").getByRole("option", { name: "红烧牛肉面", exact: true }).click();
   await recipe.page.locator('label[for="r4"]').click();
   await recipe.page.locator("#comment").fill("新 UI 的图片评价");
   await recipe.page.locator("#image").setInputFiles(fixture);
@@ -978,7 +1010,7 @@ try {
   check(
     "review multipart upload works",
     (await api("/api/recipes")).data.recipes.some(
-      (r) => r.name === "清蒸鱼" && r.rating === 4 && r.image_url,
+      (r) => r.name === "红烧牛肉面" && r.dish_id && r.rating === 4 && r.image_url,
     ),
   );
   await recipe.page.locator("#weeklyBtn").click();
