@@ -1,5 +1,7 @@
 # 拾光酥糕
 
+当前代码仓库为 [szzxai/sytime](https://github.com/szzxai/sytime)，保留原项目的提交历史；历史需求和验收记录中的原仓库问题链接继续保留。
+
 一个面向苏州中学、由学生维护的全中文校园信息平台；品牌为 **拾光酥糕**，以 **Berkeleytime 的布局与视觉风格**重制，采用源自 VC 团队橙子切面的青柠绿色图标、本地可变字重 Noto Sans SC 中文字形、绿色主题与维护者提供的范仲淹像插画，集成了交互式校园地图、三元坊必吃榜、菜谱评价、更新公告、消息箱、学生认证、个人中心与设置，并配套一套完整的账号系统与后台管理。
 
 本站由学生自主运营，与江苏省苏州中学官方无隶属关系；共享页脚说明相关标识的权利归属，资讯以学校官方渠道为准，提供 [勘误邮箱](mailto:baimoqilin@gmail.com)。品牌与浏览器图标使用 `public/img/brand-lime.svg`，首页团队区保留原橙色标志。
@@ -43,9 +45,11 @@
 ### 菜品与食谱
 - 全部菜品 / 菜品评价 / 每周食谱三个页签
 - 1,243 道历史菜品、A–Z 索引，搜索菜名、拼音和首字母
+- 点击目录菜名进入独立详情，查看该菜品的平均评分、完整评论、作者、时间与配图；评价每次加载 20 条
 - 网站内直接获取学校菜单并用视觉模型转为八字段 JSON；developer 配置提供商、API Key、模型与每日同步时间
 - developer、super_admin、admin 可粘贴 JSON 手动导入、修改已发布菜单或失败识图候选；校验后整篇发布并记录操作者
-- 图文评价（菜名 / 评分 / 评论 / 图片）
+- 图文评价（已有菜品 / 评分 / 评论 / 图片）：输入菜名、拼音或首字母筛选，再从下拉列表明确选择；候选初始显示 50 条，点击「显示更多」每次追加最多 50 条，更换关键词重置为首批；不能自由新增菜名，详情页写评价时预选当前菜品
+- 「菜品评价」页签的卡片、排序与分页保持原样；旧评价按归一后的名称关联已有菜品，无法关联的历史内容仍完整保留
 - 每周食谱：按日期范围展开 / 收起菜谱大图，支持缩放查看
 
 ### 头衔系统
@@ -66,7 +70,7 @@
 - **个人中心**：类 B 站布局——资料头部（头像 + 用户名 / 权限等级 / 昵称 + 个性签名，昵称与签名点击即可编辑）与吸顶横向菜单栏（主页 / 收藏 / 头衔 / 设置）
 - **设置**：账号安全、网站设置（默认进入界面 / 菜品与食谱默认页 / 必吃榜默认排序与餐食类型 / 店铺详情页样式（手动 / 自动）/ 收藏默认页 / 显示权限等级）、消息通知、工单、退出登录
 - **用户主页**：评价等处的头像可点击进入主页——点自己的头像进入个人中心，点他人的进入其主页（同版式、只读、按其设置显示权限等级、可查看其头衔）；权限足够的管理员可在主页「管理」中修改该用户的权限等级、特殊权限、头衔或封号
-- **收藏夹**：必吃榜店铺卡片与店铺详情页的点赞旁有「收藏」按钮——弹窗内可选择或新建必吃榜收藏夹，确认后按钮高亮为「已收藏」；个人中心「收藏」按版块 / 收藏夹分栏浏览并分页，公开后可在他人主页只读查看；设置中可选择必吃榜的默认收藏夹
+- **收藏夹**：必吃榜店铺卡片与店铺详情页的点赞旁有「收藏」按钮——弹窗内可选择或新建必吃榜收藏夹，确认后按钮高亮为「已收藏」；个人中心「收藏」按版块 / 收藏夹分栏浏览并分页，公开后可在他人主页只读查看；设置中可选择必吃榜的默认收藏夹，并在其下设置「新建收藏夹默认公开」，切换即保存。新建时重新读取账号偏好，可用「公开」开关单独调整；读取失败默认私密，已有收藏夹不变。
 - **全站横幅**：可由管理员配置，用户可关闭
 - **导航栏**：Logo 点击回首页、手机导航抽屉与账户菜单（个人中心 / 设置 / 管理后台）
 - **统一交互**：表单校验、提交状态、确认对话框、图片查看器、加载与错误重试
@@ -101,6 +105,9 @@
 │   ├── login.html       # 登录（含封禁申诉）
 │   ├── register.html    # 注册
 │   ├── recipe.html      # 菜品目录、评价与每周食谱
+│   ├── dish.html        # 单道菜品的评分与分页评论
+│   ├── js/dish-review.js # 菜谱与详情共用的已有菜品选择及评价表单
+│   ├── js/pages/dish.js # 菜品详情、评论与加载更多
 │   ├── shops.html       # 三元坊必吃榜地图与店铺列表
 │   ├── shop.html        # 单店详情
 │   ├── shop-new.html    # 添加店铺（权限保护）
@@ -125,6 +132,7 @@
 ├── data.db              # SQLite 数据库（随仓库提交）
 ├── server.js            # Express 后端、菜单与店铺路由
 ├── lib/menu/            # 来源、模型、分块、校验、配置、存储、调度、任务及路由
+├── lib/dishes/          # 评价关联迁移、菜品详情与分页评价接口
 ├── lib/shops/           # 店铺数据校验、SQLite 存储与权限 API
 ├── lib/titles/          # 头衔目录与佩戴存储、自动规则注册表及接口
 ├── data/shops-config.json # 高德地图中心、校门锚点及覆盖范围多边形（GCJ-02）
@@ -142,6 +150,12 @@
 ├── tests/shops.test.cjs # 店铺接口、校验、角色权限与范围测试
 ├── tests/shops-ui.mjs   # 店铺页面端到端与无障碍回归
 ├── tests/menu.test.cjs   # 调度、数据、识别、任务和权限测试
+├── tests/dishes.test.cjs # 历史评价迁移、详情、评价分页与提交校验
+├── tests/dishes-ui.mjs  # 详情跳转、已有菜品选择、每批 50 条候选及明暗主题回归
+├── tests/collections.test.cjs # 收藏接口、默认公开迁移、严格参数与账号隔离
+├── tests/collections-ui.mjs # 收藏按钮、弹窗及收藏浏览回归
+├── tests/collection-privacy-ui.mjs # 默认公开即改即存、创建覆盖与失败回滚回归
+├── tests/helpers/app-fixture.cjs # 临时数据库、上传目录与独立端口测试站点
 ├── tests/titles.test.cjs # 头衔目录、授予撤销、佩戴、自动规则与序列化测试
 ├── docs/menu-sync.md     # 配置、备份、故障处理及接口
 ├── docs/issue-5-plan.md  # 用户确认的 Issue #5 实施范围
@@ -221,7 +235,9 @@ npm.cmd start
 
 ### 回归验证
 
-运行 `npm test`，先验证菜单后端，再在临时目录启动独立后端，验证页面布局、无障碍、权限与主要表单操作；不会改动项目的 `data.db` 或 `uploads/`。可分别运行 `npm run test:menu`、`npm run test:ui` 和 `npm run test:map`（校园导览搜索、筛选、选点、触控、键盘、响应式与明暗主题）。Windows 默认使用已安装的 Microsoft Edge，其他平台先运行 `npx playwright install chromium`。
+运行 `npm test`，依次执行菜单、菜品详情及选菜、头衔、店铺、收藏、用户主页、全站与地图回归；不会改动项目的 `data.db` 或 `uploads/`。可分别运行 `npm run test:menu`、`npm run test:dishes`、`npm run test:dishes:ui`、`npm run test:ui` 和 `npm run test:map`（校园导览搜索、筛选、选点、触控、键盘、响应式与明暗主题）。Windows 默认使用已安装的 Microsoft Edge，其他平台先运行 `npx playwright install chromium`。
+
+收藏默认公开可单独运行 `npm run test:collections`（含旧账号迁移、数值校验、两版块及账号隔离）和 `npm run test:collections:ui`（既有收藏交互 + 默认公开专项，覆盖手机/桌面、明暗主题、键盘及请求失败）。本轮结果与全量回归的已知限制见根目录 `MAP.md` 最新记录。
 
 截图与扫描结果保存到 `output/playwright/`。设计总纲见 [UI.md](./UI.md)，参考样张见 `docs/ui/assets/specimen.html`。
 
@@ -263,9 +279,14 @@ npm.cmd start
 | 方法 | 路径 | 说明 |
 | --- | --- | --- |
 | POST | `/api/register` / `/api/login` | 注册 / 登录 |
-| GET | `/api/user/profile` | 当前用户信息（含角色、权限） |
+| GET | `/api/user/profile` | 当前用户信息（含角色、权限及数值 `collection_default_public`，默认 0） |
+| PUT | `/api/user/settings` | 部分更新网站设置；`collection_default_public` 只接受数字 0/1，省略则保留原值 |
 | GET | `/api/weekly-menu` | 每周菜谱列表 |
 | GET | `/api/dishes` | 独立菜品目录和统一拼音排序 |
+| GET | `/api/dishes/:id` | 菜品详情、评价数和平均评分；没有评价时评分为 null |
+| GET | `/api/dishes/:id/reviews?offset=0` | 当前菜品的非每周评价，按时间及编号倒序，每页 20 条 |
+| GET | `/api/recipes` | 原有全站评价列表，保留无法关联的历史记录 |
+| POST | `/api/recipes` | 登录后以 `dish_id` 选择已有目录菜品；服务端确定菜名，评分为 0–5 整数，可选评论和图片 |
 | GET | `/api/shops` | 公开店铺列表，可按 `type`、`q`、本部距离/步行时间、点赞数、评价数、评分范围过滤；可按本部/地铁/点赞/评价/评分/最新排序（拼音 A–Z 由前端完成） |
 | GET | `/api/shops/meta` | 店铺类型、地图配置、覆盖范围和当前用户上传权限 |
 | GET | `/api/shops/:id` | 公开店铺详情与互动计数 |
@@ -278,6 +299,7 @@ npm.cmd start
 | GET | `/api/user/titles` | 我的头衔（含佩戴状态）与未达成自动头衔的进度 |
 | PUT | `/api/user/title` | 佩戴 / 不佩戴头衔 |
 | — | `/api/collections*` | 收藏夹（#23）：列表 / 新建、收藏与取消、分页详情、公开状态；写操作需登录，公开收藏内容可匿名读取 |
+| POST | `/api/collections` | `{section, name, is_public?}`；明确的 `is_public` 只接受数字 0/1，省略时读取当前登录用户最新默认公开偏好；响应仍为布尔公开状态 |
 | GET | `/api/users/:id/collections` | 指定用户的公开收藏夹（他人主页只读，公开收藏内容可匿名读取） |
 | PUT | `/api/user/settings/collection` | 保存必吃榜默认收藏夹 |
 | — | `/api/admin/titles*`、`/api/admin/users/:id/titles*` | 头衔目录维护、授予撤销与专属头衔颁发（`title_manage`，默认 super_admin） |
@@ -290,7 +312,11 @@ npm.cmd start
 | POST | `/api/admin/notifications` | 发布系统通知（`announcement_publish`） |
 | — | `/api/admin/*` | 后台接口（按角色 / 权限校验） |
 
+`users.collection_default_public` 为 `INTEGER NOT NULL DEFAULT 0`，旧账号启动迁移后默认私密；偏好只影响之后主动新建的收藏夹，不批量修改已有收藏夹。首次读取版块时自动补建的「默认收藏夹」仍为私密；单个收藏夹后续的公开切换与所有权校验保持不变。
+
 功能更新记录（面向使用者，日常用语）见 [CHANGELOG.md](./CHANGELOG.md)。
+
+菜品详情入口为 `/dish.html?id=<菜品编号>`。启动时在菜单目录初始化之后，为评价表补充可空的 `dish_id` 外键和查询索引；旧非每周评价仅按同一名称归一规则补关联，不改写原文、不删除无法匹配的记录。旧的仅传菜名发布方式不再接受，新请求必须选择已有菜品；客户端上传的菜名不能覆盖目录名称。详情不虚构价格、供应信息或图片，店铺关联不在本次范围。字段与迁移详见 [项目地图](./MAP.md)，交互见 [菜品详情规范](./docs/ui/pages/dish-detail.md)。
 
 ## 配套离线地图编辑器
 
@@ -313,3 +339,5 @@ This project is licensed under the **GNU Affero General Public License v3.0 (AGP
 启动时依次运行头衔、收藏与 `lib/migrations/remove-forum.js` 迁移：删除论坛帖子、回复、点赞表，清除论坛收藏、旧互动消息、相关头衔拥有/佩戴关系及默认收藏和通知偏好字段。店铺收藏 ID、公开状态与默认选择保留；默认进入论坛的账号回到首页。迁移使用事务并支持重复执行，本次开发使用临时数据库验证，保留工作区原有 data.db 改动。
 
 验证命令为 `npm test`，其中收藏后端包含旧库迁移与论坛接口移除检查；最新结果见根目录 MAP.md。
+
+2026-10-24 合并验证：论坛移除与菜品详情、选菜追加、店铺收藏默认公开已共同通过 `npm test` 全量回归。升级保留店铺收藏及默认公开偏好；当前结果与测试数量见 [MAP.md](./MAP.md) 最新合并记录。

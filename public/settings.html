@@ -293,6 +293,13 @@
                       >进入个人中心「收藏」时默认打开的收藏夹</span
                     >
                   </div>
+                  <div class="switch-row">
+                    <div class="switch-row__text">
+                      <label class="switch-row__title" for="collectionDefaultPublic">新建收藏夹默认公开</label>
+                      <span class="switch-row__desc" id="collectionDefaultPublicHint">仅影响之后新建的收藏夹，新建时仍可单独调整；已有收藏夹不变。</span>
+                    </div>
+                    <input type="checkbox" class="switch" role="switch" id="collectionDefaultPublic" name="collectionDefaultPublic" aria-describedby="collectionDefaultPublicHint" disabled />
+                  </div>
                   <div class="field">
                     <span class="field__label">显示权限等级</span>
                     <label class="check-row"
@@ -425,8 +432,8 @@
       </div>
     </main>
     <div id="siteFooter"></div>
-    <script src="/js/ui.js?v=shstime-20261019"></script>
+    <script src="/js/ui.js?v=shstime-20261024-collections"></script>
     <script src="/js/page.js"></script>
-    <script src="/js/pages/settings.js"></script>
+    <script src="/js/pages/settings.js?v=20261024-collections"></script>
   </body>
 </html>

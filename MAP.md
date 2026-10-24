@@ -1,6 +1,8 @@
-# szzx-info 项目地图
+# sytime 项目地图
 
-> 更新日期：2026-10-23（移除论坛前后端与关联数据）。本文描述 #4 UI 改版、#5 菜品目录与菜单同步、#6 三元坊必吃榜，#10 头衔系统，#11 优化地图UI，#19 个人中心拆分（新增 settings.html），#20 个人中心重做（类 B 站资料头部 + 吸顶横向菜单栏），#21 用户主页（头像跳转 + 他人主页只读 + 管理面板），#22 必吃榜详情页样式（手动/自动，自动为纯 CSS 按宽度切换），以及 #23 收藏功能（收藏夹表与接口、点赞旁收藏按钮与弹窗、个人中心收藏页、他人主页公开收藏、设置默认收藏夹）的代码，并包含完整 SVG 校园导览改版及新版位置图校准、地块补绘。最新共享界面顶栏仅使用青柠切面图标，全站品牌为「拾光酥糕」（SHSTime）；历史章节保留对应版本时点及其测试数字。
+> 仓库归属与提交复核：2026-10-24。当前 GitHub 仓库为 `szzxai/sytime`，默认分支为 `main`；提交范围与本轮验证结果见文末最新记录。
+
+> 更新日期：2026-10-24（合并论坛移除与远端菜品、收藏改进；写评价选菜首批 50 条及「显示更多」；保留 #29 收藏夹默认公开、菜品详情、评论关联、已有菜品选择及目录字体统一）。本文描述 #4 UI 改版、#5 菜品目录与菜单同步、#6 三元坊必吃榜，#10 头衔系统，#11 优化地图UI，#19 个人中心拆分（新增 settings.html），#20 个人中心重做（类 B 站资料头部 + 吸顶横向菜单栏），#21 用户主页（头像跳转 + 他人主页只读 + 管理面板），#22 必吃榜详情页样式（手动/自动，自动为纯 CSS 按宽度切换），#23 收藏功能与 #29 默认公开偏好的代码，并包含完整 SVG 校园导览改版及新版位置图校准、地块补绘。最新共享界面顶栏仅使用青柠切面图标，全站品牌为「拾光酥糕」（SHSTime）；历史章节保留对应版本时点及其测试数字。
 >
 > 本文依据实际文件、后端代码、全部前端页面、地图 JSON、SQLite 表结构及依赖清单整理。设计规范见 [UI.md](./UI.md)，验收记录见 [docs/ui/acceptance.md](./docs/ui/acceptance.md)，原始里程碑快照见 [PLAN_2026-10-01.md](./PLAN_2026-10-01.md)。
 
@@ -12,7 +14,7 @@
 | --- | --- | --- |
 | 服务端 | CommonJS、Node.js、Express 5；原有业务及网站内菜单 worker 模块 | [server.js](./server.js)、[lib/menu/](./lib/menu/) |
 | 数据库 | Node 内置 `node:sqlite` 的同步 `DatabaseSync`；11 张原有表、3 张必吃榜表、2 张头衔表、2 张收藏夹表及 8 张菜单表 | [data.db](./data.db)、[lib/menu/store.js](./lib/menu/store.js)、[lib/shops/store.js](./lib/shops/store.js)、[lib/titles/store.js](./lib/titles/store.js)、[lib/collections/store.js](./lib/collections/store.js) |
-| 前端 | 16 个功能页面及 404（含独立关于页），统一外部 CSS 与页面脚本；原生 JavaScript，无构建流程 | [public/](./public/) |
+| 前端 | 17 个功能页面及 404（含独立关于页与菜品详情），统一外部 CSS 与页面脚本；原生 JavaScript，无构建流程 | [public/](./public/) |
 | 共享前端逻辑 | 导航壳、登录态、用户展示、横幅、表单、对话框、上传、图片查看器及页面工具 | [public/js/ui.js](./public/js/ui.js)、[public/js/page.js](./public/js/page.js) |
 | 地图 | 本地 Leaflet 1.9.4；单一北向上 SVG 校园地图（31 个地点），支持触控板平移/捏合与大面积运动场插画 | [campus-places.js](./public/js/campus-places.js)、[campus.svg](./public/img/map/campus.svg)；[data.json](./data.json) 仅为旧数据归档 |
 | 文件存储 | 本地图片文件，通过 `/uploads` 静态提供 | [uploads/](./uploads/) |
@@ -25,7 +27,7 @@
 以下为改版后的源码、文档和持久数据目录。`node_modules/`、本机 `.env` 和浏览器测试产物不提交。
 
 ```text
-szzx-info/
+sytime/
 ├── .gitignore                    依赖、密钥、数据库临时文件和测试产物忽略规则
 ├── .env.example                  端口与 JWT 配置模板
 ├── LICENSE                       GNU AGPL v3 许可证正文
@@ -59,11 +61,13 @@ szzx-info/
 ├── data.json                     旧楼层地图数据归档；后端保留兼容
 ├── data/shops-config.json        高德地图中心、苏州中学参考点、姑苏区边界多边形（GCJ-02）
 ├── lib/shops/store.js            shops 表、路线字段校验、列表/详情与地理围栏
+├── lib/dishes/store.js           recipes.dish_id 迁移、历史关联、详情统计及每页 20 条评论
+├── lib/dishes/routes.js          公开菜品详情与分页评价，严格校验目录身份和偏移量
 ├── lib/shops/routes.js           店铺公开读取与带权限的创建 API
 ├── lib/titles/store.js           titles/user_titles 表、佩戴状态、种子与增删改查
 ├── lib/titles/rules.js           自动头衔规则注册表与发放逻辑
 ├── lib/titles/routes.js          用户佩戴接口与后台头衔管理接口
-├── lib/collections/store.js      collections/collection_items 表与收藏夹查询、默认收藏夹
+├── lib/collections/store.js      收藏夹表与默认公开偏好迁移、查询及默认收藏夹
 ├── lib/collections/routes.js     收藏夹列表、收藏/取消、分页详情、公开状态、他人公开收藏与默认设置 API
 ├── MAP.md                        项目结构与实现地图（本文）
 ├── docs/map-sources.md           31 个地点介绍的校内补充、公开资料与引用范围
@@ -84,6 +88,12 @@ szzx-info/
 │   ├── shops-ui.mjs              店铺列表/详情/创建与权限浏览器回归
 │   ├── menu.test.cjs             菜单数据/调度/提供商/队列/权限测试
 │   ├── forum-removal.test.cjs     旧库迁移、店铺数据保留与重复运行检查
+│   ├── dishes.test.cjs           历史关联、详情隔离、分页、提交校验与图片清理
+│   ├── dishes-ui.mjs             详情、选菜每批 50 条与边界、键盘、图文及明暗主题回归
+│   ├── collections.test.cjs      收藏接口、旧账号默认公开迁移、参数与账号隔离
+│   ├── collections-ui.mjs        收藏按钮、弹窗及收藏浏览回归
+│   ├── collection-privacy-ui.mjs 默认公开即时保存、双向覆盖、加载失败与回滚回归
+│   ├── helpers/app-fixture.cjs   独立临时站点、动态端口与受限目录清理
 │   ├── menu-live.cjs             可选真实模型与三张菜单检查
 │   ├── node-deploy.cjs           全新 Node 生产依赖安装检查
 │   ├── menu-skill.py             便携技能、离线验证器及包内文件检查
@@ -94,6 +104,7 @@ szzx-info/
 │   ├── about.html                独立关于页：起源、学生维护与反馈
 │   ├── map.html                  单一 SVG 校园地图，无楼层切换
 │   ├── recipe.html               A–Z 菜品目录、评价与每周食谱三个页签
+│   ├── dish.html                 单道菜品详情、评分和分页评论
 │   ├── shops.html                三元坊必吃榜、高德地图与分类筛选
 │   ├── shop.html                 店铺步行路线和坐标详情
 │   ├── shop-new.html             权限校验后的店铺创建表单
@@ -121,6 +132,8 @@ szzx-info/
 │   │   ├── ui.js                 全站交互、导航壳与统一 API 客户端
 │   │   ├── page-transition.js    跨页滑动方向在目标页首帧前初始化
 │   │   ├── page.js               页面表单、请求、权限、面板和工单工具
+│   │   ├── dish-review.js        共用已有菜品组合框（首批/追加 50 条）与图文评价对话框
+│   │   ├── pages/dish.js         详情、评分统计、评价分页与发布后刷新
 │   │   ├── campus-places.js      31 个导览地点、分类、别名、示意坐标与介绍
 │   │   ├── pages/map.js          SVG 导览、搜索、选点与触控板手势
 │   │   ├── shops-map.js          高德地图加载、标记、路线查询与外链
@@ -162,6 +175,9 @@ flowchart LR
 - `public/` 挂载在站点根路径，`/` 默认提供 `index.html`。
 - `/uploads` 映射到项目内的 `uploads/`，图片 URL 保存到数据库或由文件名生成。
 - 普通 JSON 请求体上限为 `8mb`；上传请求使用 multer 的 multipart 处理。
+- 收藏新建流程（#29）：网站设置独立即时保存 `collection_default_public`；共享弹窗每次展开新建表单都从个人资料重新读取默认值，读取中禁用创建，失败回退私密，可手动覆盖。创建请求明确发送数值 `is_public`；旧客户端省略时由服务器读取当前登录用户最新偏好。不会更改已有收藏夹的公开状态，自动补建的「默认收藏夹」仍为私密。
+- 菜单目录初始化后运行 `lib/dishes/store.js` 迁移：增加可空菜品外键，按归一名称补关联旧非每周评价。目录行用原生链接进入 `dish.html?id=...`，详情和评论按菜品 ID 读取；发布时后端只接受已有目录菜品 ID，名称取自服务端。原「菜品评价」全站列表不改排序或过滤。
+- 两页共用写评价选择器继续一次读取完整已有目录，在前端筛选后按 50 条显示；首批 50，「显示更多」每次追加最多 50，所有匹配项均可访问。新关键词或收起后重新展开恢复首批，追加保留顺序与滚动位置；不改目录接口、数据表或评论列表的每页 20 条。
 - 页面通过共享 `UI.api` 封装同源 `fetch('/api/...')`，统一 token、失败提示和登录回跳；后端仍使用原有业务接口。
 - 未知 `/api` 路径返回 JSON 404；未知 GET 页面路径（无扩展名且不属于上传目录）返回 `404.html`。
 - 登录返回 JWT；浏览器以 `localStorage.token` 保存，并以 `Authorization: Bearer <token>` 请求登录接口。`localStorage.user` 保存用户缓存。
@@ -174,7 +190,8 @@ flowchart LR
 | `index.html` | 首页介绍、地图/菜谱/必吃榜/公告入口、关于我们与工单反馈；仅在根路径 `/` 且无锚点时按用户默认页面跳转 | `/api/user/profile`、本地默认页设置 |
 | `about.html` | 独立关于内容、原创地标插画与工单入口 | 共享导航与横幅接口 |
 | `map.html` | 单一北向上 SVG 校园地图：31 地点、名称/别名搜索、分类、介绍卡、大面积篮球场与操场、拖动/滚动平移、捏合或 Ctrl / ⌘ + 滚轮缩放、键盘与全景；无楼层视图及切换器 | 读取本地 `campus-places.js` + `campus.svg`，不调用旧地图接口或读取楼层偏好 |
-| `recipe.html` | A–Z 菜品目录与搜索；评价卡与发布对话框；每周食谱折叠、放大及授权删除 | `/api/dishes`、`/api/recipes`、`/api/weekly-menu`、`/api/user/profile` |
+| `recipe.html` | A–Z 菜品目录链接与搜索；原评价卡及已有菜品选择对话框；每周食谱折叠、放大及授权删除 | `/api/dishes`、`/api/recipes`、`/api/weekly-menu`、`/api/user/profile` |
+| `dish.html?id=...` | 菜名、平均评分与评价数、完整图文评论和作者时间；每页 20 条；预选当前菜品写评价 | `/api/dishes/:id`、`/api/dishes/:id/reviews`、`/api/dishes`、`/api/recipes` |
 | `shops.html` | 三元坊必吃榜；可拖动/缩放的高德地图，附近店铺按屏幕距离聚合为带数量的点，点击聚合点居中放大；分类、拼音 A–Z、道路/商场、距离/时间、点赞/评价/评分筛选与排序；列表分页（每页 20 条，`?page=` 保留）；店铺卡收藏按钮（#23） | `/api/shops`、`/api/shops/meta`、`/api/shops/map-image`；收藏夹接口 |
 | `shop.html` | 地址、路线、本部/地铁出口距离、点赞/评价/评分汇总；学生及以上可点赞、提交/更新及删除本人 1–5 星评价，评价可选带一张实拍图（JPG/PNG，≤2 MB）、选填人数与总价并自动计算人均价；点赞右侧收藏按钮（#23）；详情页样式由账号 `shop_layout_mode` 决定：手动显示「纵向 / 双栏」开关并记住上次选择，自动则隐藏开关、纯 CSS 按屏幕宽度切换（#22） | `/api/shops/:id`、`/api/shops/:id/reviews`、互动写接口；收藏夹接口 |
 | `shop-new.html` | 最低角色提示；店铺、地址、自定义类型、可选大众点评链接、GCJ-02 坐标和本部/地铁两组步行路线表单；高德步行路线测算 | `/api/shops/meta`、`POST /api/shops`、高德 AMap.Walking |
@@ -183,6 +200,7 @@ flowchart LR
 | `register.html` | 用户名/昵称/密码及重复密码校验；注册后调用登录 | `/api/register`、`/api/login` |
 | `student_verify.html` | 已达到学生角色时隐藏表单；否则填写新生号、班级、真实姓名，可填邀请码及补充信息 | `/api/user/profile`、`/api/student/apply` |
 | `profile.html` | #20 类 B 站布局：资料头部（头像含编辑按钮 + 用户名/权限等级标签/昵称 + 个性签名；昵称与签名点击即可编辑、失焦弹确认保存）+ 吸顶横向菜单栏（主页 / 收藏 / 头衔 / 设置）；主页为空页面；收藏（#23）为左右分栏（必吃榜双层菜单 + 卡片网格 + 公开开关 + 分页，手机 UA 降级为顶部下拉）；头衔为佩戴/不佩戴选择；设置跳转 settings.html | `/api/user/profile`、`/api/user/avatar`、`/api/user/nickname`、`/api/user/signature`、`/api/user/titles`、`/api/user/title`；收藏夹接口 |
+| `settings.html` | 设置页（左侧菜单，与个人中心同构）：账号安全（改密码）、网站设置（默认进入界面 / 菜品与食谱默认页 / 必吃榜默认排序与餐食类型 / 店铺详情页样式 / 收藏默认页 / 新建收藏夹默认公开（#29，切换即保存）/ 显示权限等级）、工单、退出登录 | `/api/user/profile`、`/api/user/settings`、`/api/user/settings/collection`、`/api/collections`、`/api/user/password`、`/api/tickets`、`/api/tickets/mine` |
 | `user.html` | #21 其他用户主页（类个人中心版式，#20；只读）：资料头部 + 吸顶横向菜单栏（主页 / 收藏 / 头衔 / [管理]）；权限等级按该用户 `show_role` 显示；头衔只读；仅在目标存在公开收藏夹时显示「收藏」标签，只读展示公开收藏（#23）；有 `user_manage` / `title_manage` 且目标权重低于自己（非本人）时出现「管理」：改权限等级、发放特殊权限、发放头衔、封号/解封；`?id=` 为本人时跳转 profile.html | 公开 `GET /api/users/:id/profile`、`GET /api/users/:id/titles`、`GET /api/users/:id/collections`、`GET /api/collections/:id/items`（公开收藏夹）；`GET /api/me`；管理接口同上 |
 | `inbox.html` | 消息箱：按天分组、全部/系统标签过滤、只看未读、全部标为已读、点击标记已读；页头消息铃显示未读数 | `/api/messages`、`/api/messages/unread-count`、`/api/messages/:id/read`、`/api/messages/read-all` |
 | `admin.html` | 横幅、公告、发送系统通知、学生审核、邀请码、每周菜谱、用户管理、头衔管理、申诉、工单、developer 菜单同步和三种管理角色的 JSON 手动导入；待办红点 | `/api/admin/*`，菜单接口见 [运维文档](./docs/menu-sync.md) |
@@ -203,10 +221,10 @@ flowchart LR
 | POST | `/api/register` | 公开 | 创建用户；首个用户为 developer，其余为 user；生成 display_id |
 | POST | `/api/login` | 公开 | 验证密码、封禁状态，签发 JWT |
 | GET | `/api/me` | 公开，可携带 token | 返回解析后的用户及显式权限 |
-| GET | `/api/user/profile` | 登录 | 当前用户资料、设置、状态、权限与佩戴中的头衔 |
+| GET | `/api/user/profile` | 登录 | 当前用户资料、设置、状态、权限与佩戴中的头衔；含数值 `collection_default_public`（0/1，默认 0），不在他人公开资料中返回 |
 | GET | `/api/user/titles` | 登录 | 已拥有头衔（含佩戴状态）与未达成自动头衔的条件进度 |
 | PUT | `/api/user/title` | 登录 | 佩戴或取消佩戴；未拥有的头衔 403，`title_id: null` 表示不佩戴 |
-| PUT | `/api/user/settings` | 登录 | 部分更新：默认页、菜谱视图（all/reviews/weekly）、必吃榜默认排序/餐食类型、店铺详情页样式模式（`shop_layout_mode`：manual/auto）、手动模式上次布局（`shop_layout`：stacked/split）、是否展示权限等级（show_role）；旧 1–4 楼层字段仅保留后端兼容，前端不再提交 |
+| PUT | `/api/user/settings` | 登录 | 部分更新：默认页、菜谱视图、必吃榜默认排序/餐食类型、`shop_layout_mode`（manual/auto）、`shop_layout`（stacked/split）、`show_role`、`collection_default_public`（仅数字 0/1，省略保留；非法值 400 且不写入其他字段）；响应回显新偏好；旧楼层字段仅保留后端兼容 |
 | POST | `/api/user/avatar` | 登录 | 上传头像，更新 avatar_url |
 | PUT | `/api/user/nickname` | 登录 | 修改昵称 |
 | PUT | `/api/user/signature` | 登录 | 修改签名 |
@@ -220,7 +238,10 @@ flowchart LR
 | --- | --- | --- | --- |
 | GET | `/api/recipes` | 公开 | 按 `name COLLATE NOCASE, id` 排序读取评价记录 |
 | GET | `/api/recipes/weekly` | 公开 | 读取 `is_weekly=1` 的评价记录；当前每周食谱页面使用另一接口 |
-| POST | `/api/recipes` | 登录 | 上传可选图片并写入菜谱评价；评分范围 0–5 |
+| POST | `/api/recipes` | 登录 | 必须传当前目录已有 `dish_id`，名称由服务端确定；评分为 0–5 整数，评论选填且最多 500 字，可选 JPG/PNG 图片 ≤2 MB；无效参数拒绝并清理该次上传文件 |
+| GET | `/api/dishes` | 公开 | 有成功供应记录的独立菜品目录、拼音与索引元数据 |
+| GET | `/api/dishes/:id` | 公开 | `{dish}` 包含目录字段、`reviews_count` 和保留一位小数的 `rating_avg`；只统计 `is_weekly=0`，没有评价时评分为 null；非目录 ID 返回 404 |
+| GET | `/api/dishes/:id/reviews?offset=0` | 公开 | `{reviews,total,offset,has_more}`，每页 20 条，按 `created_at DESC,id DESC`；附作者昵称、头像、权限及头衔；偏移为 0–1000000 的整数字符串，否则 400；两种详情读取成功响应均 no-store |
 | GET | `/api/announcements` | 公开 | 按发布日期倒序读取公告 |
 | GET | `/api/weekly-menu` | 公开 | 每周食谱日期、图片 URL 和上传者 |
 | GET | `/api/settings/banner` | 公开 | 当前横幅及版本 |
@@ -294,7 +315,7 @@ flowchart LR
 | 方法 | 路径 | 访问条件 | 作用 |
 | --- | --- | --- | --- |
 | GET | `/api/collections?section=shops` | 登录 | 当前用户该版块的收藏夹（含条目数）；该版块没有收藏夹时自动创建「默认收藏夹」；同时返回 `defaults` 默认收藏夹 |
-| POST | `/api/collections` | 登录 | 新建收藏夹 `{section, name}`；section 只能 shops，名称 1–40 字 |
+| POST | `/api/collections` | 登录 | 新建 `{section, name, is_public?}`；版块 shops，名称 1–40 字；`is_public` 明确值只接受数字 0/1（非法 400），省略时读取当前登录用户最新 `collection_default_public`；响应 `collection.is_public` 仍为布尔值 |
 | POST | `/api/collections/:id/items` | 登录，限本人收藏夹 | 收藏 `{item_type, item_id}`；item_type 必须与收藏夹版块匹配（shops→shop），重复收藏幂等 |
 | DELETE | `/api/collections/:id/items/:itemType/:itemId` | 登录，限本人收藏夹 | 取消收藏 |
 | GET | `/api/collections/:id/items?page=1` | 登录或公开收藏夹（可匿名）；私密仅本人 | 每页 20 条；店铺返回卡片信息；已删除内容标记 `deleted` |
@@ -335,11 +356,11 @@ flowchart LR
 
 | 表 | 主要字段/约束 | 关联与用途 |
 | --- | --- | --- |
-| users | id、display_id、username、nickname、password_hash、avatar_url、signature、role、网站设置（默认页/楼层/菜谱视图/必吃榜排序与餐食类型/店铺布局模式 `shop_layout_mode` 手动或自动/上次纵向或双栏 `shop_layout`、`show_role` 是否展示权限等级）、默认收藏夹 `default_collection_shops`（可空）、status、封禁字段、`equipped_title_id`、`last_login_date`/`login_streak`；username/email 唯一 | 账号与偏好；email 为兼容字段，现有注册不使用邮箱；`shop_layout_mode` 决定详情页显示手动开关还是按宽度自动切换，`shop_layout` 记录手动模式下上次的界面选择；默认收藏夹字段指向该用户 shops 版块的收藏夹；`equipped_title_id` 为当前佩戴的头衔（单值），`login_streak` 供「夜读星」规则使用；`show_role` 控制评价等处是否显示角色标签（普通用户强制展示） |
+| users | id、display_id、username、nickname、password_hash、avatar_url、signature、role、网站设置（默认页/楼层/菜谱视图/必吃榜排序与餐食类型/`shop_layout_mode`/`shop_layout`/`show_role`）、默认收藏夹 `default_collection_shops`（可空）、`collection_default_public INTEGER NOT NULL DEFAULT 0`、status、封禁字段、`equipped_title_id`、`last_login_date`/`login_streak`；username/email 唯一 | email 为兼容字段；布局模式决定手动开关或按宽度切换，`shop_layout` 记住手动布局；默认收藏夹字段指向本人的店铺版块；`collection_default_public` 为主动新建收藏夹的默认公开偏好，旧/新账号默认 0，迁移幂等且不改已有收藏夹；头衔为单值，连续登录供自动规则使用；普通用户强制展示角色 |
 | user_permissions | user_id、permission；二者联合唯一 | 用户显式授权 |
-| collections | user_id、section（shops）、name、is_public、created_at | 收藏夹（#23）；按用户与版块维护；GET 时该版块无收藏夹会自动创建「默认收藏夹」 |
+| collections | user_id、section（shops）、name、is_public（INTEGER NOT NULL DEFAULT 0）、created_at | 收藏夹（#23/#29）；主动创建保存明确选择或账号偏好；GET 时版块无收藏夹会自动创建私密「默认收藏夹」；修改默认偏好不追溯已有收藏夹 |
 | collection_items | collection_id、item_type（shop）、item_id、created_at；三者联合唯一 | 收藏项；必吃榜收藏夹只允许 shop |
-| recipes | user_id、username、name、rating、comment、image_url、is_weekly | 一条记录是一条用户评价，没有独立菜品 ID 或店铺 ID |
+| recipes | user_id、username、name、rating、comment、image_url、is_weekly、可空 dish_id → dishes.id | 一条记录是一条评价；新评价必须选择已有菜品，保存规范名称；旧未匹配记录保留 NULL，无店铺关联；索引 `idx_recipes_dish(dish_id,created_at DESC,id DESC)` |
 | weekly_menu_images | user_id、menu_start_date、menu_end_date、filename、uploaded_at | 每周食谱整张图片，与 recipes 分开 |
 | announcements | title、content、publish_date | 公开公告 |
 | settings | key 主键、value | 横幅、邀请码兼容设置及加密 menu_ai_config |
@@ -363,7 +384,7 @@ flowchart LR
 | menu_sync_state | key/value | 发现锚点 |
 | menu_import_audit | source_id、actor_id、job_id、revision、records_json | 人工发布历史，与菜单发布同一事务 |
 
-原有 user_id/post_id 关系由应用维护；新增菜单记录和任务条目声明外键。菜单供应按篇事务替换，不修改原有评价表。原有删帖、认证和申诉限频规则保持。
+原有 user_id/post_id 关系由应用维护；新增菜单记录和任务条目声明外键。菜单供应按篇事务替换；评价关联迁移在目录初始化后独立执行。只为 `dish_id IS NULL AND is_weekly=0` 的旧评价按 NFC、首尾及连续空白、大小写归一后的名称补关联，保留原菜名、无法匹配记录及每周记录，不覆盖已有关联；重复启动幂等。原有删帖、认证和申诉限频规则保持。
 
 实际已提交数据库保留旧迁移结构，例如 users.display_id 通过后续 `ALTER TABLE` 添加，没有新建库 SQL 中的 UNIQUE 约束；不能假设旧库与新库的所有约束完全一致。
 
@@ -438,7 +459,8 @@ JWT_EXPIRES_IN=7d
 - data.db、data.json 的在线编辑结果、uploads/ 都是本地持久数据；部署需要可写、持久化的存储和 Node 服务。
 - 开发依赖为 Playwright 与 axe-core。运行 `npm.cmd test` 可执行浏览器回归；Windows 使用 Microsoft Edge，其他平台先运行 `npx playwright install chromium`。
 - 回归测试在系统临时目录启动独立后端并创建测试数据库与上传文件；项目内的 `data.db`、`uploads/` 和 `data.json` 不被测试改写。
-- 最近一次验证：菜单 18 项、头衔 14 项、店铺 14 项后端测试，店铺 64 项与浏览器 363 项检查及全新 Node 生产安装通过；360px/1280px、light/dark 扫描无违规。真实模型的失败与限制见 [菜单验证记录](./docs/menu-validation.md)，产物位于忽略的 output/。
+- 菜品专项命令为 `npm.cmd run test:dishes` 和 `npm.cmd run test:dishes:ui`，已加入 `npm.cmd test`；隔离夹具动态分配端口，等待目录就绪最多 60 秒，清理前核对临时目录真实路径与前缀。结果与截图位于 `output/playwright/dishes/`。
+- 当前验证见本文末尾「2026-10-24 · 菜品详情与已有菜品选评」，不得用历史全绿记录替代本轮结果。真实模型的失败与限制见 [菜单验证记录](./docs/menu-validation.md)，测试产物位于忽略的 output/。
 
 ## 9. 文档与实现约定
 
@@ -451,14 +473,14 @@ JWT_EXPIRES_IN=7d
 | docs/ui/assets 与 public | 前者是设计参考，后者是实际运行代码；运行代码包含资源路径、未保存表单保护和地图布局适配 |
 | PLAN_2026-10-01.md | 保留需求读取时的原始正文和状态；执行进度见 progress 与验收记录，实时关闭状态以 GitHub 为准 |
 | package.json、package-lock.json、LICENSE | 根包许可为 AGPL-3.0；本地 Leaflet 另附上游许可证 |
-| #5 菜品与评价 | 独立目录和网站内同步已实现；原评价独立保留，店铺关联后续实施 |
+| #5 菜品与评价 | 独立目录、网站内同步、菜品详情与评价关联已实现；原评价栏保留，店铺关联后续实施 |
 
 ## 10. 国庆计划的代码定位
 
 | Issue | 当前相关位置 | 实施状态或后续能力 |
 | --- | --- | --- |
 | [#4 修改UI](https://github.com/szzxvc/szzx-info/issues/4) | public HTML、css/site.css、js/、本地 Leaflet、UI.md 与 docs/ui/ | 已完成全站改版及浏览器验收，保留现有业务接口 |
-| [#5 全部菜品](https://github.com/szzxvc/szzx-info/issues/5) | recipe.html、lib/menu、data 种子、离线工具、开发者后台 | 独立目录、统一拼音搜索、网站内识别、每日自定时间与运维文档 |
+| [#5 全部菜品](https://github.com/szzxvc/szzx-info/issues/5) | recipe.html、dish.html、lib/menu、lib/dishes、data 种子、离线工具、开发者后台 | 独立目录、详情与分页评论、已有菜品选评、统一拼音搜索、网站内识别及运维 |
 | [#6 三元坊必吃榜](https://github.com/szzxvc/szzx-info/issues/6) | `shops.html`、`shop.html`、`shop-new.html`、`lib/shops/`、`data/shops-config.json`、高德 AMap JS API | 已实现：公开列表/分类筛选/搜索、拼音 A–Z、互动统计/排序/筛选、单一学校本部步行距离与地铁出口路线、自定义类型、认证学生互动和后端权限复验。围栏为高德姑苏区 adcode 320508 的完整 323 点 GCJ-02 边界；全区检索 5,942 条 POI，校验后导入 5,567 家，62 条同名记录跳过；未导入候选与高德检索范围限制见 README。静态地图使用服务器代理，Web 服务 Key 不下发浏览器。 |
 | [#7 三元坊必吃榜 UI适配](https://github.com/szzxvc/szzx-info/issues/7) | profile.html、用户默认设置的保存模式 | 店铺详情页的两种布局、粘性导航与持久布局设置 |
 | [#8 三元坊必吃榜菜谱上传](https://github.com/szzxvc/szzx-info/issues/8) | student 角色、multer 存储器、现有评价模型 | 菜品与店铺关联、学生上传权限、图片、去重及异常数据处理 |
@@ -590,3 +612,102 @@ axe 无障碍违规：0；控制台页面报错：0；水平溢出：0。
 - 文档同步：删除论坛及帖子逐页规范，更新 README、UI、共享组件、文案、相关页面规范、CHANGELOG、progress 和验收追加记录。本文此前带日期的章节及 progress/CHANGELOG 的旧条目保留为历史。
 
 验证结果：菜单 18、头衔 13、店铺与图片后端 14、收藏后端与旧库迁移 10、收藏浏览器 73、店铺浏览器 86、用户主页 23、全站浏览器 527、地图 217 项全部通过。全站覆盖 360/1280px 与明暗主题，axe、横向溢出及页面异常为 0；既有键盘与手机布局检查通过，人工核对桌面/手机首页截图；JavaScript 语法与 `git diff --check` 通过。验证通过 `npm test` 各套件执行，修正头衔数量断言后单独复验 `npm run test:ui`，地图单独复验 `npm run test:map`，均使用隔离数据库及上传目录。
+
+## 2026-10-24 · 全部菜品字体统一
+
+- 字体排查：1,243 个历史菜名中，1,091 个同时使用精简 `NotoSansSC` 与系统中文字体，造成同一菜名中的字形混杂。
+- `public/css/site.css` 抽取 `--font-sans-system` 完整系统字体栈，原有 `--font-sans` 的优先级不变；仅「全部菜品」的菜名改用系统栈，并将未定义的 `--fw-normal` 改为 `--fw-regular`（400）。保留桌面 14px、手机 13px、搜索高亮继承及现有布局和交互。
+- `public/recipe.html` 更新样式缓存版本；后端接口、数据表、权限及字体资源文件未变。同步 UI 总纲、组件、菜谱/菜品规范、更新日志与进度记录。
+- 字体专项验证通过：1,243 个菜名实际均由同一系统中文字体渲染，混用数量由 1,091 降为 0；360/1280px 明暗主题的 12 项排版断言及 1 项中文搜索高亮继承断言全部通过，人工核对四种页面截图。报告为 `output/playwright/dish-font-audit.json`。
+- 全站 UI 脚本执行完 584 项检查，最终无障碍汇总未通过：现有目录行的 `li[role="button"]` 引发 `aria-allowed-role` 和 `list`，1440px 浅色首页另报 `color-contrast`；这些交互语义和首页颜色未纳入本次修改。首次运行隔离服务尚未就绪，输出启动日志重跑后完成全部检查；无页面脚本报错或横向溢出。`node --check tests/ui-smoke.mjs`、`git diff --check` 通过，数据库与上传文件隔离。
+
+## 2026-10-24 · 菜品详情与已有菜品选评
+
+- 目录行改为真实链接，进入 `dish.html?id=...`；保留原字体、分组、搜索与网格。`li` 恢复列表项语义，扩展链接支持整行点击、键盘回车及新标签页。详情显示真实平均评分、评价数和完整图文评论，按发布时间及编号倒序，每次 20 条；无评价时评分为 null，不虚构其他菜品资料。
+- 新增 `lib/dishes/store.js`、`routes.js` 和两种公开详情读取；评价新增可空 `dish_id` 外键及复合索引。目录初始化后按统一归一名称补关联旧非每周评价，保留原文、无法匹配及每周记录，不覆盖已有关联。新发布必须传已有目录 ID，服务端确定菜名；无效提交清理本次上传文件。
+- `public/js/dish-review.js` 共用写评价对话框，支持菜名/拼音/首字母筛选、初版最多 20 个候选（当前已按文末记录改为每批 50 条）、中文输入法、方向键/回车、Escape/Tab、加载失败重试和长菜名。只输入文字不能发布，修改已选名称会清空身份；详情预选当前菜品，改选发布后跳往对应详情。原「菜品评价」栏的卡片、排序、分页及每周图片功能不改。
+- 同步 README、UI 总纲、组件、文案、菜谱与目录规范，并新增 [菜品详情规范](./docs/ui/pages/dish-detail.md)；用户更新日志和进度日志同步记录。新增隔离夹具及菜品后端/浏览器测试，加入默认测试链；全站冒烟补充详情页并使用已有菜品选评流程，保留字体专项断言。
+
+### 本轮验证
+
+| 验证 | 结果 |
+| --- | --- |
+| 菜品后端 `test:dishes` | 11 项通过：迁移幂等、旧内容保留、统计隔离、分页、身份与评分/评论校验、规范名称及无效上传清理 |
+| 菜品浏览器 `test:dishes:ui` | 114 项通过；360/1280px × 明暗主题，包含原生跳转、评论分页、作者及配图、键盘选菜、无选择禁止发布、长名称、拼音、改选跳转、空/错/重试、访客登录和原评价栏保留；axe、脚本错误、横向溢出均为 0 |
+| 其他后端 | 菜单 18、头衔 13、店铺及配图 14、收藏夹 9 项均通过 |
+| 其他浏览器 | 收藏 75、店铺 86、用户主页 28 项均通过；全量链中断后单独补跑地图 217 项通过 |
+| 全站 `test:ui` | 执行完 596 项检查；最终汇总仍因既有 `landing/1440/light` 的 `color-contrast`（27 个节点）失败。新目录列表语义问题已消失，详情与选菜没有新增违规，无页面脚本错误或横向溢出；未修改无关首页配色 |
+| 静态与人工 | 新增及修改的 JavaScript 语法检查、`git diff --check` 通过；核对手机/桌面和明暗主题详情与候选浮层截图 |
+
+不能将本次 `npm.cmd test` 记为全绿：链在全站首页对比度汇总处停止，地图已另行补跑。菜品报告与截图在 `output/playwright/dishes/`，全站报告为 `output/playwright/audit.json`，全量日志为 `output/run/dishes-full-regression-20261024.log`。历史章节保留原测试数字及当时问题。
+
+测试使用临时数据库和上传目录，不写入现有业务数据。本地 3000 端口服务已重启启用功能，1,243 道目录、红烧牛肉面详情及评论读取、详情 HTML 均正常响应；仅正常启动迁移更新现有数据库，未向本地站点写入测试评价。
+
+## 2026-10-24 · #29 收藏夹默认公开与新建时选择
+
+### 当前实现
+
+- `users.collection_default_public` 为 `INTEGER NOT NULL DEFAULT 0`；新建账号、旧账号启动迁移及旧结构重建均有安全默认值。收藏模块迁移幂等，不回写已有收藏夹的公开状态。
+- 本人资料返回该数值偏好，他人公开资料不返回。网站设置部分更新只接受数字 0/1，省略则保留；非法值在任何字段写入前返回 400。切换开关只保存此字段，不意外保存其他表单草稿。
+- 主动创建收藏夹时，明确的 `is_public: 0|1` 优先；省略时从当前登录用户数据库记录读取最新偏好。响应中的收藏夹公开状态仍为布尔值，后续公开切换及私密访问权限不变。首次读取版块时自动补建的「默认收藏夹」继续私密。
+- 设置页开关位于「收藏默认页」下，切换即保存，加载/保存期间禁用，失败恢复已保存值。共享新建表单每次展开都重新读取本人资料；读取期间禁用创建，失败回退私密并说明，允许手动覆盖。新建失败保留名称和选择，成功后的下一次新建重新取默认值，不继承上一轮手动覆盖。
+- 复用现有开关与弹窗，不新增样式。更新设置及论坛、帖子、必吃榜、店铺、个人中心、用户主页的共享脚本缓存版本；同步 README、UI、组件、文案、逐页规范、使用者更新日志及进度。
+
+### 本轮验证
+
+| 范围 | 实际结果 |
+| --- | --- |
+| 收藏后端 | `npm.cmd run test:collections` 14 项通过；含旧结构迁移与幂等、旧收藏状态保留、严格数值校验、单字段保存、账号隔离、两个版块的默认/明确覆盖及公开访问 |
+| 收藏浏览器 | `npm.cmd run test:collections:ui`：原有 75 项 + 新专项 88 项通过，共 163 项；360/1280px 明暗主题，覆盖论坛/帖子/店铺列表/详情，键盘即时保存、刷新持久化、双向覆盖、再次新建重读、慢响应、读取失败安全回退、保存失败回滚及创建失败重试 |
+| 专项质量 | 设置、新建表单及读取失败状态的 axe、页面脚本错误与横向溢出均为 0；人工核对手机浅色新建、手机深色设置、桌面深色新建及桌面浅色设置截图 |
+| 其他回归 | 菜单 18、菜品后端 11、头衔 13、店铺及配图 14、菜品浏览器 114、店铺浏览器 86、用户主页 28、地图 217 项通过 |
+| 全站浏览器 | 执行 596 项检查后汇总失败，唯一报告为既有 `landing/1440/light` 的 `color-contrast`，本轮 32 个节点；未改动无关首页配色 |
+| 静态检查 | 8 个相关 JavaScript 文件的 `node --check` 与 `git diff --check` 通过 |
+| 本地服务 | 已验证原端口与进程后重启；设置及相关 6 页、菜品目录均返回 200，未登录本人资料返回 401；只读核对新字段类型、非空与默认值，旧账号默认私密，原有 2 个收藏夹的编号/公开状态摘要前后一致 |
+
+全量 `npm.cmd test` 首次在既有收藏浏览器夹具的启动等待阶段未就绪（`fetch failed`）而中断；补跑同一收藏浏览器命令及剩余各组后，仅全站首页对比度汇总仍失败，不能记为全量通过。没有调整无关测试启动逻辑或首页颜色。测试使用隔离数据库与上传目录，不向本地业务库添加测试账号或收藏；本地数据库仅发生正常启动迁移。
+
+专项报告与 8 张截图：`output/playwright/collection-privacy/`；全站问题明细：`output/playwright/audit.json`；全量首轮日志：`output/run/issue29-full-regression-20261024.log`；各浏览器组补跑日志：`output/run/issue29-browser-regression-20261024-utf8.log`。本地服务运行于 `http://127.0.0.1:3000`，启动日志为 `output/run/server-issue29-20261024-181042.log`。保留此前未提交的菜品功能与文档，本轮未提交、更换分支或关闭 issue。
+
+## 2026-10-24 · 写评价选菜每批 50 条与显示更多
+
+- 菜谱评价页和菜品详情页共用选择器取消固定前 20 条的限制。完整目录仍只读取一次，前端按当前关键词匹配；初始展示最多 50 条，「显示更多」每次再展示最多 50 条，保留顺序与滚动位置。全部匹配项显示后隐藏入口；重新输入、清空或收起后重开恢复首批。
+- 新按钮 `#dishPickerMore` 位于 `listbox` 外，状态提示总数与已显示数。列表显式排除原生 Tab 顺序，Tab 可直接访问追加/重试按钮，Enter/空格操作；离开选菜区域收起。追加不自动选择，方向键可访问追加项，末批按钮隐藏后焦点回到输入，Escape 在按钮上也先收起候选。避免追加渲染时短暂隐藏按钮导致焦点丢失。
+- 仅修改共享选菜前端、两页脚本缓存版本及浏览器回归；复用现有按钮与浮层样式，不改 CSS、接口、数据库、权限或目录数据。详情评论与原「菜品评价」栏仍按每批 20 条显示，原卡片、排序和发布校验不变。
+- 同步 README、UI、组件、文案、菜谱/详情/目录规范、CHANGELOG、进度与验收记录，保留 #29 和此前未提交的功能。
+
+### 本轮验证
+
+| 范围 | 结果 |
+| --- | --- |
+| 菜品浏览器 `npm.cmd run test:dishes:ui` | 288 项通过；360/1280px 明暗主题，两处写评价入口均验证首批 50、连续追加至 100/150/200、匹配顺序与无重复、滚动位置、重新筛选/清空、末批不足 50、0/50/51/100 条边界、Tab/Enter/空格、焦点与追加项鼠标/键盘选择；保留原详情、发布、配图、错误重试及评价栏回归 |
+| 专项质量 | axe、页面脚本错误与横向溢出均为 0；新增 8 张追加候选截图，人工核对手机浅色详情、手机深色菜谱、桌面浅色菜谱和桌面深色详情 |
+| 菜品后端 `npm.cmd run test:dishes` | 11 项通过，确认目录身份、评论隔离与原分页契约不变 |
+| 全站 `npm.cmd run test:ui` | 执行 596 项检查后汇总失败，唯一报告仍为既有 `landing/1440/light` 的 `color-contrast`（本轮 27 节点）；没有新增脚本错误或横向溢出，未修改无关首页样式 |
+| 静态与运行中页面 | 两个修改的 JavaScript 语法及 `git diff --check` 通过；本地菜谱页、详情页与新版本选菜脚本均返回 200，确认缓存版本和每批 50 条逻辑已提供，无需重启后端 |
+
+所有测试使用临时数据库与上传目录，不向运行中业务库发布评价。报告为 `output/playwright/dishes/audit.json`，追加候选截图为同目录 `*-picker-more.png`；全站报告为 `output/playwright/audit.json`，日志为 `output/run/dish-picker50-ui-20261024.log`。不能将本次全站检查记为全绿；Safari/Firefox 未独立验证。本轮仍未提交。
+
+## 2026-10-24 · sytime 仓库归属与提交前复核
+
+- 当前仓库为 `szzxai/sytime`，拉取和推送均指向该仓库，默认分支为 `main`；保留原项目的提交历史与历史需求链接，目录根名称统一为 `sytime/`。
+- 本次提交包含工作区已有的菜品字体、菜品详情、已有菜品选评、每批 50 条候选追加、收藏夹默认公开及其测试和配套文档。运行数据库 `data.db` 的本地变化保留在工作区，不纳入提交；新增字段和关联由启动迁移代码维护。依赖、本机环境配置与测试产物继续忽略。
+- 按维护者要求，提交说明包含 `Closes #9`、`Closes #10`，指向当前 `szzxai/sytime` 的问题；共同作者使用 `GPT-6.1-Sol <codex@openai.com>`。历史原仓库问题索引不改写。
+
+| 复核范围 | 结果 |
+| --- | --- |
+| 后端 | 菜单 18、菜品 11、头衔 13、店铺及配图 14、收藏夹 14 项全部通过 |
+| 专项浏览器 | 菜品 288、收藏 75、默认公开 88、店铺 86、用户主页 28、地图 217 项全部通过 |
+| 全量链与补跑 | `npm.cmd test` 在店铺浏览器隔离服务未就绪时因连接失败中断；单独补跑店铺及后续各组，除下述既有全站问题外全部通过 |
+| 全站浏览器 | 执行 596 项检查后汇总失败，唯一场景为 `landing/1440/light` 的既有 `color-contrast`，本轮 25 个节点；未宣称全量全绿 |
+| 静态与人工 | 17 个新增或修改的 JavaScript 文件语法和差异检查通过；46 个待提交文本文件未检出常见密钥格式；核对手机浅色选菜、桌面深色选菜、手机深色新建收藏夹和桌面浅色设置截图，专项继续覆盖键盘、手机及明暗主题 |
+
+本轮日志为 `output/run/sytime-prepush-20261024.log`、`output/run/sytime-prepush-browser-20261024.log`，结构化补跑结果为 `output/run/sytime-prepush-browser-results-20261024.json`；浏览器明细保留在 `output/playwright/`。所有测试使用隔离数据库与上传目录，Safari/Firefox 未独立验证。
+
+## 2026-10-24 · 论坛移除与远端功能合并验证
+
+- 在现有 `main` 合并远端 `51190ad`，保留菜品详情、已有菜品选评、每批 50 条候选、目录字体统一和收藏默认公开功能，同时维持论坛页面、接口、收藏与通知偏好的移除。已删除的论坛/帖子页面及规范不恢复。
+- 保留菜品详情需要的作者资料补充函数，修复自动合并后 `attachAuthors` 缺失造成的服务启动失败；本人资料继续返回 `collection_default_public`，默认页不再接受论坛，设置页仅保留默认公开的即时保存逻辑。
+- 默认公开专项改用手机/桌面店铺列表与详情场景，保留明暗主题、键盘、双向覆盖、加载失败、回滚和重试覆盖；收藏后端只验证店铺版块，新旧库迁移额外确认默认公开偏好在论坛清理和重复启动后保留。完整接口与表结构已同步至本文当前索引。
+- 最终 `npm test` 全量通过：菜单 18、菜品后端 11、菜品浏览器 288、头衔 13、店铺及配图后端 14、收藏后端及旧库迁移 15、收藏浏览器 73、默认公开浏览器 88、店铺浏览器 86、用户主页 23、全站浏览器 552、地图 217 项。收藏迁移补充断言后单独复验 15 项通过；18 个 JavaScript 文件语法检查及差异检查通过，无未解决冲突。此前 Windows 的首页对比度失败保留为历史记录，本轮 macOS 全站检查通过。
+- 所有测试使用隔离数据库与上传目录；现有 `data.db` 本地修改保留、不纳入提交。完整测试日志为 `/tmp/sytime-merge-full.log`，地图与迁移复验分别为 `/tmp/sytime-merge-map.log`、`/tmp/sytime-merge-collections-final.log`；截图及结构化报告在忽略提交的 `output/playwright/`。

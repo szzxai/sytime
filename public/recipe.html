@@ -10,7 +10,7 @@
     <meta name="theme-color" content="#218653" />
     <title>菜品与食谱 · 拾光酥糕</title>
     <link rel="icon" href="/img/brand-lime.svg?v=20261019" type="image/svg+xml" />
-    <link rel="stylesheet" href="/css/site.css?v=shstime-20261019" />
+    <link rel="stylesheet" href="/css/site.css?v=shstime-20261024-dishes" />
   </head>
   <body data-page="recipe" data-nav="recipe">
     <noscript
@@ -27,13 +27,6 @@
         <div class="page-head__main">
           <span class="page-head__eyebrow">每天的好味道</span>
           <h1 class="page-head__title">菜品与食谱</h1>
-        </div>
-        <div class="page-head__actions" id="writeAction" hidden>
-          <button type="button" class="btn btn--primary" id="writeBtn">
-            <svg class="icon" aria-hidden="true">
-              <use href="/img/icons.svg#i-pencil"></use></svg
-            >写评价
-          </button>
         </div>
       </div>
 
@@ -58,6 +51,14 @@
           aria-selected="false"
         >
           每周食谱
+        </button>
+      </div>
+
+      <div class="page-head__actions" id="writeAction" hidden>
+        <button type="button" class="btn btn--primary" id="writeBtn">
+          <svg class="icon" aria-hidden="true">
+            <use href="/img/icons.svg#i-pencil"></use></svg
+          >写评价
         </button>
       </div>
 
@@ -93,136 +94,11 @@
       </div>
 
       </div>
-      <dialog
-        class="dialog dialog--sheet dialog--wide"
-        id="reviewDialog"
-        aria-labelledby="reviewDialog-t"
-      >
-        <form class="dialog__form" id="recipeForm" novalidate>
-          <div class="dialog__head">
-            <h2 class="dialog__title" id="reviewDialog-t">写评价</h2>
-            <button
-              type="button"
-              class="icon-btn icon-btn--sm"
-              data-dialog-close
-              aria-label="关闭"
-            >
-              <svg class="icon" aria-hidden="true">
-                <use href="/img/icons.svg#i-close"></use>
-              </svg>
-            </button>
-          </div>
-          <div class="dialog__body">
-            <div class="field">
-              <label class="field__label" for="name">菜名</label>
-              <input
-                class="input"
-                id="name"
-                type="text"
-                required
-                data-counter="20"
-                enterkeyhint="next"
-              />
-              <div class="field__foot">
-                <span class="field__hint">和食堂菜单写法一致更容易被搜到</span
-                ><span class="field__counter"></span>
-              </div>
-            </div>
-            <div class="field">
-              <span class="field__label" id="ratingLabel">评分</span>
-              <div
-                class="rating-input"
-                role="radiogroup"
-                aria-labelledby="ratingLabel"
-              >
-                <input
-                  type="radio"
-                  name="rating"
-                  id="r5"
-                  value="5"
-                  checked
-                /><label for="r5" title="5 分"
-                  ><svg class="icon" aria-hidden="true">
-                    <use href="/img/icons.svg#i-star"></use></svg
-                ></label>
-                <input type="radio" name="rating" id="r4" value="4" /><label
-                  for="r4"
-                  title="4 分"
-                  ><svg class="icon" aria-hidden="true">
-                    <use href="/img/icons.svg#i-star"></use></svg
-                ></label>
-                <input type="radio" name="rating" id="r3" value="3" /><label
-                  for="r3"
-                  title="3 分"
-                  ><svg class="icon" aria-hidden="true">
-                    <use href="/img/icons.svg#i-star"></use></svg
-                ></label>
-                <input type="radio" name="rating" id="r2" value="2" /><label
-                  for="r2"
-                  title="2 分"
-                  ><svg class="icon" aria-hidden="true">
-                    <use href="/img/icons.svg#i-star"></use></svg
-                ></label>
-                <input type="radio" name="rating" id="r1" value="1" /><label
-                  for="r1"
-                  title="1 分"
-                  ><svg class="icon" aria-hidden="true">
-                    <use href="/img/icons.svg#i-star"></use></svg
-                ></label>
-              </div>
-              <div class="field__hint">默认 5 分可改</div>
-            </div>
-            <div class="field">
-              <label class="field__label" for="comment"
-                >评论 <span class="field__opt">（选填）</span></label
-              >
-              <textarea
-                class="textarea"
-                id="comment"
-                data-counter="500"
-              ></textarea>
-              <div class="field__foot">
-                <span class="field__hint"></span
-                ><span class="field__counter"></span>
-              </div>
-            </div>
-            <div
-              class="field"
-              data-upload
-              data-max-mb="2"
-              data-types="image/jpeg,image/png"
-            >
-              <span class="field__label"
-                >图片 <span class="field__opt">（选填）</span></span
-              >
-              <label class="upload"
-                ><span class="upload__icon"
-                  ><svg class="icon icon--lg" aria-hidden="true">
-                    <use href="/img/icons.svg#i-image"></use></svg></span
-                ><span class="upload__title">点击选择或拖入图片</span
-                ><span class="upload__hint">JPG / PNG，不超过 2 MB</span
-                ><input
-                  aria-label="上传图片"
-                  type="file"
-                  id="image"
-                  accept="image/jpeg,image/png"
-              /></label>
-              <div class="upload-preview-slot"></div>
-            </div>
-          </div>
-          <div class="dialog__foot">
-            <button type="button" class="btn" data-dialog-close>取消</button>
-            <button type="submit" class="btn btn--primary" id="recipeSubmit">
-              发布
-            </button>
-          </div>
-        </form>
-      </dialog>
     </main>
     <div id="siteFooter"></div>
     <script src="/js/ui.js?v=shstime-20261019"></script>
     <script src="/js/page.js"></script>
-
-    <script src="/js/pages/recipe.js"></script>
+    <script src="/js/dish-review.js?v=20261024-picker50"></script>
+    <script src="/js/pages/recipe.js?v=20261024-dishes"></script>
   </body>
 </html>

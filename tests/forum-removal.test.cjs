@@ -35,6 +35,8 @@ test("旧库清除论坛及衍生数据，保留店铺收藏和系统通知，�
       INSERT INTO user_titles (user_id, title_id) VALUES (1, 100), (1, 101);
       UPDATE users SET equipped_title_id = 100;
     `);
+    collections.migrate(db);
+    db.exec("UPDATE users SET collection_default_public = 1 WHERE id = 1");
     for (let run = 0; run < 2; run++) {
       titles.migrate(db);
       collections.migrate(db);
@@ -46,6 +48,7 @@ test("旧库清除论坛及衍生数据，保留店铺收藏和系统通知，�
       const user = db.prepare("SELECT * FROM users").get();
       assert.equal(user.default_page, "index.html");
       assert.equal(user.default_collection_shops, 20);
+      assert.equal(user.collection_default_public, 1);
       assert.equal(user.equipped_title_id, null);
       assert.equal(db.prepare("SELECT COUNT(*) AS n FROM user_titles").get().n, 0);
       assert.equal(db.prepare("SELECT COUNT(*) AS n FROM titles WHERE rule IN ('forum_catalyst','top_liked')").get().n, 0);

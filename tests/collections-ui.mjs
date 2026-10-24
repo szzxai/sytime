@@ -127,7 +127,7 @@ try {
   await collect.click();
   await listing.page.waitForSelector("dialog[open] [data-new-toggle]");
   await listing.page.click("dialog[open] [data-new-toggle]");
-  await listing.page.fill("dialog[open] [data-new-field] input", "稍后再看");
+  await listing.page.fill("dialog[open] [data-new-field] input.input", "稍后再看");
   await listing.page.click("dialog[open] [data-create]");
   await listing.page.waitForFunction(() => {
     const d = document.querySelector("dialog[open]");
