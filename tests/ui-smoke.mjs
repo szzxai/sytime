@@ -141,42 +141,6 @@ try {
   const admin = await account("developer"),
     ordinary = await account("campus-user"),
     banned = await account("banned-user");
-  const post = (
-    await api("/api/forum/posts", {
-      token: ordinary.token,
-      method: "POST",
-      body: {
-        category: "讨论",
-        title: "校园里的新发现",
-        content: "分享一个校园角落。\n<img src=x onerror=window.XSS=true>",
-      },
-    })
-  ).data.post;
-  for (let i = 0; i < 25; i++)
-    await api(`/api/forum/posts/${post.id}/replies`, {
-      token: ordinary.token,
-      method: "POST",
-      body: { content: "第 " + (i + 1) + " 条回复" },
-    });
-  for (let i = 0; i < 22; i++)
-    await api("/api/forum/posts", {
-      token: ordinary.token,
-      method: "POST",
-      body: {
-        category: "讨论",
-        title: "校园讨论 " + i,
-        content: "欢迎交流校园生活。",
-      },
-    });
-  await api("/api/forum/posts", {
-    token: ordinary.token,
-    method: "POST",
-    body: {
-      category: "提问",
-      title: "图书馆几点开放？",
-      content: "想了解开放时间。",
-    },
-  });
   await api("/api/admin/announcements", {
     token: admin.token,
     method: "POST",
@@ -251,8 +215,6 @@ try {
     "register",
     "student_verify",
     "announcements",
-    "forum",
-    "post",
     "recipe",
     "profile",
     "admin",
@@ -265,12 +227,12 @@ try {
         const login = ["profile", "admin", "student_verify", "settings", "inbox"].includes(file)
           ? admin
           : null;
-        const url = `/${file}.html${file === "post" ? "?id=" + post.id : ""}`;
+        const url = `/${file}.html`;
         const { ctx, page } = await pageFor(login, url, width, theme);
         await audit(page, `${file}/${width}/${theme}`);
         if (
           theme === "light" &&
-          ["index", "forum", "admin", "map", "profile"].includes(file)
+          ["index", "admin", "map", "profile"].includes(file)
         )
           await page.screenshot({
             path: path.join(output, `${file}-${width}.png`),
@@ -294,13 +256,13 @@ try {
     }));
     check("lime mark is the favicon", await landing.page.locator('link[rel="icon"]').getAttribute("href") === "/img/brand-lime.svg?v=20261019");
     check("short Chinese primary navigation", width > 992
-      ? (await landing.page.locator(".site-nav__link").allTextContents()).join("|") === "地图|论坛|菜谱|必吃榜|更新公告"
-      : (await landing.page.locator("#navDrawer .drawer-link").allTextContents()).slice(0, 6).join("|") === "首页|地图|论坛|菜谱|必吃榜|更新公告");
+      ? (await landing.page.locator(".site-nav__link").allTextContents()).join("|") === "地图|菜谱|必吃榜|更新公告"
+      : (await landing.page.locator("#navDrawer .drawer-link").allTextContents()).slice(0, 5).join("|") === "首页|地图|菜谱|必吃榜|更新公告");
     check("local Noto Sans SC is applied", await landing.page.evaluate(async () => {
-      await document.fonts.load('16px "NotoSansSC"', "苏州中学地图论坛");
+      await document.fonts.load('16px "NotoSansSC"', "苏州中学地图");
       await document.fonts.load('600 32px "NotoSansSC"', "校园信息平台");
       const chineseFace = [...document.fonts].find(face => face.family.replaceAll('"', '') === "NotoSansSC");
-      return document.fonts.check('16px "NotoSansSC"', "苏州中学地图论坛") && chineseFace?.weight === "100 900";
+      return document.fonts.check('16px "NotoSansSC"', "苏州中学地图") && chineseFace?.weight === "100 900";
     }));
     check("all shared logos use lime artwork", await landing.page.locator(".brand__mark").evaluateAll(imgs => imgs.length >= 3 && imgs.every(img => img.getAttribute("src") === "/img/brand-lime.svg?v=20261019" && img.complete && img.naturalWidth > 0)));
     check("complete independent operation notice", (await landing.page.locator(".site-footer__identity > p").innerText()) === "本站系学生自主运营的校园资讯聚合平台，与江苏省苏州中学官方无隶属关系。“苏州中学”名称、校徽及相关标识的知识产权均归原权利主体所有。所载信息仅供参考，不代表校方立场，权威资讯及具体事宜请以学校官方发布渠道为准。如有疑问或勘误，请致信 baimoqilin@gmail.com，我们将于核实后及时妥善处理。");
@@ -323,7 +285,7 @@ try {
     await summary.focus();
     await summary.press("Enter");
     check("home contribution accordion opens from keyboard", await landing.page.locator(".landing-accordion details").first().evaluate(el => el.open));
-    check("open accordion provides real destination", await landing.page.locator(".landing-accordion details").first().getByRole("link", { name: "去校园论坛" }).getAttribute("href") === "forum.html");
+    check("open accordion provides real destination", await landing.page.locator(".landing-accordion details").first().getByRole("link", { name: "去三元坊必吃榜" }).getAttribute("href") === "shops.html");
     await audit(landing.page, `landing/${width}/expanded`);
     await summary.press("Enter");
     check("home contribution accordion closes from keyboard", !await landing.page.locator(".landing-accordion details").first().evaluate(el => el.open));
@@ -367,7 +329,7 @@ try {
     check("about page reuses the supplied statue", await landing.page.locator(".about-page__art").evaluate(img =>
       img.getAttribute("src") === "/img/fan-zhongyan-user.png" && img.complete && img.naturalWidth > 0));
     await landing.ctx.close();
-    for (const route of ["forum", "recipe", "shops"]) {
+    for (const route of ["recipe", "shops"]) {
       const workspace = await pageFor(null, `/${route}.html`, width);
       check(`${route} workspace adapts at ${width}`, await workspace.page.evaluate(() => {
         const side = document.querySelector(".workspace__sidebar").getBoundingClientRect();
@@ -559,67 +521,7 @@ try {
   check("header stays fixed while the next page announcement is delayed", await delayedBanner.page.evaluate(expected =>
     expected > 0 && window.__delayedHeaderTops.every(top => top === expected), delayedSourceHeight));
   await delayedBanner.ctx.close();
-  const { ctx, page } = await pageFor(ordinary, "/forum.html", 360);
-  check(
-    "first feed batch has 20 posts",
-    (await page.locator("[data-post-id]").count()) === 20,
-  );
-  await page.locator("#moreBtn").click();
-  check(
-    "remaining feed batch appended",
-    (await page.locator("[data-post-id]").count()) === 23,
-  );
-  await page.locator("#questionBtn").click();
-  await page.waitForFunction(
-    () => document.querySelectorAll("[data-post-id]").length === 1,
-  );
-  check(
-    "category changes fetch matching posts",
-    (await page.locator(".post__title").textContent()) === "图书馆几点开放？",
-  );
-  await page.locator("#newPostBtn").click();
-  await page.locator("#postSubmit").click();
-  check(
-    "empty post is rejected inline",
-    (await page.locator("#title").getAttribute("aria-invalid")) === "true",
-  );
-  await page.locator("#title").fill("测试 UI 发帖");
-  await page.locator("#content").fill("键盘与手机端提交。");
-  await page.locator("#postSubmit").click();
-  await page.waitForFunction(() => !document.getElementById("postDialog").open);
-  check("post dialog closes after creation", true);
-  await page.goto(base + "/post.html?id=" + post.id + "#reply-25", {
-    waitUntil: "networkidle",
-  });
-  check(
-    "reply deep link expands the required batch",
-    (await page.locator("#reply-25").count()) === 1,
-  );
-  check(
-    "user content is escaped",
-    await page.evaluate(
-      () =>
-        !window.XSS &&
-        document
-          .querySelector(".post-detail__body")
-          .textContent.includes("<img"),
-    ),
-  );
-  await page.locator("[data-like]").click();
-  await page.waitForFunction(
-    () => !document.querySelector("[data-like]").disabled,
-  );
-  check(
-    "like is reflected by the server",
-    (await api(`/api/forum/posts/${post.id}`, { token: ordinary.token })).data
-      .post.is_liked,
-  );
-  await page.locator("[data-reply-input]").fill("新的回复");
-  await page.locator('.composer button[type="submit"]').click();
-  await page.waitForFunction(
-    () => document.getElementById("replyTotal").textContent === "26",
-  );
-  check("reply count refreshes", true);
+  const { ctx, page } = await pageFor(ordinary, "/settings.html#tickets", 360);
   await page.goto(base + "/settings.html#tickets", { waitUntil: "networkidle" });
   await page.locator("#ticketTitle").fill("通过新 UI 提交");
   await page.locator("#ticketContent").fill("工单正文");
@@ -774,7 +676,7 @@ try {
     await denied.page.locator("#denyBox").isVisible(),
   );
   await denied.ctx.close();
-  const loggedOut = await pageFor(null, "/login.html?next=%2Fforum.html", 360);
+  const loggedOut = await pageFor(null, "/login.html?next=%2Fshops.html", 360);
   await loggedOut.page.locator("#username").fill("banned-user");
   await loggedOut.page.locator("#password").fill("test-password");
   await loggedOut.page.locator("#submitBtn").click();
@@ -1017,7 +919,7 @@ try {
   await settings.ctx.close();
   const registration = await pageFor(
     null,
-    "/register.html?next=%2Fforum.html",
+    "/register.html?next=%2Fshops.html",
     360,
   );
   for (const [id, value] of [
@@ -1028,30 +930,12 @@ try {
   ])
     await registration.page.locator("#" + id).fill(value);
   await registration.page.locator("#submitBtn").click();
-  await registration.page.waitForURL("**/forum.html");
+  await registration.page.waitForURL("**/shops.html");
   check(
     "registration automatically logs in and returns to next",
     !!(await registration.page.evaluate(() => localStorage.getItem("token"))),
   );
   await registration.ctx.close();
-  const retry = await pageFor(null, "/forum.html", 360);
-  await retry.page.route("**/api/forum/posts?*", (route) =>
-    route.fulfill({
-      status: 503,
-      contentType: "application/json",
-      body: JSON.stringify({ error: "server error" }),
-    }),
-  );
-  await retry.page.locator("#questionBtn").click();
-  await retry.page.locator("[data-retry]").waitFor();
-  check("fetch failure provides retry", true);
-  await retry.page.unroute("**/api/forum/posts?*");
-  await retry.page.locator("[data-retry]").click();
-  await retry.page.waitForFunction(
-    () => !!document.querySelector("[data-post-id]"),
-  );
-  check("retry reloads the failed list", true);
-  await retry.ctx.close();
   for (const role of ["super_admin","admin"]) {
     const staff=await account("manual-"+role);
     check(role+" role assigned",(await api("/api/admin/users/role",{token:admin.token,method:"PUT",body:{userId:staff.user.id,newRole:role}})).status===200);
@@ -1082,11 +966,9 @@ try {
     .titles;
   check(
     "title catalog seeded with rules",
-    catalog.length === 9 &&
+    catalog.length === 7 &&
       catalog.some((t) => t.rule === "shop_contributor") &&
-      catalog.some((t) => t.rule === "forum_catalyst") &&
       catalog.some((t) => t.rule === "weekend_regular") &&
-      catalog.some((t) => t.rule === "top_liked") &&
       catalog.some((t) => t.rule === "canteen_veteran") &&
       !catalog.some(
         (t) => t.rule.indexOf("role_") === 0 || t.rule === "student_verified",
@@ -1195,7 +1077,7 @@ try {
   await titlesAdmin.page.waitForSelector("#view-titles-mgmt:not([hidden])");
   check(
     "admin catalog lists seeded titles",
-    (await titlesAdmin.page.locator("#titleList tbody tr").count()) === 9,
+    (await titlesAdmin.page.locator("#titleList tbody tr").count()) === 7,
   );
   await titlesAdmin.page.locator("#titleAdd").click();
   await titlesAdmin.page.waitForSelector("#titleModal[open]");
@@ -1211,20 +1093,20 @@ try {
   await titlesAdmin.page.locator("#titleName").fill("测试头衔");
   await titlesAdmin.page.locator("#titleConfirm").click();
   await titlesAdmin.page.waitForFunction(
-    () => document.querySelectorAll("#titleList tbody tr").length === 10,
+    () => document.querySelectorAll("#titleList tbody tr").length === 8,
   );
   check(
     "new title appears in catalog",
-    (await titlesAdmin.page.locator("#titleList tbody tr").count()) === 10,
+    (await titlesAdmin.page.locator("#titleList tbody tr").count()) === 8,
   );
   await titlesAdmin.page.locator("[data-delete-title]").last().click();
   await titlesAdmin.page.locator('dialog[open] [data-r="ok"]').click();
   await titlesAdmin.page.waitForFunction(
-    () => document.querySelectorAll("#titleList tbody tr").length === 9,
+    () => document.querySelectorAll("#titleList tbody tr").length === 7,
   );
   check(
     "deleting a title refreshes the catalog",
-    (await titlesAdmin.page.locator("#titleList tbody tr").count()) === 9,
+    (await titlesAdmin.page.locator("#titleList tbody tr").count()) === 7,
   );
   await audit(titlesAdmin.page, "admin/titles/1280");
   await titlesAdmin.page.screenshot({
@@ -1265,7 +1147,7 @@ try {
   check(
     "exclusive title stays out of the shared catalog",
     (await api("/api/admin/titles", { token: admin.token })).data.titles
-      .length === 9,
+      .length === 7,
   );
   await titlesAdmin.page
     .locator("#grantOwned [data-revoke-title]")

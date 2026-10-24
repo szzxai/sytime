@@ -69,8 +69,6 @@ try {
   const target = await account("target-user");
   check("first account is developer", dev.user.role === "developer");
   await api("/api/user/signature", { token: target.token, method: "PUT", body: { signature: "目标用户签名" } });
-  await api("/api/forum/posts", { token: target.token, method: "POST", body: { category: "讨论", title: "头像跳转测试帖", content: "正文内容" } });
-  await api("/api/forum/posts", { token: dev.token, method: "POST", body: { category: "讨论", title: "开发者自己的帖子", content: "正文" } });
 
   browser = await chromium.launch({ channel: process.platform === "win32" ? "msedge" : undefined });
   async function pageFor(login, url, width = 1280) {
@@ -81,14 +79,6 @@ try {
     await page.goto(base + url, { waitUntil: "networkidle" });
     return { ctx, page };
   }
-
-  // 1. 论坛头像跳转：本人 → 个人中心；他人 → user.html?id=
-  const forum = await pageFor(dev, "/forum.html");
-  const hrefs = await forum.page.$$eval(".user-line a.user-avatar--link", (els) => els.map((e) => e.getAttribute("href")));
-  check("own avatar links to profile", hrefs.includes("profile.html"));
-  check("other avatar links to user page", hrefs.includes("user.html?id=" + target.user.id));
-  await audit(forum.page, "forum/1280");
-  await forum.ctx.close();
 
   // 2. 他人主页（只读）+ 管理
   const other = await pageFor(dev, `/user.html?id=${target.user.id}`);

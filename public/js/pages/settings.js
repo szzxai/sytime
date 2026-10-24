@@ -22,17 +22,11 @@
   }
   async function loadCollectionDefaults(user) {
     var results = await Promise.all([
-      UI.api("/api/collections?section=forum", { on401: false }),
       UI.api("/api/collections?section=shops", { on401: false }),
     ]);
     fillCollectionSelect(
-      "defaultCollectionForum",
-      results[0],
-      user.default_collection_forum,
-    );
-    fillCollectionSelect(
       "defaultCollectionShops",
-      results[1],
+      results[0],
       user.default_collection_shops,
     );
   }
@@ -87,7 +81,6 @@
     P.el("defaultPage").value = [
       "index.html",
       "map.html",
-      "forum.html",
       "recipe.html",
     ].includes(page)
       ? page
@@ -123,7 +116,7 @@
     showRoleInput.disabled = forceRole;
     P.el("showRoleHint").textContent = forceRole
       ? "普通用户始终展示权限等级，无需设置。"
-      : "关闭后，你的权限等级标签将不在论坛、评价等位置显示。";
+      : "关闭后，你的权限等级标签将不在评价等位置显示。";
     UI.qsa("[data-counter]", main).forEach(function (input) {
       input.dispatchEvent(new Event("input", { bubbles: true }));
     });
@@ -153,34 +146,8 @@
           desc: "遇到问题可以提交工单。",
         });
   }
-  async function loadPrefs() {
-    var r = await UI.api("/api/user/preferences");
-    if (!r.ok) return;
-    P.el("prefComment").checked = !!r.data.comment;
-    P.el("prefReply").checked = !!r.data.reply;
-    P.el("prefLike").checked = !!r.data.like;
-  }
   P.panels(P.el("settingsNav"), function (name) {
     if (name === "tickets") loadTickets();
-    if (name === "messages") loadPrefs();
-  });
-  ["prefComment", "prefReply", "prefLike"].forEach(function (id) {
-    var key = id.replace("pref", "").toLowerCase();
-    P.el(id).addEventListener("change", async function () {
-      var input = this,
-        body = {};
-      body[key] = input.checked;
-      var r = await UI.api("/api/user/preferences", {
-        method: "PUT",
-        body: body,
-        on401: false,
-      });
-      if (r && r.ok) UI.toast.success("偏好已保存");
-      else {
-        input.checked = !input.checked;
-        UI.toast.error(r ? UI.errorText(r) : "保存失败，请稍后再试");
-      }
-    });
   });
   P.el("passwordForm").addEventListener("submit", async function (e) {
     e.preventDefault();
@@ -243,10 +210,7 @@
       localStorage.setItem("showRole", body.show_role ? "1" : "0");
       UI.session.patch(body);
       var collectionBody = {};
-      var forumSelect = P.el("defaultCollectionForum");
       var shopsSelect = P.el("defaultCollectionShops");
-      if (forumSelect && !forumSelect.disabled && forumSelect.value)
-        collectionBody.default_collection_forum = Number(forumSelect.value);
       if (shopsSelect && !shopsSelect.disabled && shopsSelect.value)
         collectionBody.default_collection_shops = Number(shopsSelect.value);
       var cr = await UI.api("/api/user/settings/collection", {

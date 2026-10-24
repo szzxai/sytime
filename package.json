@@ -9,7 +9,7 @@
     "test:menu": "node --test tests/menu.test.cjs",
     "test:titles": "node --test tests/titles.test.cjs",
     "test:shops": "node --test tests/shops.test.cjs tests/review-image.test.cjs",
-    "test:collections": "node --test tests/collections.test.cjs",
+    "test:collections": "node --test tests/collections.test.cjs tests/forum-removal.test.cjs",
     "test:collections:ui": "node tests/collections-ui.mjs",
     "test:shops:ui": "node tests/shops-ui.mjs",
     "test:user": "node tests/user-ui.mjs",

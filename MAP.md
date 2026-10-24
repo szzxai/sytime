@@ -1,18 +1,18 @@
 # szzx-info 项目地图
 
-> 更新日期：2026-10-19（青柠品牌图标与独立运营声明）。本文描述 #4 UI 改版、#5 菜品目录与菜单同步、#6 三元坊必吃榜，#10 头衔系统，#11 优化地图UI，#19 个人中心拆分（新增 settings.html），#20 个人中心重做（类 B 站资料头部 + 吸顶横向菜单栏），#21 用户主页（头像跳转 + 他人主页只读 + 管理面板），#22 必吃榜详情页样式（手动/自动，自动为纯 CSS 按宽度切换），以及 #23 收藏功能（收藏夹表与接口、点赞旁收藏按钮与弹窗、个人中心收藏页、他人主页公开收藏、设置默认收藏夹）的代码，并包含完整 SVG 校园导览改版及新版位置图校准、地块补绘。最新共享界面顶栏仅使用青柠切面图标，全站品牌为「拾光酥糕」（SHSTime）；历史章节保留对应版本时点及其测试数字。
+> 更新日期：2026-10-23（移除论坛前后端与关联数据）。本文描述 #4 UI 改版、#5 菜品目录与菜单同步、#6 三元坊必吃榜，#10 头衔系统，#11 优化地图UI，#19 个人中心拆分（新增 settings.html），#20 个人中心重做（类 B 站资料头部 + 吸顶横向菜单栏），#21 用户主页（头像跳转 + 他人主页只读 + 管理面板），#22 必吃榜详情页样式（手动/自动，自动为纯 CSS 按宽度切换），以及 #23 收藏功能（收藏夹表与接口、点赞旁收藏按钮与弹窗、个人中心收藏页、他人主页公开收藏、设置默认收藏夹）的代码，并包含完整 SVG 校园导览改版及新版位置图校准、地块补绘。最新共享界面顶栏仅使用青柠切面图标，全站品牌为「拾光酥糕」（SHSTime）；历史章节保留对应版本时点及其测试数字。
 >
 > 本文依据实际文件、后端代码、全部前端页面、地图 JSON、SQLite 表结构及依赖清单整理。设计规范见 [UI.md](./UI.md)，验收记录见 [docs/ui/acceptance.md](./docs/ui/acceptance.md)，原始里程碑快照见 [PLAN_2026-10-01.md](./PLAN_2026-10-01.md)。
 
 ## 1. 项目概览
 
-拾光酥糕是一个按 Berkeleytime 的页面布局与视觉风格重制、采用中文内容和绿色主题的动态校园信息网站，现有校园地图、论坛、菜谱评价、每周食谱图片、公告、账号与权限、学生认证、个人中心、设置和管理后台。用户可在设置页提交工单，管理员可审核认证、处理封禁申诉及批复工单。
+拾光酥糕是一个按 Berkeleytime 的页面布局与视觉风格重制、采用中文内容和绿色主题的动态校园信息网站，现有校园地图、菜谱评价、每周食谱图片、公告、账号与权限、学生认证、个人中心、设置和管理后台。用户可在设置页提交工单，管理员可审核认证、处理封禁申诉及批复工单。
 
 | 层次 | 实际实现 | 入口 |
 | --- | --- | --- |
 | 服务端 | CommonJS、Node.js、Express 5；原有业务及网站内菜单 worker 模块 | [server.js](./server.js)、[lib/menu/](./lib/menu/) |
-| 数据库 | Node 内置 `node:sqlite` 的同步 `DatabaseSync`；14 张原有表、3 张必吃榜表、2 张头衔表、2 张收藏夹表及 8 张菜单表 | [data.db](./data.db)、[lib/menu/store.js](./lib/menu/store.js)、[lib/shops/store.js](./lib/shops/store.js)、[lib/titles/store.js](./lib/titles/store.js)、[lib/collections/store.js](./lib/collections/store.js) |
-| 前端 | 18 个功能页面及 404（含独立关于页），统一外部 CSS 与页面脚本；原生 JavaScript，无构建流程 | [public/](./public/) |
+| 数据库 | Node 内置 `node:sqlite` 的同步 `DatabaseSync`；11 张原有表、3 张必吃榜表、2 张头衔表、2 张收藏夹表及 8 张菜单表 | [data.db](./data.db)、[lib/menu/store.js](./lib/menu/store.js)、[lib/shops/store.js](./lib/shops/store.js)、[lib/titles/store.js](./lib/titles/store.js)、[lib/collections/store.js](./lib/collections/store.js) |
+| 前端 | 16 个功能页面及 404（含独立关于页），统一外部 CSS 与页面脚本；原生 JavaScript，无构建流程 | [public/](./public/) |
 | 共享前端逻辑 | 导航壳、登录态、用户展示、横幅、表单、对话框、上传、图片查看器及页面工具 | [public/js/ui.js](./public/js/ui.js)、[public/js/page.js](./public/js/page.js) |
 | 地图 | 本地 Leaflet 1.9.4；单一北向上 SVG 校园地图（31 个地点），支持触控板平移/捏合与大面积运动场插画 | [campus-places.js](./public/js/campus-places.js)、[campus.svg](./public/img/map/campus.svg)；[data.json](./data.json) 仅为旧数据归档 |
 | 文件存储 | 本地图片文件，通过 `/uploads` 静态提供 | [uploads/](./uploads/) |
@@ -34,6 +34,7 @@ szzx-info/
 ├── package.json                  应用元数据、依赖、start/test 脚本
 ├── package-lock.json             npm lockfileVersion 3 依赖锁定文件
 ├── server.js                     原有后端逻辑、菜单模块与调度启动
+├── lib/migrations/remove-forum.js  旧论坛表、收藏、消息与设置的幂等清理
 ├── lib/menu/
 │   ├── schema.js                 名称归一、拼音与八字段校验
 │   ├── store.js                  菜单建表、种子导入、原子发布与目录
@@ -82,6 +83,7 @@ szzx-info/
 │   ├── shops.test.cjs            店铺 API、字段校验、覆盖区域、角色/显式权限测试
 │   ├── shops-ui.mjs              店铺列表/详情/创建与权限浏览器回归
 │   ├── menu.test.cjs             菜单数据/调度/提供商/队列/权限测试
+│   ├── forum-removal.test.cjs     旧库迁移、店铺数据保留与重复运行检查
 │   ├── menu-live.cjs             可选真实模型与三张菜单检查
 │   ├── node-deploy.cjs           全新 Node 生产依赖安装检查
 │   ├── menu-skill.py             便携技能、离线验证器及包内文件检查
@@ -91,8 +93,6 @@ szzx-info/
 │   ├── index.html                渐变地标首页、开发团队与参与入口；根路径默认页跳转
 │   ├── about.html                独立关于页：起源、学生维护与反馈
 │   ├── map.html                  单一 SVG 校园地图，无楼层切换
-│   ├── forum.html                讨论/提问列表、发帖、回复、点赞、删帖
-│   ├── post.html                 单帖详情，通过 ?id=<帖子 ID> 访问
 │   ├── recipe.html               A–Z 菜品目录、评价与每周食谱三个页签
 │   ├── shops.html                三元坊必吃榜、高德地图与分类筛选
 │   ├── shop.html                 店铺步行路线和坐标详情
@@ -123,7 +123,6 @@ szzx-info/
 │   │   ├── page.js               页面表单、请求、权限、面板和工单工具
 │   │   ├── campus-places.js      31 个导览地点、分类、别名、示意坐标与介绍
 │   │   ├── pages/map.js          SVG 导览、搜索、选点与触控板手势
-│   │   ├── forum.js              论坛及详情共用的点赞、回复与删除逻辑
 │   │   ├── shops-map.js          高德地图加载、标记、路线查询与外链
 │   │   └── pages/                各页业务脚本、菜单同步/导入及店铺列表/创建/详情
 │   ├── vendor/leaflet/           Leaflet JS、CSS、图片与上游 LICENSE
@@ -145,7 +144,7 @@ szzx-info/
 ```mermaid
 flowchart LR
     Browser[浏览器 HTML 与页面脚本] --> Shared[ui.js 交互与 API 客户端]
-    Browser --> Helpers[page.js 与 forum.js 业务工具]
+    Browser --> Helpers[page.js 业务工具]
     Helpers --> Shared
     Shared --> Shell[公共导航、横幅和页脚]
     Shared --> API[server.js /api 路由]
@@ -172,11 +171,9 @@ flowchart LR
 
 | 页面 | 功能与交互 | 主要数据来源 |
 | --- | --- | --- |
-| `index.html` | 首页介绍、地图/论坛/菜谱/公告入口、关于我们与工单反馈；仅在根路径 `/` 且无锚点时按用户默认页面跳转 | `/api/user/profile`、本地默认页设置 |
-| `about.html` | 独立关于内容、原创地标插画、论坛与工单入口 | 共享导航与横幅接口 |
+| `index.html` | 首页介绍、地图/菜谱/必吃榜/公告入口、关于我们与工单反馈；仅在根路径 `/` 且无锚点时按用户默认页面跳转 | `/api/user/profile`、本地默认页设置 |
+| `about.html` | 独立关于内容、原创地标插画与工单入口 | 共享导航与横幅接口 |
 | `map.html` | 单一北向上 SVG 校园地图：31 地点、名称/别名搜索、分类、介绍卡、大面积篮球场与操场、拖动/滚动平移、捏合或 Ctrl / ⌘ + 滚轮缩放、键盘与全景；无楼层视图及切换器 | 读取本地 `campus-places.js` + `campus.svg`，不调用旧地图接口或读取楼层偏好 |
-| `forum.html` | 讨论/提问切换；发帖对话框；每批 20 条；卡片跳转详情；回复展开、发布；点赞及失败回滚；点赞右侧收藏按钮（打开收藏夹弹窗，#23）；更多菜单删帖 | `/api/forum/posts` 及其回复、点赞、删除路由；收藏夹接口 |
-| `post.html` | 按查询参数 `id` 加载正文与点赞状态；默认展开回复；点赞右侧收藏按钮（#23） | `/api/forum/posts/:id` 及其回复、点赞路由；收藏夹接口 |
 | `recipe.html` | A–Z 菜品目录与搜索；评价卡与发布对话框；每周食谱折叠、放大及授权删除 | `/api/dishes`、`/api/recipes`、`/api/weekly-menu`、`/api/user/profile` |
 | `shops.html` | 三元坊必吃榜；可拖动/缩放的高德地图，附近店铺按屏幕距离聚合为带数量的点，点击聚合点居中放大；分类、拼音 A–Z、道路/商场、距离/时间、点赞/评价/评分筛选与排序；列表分页（每页 20 条，`?page=` 保留）；店铺卡收藏按钮（#23） | `/api/shops`、`/api/shops/meta`、`/api/shops/map-image`；收藏夹接口 |
 | `shop.html` | 地址、路线、本部/地铁出口距离、点赞/评价/评分汇总；学生及以上可点赞、提交/更新及删除本人 1–5 星评价，评价可选带一张实拍图（JPG/PNG，≤2 MB）、选填人数与总价并自动计算人均价；点赞右侧收藏按钮（#23）；详情页样式由账号 `shop_layout_mode` 决定：手动显示「纵向 / 双栏」开关并记住上次选择，自动则隐藏开关、纯 CSS 按屏幕宽度切换（#22） | `/api/shops/:id`、`/api/shops/:id/reviews`、互动写接口；收藏夹接口 |
@@ -185,20 +182,19 @@ flowchart LR
 | `login.html` | 用户名/密码登录；封禁错误展示；允许申诉时提交理由及可选图片 | `/api/login`、`/api/user/appeal` |
 | `register.html` | 用户名/昵称/密码及重复密码校验；注册后调用登录 | `/api/register`、`/api/login` |
 | `student_verify.html` | 已达到学生角色时隐藏表单；否则填写新生号、班级、真实姓名，可填邀请码及补充信息 | `/api/user/profile`、`/api/student/apply` |
-| `profile.html` | #20 类 B 站布局：资料头部（头像含编辑按钮 + 用户名/权限等级标签/昵称 + 个性签名；昵称与签名点击即可编辑、失焦弹确认保存）+ 吸顶横向菜单栏（主页 / 收藏 / 头衔 / 设置）；主页为空页面；收藏（#23）为左右分栏（论坛/必吃榜双层菜单 + 卡片网格 + 公开开关 + 分页，手机 UA 降级为顶部下拉）；头衔为佩戴/不佩戴选择；设置跳转 settings.html | `/api/user/profile`、`/api/user/avatar`、`/api/user/nickname`、`/api/user/signature`、`/api/user/titles`、`/api/user/title`；收藏夹接口 |
-| `settings.html` | 设置页（左侧菜单，与个人中心同构）：账号安全（改密码）、网站设置（默认进入界面 / 菜品与食谱默认页 / 必吃榜默认排序与餐食类型 / 店铺详情页样式（手动 / 自动，#22）/ 收藏默认页（论坛、必吃榜默认收藏夹，#23）/ 显示权限等级）、工单（提交与查看本人）、消息通知偏好（系统/评论/回复/点赞）、退出登录 | `/api/user/profile`、`/api/user/settings`、`/api/user/settings/collection`、`/api/collections`、`/api/user/password`、`/api/tickets`、`/api/tickets/mine`、`/api/user/preferences` |
+| `profile.html` | #20 类 B 站布局：资料头部（头像含编辑按钮 + 用户名/权限等级标签/昵称 + 个性签名；昵称与签名点击即可编辑、失焦弹确认保存）+ 吸顶横向菜单栏（主页 / 收藏 / 头衔 / 设置）；主页为空页面；收藏（#23）为左右分栏（必吃榜双层菜单 + 卡片网格 + 公开开关 + 分页，手机 UA 降级为顶部下拉）；头衔为佩戴/不佩戴选择；设置跳转 settings.html | `/api/user/profile`、`/api/user/avatar`、`/api/user/nickname`、`/api/user/signature`、`/api/user/titles`、`/api/user/title`；收藏夹接口 |
 | `user.html` | #21 其他用户主页（类个人中心版式，#20；只读）：资料头部 + 吸顶横向菜单栏（主页 / 收藏 / 头衔 / [管理]）；权限等级按该用户 `show_role` 显示；头衔只读；仅在目标存在公开收藏夹时显示「收藏」标签，只读展示公开收藏（#23）；有 `user_manage` / `title_manage` 且目标权重低于自己（非本人）时出现「管理」：改权限等级、发放特殊权限、发放头衔、封号/解封；`?id=` 为本人时跳转 profile.html | 公开 `GET /api/users/:id/profile`、`GET /api/users/:id/titles`、`GET /api/users/:id/collections`、`GET /api/collections/:id/items`（公开收藏夹）；`GET /api/me`；管理接口同上 |
-| `inbox.html` | 消息箱：按天分组、四类标签过滤、只看未读、全部标为已读、点击标记已读并跳转；页头消息铃显示未读数 | `/api/messages`、`/api/messages/unread-count`、`/api/messages/:id/read`、`/api/messages/read-all` |
+| `inbox.html` | 消息箱：按天分组、全部/系统标签过滤、只看未读、全部标为已读、点击标记已读；页头消息铃显示未读数 | `/api/messages`、`/api/messages/unread-count`、`/api/messages/:id/read`、`/api/messages/read-all` |
 | `admin.html` | 横幅、公告、发送系统通知、学生审核、邀请码、每周菜谱、用户管理、头衔管理、申诉、工单、developer 菜单同步和三种管理角色的 JSON 手动导入；待办红点 | `/api/admin/*`，菜单接口见 [运维文档](./docs/menu-sync.md) |
 | `404.html` | 404 提示、返回首页与返回上一页 | 无 |
 | `js/ui.js` | 公共导航/页脚、账户菜单、手机抽屉、横幅、用户信息与全站交互组件；头像跳转 `UI.avatarLink`/`UI.userHref`（#21）；收藏按钮与收藏夹选择弹窗 `UI.collections`（#23）；移动端判断 `UI.isMobile`、共享店铺卡片 `UI.shopCard`、分页器 `UI.pagerHtml` | `/api/user/profile`、`/api/settings/banner`、收藏夹接口 |
 | `js/collections-view.js` | `UI.collectionsBrowser`：个人中心 / 用户主页共用的收藏浏览（左右分栏、双层菜单、公开开关、卡片网格、分页、手机 UA 下拉） | 收藏夹接口 |
 
-页面布局由 `public/css/site.css` 统一维护，业务脚本位于 `public/js/pages/`。`ui.js` 集中处理角色权重、用户展示、日期、转义和交互；`page.js` 与 `forum.js` 复用页面业务逻辑。动态文本使用 `UI.esc` 或 DOM `textContent` 输出。
+页面布局由 `public/css/site.css` 统一维护，业务脚本位于 `public/js/pages/`。`ui.js` 集中处理角色权重、用户展示、日期、转义和交互；`page.js` 复用页面业务逻辑。动态文本使用 `UI.esc` 或 DOM `textContent` 输出。
 
 ## 5. 后端 API 全量索引
 
-以下显式路由位于 [server.js](./server.js)。菜单新增的方法/路径组合位于 [lib/menu/routes.js](./lib/menu/routes.js)，索引见 [菜单同步接口](./docs/menu-sync.md#接口)。表中“公开”表示没有强制登录；帖子读取可带 token 获取点赞状态。
+以下显式路由位于 [server.js](./server.js)。菜单新增的方法/路径组合位于 [lib/menu/routes.js](./lib/menu/routes.js)，索引见 [菜单同步接口](./docs/menu-sync.md#接口)。表中“公开”表示没有强制登录。
 
 ### 5.1 账号、个人资料与设置
 
@@ -218,18 +214,10 @@ flowchart LR
 | GET | `/api/users/:id/profile` | 公开 | 指定用户的公开资料（昵称/签名/头像/角色/`show_role`/状态/佩戴头衔）；用于用户主页（#21） |
 | GET | `/api/users/:id/titles` | 公开 | 指定用户已拥有的头衔（只读，不含自动头衔进度）；用于用户主页「头衔」分区 |
 
-### 5.2 论坛、菜谱、公告与地图
+### 5.2 菜谱、公告与地图
 
 | 方法 | 路径 | 访问条件 | 作用 |
 | --- | --- | --- | --- |
-| GET | `/api/forum/posts` | 公开，可携带 token | 按分类读取帖子，附回复数、点赞数及本人点赞状态 |
-| GET | `/api/forum/posts/:id` | 公开，可携带 token | 单帖详情及点赞状态 |
-| POST | `/api/forum/posts` | 登录 | 发布讨论或提问 |
-| DELETE | `/api/forum/posts/:id` | 登录，作者或 admin 及以上 | 删除帖子，手动清理其回复和点赞 |
-| POST | `/api/forum/posts/:id/like` | 登录 | 点赞帖子 |
-| DELETE | `/api/forum/posts/:id/like` | 登录 | 取消点赞 |
-| GET | `/api/forum/posts/:id/replies` | 公开 | 按时间读取该帖回复 |
-| POST | `/api/forum/posts/:id/replies` | 登录 | 发布回复 |
 | GET | `/api/recipes` | 公开 | 按 `name COLLATE NOCASE, id` 排序读取评价记录 |
 | GET | `/api/recipes/weekly` | 公开 | 读取 `is_weekly=1` 的评价记录；当前每周食谱页面使用另一接口 |
 | POST | `/api/recipes` | 登录 | 上传可选图片并写入菜谱评价；评分范围 0–5 |
@@ -295,26 +283,24 @@ flowchart LR
 | GET | `/api/admin/tickets` | ticket_manage，按角色再过滤 | 当前管理者可见的工单 |
 | PUT | `/api/admin/tickets/reply` | ticket_manage，按工单可见级别再校验 | 批复正文及可选 DataURL 图片 |
 | GET | `/api/admin/pending-counts` | 登录，按权限和工单范围统计 | 学生认证、申诉、工单待办数量 |
-| GET | `/api/messages` | 登录 | 消息列表；支持 type(system/interact/like)、unread、before 游标与 page_size |
+| GET | `/api/messages` | 登录 | 消息列表；支持 type(system)、unread、before 游标与 page_size |
 | GET | `/api/messages/unread-count` | 登录 | 未读总数（页头消息铃轮询） |
 | PUT | `/api/messages/:id/read` | 登录，限本人 | 单条标记已读 |
 | PUT | `/api/messages/read-all` | 登录 | 全部标记已读 |
-| GET | `/api/user/preferences` | 登录 | 评论/回复/点赞通知开关 |
-| PUT | `/api/user/preferences` | 登录 | 保存通知开关（系统消息始终接收） |
 | POST | `/api/admin/notifications` | announcement_publish | 向全体用户发送系统通知（标题/正文/重要性） |
 
 ### 5.5 收藏夹（#23）
 
 | 方法 | 路径 | 访问条件 | 作用 |
 | --- | --- | --- | --- |
-| GET | `/api/collections?section=forum` | 登录 | 当前用户该版块的收藏夹（含条目数）；该版块没有收藏夹时自动创建「默认收藏夹」；同时返回 `defaults` 默认收藏夹 |
-| POST | `/api/collections` | 登录 | 新建收藏夹 `{section, name}`；section 只能 forum/shops，名称 1–40 字 |
-| POST | `/api/collections/:id/items` | 登录，限本人收藏夹 | 收藏 `{item_type, item_id}`；item_type 必须与收藏夹版块匹配（forum→forum_post、shops→shop），重复收藏幂等 |
+| GET | `/api/collections?section=shops` | 登录 | 当前用户该版块的收藏夹（含条目数）；该版块没有收藏夹时自动创建「默认收藏夹」；同时返回 `defaults` 默认收藏夹 |
+| POST | `/api/collections` | 登录 | 新建收藏夹 `{section, name}`；section 只能 shops，名称 1–40 字 |
+| POST | `/api/collections/:id/items` | 登录，限本人收藏夹 | 收藏 `{item_type, item_id}`；item_type 必须与收藏夹版块匹配（shops→shop），重复收藏幂等 |
 | DELETE | `/api/collections/:id/items/:itemType/:itemId` | 登录，限本人收藏夹 | 取消收藏 |
-| GET | `/api/collections/:id/items?page=1` | 登录或公开收藏夹（可匿名）；私密仅本人 | 每页 20 条；帖子返回标题/作者/时间/正文开头，店铺返回卡片信息；已删除内容标记 `deleted` |
+| GET | `/api/collections/:id/items?page=1` | 登录或公开收藏夹（可匿名）；私密仅本人 | 每页 20 条；店铺返回卡片信息；已删除内容标记 `deleted` |
 | GET | `/api/users/:id/collections` | 公开 | 指定用户的公开收藏夹（`is_public=1`），供他人主页只读展示 |
 | PUT | `/api/collections/:id/public` | 登录，限本人收藏夹 | 切换公开状态 `{is_public}` |
-| PUT | `/api/user/settings/collection` | 登录 | 保存默认收藏夹；支持 `{default_collection_forum, default_collection_shops}` 或 `{section, collection_id}`，并校验归属与版块 |
+| PUT | `/api/user/settings/collection` | 登录 | 保存默认收藏夹；支持 `{default_collection_shops}` 或 `{section, collection_id}`，并校验归属与版块 |
 
 ## 6. 角色与权限模型
 
@@ -345,17 +331,14 @@ flowchart LR
 
 ### 7.1 SQLite
 
-原有 14 张业务表保留；启动迁移另创建 `shops`、`shop_likes`、`shop_reviews` 三张店铺表、`titles`、`user_titles` 两张头衔表、`collections`、`collection_items` 两张收藏夹表和 8 张菜单表。店铺 schema 在 `lib/shops/store.js`，头衔 schema 与种子在 `lib/titles/store.js`，收藏夹 schema 在 `lib/collections/store.js`，菜单迁移与种子导入位于 `lib/menu/store.js`。另有内部表 sqlite_sequence；测试使用临时数据库。
+原有业务表中删除 3 张论坛表，其余 11 张保留；启动迁移另创建 `shops`、`shop_likes`、`shop_reviews` 三张店铺表、`titles`、`user_titles` 两张头衔表、`collections`、`collection_items` 两张收藏夹表和 8 张菜单表。店铺 schema 在 `lib/shops/store.js`，头衔 schema 与种子在 `lib/titles/store.js`，收藏夹 schema 在 `lib/collections/store.js`，菜单迁移与种子导入位于 `lib/menu/store.js`。另有内部表 sqlite_sequence；测试使用临时数据库。
 
 | 表 | 主要字段/约束 | 关联与用途 |
 | --- | --- | --- |
-| users | id、display_id、username、nickname、password_hash、avatar_url、signature、role、网站设置（默认页/楼层/菜谱视图/必吃榜排序与餐食类型/店铺布局模式 `shop_layout_mode` 手动或自动/上次纵向或双栏 `shop_layout`、`show_role` 是否展示权限等级）、默认收藏夹 `default_collection_forum`/`default_collection_shops`（可空）、status、封禁字段、三条通知偏好（pref_comment/pref_reply/pref_like）、`equipped_title_id`、`last_login_date`/`login_streak`；username/email 唯一 | 账号与偏好；email 为兼容字段，现有注册不使用邮箱；`shop_layout_mode` 决定详情页显示手动开关还是按宽度自动切换，`shop_layout` 记录手动模式下上次的界面选择；两个默认收藏夹字段分别指向该用户 forum / shops 版块的收藏夹；`equipped_title_id` 为当前佩戴的头衔（单值），`login_streak` 供「夜读星」规则使用；`show_role` 控制论坛/评价等处是否显示角色标签（普通用户强制展示） |
+| users | id、display_id、username、nickname、password_hash、avatar_url、signature、role、网站设置（默认页/楼层/菜谱视图/必吃榜排序与餐食类型/店铺布局模式 `shop_layout_mode` 手动或自动/上次纵向或双栏 `shop_layout`、`show_role` 是否展示权限等级）、默认收藏夹 `default_collection_shops`（可空）、status、封禁字段、`equipped_title_id`、`last_login_date`/`login_streak`；username/email 唯一 | 账号与偏好；email 为兼容字段，现有注册不使用邮箱；`shop_layout_mode` 决定详情页显示手动开关还是按宽度自动切换，`shop_layout` 记录手动模式下上次的界面选择；默认收藏夹字段指向该用户 shops 版块的收藏夹；`equipped_title_id` 为当前佩戴的头衔（单值），`login_streak` 供「夜读星」规则使用；`show_role` 控制评价等处是否显示角色标签（普通用户强制展示） |
 | user_permissions | user_id、permission；二者联合唯一 | 用户显式授权 |
-| forum_posts | user_id、username、category、title、content、created_at；category 只允许讨论/提问 | 论坛帖子 |
-| forum_replies | post_id、user_id、username、content、created_at | 平铺帖子回复；没有父评论 ID |
-| post_likes | post_id、user_id、created_at；二者联合唯一 | 帖子点赞；目前没有评论点赞表 |
-| collections | user_id、section（forum/shops）、name、is_public、created_at | 收藏夹（#23）；按用户与版块维护；GET 时该版块无收藏夹会自动创建「默认收藏夹」 |
-| collection_items | collection_id、item_type（forum_post/shop）、item_id、created_at；三者联合唯一 | 收藏项；论坛收藏夹只允许 forum_post、必吃榜收藏夹只允许 shop；论坛帖子删除时同步清理对应收藏项 |
+| collections | user_id、section（shops）、name、is_public、created_at | 收藏夹（#23）；按用户与版块维护；GET 时该版块无收藏夹会自动创建「默认收藏夹」 |
+| collection_items | collection_id、item_type（shop）、item_id、created_at；三者联合唯一 | 收藏项；必吃榜收藏夹只允许 shop |
 | recipes | user_id、username、name、rating、comment、image_url、is_weekly | 一条记录是一条用户评价，没有独立菜品 ID 或店铺 ID |
 | weekly_menu_images | user_id、menu_start_date、menu_end_date、filename、uploaded_at | 每周食谱整张图片，与 recipes 分开 |
 | announcements | title、content、publish_date | 公开公告 |
@@ -364,8 +347,8 @@ flowchart LR
 | invite_codes | code 唯一、max_uses、used_count | 多邀请码及次数限制 |
 | ban_appeals | user_id、appeal_reason、appeal_image、status | 解封审核；pending/approved/rejected |
 | tickets | user_id、username、title、content、visibility、status、reply_content、reply_image、reply_by、replied_at | 工单；pending/resolved |
-| messages | user_id、type、actors(JSON)、count、target_kind/target_id、title/body/snippet、important、read_at | 消息箱；system/comment/reply/like，点赞按目标聚合 |
-| titles | key（种子标识，可空）、name、hue、source（grant/auto）、rule（自动规则 key）、description、`owner_user_id` | 头衔目录，共 9 个种子：六个成就（三元坊老饕/夜读星/论坛催化剂/闲者爱上网/高赞校友/校园老吃家）与三个手动（师者/创站元老/官方）；角色等级头衔已下线（角色改由权限等级标签体现），旧库中的这类目录行会在启动迁移时清理；`owner_user_id` 为空是公共头衔（按名称全站唯一），非空是该账号的专属头衔（按「账号 + 名称」唯一，不进公共目录）；`rule` 关联 `lib/titles/rules.js` 的规则；来源为 auto 时不可手动授予也不可手动撤销，带 `key` 的种子头衔不可删除，专属头衔不得与公共头衔同名 |
+| messages | user_id、type、actors(JSON)、count、target_kind/target_id、title/body/snippet、important、read_at | 消息箱；仅 system 消息，target 返回 null；旧互动消息由启动迁移清除 |
+| titles | key（种子标识，可空）、name、hue、source（grant/auto）、rule（自动规则 key）、description、`owner_user_id` | 头衔目录，共 7 个种子：四个自动头衔（三元坊老饕/夜读星/闲者爱上网/校园老吃家）与三个手动（师者/创站元老/官方）；角色等级头衔已下线（角色改由权限等级标签体现），旧库中的这类目录行会在启动迁移时清理；`owner_user_id` 为空是公共头衔（按名称全站唯一），非空是该账号的专属头衔（按「账号 + 名称」唯一，不进公共目录）；`rule` 关联 `lib/titles/rules.js` 的规则；来源为 auto 时不可手动授予也不可手动撤销，带 `key` 的种子头衔不可删除，专属头衔不得与公共头衔同名 |
 | user_titles | user_id、title_id 联合唯一、granted_by（NULL 表示自动发放）、created_at | 用户拥有的头衔，一人可多个；成就头衔只增不减；佩戴状态单独存在 users.equipped_title_id；撤销专属头衔时其 titles 目录行一并删除 |
 | user_login_days | user_id、day 联合主键 | 登录逐日历史（北京时间自然日，登录时写入），供「闲者爱上网」按周末窗口统计；不做回填 |
 | shops | name 唯一、address、location_note、可选 `dianping_url`、type、GCJ-02 lat/lng、本部/最近地铁出口 distance_m 与 walk_min、metro_station/metro_exit、created_by/created_at | 三元坊必吃榜；列表可按本部、地铁及互动统计排序筛选 |
@@ -479,14 +462,14 @@ JWT_EXPIRES_IN=7d
 | [#6 三元坊必吃榜](https://github.com/szzxvc/szzx-info/issues/6) | `shops.html`、`shop.html`、`shop-new.html`、`lib/shops/`、`data/shops-config.json`、高德 AMap JS API | 已实现：公开列表/分类筛选/搜索、拼音 A–Z、互动统计/排序/筛选、单一学校本部步行距离与地铁出口路线、自定义类型、认证学生互动和后端权限复验。围栏为高德姑苏区 adcode 320508 的完整 323 点 GCJ-02 边界；全区检索 5,942 条 POI，校验后导入 5,567 家，62 条同名记录跳过；未导入候选与高德检索范围限制见 README。静态地图使用服务器代理，Web 服务 Key 不下发浏览器。 |
 | [#7 三元坊必吃榜 UI适配](https://github.com/szzxvc/szzx-info/issues/7) | profile.html、用户默认设置的保存模式 | 店铺详情页的两种布局、粘性导航与持久布局设置 |
 | [#8 三元坊必吃榜菜谱上传](https://github.com/szzxvc/szzx-info/issues/8) | student 角色、multer 存储器、现有评价模型 | 菜品与店铺关联、学生上传权限、图片、去重及异常数据处理 |
-| [#9 消息箱](https://github.com/szzxvc/szzx-info/issues/9) | inbox.html、messages 表、论坛回复/点赞通知、profile.html 通知偏好、admin.html 发送系统通知、ui.js 消息铃 | 已实现：系统/评论/回复/点赞消息、聚合点赞、已读与未读计数、按天分组、类型过滤、通知偏好、super_admin 发送系统通知 |
+| [#9 消息箱](https://github.com/szzxvc/szzx-info/issues/9) | inbox.html、messages 系统消息、settings.html 通知说明、admin.html 发送系统通知、ui.js 消息铃 | 已实现：系统通知与头衔授予消息、已读与未读计数、按天分组、系统类型过滤、super_admin 发送系统通知 |
 | [#10 头衔系统](https://github.com/szzxvc/szzx-info/issues/10) | 用户资料、后台用户管理、各用户内容渲染处 | 头衔目录/拥有关系/佩戴状态、授予撤销、自动规则、统一用户展示 |
 | [#11 优化地图UI](https://github.com/szzxvc/szzx-info/issues/11) | `map.html`、`public/js/pages/map.js`、`public/css/map.css`、`public/img/map/campus.svg`、`public/js/campus-places.js`、`tests/map-ui.mjs` | 已实现：重做为北向上完整 SVG 校园导览，补齐 31 个地点及手绘示意插画；支持名称/别名搜索、分类过滤、详情卡片、目录折叠、明暗主题与全景复位；移除旧楼层视图与设置项；优化 Mac 触控板平移与捏合/连续缩放；按新版图校准位置并补绘林地、竹林、池岸和院落，新增政道楼（原墨子馆）、碑廊与泮池泮桥；点选保留建筑层级与缩放，必要时最小平移；31 地点补齐用途和文化介绍、引用与长文阅读 |
 | [#19 个人中心拆分](https://github.com/szzxvc/szzx-info/issues/19) | profile.html、settings.html、public/js/pages/profile.js、public/js/pages/settings.js、ui.js 账户菜单 | 已实现：账户菜单新增「设置」（个人中心与管理后台之间），新建 settings.html（同构左侧菜单），将账号安全、网站设置、工单、消息通知、退出登录从个人中心迁出；profile.html 仅保留个人资料与我的头衔 |
 | [#20 个人中心重做](https://github.com/szzxvc/szzx-info/issues/20) | profile.html、public/js/pages/profile.js、public/css/site.css（.profile-hero / .profile-tabs） | 已实现：简洁资料头部（头像 + 用户名/权限等级/昵称 + 个性签名，昵称与签名点击可编辑、失焦确认保存）+ 吸顶横向菜单栏（主页 / 收藏 / 头衔 / 设置）；主页、收藏为空页面，头衔沿用原面板，设置直接跳转 settings.html |
-| [#21 头像进入主页](https://github.com/szzxvc/szzx-info/issues/21) | public/js/ui.js（UI.userHref/UI.avatarLink）、forum/reviews 头像、user.html、public/js/pages/user.js、server.js 公开用户接口 | 已实现：论坛/评价等处头像可点击，本人 → profile.html、他人 → user.html?id=；他人主页与个人中心同版式但只读、权限等级按 show_role 显示、无设置、头衔只读；有足够权限且目标权重更低时追加「管理」（改角色 / 权限 / 发头衔 / 封号） |
+| [#21 头像进入主页](https://github.com/szzxvc/szzx-info/issues/21) | public/js/ui.js（UI.userHref/UI.avatarLink）、reviews 头像、user.html、public/js/pages/user.js、server.js 公开用户接口 | 已实现：评价等处头像可点击，本人 → profile.html、他人 → user.html?id=；他人主页与个人中心同版式但只读、权限等级按 show_role 显示、无设置、头衔只读；有足够权限且目标权重更低时追加「管理」（改角色 / 权限 / 发头衔 / 封号） |
 | [#22 必吃榜布局自动切换](https://github.com/szzxvc/szzx-info/issues/22) | settings.html、public/js/pages/settings.js、public/js/pages/shop-detail.js、public/css/site.css、server.js（users.shop_layout_mode） | 已实现：设置项「店铺详情页样式」改为手动/自动（带悬停说明）；手动时详情页保留纵向/双栏开关并把选择写入账号，下次进入保持；自动时隐藏开关，用纯 CSS 媒体查询按宽度切换（≥900px 双栏，否则纵向），窗口缩放不重渲染、不丢输入 |
-| [#23 收藏功能](https://github.com/szzxvc/szzx-info/issues/23) | server.js（users 默认收藏夹字段与论坛删除清理）、lib/collections/store.js、lib/collections/routes.js、public/js/ui.js（UI.collections / shopCard / pager）、public/js/collections-view.js、forum/post/shops/shop/profile/user/settings 页面脚本、tests/collections.test.cjs、tests/collections-ui.mjs | 已实现后端与数据库：collections / collection_items 表与启动迁移；收藏夹列表（无则自动建「默认收藏夹」）、新建、收藏/取消、分页详情、公开状态、默认收藏夹设置；帖子删除时清理收藏项；公开收藏夹列表与条目支持匿名只读。已实现前端：四个页面点赞右侧收藏按钮与统一弹窗；个人中心收藏页（左右分栏、双层菜单、公开开关、卡片网格、分页、手机 UA 下拉）；他人主页公开收藏只读标签；设置页论坛 / 必吃榜默认收藏夹 |
+| [#23 收藏功能](https://github.com/szzxvc/szzx-info/issues/23) | server.js（users 默认收藏夹字段）、lib/collections/store.js、lib/collections/routes.js、public/js/ui.js（UI.collections / shopCard / pager）、public/js/collections-view.js、shops/shop/profile/user/settings 页面脚本、tests/collections.test.cjs、tests/collections-ui.mjs | 已实现后端与数据库：collections / collection_items 表与启动迁移；收藏夹列表（无则自动建「默认收藏夹」）、新建、收藏/取消、分页详情、公开状态、默认收藏夹设置；公开收藏夹列表与条目支持匿名只读。已实现前端：店铺列表和详情页收藏按钮与统一弹窗；个人中心收藏页（左右分栏、双层菜单、公开开关、卡片网格、分页、手机 UA 下拉）；他人主页公开收藏只读标签；设置页必吃榜默认收藏夹 |
 
 菜品目录、消息箱与必吃榜开关已开启。#6 姑苏区全域边界取自高德行政区 adcode 320508（GCJ-02、323 点），范围文案/地图/服务端地理围栏共用该多边形。全区分块检索得到 5,942 条高德餐饮 POI，地址及步行路线补全后 5,629 条通过初筛；正式导入 5,567 条，62 条同名项跳过。其余候选因地址格式、明确停业标记、名称长度或缺少最近地铁步行路线未导入（原因可能重叠）；数据代表高德可检索 POI，不保证涵盖所有实际店铺。数据库店铺均通过区界校验。页面具备可拖动/缩放的同源高德底图与近邻聚合点（显示店数、点击居中放大）、拼音 A–Z、店名/道路/商场搜索及本部距离/时间和互动指标筛选；地图代理不向浏览器泄漏 Web 服务 Key。#7 店铺详情双布局、#9 消息箱与 #10 头衔系统已实现；#8 店铺菜品关联仍待实施。回归入口：`npm test` 包含 `npm run test:menu`（18 项）、`npm run test:titles`（13 项）、`npm run test:shops`（14 项）、`npm run test:collections`（9 项）、`npm run test:collections:ui`（75 项）、`npm run test:shops:ui`（86 项）、`npm run test:user`（28 项）、`npm run test:ui`（370 项）、`npm run test:map`（134 项）。
 菜品目录、消息箱与必吃榜开关已开启。#6 姑苏区全域边界取自高德行政区 adcode 320508（GCJ-02、323 点），范围文案/地图/服务端地理围栏共用该多边形。全区分块检索得到 5,942 条高德餐饮 POI，地址及步行路线补全后 5,629 条通过初筛；正式导入 5,567 条，62 条同名项跳过。其余候选因地址格式、明确停业标记、名称长度或缺少最近地铁步行路线未导入（原因可能重叠）；数据代表高德可检索 POI，不保证涵盖所有实际店铺。数据库店铺均通过区界校验。页面具备可拖动/缩放的同源高德底图与近邻聚合点（显示店数、点击居中放大）、拼音 A–Z、店名/道路/商场搜索及本部距离/时间和互动指标筛选；地图代理不向浏览器泄漏 Web 服务 Key。#7 店铺详情双布局、#9 消息箱与 #10 头衔系统已实现；#8 店铺菜品关联仍待实施。回归入口：`npm test` 包含 `npm run test:menu`（18 项）、`npm run test:titles`（13 项）、`npm run test:shops`（14 项）、`npm run test:shops:ui`（64 项）、`npm run test:user`（28 项）、`npm run test:ui`（370 项）、`npm run test:map`（217 项）。
@@ -594,3 +577,16 @@ axe 无障碍违规：0；控制台页面报错：0；水平溢出：0。
 - 新增 `public/img/brand-lime.svg`：从 VC 团队橙子切面派生绿色版本，供全部 19 个 HTML 页的 favicon、共享顶栏、抽屉、页脚及登录/注册卡片使用；首页团队区保留原橙色图。更新资源版本以刷新浏览器缓存。
 - 共享页脚替换为维护者提供的完整运营声明，说明学生自主运营、与校方无隶属关系、知识产权归属、官方资讯优先及勘误方式；邮箱可点击。身份区支持长文自然换行，保留手机纵向导航和明暗主题。
 - 后端接口、数据库表与权限未变。验证：`npm run test:ui` 571 项通过，覆盖 360/1280px 明暗主题全站页面、360/768/1440px 首页、共享 logo 加载、favicon 引用、完整声明及邮件链接、既有键盘与手机布局；axe、横向溢出和页面报错均为 0。人工核对桌面与手机页脚截图，`node --check public/js/ui.js` 与 `git diff --check` 通过；测试数据库及上传目录隔离。
+
+
+## 2026-10-23 · 完全移除论坛
+
+- 删除 `public/forum.html`、`post.html`、`public/js/forum.js`、两个对应页面脚本及专属样式。共享导航、抽屉、页脚、首页、关于页、404 和默认页设置不再提供论坛入口；旧页面与全部论坛 API 返回 404。
+- `lib/collections`、共享收藏弹窗与浏览器仅支持 `section=shops`、`item_type=shop`；默认字段只剩 `users.default_collection_shops`。个人中心和公开主页保留店铺收藏、分页、公开状态及移动端选择。
+- 自动规则和种子删除 `forum_catalyst`、`top_liked`；头衔目录现有 7 项，头衔迁移清除这两项的拥有关系并取消相关佩戴。
+- 消息箱保留系统通知及头衔授予消息，`target` 为 null；删除旧帖子关联查询、互动类型展示、通知偏好接口和评论/回复/点赞开关。
+- 新增 `lib/migrations/remove-forum.js`：在启动的头衔/收藏迁移之后以事务清理 `forum_posts`、`forum_replies`、`post_likes`，重建仅允许店铺的收藏表，保留店铺收藏 ID/公开状态/时间/默认选择；删除帖子互动消息、`default_collection_forum`、`pref_comment`、`pref_reply`、`pref_like`，旧论坛默认页重置为首页。重复启动可安全执行。开发时未操作工作区原有 data.db。
+- 测试用店铺数据继续验证收藏分页、权限、公开状态、默认设置和收藏弹窗；新增 `tests/forum-removal.test.cjs`，接入 `test:collections`，验证旧库迁移、店铺数据保留、约束和幂等性；接口测试覆盖旧路由各方法 404、前端文件删除与默认页回退。
+- 文档同步：删除论坛及帖子逐页规范，更新 README、UI、共享组件、文案、相关页面规范、CHANGELOG、progress 和验收追加记录。本文此前带日期的章节及 progress/CHANGELOG 的旧条目保留为历史。
+
+验证结果：菜单 18、头衔 13、店铺与图片后端 14、收藏后端与旧库迁移 10、收藏浏览器 73、店铺浏览器 86、用户主页 23、全站浏览器 527、地图 217 项全部通过。全站覆盖 360/1280px 与明暗主题，axe、横向溢出及页面异常为 0；既有键盘与手机布局检查通过，人工核对桌面/手机首页截图；JavaScript 语法与 `git diff --check` 通过。验证通过 `npm test` 各套件执行，修正头衔数量断言后单独复验 `npm run test:ui`，地图单独复验 `npm run test:map`，均使用隔离数据库及上传目录。

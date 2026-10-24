@@ -1,4 +1,4 @@
-// #23 收藏按钮与弹窗：论坛 / 帖子 / 必吃榜列表 / 店铺详情。独立浏览器回归。
+// #23 收藏按钮与弹窗：店铺收藏与个人主页。独立浏览器回归。
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -84,13 +84,6 @@ try {
   const shopRes = await api("/api/shops", { token: developer.token, method: "POST", body: SHOP });
   check("创建测试店铺", shopRes.status === 201);
   const shopId = shopRes.data.shop.id;
-  const postIds = [];
-  for (let i = 1; i <= 2; i++) {
-    const post = await api("/api/forum/posts", { token: user.token, method: "POST", body: { category: "讨论", title: "收藏按钮测试帖 " + i, content: "用于收藏弹窗测试的正文。" } });
-    check("创建测试帖子 " + i, post.status === 201);
-    postIds.push(post.data.post.id);
-  }
-
   browser = await chromium.launch({ channel: process.platform === "win32" ? "msedge" : undefined });
   async function pageFor(login, url, width = 1280) {
     const ctx = await browser.newContext({ viewport: { width, height: 900 }, reducedMotion: "reduce" });
@@ -101,71 +94,71 @@ try {
     return { ctx, page };
   }
 
-  // 1. 论坛列表：点赞按钮右侧的收藏按钮
-  const forum = await pageFor(user, "/forum.html");
-  await forum.page.waitForSelector(".post.card [data-collect]");
-  const firstCard = forum.page.locator(".post.card").first();
-  const postId = Number(await firstCard.getAttribute("data-post-id"));
+  // 1. 必吃榜列表：点赞按钮右侧的收藏按钮
+  const listing = await pageFor(user, "/shops.html");
+  await listing.page.waitForSelector(".shop.card [data-collect]");
+  const firstCard = listing.page.locator(".shop.card").filter({ hasText: SHOP.name }).first();
+  const collectedShopId = shopId;
   const collect = firstCard.locator("[data-collect]");
-  check("论坛列表显示收藏按钮", (await collect.count()) === 1);
+  check("必吃榜列表显示收藏按钮", (await collect.count()) === 1);
   check("收藏按钮初始未高亮", (await collect.getAttribute("aria-pressed")) === "false");
-  const footText = await firstCard.locator(".post__foot").textContent();
+  const footText = await firstCard.locator(".row--end").textContent();
   check("收藏按钮位于点赞按钮之后", footText.indexOf("收藏") !== -1);
-  await audit(forum.page, "collections/forum/1280");
+  await audit(listing.page, "collections/listing/1280");
 
   await collect.click();
-  await forum.page.waitForSelector("dialog[open] .dialog__title");
-  check("点击收藏打开统一弹窗", (await forum.page.textContent("dialog[open] .dialog__title")) === "收藏");
-  await forum.page.waitForSelector("dialog[open] [data-list] .choice");
-  check("弹窗自动列出默认收藏夹", (await forum.page.textContent("dialog[open] [data-list]")).includes("默认收藏夹"));
-  await audit(forum.page, "collections/dialog/1280");
-  await forum.page.click("dialog[open] [data-confirm]");
-  await forum.page.waitForFunction(() => document.querySelector("dialog[open]") === null);
+  await listing.page.waitForSelector("dialog[open] .dialog__title");
+  check("点击收藏打开统一弹窗", (await listing.page.textContent("dialog[open] .dialog__title")) === "收藏");
+  await listing.page.waitForSelector("dialog[open] [data-list] .choice");
+  check("弹窗自动列出默认收藏夹", (await listing.page.textContent("dialog[open] [data-list]")).includes("默认收藏夹"));
+  await audit(listing.page, "collections/dialog/1280");
+  await listing.page.click("dialog[open] [data-confirm]");
+  await listing.page.waitForFunction(() => document.querySelector("dialog[open]") === null);
   check("确认收藏后按钮高亮", (await collect.getAttribute("aria-pressed")) === "true");
   check("确认收藏后按钮文案更新", (await collect.textContent()).includes("已收藏"));
 
-  const forumCollections = (await api("/api/collections?section=forum", { token: user.token })).data.collections;
-  const defaultCollection = forumCollections.filter((c) => c.name === "默认收藏夹")[0];
+  const listingCollections = (await api("/api/collections?section=shops", { token: user.token })).data.collections;
+  const defaultCollection = listingCollections.filter((c) => c.name === "默认收藏夹")[0];
   check("收藏写入默认收藏夹", defaultCollection && defaultCollection.items_count === 1);
   const defaultItems = (await api("/api/collections/" + defaultCollection.id + "/items", { token: user.token })).data.items;
-  check("收藏项为当前帖子", defaultItems.length === 1 && defaultItems[0].item_id === postId);
+  check("收藏项为当前店铺", defaultItems.length === 1 && defaultItems[0].item_id === collectedShopId);
 
   // 2. 弹窗内新建收藏夹
   await collect.click();
-  await forum.page.waitForSelector("dialog[open] [data-new-toggle]");
-  await forum.page.click("dialog[open] [data-new-toggle]");
-  await forum.page.fill("dialog[open] [data-new-field] input", "稍后再看");
-  await forum.page.click("dialog[open] [data-create]");
-  await forum.page.waitForFunction(() => {
+  await listing.page.waitForSelector("dialog[open] [data-new-toggle]");
+  await listing.page.click("dialog[open] [data-new-toggle]");
+  await listing.page.fill("dialog[open] [data-new-field] input", "稍后再看");
+  await listing.page.click("dialog[open] [data-create]");
+  await listing.page.waitForFunction(() => {
     const d = document.querySelector("dialog[open]");
     return d && d.textContent.includes("稍后再看");
   });
-  await forum.page.click("dialog[open] [data-confirm]");
-  await forum.page.waitForFunction(() => document.querySelector("dialog[open]") === null);
-  const afterCreate = (await api("/api/collections?section=forum", { token: user.token })).data.collections;
+  await listing.page.click("dialog[open] [data-confirm]");
+  await listing.page.waitForFunction(() => document.querySelector("dialog[open]") === null);
+  const afterCreate = (await api("/api/collections?section=shops", { token: user.token })).data.collections;
   const laterCollection = afterCreate.filter((c) => c.name === "稍后再看")[0];
   check("新建收藏夹成功", !!laterCollection);
   check("收藏进入新建收藏夹", laterCollection && laterCollection.items_count === 1);
 
-  // 3. 帖子详情沿用高亮状态
-  await forum.page.goto(base + "/post.html?id=" + postId, { waitUntil: "networkidle" });
-  await forum.page.waitForSelector("[data-collect]");
-  check("帖子详情显示收藏按钮", (await forum.page.locator("[data-collect]").count()) === 1);
-  check("帖子详情收藏按钮保持高亮", (await forum.page.getAttribute("[data-collect]", "aria-pressed")) === "true");
-  await forum.page.click("[data-collect]");
-  await forum.page.waitForSelector("dialog[open] [data-list] .choice");
-  check("帖子详情可再次打开弹窗", true);
-  await forum.page.click("dialog[open] [data-cancel]");
-  await forum.page.waitForFunction(() => document.querySelector("dialog[open]") === null);
-  await audit(forum.page, "collections/post/1280");
-  check("论坛/帖子无控制台报错", !issues.some((i) => typeof i === "string" && i.includes("/forum")));
-  await forum.ctx.close();
+  // 3. 店铺详情沿用高亮状态
+  await listing.page.goto(base + "/shop.html?id=" + collectedShopId, { waitUntil: "networkidle" });
+  await listing.page.waitForSelector("[data-collect]");
+  check("店铺详情显示收藏按钮", (await listing.page.locator("[data-collect]").count()) === 1);
+  check("店铺详情收藏按钮保持高亮", (await listing.page.getAttribute("[data-collect]", "aria-pressed")) === "true");
+  await listing.page.click("[data-collect]");
+  await listing.page.waitForSelector("dialog[open] [data-list] .choice");
+  check("店铺详情可再次打开弹窗", true);
+  await listing.page.click("dialog[open] [data-cancel]");
+  await listing.page.waitForFunction(() => document.querySelector("dialog[open]") === null);
+  await audit(listing.page, "collections/detail/1280");
+  check("必吃榜/详情无控制台报错", !issues.some((i) => typeof i === "string" && i.includes("/shops")));
+  await listing.ctx.close();
 
-  // 360：论坛列表与收藏弹窗
-  const mobile = await pageFor(user, "/forum.html", 360);
-  await mobile.page.waitForSelector(".post.card [data-collect]");
-  await audit(mobile.page, "collections/forum/360");
-  await mobile.page.click(".post.card [data-collect]");
+  // 360：必吃榜列表与收藏弹窗
+  const mobile = await pageFor(user, "/shops.html", 360);
+  await mobile.page.waitForSelector(".shop.card [data-collect]");
+  await audit(mobile.page, "collections/listing/360");
+  await mobile.page.click(".shop.card [data-collect]");
   await mobile.page.waitForSelector("dialog[open] [data-list] .choice");
   await audit(mobile.page, "collections/dialog/360");
   await mobile.ctx.close();
@@ -199,9 +192,9 @@ try {
   await shops.ctx.close();
 
   // 5. 游客点击收藏：提示登录，不打开弹窗
-  const guest = await pageFor(null, "/forum.html");
-  await guest.page.waitForSelector(".post.card [data-collect]");
-  await guest.page.click(".post.card [data-collect]");
+  const guest = await pageFor(null, "/shops.html");
+  await guest.page.waitForSelector(".shop.card [data-collect]");
+  await guest.page.click(".shop.card [data-collect]");
   await guest.page.waitForSelector(".toast__text");
   check("游客收藏提示先登录", (await guest.page.textContent(".toast__text")).includes("请先登录"));
   check("游客不打开收藏弹窗", (await guest.page.$("dialog[open]")) === null);
@@ -212,11 +205,11 @@ try {
   await profile.page.waitForSelector("[data-sections] [data-section]");
   await profile.page.waitForSelector("[data-grid]");
   const sectionLabels = await profile.page.$$eval("[data-sections] [data-section]", (els) => els.map((e) => e.textContent.trim()));
-  check("收藏页显示论坛与必吃榜", sectionLabels.join(",") === "论坛,必吃榜");
-  check("收藏页默认打开论坛默认收藏夹", (await profile.page.textContent("[data-path]")).includes("默认收藏夹"));
+  check("收藏页显示必吃榜", sectionLabels.join(",") === "必吃榜");
+  check("收藏页默认打开必吃榜默认收藏夹", (await profile.page.textContent("[data-path]")).includes("默认收藏夹"));
   const menuText = await profile.page.textContent("[data-collections]");
-  check("收藏页列出论坛收藏夹", menuText.includes("默认收藏夹") && menuText.includes("稍后再看"));
-  check("收藏页展示论坛帖子卡片", (await profile.page.$('[data-grid] a[href="post.html?id=' + postId + '"]')) !== null);
+  check("收藏页列出必吃榜收藏夹", menuText.includes("默认收藏夹") && menuText.includes("稍后再看"));
+  check("收藏页展示店铺卡片", (await profile.page.$('[data-grid] a[href="shop.html?id=' + collectedShopId + '"]')) !== null);
   check("私密收藏显示公开开关", await profile.page.$eval("[data-public-wrap]", (el) => !el.hidden));
   check("默认收藏夹为私密", !(await profile.page.$eval("[data-public]", (el) => el.checked)));
   check("收藏页无横向溢出且 axe=0", true);
@@ -229,7 +222,7 @@ try {
   await profile.page.check("[data-public]");
   check("公开开关保存成功", (await publish).ok());
   await profile.page.waitForFunction(() => document.querySelector("[data-public]").checked);
-  const refreshedForum = (await api("/api/collections?section=forum", { token: user.token })).data.collections;
+  const refreshedForum = (await api("/api/collections?section=shops", { token: user.token })).data.collections;
   const laterPublic = refreshedForum.filter((c) => c.name === "稍后再看")[0];
   check("稍后再看已设为公开", laterPublic && laterPublic.is_public === true);
 
@@ -239,7 +232,7 @@ try {
   check("存在公开收藏夹时显示收藏标签", !(await publicPage.page.$eval("#favoritesNav", (el) => el.hidden)));
   await publicPage.page.click("#favoritesNav");
   await publicPage.page.waitForSelector("[data-sections] [data-section]");
-  await publicPage.page.waitForSelector('[data-grid] a[href="post.html?id=' + postId + '"]');
+  await publicPage.page.waitForSelector('[data-grid] a[href="shop.html?id=' + collectedShopId + '"]');
   check("他人主页展示公开收藏内容", (await publicPage.page.textContent("[data-path]")).includes("稍后再看"));
   check("他人主页只读（无公开开关）", await publicPage.page.$eval("[data-public-wrap]", (el) => el.hidden));
   check("他人主页显示公开标识", !(await publicPage.page.$eval("[data-public-badge]", (el) => el.hidden)));
@@ -265,28 +258,28 @@ try {
   check("手机 UA 显示收藏夹下拉", !(await mobilePage.$eval("[data-mobile]", (el) => el.hidden)));
   check("手机 UA 隐藏侧栏菜单", await mobilePage.$eval("[data-sections]", (el) => el.hidden));
   const groups = await mobilePage.$$eval("[data-mobile-select] optgroup", (els) => els.map((e) => e.label));
-  check("手机 UA 下拉包含两个版块", groups.join(",") === "论坛,必吃榜");
+  check("手机 UA 下拉包含必吃榜版块", groups.join(",") === "必吃榜");
   await audit(mobilePage, "collections/profile/390/mobile");
   await mobileCtx.close();
 
-  // 9. 设置页：论坛 / 必吃榜默认收藏夹
+  // 9. 设置页：必吃榜 / 必吃榜默认收藏夹
   const settings = await pageFor(user, "/settings.html#site");
-  await settings.page.waitForFunction(() => document.querySelectorAll("#defaultCollectionForum option").length > 1);
-  const forumOptions = await settings.page.$$eval("#defaultCollectionForum option", (els) => els.map((e) => e.textContent));
-  check("设置页列出论坛收藏夹", forumOptions.includes("默认收藏夹") && forumOptions.includes("稍后再看"));
+  await settings.page.waitForFunction(() => document.querySelectorAll("#defaultCollectionShops option").length > 1);
+  const listingOptions = await settings.page.$$eval("#defaultCollectionShops option", (els) => els.map((e) => e.textContent));
+  check("设置页列出必吃榜收藏夹", listingOptions.includes("默认收藏夹") && listingOptions.includes("稍后再看"));
   const shopsOptions = await settings.page.$$eval("#defaultCollectionShops option", (els) => els.map((e) => e.textContent));
   check("设置页列出必吃榜收藏夹", shopsOptions.includes("默认收藏夹"));
-  check("未设置时默认选中默认收藏夹", (await settings.page.$eval("#defaultCollectionForum", (el) => el.value)) === String(defaultCollection.id));
+  check("未设置时默认选中默认收藏夹", (await settings.page.$eval("#defaultCollectionShops", (el) => el.value)) === String(defaultCollection.id));
   const siteSaved = settings.page.waitForResponse((r) => r.url().endsWith("/api/user/settings") && r.request().method() === "PUT");
   const defaultsSaved = settings.page.waitForResponse((r) => r.url().endsWith("/api/user/settings/collection") && r.request().method() === "PUT");
-  await settings.page.selectOption("#defaultCollectionForum", String(laterCollection.id));
+  await settings.page.selectOption("#defaultCollectionShops", String(laterCollection.id));
   await settings.page.click("#siteSubmit");
   check("网站设置保存成功", (await siteSaved).ok());
   check("收藏默认页保存成功", (await defaultsSaved).ok());
   await settings.page.waitForSelector(".toast__text");
   check("保存后提示", (await settings.page.textContent(".toast__text")).includes("网站设置已保存"));
   const savedProfile = (await api("/api/user/profile", { token: user.token })).data.user;
-  check("论坛默认收藏夹写入账号", Number(savedProfile.default_collection_forum) === Number(laterCollection.id));
+  check("必吃榜默认收藏夹写入账号", Number(savedProfile.default_collection_shops) === Number(laterCollection.id));
   await audit(settings.page, "collections/settings/1280");
   await settings.ctx.close();
 

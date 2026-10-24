@@ -5,7 +5,7 @@
 
    目录
     1 令牌 Tokens            10 菜单/标签页/折叠/分段控件
-    2 基础 Base              11 论坛 Forum
+    2 基础 Base              11 互动操作
     3 布局 Layout            12 菜品/店铺/评价 Dish·Shop·Review
     4 页头/导航/页脚/横幅     13 消息箱/头衔 Inbox·Titles
     5 按钮 Buttons           14 页面级 Pages（首页/认证/公告/个人中心/后台/地图）
@@ -1284,13 +1284,13 @@ button.list__item { width: 100%; text-align: left; }
 .avatar--md { --avatar-size: 2.5rem; }
 .avatar--lg { --avatar-size: 4rem; }
 .avatar--xl { --avatar-size: 6rem; }
-/* 可点击头像（#21）：论坛 / 评价等处点击进入该用户主页或本人个人中心 */
+/* 可点击头像（#21）：评价等处点击进入该用户主页或本人个人中心 */
 .user-avatar { display: inline-flex; flex: none; }
 a.user-avatar--link { border-radius: 50%; text-decoration: none; -webkit-tap-highlight-color: transparent; }
 a.user-avatar--link:hover .avatar { box-shadow: 0 0 0 3px var(--primary-100); }
 a.user-avatar--link:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
 
-/* 统一用户信息组件（论坛、评价、消息、后台等所有展示用户的地方都用它） */
+/* 统一用户信息组件（评价、消息、后台等所有展示用户的地方都用它） */
 .user-line { display: flex; align-items: center; gap: 0.625rem; min-width: 0; color: inherit; }
 a.user-line:hover { text-decoration: none; }
 a.user-line:hover .user-line__name { text-decoration: underline; }
@@ -1716,7 +1716,7 @@ dialog .toast-host { position: absolute; top: var(--sp-3); }
 .breadcrumb .icon { width: 0.875rem; height: 0.875rem; }
 
 
-/* ---------- 11. 论坛 Forum ---------- */
+/* ---------- 11. 互动操作 ---------- */
 /* 操作按钮：点赞 / 回复 / 分享等小型图标+数字按钮 */
 .action-btn {
   display: inline-flex;
@@ -1751,48 +1751,6 @@ dialog .toast-host { position: absolute; top: var(--sp-3); }
 .choice-group--compact .choice__body { padding: var(--sp-3); gap: var(--sp-1); }
 .choice-group--compact .choice__title { font-size: var(--fs-sm); }
 .choice-group--compact .choice__desc { font-size: var(--fs-xs); }
-
-/* 帖子卡片（列表） */
-.post { display: grid; gap: var(--sp-3); }
-.post__head { display: flex; align-items: center; gap: var(--sp-3); }
-.post__head .user-line { flex: 1; }
-.post__title { font-size: var(--fs-lg); line-height: var(--lh-snug); overflow-wrap: anywhere; }
-.post__title a { color: var(--ink); }
-.post__title a:hover { color: var(--primary-ink); }
-.post__excerpt {
-  color: var(--ink-2);
-  overflow-wrap: anywhere;
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  white-space: pre-line;
-}
-.post__foot { display: flex; align-items: center; gap: var(--sp-1); margin-inline: calc(var(--sp-3) * -1); }
-.post__foot .grow { flex: 1; }
-.post__replies { border-top: 1px solid var(--line); padding-top: var(--sp-4); position: relative; z-index: 1; }
-
-/* 帖子详情 */
-.post-detail__title { font-size: var(--fs-2xl); line-height: var(--lh-snug); overflow-wrap: anywhere; }
-@media (min-width: 768px) { .post-detail__title { font-size: var(--fs-3xl); } }
-.post-detail__meta { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-3); margin-top: var(--sp-4); }
-.post-detail__body { margin-top: var(--sp-6); }
-.post-detail__actions { display: flex; align-items: center; gap: var(--sp-1); margin-top: var(--sp-6); padding-top: var(--sp-3); border-top: 1px solid var(--line); margin-inline: calc(var(--sp-3) * -1); }
-
-/* 回复列表 */
-.reply-list { display: grid; gap: var(--sp-5); }
-.reply { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--sp-3); scroll-margin-top: calc(var(--header-h) + var(--sp-4)); }
-.reply:target .reply__body { background: var(--amber-tint); box-shadow: 0 0 0 6px var(--amber-tint); border-radius: var(--r-2); }
-.reply__body { min-width: 0; transition: background var(--t-slow) var(--ease-out); }
-.reply__meta { display: flex; flex-wrap: wrap; align-items: center; gap: 0.125rem var(--sp-2); font-size: var(--fs-xs); color: var(--ink-3); }
-.reply__meta .user-line__name { font-size: var(--fs-sm); }
-.reply__floor { margin-left: auto; font-variant-numeric: tabular-nums; }
-.reply__content { margin-top: 0.25rem; font-size: var(--fs-md); line-height: 1.7; white-space: pre-wrap; overflow-wrap: anywhere; }
-.reply__actions { display: flex; gap: var(--sp-1); margin: 0.25rem 0 0 calc(var(--sp-3) * -1); }
-
-/* 发布框 */
-.composer { display: grid; gap: var(--sp-2); }
-.composer__foot { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); }
 
 /* 未登录 / 无权限的行动提示条 */
 .callout {
@@ -2597,10 +2555,10 @@ body[data-page="map"] { height: 100vh; height: 100dvh; overflow: hidden; }
 /* ---------- 16. 打印 Print ---------- */
 @media print {
   .site-header, .site-footer, .site-banner, .toast-host, .back-link, .btn, .action-btn,
-  .subnav, .side-nav, .az-rail, .offline-bar, .composer, .callout { display: none !important; }
+  .subnav, .side-nav, .az-rail, .offline-bar, .callout { display: none !important; }
   body { background: var(--surface); color: var(--ink); }
   .container { max-width: none; padding-inline: 0; }
-  .card, .panel, .review, .reply { break-inside: avoid; }
+  .card, .panel, .review { break-inside: avoid; }
   .card, .panel { border-color: var(--line-strong); }
   a[href^="http"]::after { content: " (" attr(href) ")"; font-size: 0.85em; color: var(--ink-3); }
 }
@@ -2836,10 +2794,6 @@ body[data-page="home"] .site-header { border-bottom: 0; }
 .workspace__sidebar .callout__text { flex: 0 1 auto; }
 .workspace__sidebar .callout { margin-top: 28px; flex-direction: column; align-items: start; padding: 16px 12px; background: var(--surface-2); border: 0; }
 .workspace__content { min-width: 0; width: 100%; max-width: 1250px; padding: 24px 32px 64px; }
-.workspace--forum .workspace__content { max-width: 980px; }
-.workspace--forum #postList { --stack-gap: 12px; }
-.workspace--forum .post { padding: 20px; gap: 14px; }
-.workspace--forum .post__title { font-size: 19px; }
 .workspace--recipe #dishSearchArea { position: static; padding: 0; background: transparent; }
 .workspace--recipe #dishSearchArea .search-bar { display: block; }
 .workspace--recipe .dish-directory .dish-list { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }

@@ -5,13 +5,9 @@
   var list = P.el("inboxList"), more = P.el("loadMore"), moreBtn = P.el("moreBtn"), moreInfo = P.el("moreInfo");
   var filter = "all", unreadOnly = false, items = [], cursor = null, hasMore = false, loading = false;
   var KINDS = {
-    comment: { icon: "message", hue: "teal" },
-    reply: { icon: "message", hue: "teal" },
-    like: { icon: "heart", hue: "vermilion" },
     system: { icon: "megaphone", hue: "ochre" },
   };
   function esc(value) { return UI.esc(value); }
-  function nameOf(a) { return (a && (a.nickname || a.username)) || "有人"; }
   function dayKey(sec) {
     var d = new Date(Number(sec) * 1000), now = new Date();
     var start = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
@@ -19,9 +15,6 @@
     if (day === start) return "今天";
     if (day === start - 86400000) return "昨天";
     return "更早";
-  }
-  function quote(m) {
-    return m.target && m.target.snippet ? '<span class="msg__quote">' + esc(m.target.snippet) + "</span>" : "";
   }
   function mainHtml(m) {
     if (m.type === "system") {
@@ -35,36 +28,12 @@
       return '<span class="msg__title">' + esc(m.title || "") + tag + "</span>" + bodyHtml +
         '<span class="msg__time">' + UI.timeEl(m.created_at) + "</span>";
     }
-    var a = m.actors && m.actors[0];
-    var title = m.target ? m.target.title : "";
-    var text;
-    if (m.type === "like") {
-      var names = (m.actors || []).map(nameOf);
-      if (m.count > 1 && names.length) {
-        text = "<b>" + names.slice(0, 2).map(esc).join("、") + "</b> 等 " + m.count + " 人赞了你的帖子《" + esc(title) + "》";
-      } else {
-        text = "<b>" + esc(names[0] || "有人") + "</b> 赞了你的帖子《" + esc(title) + "》";
-      }
-    } else if (m.type === "reply") {
-      text = "<b>" + esc(nameOf(a)) + "</b> 回复了你的评论";
-    } else {
-      text = "<b>" + esc(nameOf(a)) + "</b> 评论了你的帖子《" + esc(title) + "》";
-    }
-    return '<span class="msg__text">' + text + "</span>" + quote(m) +
-      '<span class="msg__time">' + UI.timeEl(m.created_at) + "</span>";
-  }
-  function leadHtml(m) {
-    if (m.type === "system") {
-      return '<span class="msg__lead"><span class="msg__icon">' + UI.icon("megaphone") + "</span></span>";
-    }
-    var kind = KINDS[m.type] || KINDS.comment;
-    return '<span class="msg__lead">' + UI.avatar(m.actors && m.actors[0], "sm") +
-      '<span class="msg__kind">' + UI.icon(kind.icon) + "</span></span>";
+    return "";
   }
   function itemHtml(m) {
     var kind = KINDS[m.type] || KINDS.system;
     var url = m.target && m.target.url ? UI.safeUrl(m.target.url) : "";
-    var inner = leadHtml(m) + '<span class="msg__main">' + mainHtml(m) + "</span>" +
+    var inner = ('<span class="msg__lead"><span class="msg__icon">' + UI.icon('megaphone') + '</span></span>') + '<span class="msg__main">' + mainHtml(m) + "</span>" +
       '<span class="msg__dot" aria-label="未读"></span>';
     var link = url
       ? '<a class="msg__link" href="' + esc(url) + '">' + inner + "</a>"
@@ -202,7 +171,7 @@
   (function init() {
     var params = new URLSearchParams(location.search);
     var type = params.get("type");
-    if (["system", "interact", "like"].indexOf(type) !== -1) filter = type;
+    if (["system"].indexOf(type) !== -1) filter = type;
     unreadOnly = params.get("unread") === "1";
     P.el("unreadOnly").checked = unreadOnly;
     tabs.select(filter);

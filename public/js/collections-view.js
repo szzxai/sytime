@@ -6,7 +6,6 @@
   "use strict";
 
   var SECTIONS = [
-    { key: "forum", label: "论坛", icon: "message" },
     { key: "shops", label: "必吃榜", icon: "store" }
   ];
 
@@ -21,11 +20,11 @@
     var mobile = UI.isMobile;
     var id = UI.uid("collections");
     var state = {
-      section: opt.defaultSection === "shops" ? "shops" : "forum",
+      section: "shops",
       collectionId: null,
       page: 1,
-      lists: { forum: [], shops: [] },
-      defaults: { forum: null, shops: null },
+      lists: { shops: [] },
+      defaults: { shops: null },
       collection: null,
       items: [],
       total: 0,
@@ -159,31 +158,16 @@
       renderPublic();
     }
 
-    function forumItem(item) {
-      if (item.deleted) {
-        return '<article class="card"><p class="u-muted u-fs-sm">内容已删除</p></article>';
-      }
-      var author = item.author || {};
-      var name = author.nickname || author.username || "已注销用户";
-      return '<article class="card card--interactive" style="height:12rem;max-width:20rem;width:100%;overflow:hidden;display:flex;flex-direction:column;gap:var(--sp-2)">' +
-        '<h2 class="card__title" style="font-size:var(--fs-lg);line-height:var(--lh-snug)">' +
-        '<a class="card__link" href="post.html?id=' + encodeURIComponent(item.item_id) + '">' + UI.esc(item.title) + "</a></h2>" +
-        '<p class="u-muted u-fs-xs" style="margin:0">' + UI.esc(name) + " · " + UI.timeEl(item.created_at) + "</p>" +
-        '<p class="prose u-fs-sm" style="margin:0;overflow:hidden">' + UI.esc(item.excerpt || "") + "</p>" +
-        "</article>";
-    }
-
     function renderGrid() {
       if (!state.items.length) {
         grid.innerHTML = '<div style="grid-column:1/-1">' + UI.html.empty({
           icon: "star",
           title: "收藏夹还是空的",
-          desc: "在论坛或必吃榜点击「收藏」，内容会出现在这里。"
+          desc: "在必吃榜点击「收藏」，内容会出现在这里。"
         }) + "</div>";
         return;
       }
       grid.innerHTML = state.items.map(function (item) {
-        if (item.item_type === "forum_post") return forumItem(item);
         if (item.item_type === "shop" && item.shop) {
           return '<div style="max-width:20rem;width:100%">' + UI.shopCard(item.shop, { collect: false }) + "</div>";
         }
@@ -207,7 +191,7 @@
       grid.innerHTML = '<div style="grid-column:1/-1">' + UI.html.empty({
         icon: "star",
         title: mode === "public" ? "没有公开收藏夹" : "还没有收藏夹",
-        desc: mode === "public" ? "该用户暂未公开收藏夹。" : "在论坛或必吃榜收藏内容后，会在这里看到。"
+        desc: mode === "public" ? "该用户暂未公开收藏夹。" : "在必吃榜收藏内容后，会在这里看到。"
       }) + "</div>";
       pager.hidden = true;
       pager.innerHTML = "";
@@ -329,7 +313,6 @@
         (r.data.collections || []).forEach(function (c) {
           if (state.lists[c.section]) state.lists[c.section].push(c);
         });
-        if (!state.lists.forum.length && state.lists.shops.length) state.section = "shops";
         var list = listOf(state.section);
         state.collectionId = list.length ? list[0].id : null;
         renderAll();
@@ -340,22 +323,13 @@
     }
 
     Promise.all([
-      UI.api("/api/collections?section=forum", { on401: false }),
       UI.api("/api/collections?section=shops", { on401: false })
     ]).then(function (results) {
       if (results[0] && results[0].ok) {
-        state.lists.forum = results[0].data.collections || [];
-        state.defaults.forum = results[0].data.defaults ? results[0].data.defaults.forum : null;
+        state.lists.shops = results[0].data.collections || [];
+        state.defaults.shops = results[0].data.defaults ? results[0].data.defaults.shops : null;
       }
-      if (results[1] && results[1].ok) {
-        state.lists.shops = results[1].data.collections || [];
-        state.defaults.shops = results[1].data.defaults ? results[1].data.defaults.shops : null;
-      }
-      if (!results[0].ok || !results[1].ok) UI.toast.error("部分收藏夹加载失败");
-      var initial = state.section;
-      if (!listOf(initial).length && listOf(initial === "forum" ? "shops" : "forum").length) {
-        state.section = initial === "forum" ? "shops" : "forum";
-      }
+      if (!results[0].ok) UI.toast.error("部分收藏夹加载失败");
       var list = listOf(state.section);
       var preferred = state.defaults[state.section];
       var chosen = null;

@@ -92,20 +92,19 @@
   <div class="panel">
     <div class="panel__head"><h2 class="panel__title">网站设置</h2></div>
     <div class="panel__body form">
-      <div class="field"><label class="field__label" for="defaultPage">默认进入界面</label><select class="select" id="defaultPage" name="defaultPage"><option value="index.html">首页</option><option value="map.html">校园地图</option><option value="forum.html">论坛</option><option value="recipe.html">菜品与食谱</option></select><span class="field__hint">访问网站首页时会自动跳转到所选界面</span></div>
+      <div class="field"><label class="field__label" for="defaultPage">默认进入界面</label><select class="select" id="defaultPage" name="defaultPage"><option value="index.html">首页</option><option value="map.html">校园地图</option><option value="recipe.html">菜品与食谱</option></select><span class="field__hint">访问网站首页时会自动跳转到所选界面</span></div>
       <div class="field"><label class="field__label" for="recipeDefaultView">菜品与食谱默认页</label><select class="select" id="recipeDefaultView" name="recipeDefaultView"><option value="all">全部菜品</option><option value="reviews">菜品评价</option><option value="weekly">每周食谱</option></select></div>
       <div id="shopPrefFields" hidden><!-- features.shops：必吃榜默认排序 / 默认餐食类型 / 店铺详情页样式（手动 / 自动） --></div>
       <div class="field" id="collectionDefaultFields">
         <span class="field__label">收藏默认页</span>
         <div class="stack stack--sm">
-          <div class="field"><label class="field__label" for="defaultCollectionForum">论坛默认收藏夹</label><select class="select" id="defaultCollectionForum" name="defaultCollectionForum"></select></div>
           <div class="field"><label class="field__label" for="defaultCollectionShops">必吃榜默认收藏夹</label><select class="select" id="defaultCollectionShops" name="defaultCollectionShops"></select></div>
         </div>
         <span class="field__hint">进入个人中心「收藏」时默认打开的收藏夹</span>
       </div>
       <div class="field">
         <span class="field__label">显示权限等级</span>
-        <label class="check-row"><input class="check" type="checkbox" id="showRole" name="showRole"><span class="check-row__text">在论坛、评价等位置显示我的权限等级标签</span></label>
+        <label class="check-row"><input class="check" type="checkbox" id="showRole" name="showRole"><span class="check-row__text">在评价等位置显示我的权限等级标签</span></label>
         <span class="field__hint" id="showRoleHint"></span>
       </div>
     </div>
@@ -119,13 +118,13 @@
 - **手动**：店铺详情页显示「纵向 / 双栏」分段开关，用户在该页选择后写入账号（`shop_layout`），下次进入详情页保持上次选择。
 - **自动**：详情页不显示纵向/双栏开关，由纯 CSS 按屏幕宽度自动切换（≥900px 双栏，否则纵向）。
 
-「收藏默认页」（`#collectionDefaultFields`，`#23`）：两个 `.select` 分别对应 `default_collection_forum` / `default_collection_shops`。加载设置页时并行请求 `GET /api/collections?section=forum|shops`（无收藏夹时后端会自动创建「默认收藏夹」），用返回的收藏夹名称填充选项；若账号未设置某版块默认收藏夹，则回退选中该版块的「默认收藏夹」（首个收藏夹）。保存时先提交网站设置，再调用 `PUT /api/user/settings/collection` 写入两个默认收藏夹；成功后统一 toast「网站设置已保存到账号」。收藏夹列表加载失败时对应下拉禁用并显示「收藏夹加载失败」。
+「收藏默认页」只包含 `#defaultCollectionShops`，读取 `GET /api/collections?section=shops` 并提交 `{default_collection_shops}`。未设置时选中默认收藏夹；失败时禁用下拉并提示加载失败。
 
-设置保存：请求体 `{default_page, recipe_default_view, shop_default_sort, shop_default_type, shop_layout_mode, show_role}`；后端按传入字段部分更新。**本表单不再提交 `shop_layout`**，因此保存网站设置不会覆盖详情页记录的「纵向 / 双栏」选择。随后提交 `PUT /api/user/settings/collection`，请求体 `{default_collection_forum, default_collection_shops}`。成功后同步 localStorage 键（defaultPage/recipeDefaultView/shopDefaultSort/shopDefaultType/shopLayoutMode/showRole）+ toast「网站设置已保存到账号」。必吃榜偏好与样式面板（`#shopPrefFields`）在 `features.shops` 时显示；`shopDefaultType` 选项由 `/api/shops/meta` 动态填充。
+设置保存：请求体 `{default_page, recipe_default_view, shop_default_sort, shop_default_type, shop_layout_mode, show_role}`；后端按传入字段部分更新。**本表单不再提交 `shop_layout`**，因此保存网站设置不会覆盖详情页记录的「纵向 / 双栏」选择。随后提交 `PUT /api/user/settings/collection`，请求体 `{default_collection_shops}`。成功后同步 localStorage 键（defaultPage/recipeDefaultView/shopDefaultSort/shopDefaultType/shopLayoutMode/showRole）+ toast「网站设置已保存到账号」。必吃榜偏好与样式面板（`#shopPrefFields`）在 `features.shops` 时显示；`shopDefaultType` 选项由 `/api/shops/meta` 动态填充。
 
 2026-10-17 起移除「校园地图默认楼层」，不再读取、提交或写入本地楼层偏好。后端 `default_floor` 字段保留兼容，当前校园地图不使用此字段。
 
-「显示权限等级」开关（`#showRole`）：控制论坛/评价等处是否显示自己的角色标签；**普通用户（`user`）强制勾选并禁用**，其余角色可自由开关。默认展示。
+「显示权限等级」开关（`#showRole`）：控制评价等处是否显示自己的角色标签；**普通用户（`user`）强制勾选并禁用**，其余角色可自由开关。默认展示。
 
 ### #view-tickets 工单
 
@@ -151,12 +150,12 @@
 
 ### #view-messages 消息通知
 
-见 [inbox.md](inbox.md) §5。系统消息开关常显且禁用；`prefComment/prefReply/prefLike` 三个 switch，变更即 `PUT /api/user/preferences`（成功 toast「偏好已保存」，失败回滚）。
+见 [inbox.md](inbox.md)。此分区仅说明系统通知，开关选中且禁用。
 
 ## 脚本行为
 
 1. 进页 `P.requireLogin()`；`GET /api/user/profile` 载入后回填网站设置与 `#showRole`，期间提交按钮暂禁、`#settingsStatus` 显示载入中，失败可重试。
-2. 分区切换由 `UI.page.panels(#settingsNav)`：`data-panel` 点击 → 切 `.view.is-active` + `history.replaceState(null,'','#<name>')`；初始按 `location.hash` 选择，否则 `security`。切到 `tickets` 拉 `GET /api/tickets/mine`，切到 `messages` 拉 `GET /api/user/preferences`。
+2. 分区切换由 `UI.page.panels(#settingsNav)`：`data-panel` 点击 → 切 `.view.is-active` + `history.replaceState(null,'','#<name>')`；初始按 `location.hash` 选择，否则 `security`。切到 `tickets` 拉 `GET /api/tickets/mine`。
 3. 所有 fetch → `UI.api`；错误 → `UI.errorText` + toast / status-text。
 4. 退出登录：侧栏底部 `data-logout` 按钮（`ui.js` 事件委托），回首页。
 
@@ -170,12 +169,12 @@
 | 网站设置保存 | 保存 | busy → toast「网站设置已保存到账号」 |
 | 工单提交 | 提交 | busy → toast「工单已提交，请等待处理」 |
 | 工单空/加载失败 | — | empty / loadError |
-| 消息偏好保存 | 切换 switch | toast「偏好已保存」；失败回滚 |
+| 系统通知说明 | 消息分区 | 系统通知开关选中且禁用 |
 | 退出登录 | 侧栏按钮 | 清会话 + toast「已退出登录」+ 回首页 |
 
 ## 接口与存储（保留清单）
 
-- 接口：`GET /api/user/profile`；`PUT /api/user/settings`；`PUT /api/user/password`；`POST /api/tickets`、`GET /api/tickets/mine`；`GET /api/user/preferences`、`PUT /api/user/preferences`（#9）；`GET /api/shops/meta`（必吃榜类型，features.shops）；`GET /api/collections?section=forum|shops`、`PUT /api/user/settings/collection`（#23 收藏默认页）。
+- 接口：`GET /api/user/profile`；`PUT /api/user/settings`；`PUT /api/user/password`；`POST /api/tickets`、`GET /api/tickets/mine`；`GET /api/shops/meta`（必吃榜类型，features.shops）；`GET /api/collections?section=shops`、`PUT /api/user/settings/collection`（#23 收藏默认页）。
 - localStorage：token、user；defaultPage、recipeDefaultView、shopDefaultSort、shopDefaultType、shopLayoutMode、showRole（保存成功后同步写入）。`shopLayout`（详情页上次手动选择）只由详情页写入，设置表单不改动。
 
 ## 响应式
@@ -203,9 +202,9 @@
 - [ ] 账户菜单出现「设置」（个人中心与管理后台之间），可进入。
 - [ ] 四分区切换 + hash 深链 + 刷新保持；默认账号安全。
 - [ ] 密码 / 网站设置（含 show_role、必吃榜偏好）保存文案与错误正确。
-- [ ] 收藏默认页：两个下拉列出对应版块收藏夹；未设置时选中「默认收藏夹」；保存写入账号并显示成功提示（#23）。
+- [ ] 收藏默认页：必吃榜下拉列出店铺收藏夹；未设置时选中「默认收藏夹」；保存写入账号并显示成功提示（#23）。
 - [ ] 工单提交 + 列表（状态徽标、批复块、批复图 viewer）。
-- [ ] 消息偏好三开关保存与回滚。
+- [ ] 消息分区仅保留系统通知说明与禁用开关。
 - [ ] 退出登录回首页。
 - [ ] 360/900 正常；无 alert/confirm；axe=0；零报错。
 

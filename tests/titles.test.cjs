@@ -5,7 +5,7 @@
    - 用户查看与佩戴（未拥有 403、不佩戴）
    - 自动规则：推荐店铺、连续登录、学生认证（规则引擎单独用临时库验证）
    - 权限：title_manage 默认 super_admin，可显式授予
-   - 序列化：个人资料、论坛帖子/回复、店铺评价带佩戴头衔
+   - 序列化：个人资料、店铺评价带佩戴头衔
    在系统临时目录启动真实 server.js，使用临时数据库，不触碰项目 data.db。 */
 const test = require("node:test"), assert = require("node:assert/strict");
 const fs = require("node:fs"), os = require("node:os"), path = require("node:path");
@@ -123,18 +123,15 @@ test("规则引擎：新增规则只依赖注册表，未注册的 rule 不会�
   db.exec("CREATE TABLE users (id INTEGER PRIMARY KEY, role TEXT NOT NULL DEFAULT 'user', login_streak INTEGER NOT NULL DEFAULT 0)");
   db.exec("CREATE TABLE shops (id INTEGER PRIMARY KEY, created_by INTEGER)");
   // 成就类规则会查询这些业务表
-  db.exec("CREATE TABLE forum_posts (id INTEGER PRIMARY KEY, user_id INTEGER NOT NULL)");
-  db.exec("CREATE TABLE forum_replies (id INTEGER PRIMARY KEY, post_id INTEGER NOT NULL)");
-  db.exec("CREATE TABLE post_likes (id INTEGER PRIMARY KEY, post_id INTEGER NOT NULL, user_id INTEGER NOT NULL)");
   db.exec("CREATE TABLE recipes (id INTEGER PRIMARY KEY, user_id INTEGER NOT NULL, is_weekly INTEGER NOT NULL DEFAULT 0)");
   titleStore.migrate(db);
   db.prepare("INSERT INTO users (id, role) VALUES (1, 'user'), (2, 'student'), (3, 'admin'), (4, 'developer'), (5, 'super_admin')").run();
 
   const catalog = titleStore.listCatalog(db);
-  assert.equal(catalog.length, 9);
+  assert.equal(catalog.length, 7);
   assert.deepEqual(
     catalog.filter(function (t) { return t.source === "auto"; }).map(function (t) { return t.rule; }).sort(),
-    ["canteen_veteran", "forum_catalyst", "login_streak", "shop_contributor", "top_liked", "weekend_regular"]
+    ["canteen_veteran", "login_streak", "shop_contributor", "weekend_regular"]
   );
   assert.equal(
     catalog.some(function (t) { return t.rule.indexOf("role_") === 0 || t.rule === "student_verified"; }),
@@ -189,39 +186,15 @@ test("周末窗口：连续三个周末登录才算达成", () => {
   assert.equal(rules.consecutiveWeekends([lastWeekend, twoWeeksAgo], now), 0, "最近一个周末没登录就不算连续");
 });
 
-test("成就头衔：论坛催化剂 / 高赞校友 / 校园老吃家 / 闲者爱上网", () => {
+test("成就头衔：校园老吃家 / 闲者爱上网", () => {
   const db = new DatabaseSync(":memory:");
   db.exec("CREATE TABLE users (id INTEGER PRIMARY KEY, role TEXT NOT NULL DEFAULT 'user', login_streak INTEGER NOT NULL DEFAULT 0)");
   db.exec("CREATE TABLE shops (id INTEGER PRIMARY KEY, created_by INTEGER)");
-  db.exec("CREATE TABLE forum_posts (id INTEGER PRIMARY KEY, user_id INTEGER NOT NULL)");
-  db.exec("CREATE TABLE forum_replies (id INTEGER PRIMARY KEY, post_id INTEGER NOT NULL)");
-  db.exec("CREATE TABLE post_likes (id INTEGER PRIMARY KEY, post_id INTEGER NOT NULL, user_id INTEGER NOT NULL)");
   db.exec("CREATE TABLE recipes (id INTEGER PRIMARY KEY, user_id INTEGER NOT NULL, is_weekly INTEGER NOT NULL DEFAULT 0)");
   titleStore.migrate(db);
   db.prepare("INSERT INTO users (id, role) VALUES (1, 'user')").run();
 
   const names = function () { return titleStore.ownedTitles(db, 1).map(function (t) { return t.name; }); };
-  const addPost = db.prepare("INSERT INTO forum_posts (user_id) VALUES (1)");
-  const addReply = db.prepare("INSERT INTO forum_replies (post_id) VALUES (?)");
-
-  // 论坛催化剂：3 篇帖子各获 5 条评论
-  const firstPost = Number(addPost.run().lastInsertRowid);
-  const secondPost = Number(addPost.run().lastInsertRowid);
-  for (let i = 0; i < 5; i += 1) { addReply.run(firstPost); addReply.run(secondPost); }
-  rules.evaluateAutoTitles(db, 1);
-  assert.equal(names().indexOf("论坛催化剂"), -1, "只有 2 篇达标时不发放");
-  const thirdPost = Number(addPost.run().lastInsertRowid);
-  for (let i = 0; i < 5; i += 1) addReply.run(thirdPost);
-  assert.deepEqual(rules.evaluateAutoTitles(db, 1).map(function (t) { return t.name; }), ["论坛催化剂"]);
-
-  // 高赞校友：帖子累计获赞 30
-  const addLike = db.prepare("INSERT INTO post_likes (post_id, user_id) VALUES (?, ?)");
-  for (let i = 0; i < 29; i += 1) addLike.run(firstPost, 100 + i);
-  rules.evaluateAutoTitles(db, 1);
-  assert.equal(names().indexOf("高赞校友"), -1, "29 个赞还不够");
-  addLike.run(firstPost, 200);
-  assert.deepEqual(rules.evaluateAutoTitles(db, 1).map(function (t) { return t.name; }), ["高赞校友"]);
-
   // 校园老吃家：累计 10 篇食堂菜品评价，每周食谱不计入
   const addRecipe = db.prepare("INSERT INTO recipes (user_id, is_weekly) VALUES (1, ?)");
   for (let i = 0; i < 9; i += 1) addRecipe.run(0);
@@ -248,19 +221,19 @@ test("成就头衔：论坛催化剂 / 高赞校友 / 校园老吃家 / 闲者�
 
   assert.deepEqual(
     names().sort(),
-    ["校园老吃家", "论坛催化剂", "高赞校友", "闲者爱上网"].sort(),
-    "四个成就头衔并存"
+    ["校园老吃家", "闲者爱上网"].sort(),
+    "两个成就头衔并存"
   );
   db.close();
 });
 
-test("目录种子：9 个头衔，自动规则可读，未登录不可读", async () => {
+test("目录种子：7 个头衔，自动规则可读，未登录不可读", async () => {
   assert.equal((await api("/api/admin/titles")).status, 401);
   assert.equal((await api("/api/admin/titles", { token: plainUser.token })).status, 403);
 
   const list = await api("/api/admin/titles", { token: developer.token });
   assert.equal(list.status, 200);
-  assert.equal(list.data.titles.length, 9);
+  assert.equal(list.data.titles.length, 7);
   const byName = {};
   list.data.titles.forEach(function (t) { byName[t.name] = t; });
   assert.equal(byName["创站元老"].source, "grant");
@@ -272,13 +245,8 @@ test("目录种子：9 个头衔，自动规则可读，未登录不可读", asy
   assert.equal(byName["开发者"], undefined);
   assert.equal(byName["学子"], undefined);
   // 成就头衔
-  assert.equal(byName["论坛催化剂"].source, "auto");
-  assert.equal(byName["论坛催化剂"].rule, "forum_catalyst");
-  assert.equal(byName["论坛催化剂"].hue, "vermilion");
   assert.equal(byName["闲者爱上网"].rule, "weekend_regular");
   assert.equal(byName["闲者爱上网"].hue, "wisteria");
-  assert.equal(byName["高赞校友"].rule, "top_liked");
-  assert.equal(byName["高赞校友"].hue, "rose");
   assert.equal(byName["校园老吃家"].rule, "canteen_veteran");
   assert.equal(byName["校园老吃家"].hue, "ochre");
   // 师者已改为手动授予
@@ -294,10 +262,8 @@ test("目录种子：9 个头衔，自动规则可读，未登录不可读", asy
   assert.equal(ruleList.status, 200);
   assert.deepEqual(ruleList.data.rules.map(function (r) { return r.key; }).sort(), [
     "canteen_veteran",
-    "forum_catalyst",
     "login_streak",
     "shop_contributor",
-    "top_liked",
     "weekend_regular"
   ]);
 });
@@ -404,35 +370,6 @@ test("保护与即时发放：内置不可删、自动不可撤销、专属不�
   });
   assert.equal(clash.status, 409, "专属头衔不能与公共头衔同名");
 
-  // 即时发放：3 篇帖子各 5 条评论后，作者无需等待下次评估即获得「论坛催化剂」
-  // 用独立账号，避免影响后续用例对既有用户头衔的精确断言
-  const author = await account("titles_catalyst");
-  const postIds = [];
-  for (let i = 0; i < 3; i += 1) {
-    const created = await api("/api/forum/posts", {
-      token: author.token, method: "POST",
-      body: { category: "讨论", title: "即时头衔 " + i, content: "等待评论" }
-    });
-    assert.equal(created.status, 201);
-    postIds.push(created.data.post.id);
-  }
-  const countCatalyst = function () {
-    const db = new DatabaseSync(path.join(temp, "data.db"));
-    const n = db.prepare("SELECT COUNT(*) AS n FROM user_titles ut JOIN titles t ON t.id = ut.title_id WHERE ut.user_id = ? AND t.key = 'catalyst'").get(author.user.id).n;
-    db.close();
-    return n;
-  };
-  for (let p = 0; p < postIds.length; p += 1) {
-    for (let i = 0; i < 5; i += 1) {
-      const rep = await api("/api/forum/posts/" + postIds[p] + "/replies", { token: studentUser.token, method: "POST", body: { content: "评论 " + i } });
-      assert.equal(rep.status, 201);
-    }
-    assert.equal(countCatalyst(), p === 2 ? 1 : 0, "仅在第 3 篇帖子集满 5 条评论后即时发放");
-  }
-
-  // 自动头衔由规则发放，撤销会被后端拒绝（author 此时已拥有「论坛催化剂」）
-  const revokeAuto = await api("/api/admin/users/" + author.user.id + "/titles/" + byName["论坛催化剂"].id, { token: developer.token, method: "DELETE" });
-  assert.equal(revokeAuto.status, 409, "自动头衔不可手动撤销");
 });
 
 test("佩戴：未拥有 403、可取消佩戴、非法 id 404", async () => {
@@ -484,42 +421,13 @@ test("自动头衔：新增店铺后自动获得「三元坊老饕」", async ()
   assert.deepEqual(relogin.data.granted_titles, [], "已拥有的自动头衔不会重复发放");
 });
 
-test("序列化：个人资料、论坛帖子与回复、店铺评价都带佩戴头衔", async () => {
+test("序列化：个人资料、店铺评价都带佩戴头衔", async () => {
   const worn = await api("/api/user/title", { token: studentUser.token, method: "PUT", body: { title_id: founderId } });
   assert.equal(worn.status, 200);
   assert.equal(worn.data.title.name, "创站元老");
 
   const profile = await api("/api/user/profile", { token: studentUser.token });
   assert.deepEqual(profile.data.user.title, { name: "创站元老", hue: "teal" });
-
-  const post = await api("/api/forum/posts", {
-    token: studentUser.token,
-    method: "POST",
-    body: { category: "讨论", title: "头衔展示", content: "帖子正文" }
-  });
-  assert.equal(post.status, 201);
-
-  const feed = await api("/api/forum/posts", { token: plainUser.token });
-  assert.equal(feed.data.posts[0].title, "头衔展示", "佩戴头衔不能覆盖 forum_posts.title");
-  assert.equal(feed.data.posts[0].user_title.name, "创站元老", "帖子卡头带佩戴头衔");
-  assert.equal(feed.data.posts[0].nickname, "titles_student", "同时补齐昵称等统一用户组件字段");
-  assert.equal(feed.data.posts[0].role, "student");
-
-  const reply = await api("/api/forum/posts/" + post.data.post.id + "/replies", {
-    token: plainUser.token,
-    method: "POST",
-    body: { content: "回复一下" }
-  });
-  assert.equal(reply.status, 201);
-  assert.equal(reply.data.reply.user_title, null, "未佩戴则不带徽章，也不报错");
-  assert.equal(reply.data.reply.nickname, "titles_user");
-
-  const replies = await api("/api/forum/posts/" + post.data.post.id + "/replies", { token: plainUser.token });
-  assert.equal(replies.data.replies[0].role, "user");
-
-  const detail = await api("/api/forum/posts/" + post.data.post.id, { token: plainUser.token });
-  assert.equal(detail.data.post.title, "头衔展示");
-  assert.deepEqual(detail.data.post.user_title, { name: "创站元老", hue: "teal" });
 
   const shopId = (await api("/api/shops")).data.shops[0].id;
   const review = await api("/api/shops/" + shopId + "/reviews", {

@@ -1,6 +1,6 @@
 "use strict";
 /* 收藏夹（#23）后端测试：自动默认收藏夹、创建 / 收藏 / 取消、版块校验、分页详情、
-   公开状态、默认收藏夹设置与论坛帖子删除清理。
+   公开状态、默认收藏夹设置与店铺删除清理。
    在系统临时目录启动真实 server.js，使用临时数据库，不触碰项目 data.db。 */
 const test = require("node:test"), assert = require("node:assert/strict");
 const fs = require("node:fs"), os = require("node:os"), path = require("node:path");
@@ -70,9 +70,9 @@ const SHOP = {
 
 let developer, user, other;
 let shopId = null;
-let forumCollectionId = null;
+let mainCollectionId = null;
 let shopCollectionId = null;
-const postIds = [];
+const shopIds = [];
 
 test.before(async () => {
   server = spawn(process.execPath, [path.join(temp, "server.js")], {
@@ -91,13 +91,9 @@ test.before(async () => {
   shopId = shop.data.shop.id;
 
   for (let i = 1; i <= 21; i++) {
-    const post = await api("/api/forum/posts", {
-      token: developer.token,
-      method: "POST",
-      body: { category: "讨论", title: "收藏测试帖 " + i, content: "这是第 " + i + " 篇用于收藏分页测试的正文内容。" }
-    });
-    assert.equal(post.status, 201, "create post " + i);
-    postIds.push(post.data.post.id);
+    const shop = await api("/api/shops", { token: developer.token, method: "POST", body: { ...SHOP, name: "分页店铺 " + i } });
+    assert.equal(shop.status, 201);
+    shopIds.push(shop.data.shop.id);
   }
 });
 
@@ -116,53 +112,50 @@ test.after(async () => {
 });
 
 test("收藏夹接口需要登录，版块参数校验", async () => {
-  assert.equal((await api("/api/collections?section=forum")).status, 401);
+  assert.equal((await api("/api/collections?section=shops")).status, 401);
   assert.equal((await api("/api/collections?section=bad", { token: user.token })).status, 400);
   assert.equal((await api("/api/collections", { token: user.token })).status, 400);
 });
 
-test("首次读取论坛收藏夹自动创建默认收藏夹且不重复", async () => {
-  const first = await api("/api/collections?section=forum", { token: user.token });
+test("首次读取店铺收藏夹自动创建默认收藏夹且不重复", async () => {
+  const first = await api("/api/collections?section=shops", { token: user.token });
   assert.equal(first.status, 200);
   assert.equal(first.data.collections.length, 1);
   assert.equal(first.data.collections[0].name, "默认收藏夹");
-  assert.equal(first.data.collections[0].section, "forum");
+  assert.equal(first.data.collections[0].section, "shops");
   assert.equal(first.data.collections[0].items_count, 0);
 
-  const second = await api("/api/collections?section=forum", { token: user.token });
+  const second = await api("/api/collections?section=shops", { token: user.token });
   assert.equal(second.data.collections.length, 1);
 });
 
-test("创建收藏夹、收藏帖子并去重", async () => {
-  const created = await api("/api/collections", { token: user.token, method: "POST", body: { section: "forum", name: "我的帖子" } });
+test("创建收藏夹、收藏店铺并去重", async () => {
+  const created = await api("/api/collections", { token: user.token, method: "POST", body: { section: "shops", name: "我的店铺" } });
   assert.equal(created.status, 201);
-  assert.equal(created.data.collection.name, "我的帖子");
+  assert.equal(created.data.collection.name, "我的店铺");
   const id = created.data.collection.id;
-  forumCollectionId = id;
+  mainCollectionId = id;
 
-  const add = await api("/api/collections/" + id + "/items", { token: user.token, method: "POST", body: { item_type: "forum_post", item_id: postIds[0] } });
+  const add = await api("/api/collections/" + id + "/items", { token: user.token, method: "POST", body: { item_type: "shop", item_id: shopIds[0] } });
   assert.equal(add.status, 201);
   assert.equal(add.data.added, true);
 
-  const again = await api("/api/collections/" + id + "/items", { token: user.token, method: "POST", body: { item_type: "forum_post", item_id: postIds[0] } });
+  const again = await api("/api/collections/" + id + "/items", { token: user.token, method: "POST", body: { item_type: "shop", item_id: shopIds[0] } });
   assert.equal(again.status, 200);
   assert.equal(again.data.added, false);
 
-  const mismatch = await api("/api/collections/" + id + "/items", { token: user.token, method: "POST", body: { item_type: "shop", item_id: shopId } });
-  assert.equal(mismatch.status, 400);
-
-  const missing = await api("/api/collections/" + id + "/items", { token: user.token, method: "POST", body: { item_type: "forum_post", item_id: 999999 } });
+  const missing = await api("/api/collections/" + id + "/items", { token: user.token, method: "POST", body: { item_type: "shop", item_id: 999999 } });
   assert.equal(missing.status, 404);
 
-  const list = await api("/api/collections?section=forum", { token: user.token });
+  const list = await api("/api/collections?section=shops", { token: user.token });
   const target = list.data.collections.filter(function (c) { return c.id === id; })[0];
   assert.equal(target.items_count, 1);
 });
 
-test("收藏项详情包含标题、作者、正文开头并能分页", async () => {
-  const id = forumCollectionId;
-  for (let i = 1; i < postIds.length; i++) {
-    const add = await api("/api/collections/" + id + "/items", { token: user.token, method: "POST", body: { item_type: "forum_post", item_id: postIds[i] } });
+test("收藏项详情包含店铺卡片信息并能分页", async () => {
+  const id = mainCollectionId;
+  for (let i = 1; i < shopIds.length; i++) {
+    const add = await api("/api/collections/" + id + "/items", { token: user.token, method: "POST", body: { item_type: "shop", item_id: shopIds[i] } });
     assert.equal(add.status, 201);
   }
 
@@ -173,14 +166,9 @@ test("收藏项详情包含标题、作者、正文开头并能分页", async ()
   assert.equal(page1.data.total_pages, 2);
   assert.equal(page1.data.items.length, 20);
   const item = page1.data.items[0];
-  assert.equal(item.item_type, "forum_post");
+  assert.equal(item.item_type, "shop");
+  assert.ok(item.shop.name.startsWith("分页店铺"));
   assert.equal(item.deleted, false);
-  assert.ok(item.title.indexOf("收藏测试帖") === 0);
-  assert.equal(item.author.username, "collections_dev");
-  assert.equal(item.author.nickname, "collections_dev");
-  assert.ok(item.excerpt.length > 0);
-  assert.ok(item.created_at > 0);
-
   const page2 = await api("/api/collections/" + id + "/items?page=2", { token: user.token });
   assert.equal(page2.data.items.length, 1);
 
@@ -190,12 +178,12 @@ test("收藏项详情包含标题、作者、正文开头并能分页", async ()
 });
 
 test("取消收藏与分页边界", async () => {
-  const id = forumCollectionId;
-  const removed = await api("/api/collections/" + id + "/items/forum_post/" + postIds[0], { token: user.token, method: "DELETE" });
+  const id = mainCollectionId;
+  const removed = await api("/api/collections/" + id + "/items/shop/" + shopIds[0], { token: user.token, method: "DELETE" });
   assert.equal(removed.status, 200);
   assert.equal(removed.data.removed, true);
 
-  const removedAgain = await api("/api/collections/" + id + "/items/forum_post/" + postIds[0], { token: user.token, method: "DELETE" });
+  const removedAgain = await api("/api/collections/" + id + "/items/shop/" + shopIds[0], { token: user.token, method: "DELETE" });
   assert.equal(removedAgain.data.removed, false);
 
   const list = await api("/api/collections/" + id + "/items", { token: user.token });
@@ -203,7 +191,7 @@ test("取消收藏与分页边界", async () => {
 });
 
 test("公开状态控制他人查看", async () => {
-  const id = forumCollectionId;
+  const id = mainCollectionId;
   assert.equal((await api("/api/collections/" + id + "/items", { token: other.token })).status, 403);
   assert.equal((await api("/api/collections/" + id + "/items")).status, 401);
 
@@ -226,14 +214,14 @@ test("公开状态控制他人查看", async () => {
 
 test("必吃榜收藏夹自动创建、收藏店铺并返回店铺卡片信息", async () => {
   const initial = await api("/api/collections?section=shops", { token: user.token });
-  assert.equal(initial.data.collections.length, 1);
+  assert.equal(initial.data.collections.length, 2);
   const id = initial.data.collections[0].id;
   shopCollectionId = id;
 
   const add = await api("/api/collections/" + id + "/items", { token: user.token, method: "POST", body: { item_type: "shop", item_id: shopId } });
   assert.equal(add.status, 201);
 
-  const mismatch = await api("/api/collections/" + id + "/items", { token: user.token, method: "POST", body: { item_type: "forum_post", item_id: postIds[0] } });
+  const mismatch = await api("/api/collections/" + id + "/items", { token: user.token, method: "POST", body: { item_type: "invalid", item_id: shopIds[0] } });
   assert.equal(mismatch.status, 400);
 
   const items = await api("/api/collections/" + id + "/items", { token: user.token });
@@ -249,58 +237,57 @@ test("必吃榜收藏夹自动创建、收藏店铺并返回店铺卡片信息",
 });
 
 test("保存默认收藏夹设置并拒绝跨用户 / 跨版块", async () => {
-  const forumId = forumCollectionId;
   const shopsId = shopCollectionId;
 
   const saved = await api("/api/user/settings/collection", {
     token: user.token,
     method: "PUT",
-    body: { default_collection_forum: forumId, default_collection_shops: shopsId }
+    body: { default_collection_shops: shopsId }
   });
   assert.equal(saved.status, 200);
-  assert.equal(saved.data.default_collection_forum, forumId);
   assert.equal(saved.data.default_collection_shops, shopsId);
 
-  const list = await api("/api/collections?section=forum", { token: user.token });
-  assert.equal(list.data.defaults.forum, forumId);
+  const list = await api("/api/collections?section=shops", { token: user.token });
+  assert.equal(list.data.defaults.shops, shopsId);
 
   const profile = await api("/api/user/profile", { token: user.token });
-  assert.equal(profile.data.user.default_collection_forum, forumId);
   assert.equal(profile.data.user.default_collection_shops, shopsId);
 
-  const otherCreated = await api("/api/collections", { token: other.token, method: "POST", body: { section: "forum", name: "别人的" } });
+  const otherCreated = await api("/api/collections", { token: other.token, method: "POST", body: { section: "shops", name: "别人的" } });
   const foreign = await api("/api/user/settings/collection", {
     token: user.token,
     method: "PUT",
-    body: { default_collection_forum: otherCreated.data.collection.id }
+    body: { default_collection_shops: otherCreated.data.collection.id }
   });
   assert.equal(foreign.status, 400);
 
   const crossSection = await api("/api/user/settings/collection", {
     token: user.token,
     method: "PUT",
-    body: { default_collection_forum: shopsId }
+    body: { section: "forum", collection_id: shopsId }
   });
   assert.equal(crossSection.status, 400);
 
   const single = await api("/api/user/settings/collection", {
     token: user.token,
     method: "PUT",
-    body: { section: "forum", collection_id: null }
+    body: { section: "shops", collection_id: null }
   });
   assert.equal(single.status, 200);
-  assert.equal(single.data.default_collection_forum, null);
-  assert.equal(single.data.default_collection_shops, shopsId);
+  assert.equal(single.data.default_collection_shops, null);
 });
 
-test("删除论坛帖子会同时清理收藏项", async () => {
-  const id = forumCollectionId;
-  const before = await api("/api/collections/" + id + "/items", { token: user.token });
-  assert.equal(before.data.total, 20);
-
-  const removed = await api("/api/forum/posts/" + postIds[20], { token: developer.token, method: "DELETE" });
-  assert.equal(removed.status, 200);
-
-  const after = await api("/api/collections/" + id + "/items", { token: user.token });
-  assert.equal(after.data.total, 19);
+test("论坛页面、接口、通知偏好及收藏版块已移除", async () => {
+  for (const url of ["/api/forum/posts", "/api/forum/posts/1", "/api/forum/posts/1/replies", "/api/user/preferences"]) {
+    for (const method of ["GET", "POST", "PUT", "DELETE"]) {
+      assert.equal((await fetch(base + url, { method, headers: { Authorization: "Bearer " + user.token } })).status, 404);
+    }
+  }
+  for (const file of ["forum.html", "post.html", "js/forum.js", "js/pages/forum.js", "js/pages/post.js"]) {
+    assert.equal(fs.existsSync(path.join(root, "public", file)), false);
+  }
+  assert.equal((await api("/api/user/settings", { token: user.token, method: "PUT", body: { default_page: "forum.html" } })).status, 200);
+  assert.equal((await api("/api/user/profile", { token: user.token })).data.user.default_page, "index.html");
+  assert.equal((await api("/api/messages", { token: user.token })).status, 200);
+  assert.equal((await api("/api/collections?section=forum", { token: user.token })).status, 400);
 });

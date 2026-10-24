@@ -41,7 +41,7 @@
 2. **announcements.html**
 3. **index.html**（并废弃 about.html，见 pages/home.md）
 4. **recipe.html**
-5. **forum.html → post.html**
+5. **shops.html → shop.html**
 6. **profile.html**
 7. **admin.html**（最大，最后做）
 8. **map.html**（含 data.json style 修改与 Leaflet 本地化，见 pages/map.md）

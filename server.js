@@ -52,7 +52,6 @@ CREATE TABLE IF NOT EXISTS users (
   shop_default_type TEXT NOT NULL DEFAULT '',
   shop_layout TEXT NOT NULL DEFAULT 'stacked',
   shop_layout_mode TEXT NOT NULL DEFAULT 'manual',
-  default_collection_forum INTEGER,
   default_collection_shops INTEGER,
   status TEXT NOT NULL DEFAULT 'active',
   ban_reason TEXT NOT NULL DEFAULT '',
@@ -84,7 +83,6 @@ CREATE TABLE IF NOT EXISTS users (
       shop_default_type TEXT NOT NULL DEFAULT '',
       shop_layout TEXT NOT NULL DEFAULT 'stacked',
       shop_layout_mode TEXT NOT NULL DEFAULT 'manual',
-      default_collection_forum INTEGER,
       default_collection_shops INTEGER,
       status TEXT NOT NULL DEFAULT 'active',
       ban_reason TEXT NOT NULL DEFAULT '',
@@ -138,15 +136,6 @@ CREATE TABLE IF NOT EXISTS users (
   if (cols.indexOf("allow_appeal") === -1) {
     db.exec("ALTER TABLE users ADD COLUMN allow_appeal INTEGER NOT NULL DEFAULT 1");
   }
-  if (cols.indexOf("pref_comment") === -1) {
-    db.exec("ALTER TABLE users ADD COLUMN pref_comment INTEGER NOT NULL DEFAULT 1");
-  }
-  if (cols.indexOf("pref_reply") === -1) {
-    db.exec("ALTER TABLE users ADD COLUMN pref_reply INTEGER NOT NULL DEFAULT 1");
-  }
-  if (cols.indexOf("pref_like") === -1) {
-    db.exec("ALTER TABLE users ADD COLUMN pref_like INTEGER NOT NULL DEFAULT 1");
-  }
   // 头衔系统（#10）「连续登录」规则的计数来源
   if (cols.indexOf("last_login_date") === -1) {
     db.exec("ALTER TABLE users ADD COLUMN last_login_date TEXT NOT NULL DEFAULT ''");
@@ -165,16 +154,6 @@ db.exec("DROP TABLE IF EXISTS verify_codes;");
 db.exec("UPDATE users SET avatar_url = '' WHERE avatar_url IS NULL;");
 
 db.exec(`
-CREATE TABLE IF NOT EXISTS forum_posts (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  user_id INTEGER NOT NULL,
-  username TEXT NOT NULL,
-  category TEXT NOT NULL CHECK (category IN ('讨论', '提问')),
-  title TEXT NOT NULL,
-  content TEXT NOT NULL,
-  created_at INTEGER NOT NULL DEFAULT (strftime('%s','now'))
-);
-
 CREATE TABLE IF NOT EXISTS recipes (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   user_id INTEGER NOT NULL,
@@ -186,28 +165,6 @@ CREATE TABLE IF NOT EXISTS recipes (
   is_weekly INTEGER NOT NULL DEFAULT 0,
   created_at INTEGER NOT NULL DEFAULT (strftime('%s','now'))
 );
-
-CREATE TABLE IF NOT EXISTS forum_replies (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  post_id INTEGER NOT NULL,
-  user_id INTEGER NOT NULL,
-  username TEXT NOT NULL,
-  content TEXT NOT NULL,
-  created_at INTEGER NOT NULL DEFAULT (strftime('%s','now'))
-);
-
-CREATE INDEX IF NOT EXISTS idx_forum_category ON forum_posts(category);
-CREATE INDEX IF NOT EXISTS idx_forum_replies_post ON forum_replies(post_id);
-
-CREATE TABLE IF NOT EXISTS post_likes (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  post_id INTEGER NOT NULL,
-  user_id INTEGER NOT NULL,
-  created_at INTEGER NOT NULL DEFAULT (strftime('%s','now')),
-  UNIQUE (post_id, user_id)
-);
-
-CREATE INDEX IF NOT EXISTS idx_post_likes_post ON post_likes(post_id);
 
 CREATE TABLE IF NOT EXISTS user_permissions (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -354,6 +311,7 @@ migrateTitles(db);
 
 // 收藏夹（#23）：collections / collection_items 与默认收藏夹字段
 migrateCollections(db);
+require("./lib/migrations/remove-forum")(db);
 
 const UPLOAD_DIR = path.join(__dirname, "uploads");
 if (!fs.existsSync(UPLOAD_DIR)) {
@@ -566,41 +524,6 @@ function requirePermission(perm) {
   };
 }
 
-const MESSAGE_TYPE_FILTERS = { system: ["system"], interact: ["comment", "reply"], like: ["like"] };
-
-function actorInfo(userId) {
-  const row = db.prepare("SELECT id, username, nickname, avatar_url FROM users WHERE id = ?").get(userId);
-  if (!row) return { id: userId, username: "", nickname: "", avatar_url: "" };
-  return { id: row.id, username: row.username, nickname: row.nickname || "", avatar_url: row.avatar_url || "" };
-}
-
-// 头衔系统（#10）：论坛帖子与回复只存了 username，统一用户组件还需要昵称、头像、角色与佩戴头衔。
-// 佩戴头衔放在 user_title，避免覆盖 forum_posts.title 这类同名字段。
-function attachAuthors(rows, key) {
-  const column = key || "user_id";
-  const ids = [];
-  rows.forEach(function (row) {
-    const id = row[column];
-    if (id !== null && id !== undefined && ids.indexOf(id) === -1) ids.push(id);
-  });
-  if (!ids.length) return rows;
-  const placeholders = ids.map(function () { return "?"; }).join(",");
-  const accounts = new Map();
-  db.prepare("SELECT id, nickname, avatar_url, role, show_role FROM users WHERE id IN (" + placeholders + ")")
-    .all(...ids)
-    .forEach(function (account) { accounts.set(account.id, account); });
-  const titles = equippedTitleMap(db, ids);
-  rows.forEach(function (row) {
-    const account = accounts.get(row[column]);
-    row.nickname = account ? account.nickname || "" : "";
-    row.avatar_url = account ? account.avatar_url || "" : "";
-    row.role = account ? account.role : "";
-    row.show_role = account && account.show_role !== null && account.show_role !== undefined ? account.show_role : 1;
-    row.user_title = titles.get(row[column]) || null;
-  });
-  return rows;
-}
-
 // 连续登录按北京时间自然日累计，用于「夜读星」自动头衔；登录成功后顺带发放已达成的自动头衔。
 function recordLogin(userId) {
   const today = localDay(Date.now());
@@ -614,49 +537,6 @@ function recordLogin(userId) {
   // 逐日登录历史供「闲者爱上网」按周末统计；同一自然日只记一条
   db.prepare("INSERT OR IGNORE INTO user_login_days (user_id, day) VALUES (?, ?)").run(userId, today);
   return evaluateAutoTitles(db, userId);
-}
-
-function notifyComment(post, actorId, content) {
-  if (!post || post.user_id === actorId) return;
-  const author = db.prepare("SELECT id, pref_comment FROM users WHERE id = ?").get(post.user_id);
-  if (!author || !author.pref_comment) return;
-  db.prepare("INSERT INTO messages (user_id, type, actors, count, target_kind, target_id, snippet) VALUES (?, 'comment', ?, 1, 'post', ?, ?)")
-    .run(post.user_id, JSON.stringify([actorInfo(actorId)]), post.id, String(content).slice(0, 200));
-}
-
-function notifyLike(postId, actorId) {
-  const post = db.prepare("SELECT id, user_id FROM forum_posts WHERE id = ?").get(postId);
-  if (!post || post.user_id === actorId) return;
-  const author = db.prepare("SELECT pref_like FROM users WHERE id = ?").get(post.user_id);
-  if (!author || !author.pref_like) return;
-  const existing = db
-    .prepare("SELECT id, actors FROM messages WHERE user_id = ? AND type = 'like' AND target_kind = 'post' AND target_id = ?")
-    .get(post.user_id, postId);
-  if (existing) {
-    let actors = [];
-    try { actors = JSON.parse(existing.actors) || []; } catch (e) { actors = []; }
-    if (actors.some(function (a) { return a.id === actorId; })) return;
-    actors.push(actorInfo(actorId));
-    db.prepare("UPDATE messages SET actors = ?, count = ?, read_at = NULL, created_at = ? WHERE id = ?")
-      .run(JSON.stringify(actors), actors.length, Math.floor(Date.now() / 1000), existing.id);
-  } else {
-    db.prepare("INSERT INTO messages (user_id, type, actors, count, target_kind, target_id) VALUES (?, 'like', ?, 1, 'post', ?)")
-      .run(post.user_id, JSON.stringify([actorInfo(actorId)]), postId);
-  }
-}
-
-function removeLikeNotify(postId, actorId) {
-  const post = db.prepare("SELECT id, user_id FROM forum_posts WHERE id = ?").get(postId);
-  if (!post) return;
-  const existing = db
-    .prepare("SELECT id, actors FROM messages WHERE user_id = ? AND type = 'like' AND target_kind = 'post' AND target_id = ?")
-    .get(post.user_id, postId);
-  if (!existing) return;
-  let actors = [];
-  try { actors = JSON.parse(existing.actors) || []; } catch (e) { actors = []; }
-  actors = actors.filter(function (a) { return a.id !== actorId; });
-  if (!actors.length) db.prepare("DELETE FROM messages WHERE id = ?").run(existing.id);
-  else db.prepare("UPDATE messages SET actors = ?, count = ? WHERE id = ?").run(JSON.stringify(actors), actors.length, existing.id);
 }
 
 app.use(cors());
@@ -1268,7 +1148,7 @@ app.get("/api/admin/pending-counts", requireLogin, function (req, res) {
 
 app.get("/api/user/profile", requireLogin, function (req, res) {
   const user = db
-    .prepare("SELECT id, display_id, username, nickname, avatar_url, signature, role, default_page, default_floor, recipe_default_view, shop_default_sort, shop_default_type, shop_layout, shop_layout_mode, default_collection_forum, default_collection_shops, show_role, status FROM users WHERE id = ?")
+    .prepare("SELECT id, display_id, username, nickname, avatar_url, signature, role, default_page, default_floor, recipe_default_view, shop_default_sort, shop_default_type, shop_layout, shop_layout_mode, default_collection_shops, show_role, status FROM users WHERE id = ?")
     .get(req.user.id);
   if (!user) {
     res.status(404).json({ error: "user not found" });
@@ -1329,7 +1209,7 @@ app.put("/api/user/settings", requireLogin, function (req, res) {
     res.status(404).json({ error: "user not found" });
     return;
   }
-  const allowedPages = ["index.html", "map.html", "forum.html", "recipe.html"];
+  const allowedPages = ["index.html", "map.html", "recipe.html"];
   let defaultPage = current.default_page;
   if (body.default_page !== undefined) {
     defaultPage = allowedPages.indexOf(body.default_page) === -1 ? "index.html" : body.default_page;
@@ -1419,182 +1299,6 @@ app.put("/api/user/password", requireLogin, function (req, res) {
   const newHash = bcrypt.hashSync(newPassword, 10);
   db.prepare("UPDATE users SET password_hash = ? WHERE id = ?").run(newHash, req.user.id);
   res.json({ ok: true });
-});
-
-app.get("/api/forum/posts", checkRole(), function (req, res) {
-  const category = req.query.category;
-  const base =
-    "SELECT p.*, (SELECT COUNT(*) FROM forum_replies r WHERE r.post_id = p.id) AS reply_count, (SELECT COUNT(*) FROM post_likes l WHERE l.post_id = p.id) AS like_count FROM forum_posts p";
-  let rows;
-  if (category) {
-    rows = db.prepare(base + " WHERE p.category = ? ORDER BY p.created_at DESC, p.id DESC").all(category);
-  } else {
-    rows = db.prepare(base + " ORDER BY p.created_at DESC, p.id DESC").all();
-  }
-  const likedSet = {};
-  if (req.user && req.user.id !== null && req.user.id !== undefined) {
-    const liked = db.prepare("SELECT post_id FROM post_likes WHERE user_id = ?").all(req.user.id);
-    liked.forEach(function (row) { likedSet[row.post_id] = true; });
-  }
-  attachAuthors(rows);
-  const posts = rows.map(function (p) {
-    return Object.assign({}, p, { is_liked: likedSet[p.id] === true });
-  });
-  res.json({ posts: posts });
-});
-
-app.get("/api/forum/posts/:id", checkRole(), function (req, res) {
-  const id = parseInt(req.params.id, 10);
-  if (isNaN(id)) {
-    res.status(400).json({ error: "invalid post id" });
-    return;
-  }
-  const post = db
-    .prepare(
-      "SELECT p.*, (SELECT COUNT(*) FROM post_likes l WHERE l.post_id = p.id) AS like_count FROM forum_posts p WHERE p.id = ?"
-    )
-    .get(id);
-  if (!post) {
-    res.status(404).json({ error: "post not found" });
-    return;
-  }
-  let isLiked = false;
-  if (req.user && req.user.id !== null && req.user.id !== undefined) {
-    const row = db.prepare("SELECT id FROM post_likes WHERE post_id = ? AND user_id = ?").get(id, req.user.id);
-    isLiked = !!row;
-  }
-  attachAuthors([post]);
-  res.json({ post: Object.assign({}, post, { is_liked: isLiked }) });
-});
-
-app.post("/api/forum/posts", requireLogin, function (req, res) {
-  const body = req.body || {};
-  const category = body.category;
-  const title = body.title;
-  const content = body.content;
-  if (category !== "讨论" && category !== "提问") {
-    res.status(400).json({ error: "category must be 讨论 or 提问" });
-    return;
-  }
-  if (!title || !content) {
-    res.status(400).json({ error: "title and content are required" });
-    return;
-  }
-  const info = db
-    .prepare("INSERT INTO forum_posts (user_id, username, category, title, content) VALUES (?, ?, ?, ?, ?)")
-    .run(req.user.id, req.user.username, category, title, content);
-  const post = db.prepare("SELECT * FROM forum_posts WHERE id = ?").get(Number(info.lastInsertRowid));
-  res.status(201).json({ post: post });
-});
-
-app.delete("/api/forum/posts/:id", requireLogin, function (req, res) {
-  const id = parseInt(req.params.id, 10);
-  if (isNaN(id)) {
-    res.status(400).json({ error: "invalid post id" });
-    return;
-  }
-  const post = db.prepare("SELECT * FROM forum_posts WHERE id = ?").get(id);
-  if (!post) {
-    res.status(404).json({ error: "post not found" });
-    return;
-  }
-  const isOwner = post.user_id === req.user.id;
-  const isAdmin = (ROLE_WEIGHTS[req.user.role] || 0) >= ROLE_WEIGHTS.admin;
-  if (!isOwner && !isAdmin) {
-    res.status(403).json({ error: "forbidden" });
-    return;
-  }
-  db.prepare("DELETE FROM forum_replies WHERE post_id = ?").run(id);
-  db.prepare("DELETE FROM post_likes WHERE post_id = ?").run(id);
-  db.prepare("DELETE FROM collection_items WHERE item_type = 'forum_post' AND item_id = ?").run(id);
-  db.prepare("DELETE FROM messages WHERE target_kind = 'post' AND target_id = ?").run(id);
-  db.prepare("DELETE FROM forum_posts WHERE id = ?").run(id);
-  res.json({ ok: true });
-});
-
-app.post("/api/forum/posts/:id/like", requireLogin, function (req, res) {
-  const postId = parseInt(req.params.id, 10);
-  if (isNaN(postId)) {
-    res.status(400).json({ error: "invalid post id" });
-    return;
-  }
-  const post = db.prepare("SELECT id, user_id FROM forum_posts WHERE id = ?").get(postId);
-  if (!post) {
-    res.status(404).json({ error: "post not found" });
-    return;
-  }
-  const existing = db.prepare("SELECT id FROM post_likes WHERE post_id = ? AND user_id = ?").get(postId, req.user.id);
-  if (existing) {
-    res.status(400).json({ error: "已点赞" });
-    return;
-  }
-  db.prepare("INSERT INTO post_likes (post_id, user_id) VALUES (?, ?)").run(postId, req.user.id);
-  notifyLike(postId, req.user.id);
-  evaluateAutoTitles(db, post.user_id);
-  const count = db.prepare("SELECT COUNT(*) AS n FROM post_likes WHERE post_id = ?").get(postId).n;
-  res.json({ ok: true, liked: true, like_count: Number(count) });
-});
-
-app.delete("/api/forum/posts/:id/like", requireLogin, function (req, res) {
-  const postId = parseInt(req.params.id, 10);
-  if (isNaN(postId)) {
-    res.status(400).json({ error: "invalid post id" });
-    return;
-  }
-  const post = db.prepare("SELECT id FROM forum_posts WHERE id = ?").get(postId);
-  if (!post) {
-    res.status(404).json({ error: "post not found" });
-    return;
-  }
-  db.prepare("DELETE FROM post_likes WHERE post_id = ? AND user_id = ?").run(postId, req.user.id);
-  removeLikeNotify(postId, req.user.id);
-  const count = db.prepare("SELECT COUNT(*) AS n FROM post_likes WHERE post_id = ?").get(postId).n;
-  res.json({ ok: true, liked: false, like_count: Number(count) });
-});
-
-app.get("/api/forum/posts/:id/replies", function (req, res) {
-  const postId = parseInt(req.params.id, 10);
-  if (isNaN(postId)) {
-    res.status(400).json({ error: "invalid post id" });
-    return;
-  }
-  const post = db.prepare("SELECT id FROM forum_posts WHERE id = ?").get(postId);
-  if (!post) {
-    res.status(404).json({ error: "post not found" });
-    return;
-  }
-  const replies = db
-    .prepare("SELECT * FROM forum_replies WHERE post_id = ? ORDER BY created_at ASC, id ASC")
-    .all(postId);
-  attachAuthors(replies);
-  res.json({ replies: replies });
-});
-
-app.post("/api/forum/posts/:id/replies", requireLogin, function (req, res) {
-  const postId = parseInt(req.params.id, 10);
-  if (isNaN(postId)) {
-    res.status(400).json({ error: "invalid post id" });
-    return;
-  }
-  const post = db.prepare("SELECT id, user_id FROM forum_posts WHERE id = ?").get(postId);
-  if (!post) {
-    res.status(404).json({ error: "post not found" });
-    return;
-  }
-  const content = (req.body || {}).content;
-  if (!content) {
-    res.status(400).json({ error: "content is required" });
-    return;
-  }
-  const info = db
-    .prepare("INSERT INTO forum_replies (post_id, user_id, username, content) VALUES (?, ?, ?, ?)")
-    .run(postId, req.user.id, req.user.username, content);
-  notifyComment(post, req.user.id, content);
-  // 帖子达到「评论 5 条以上」可能让作者获得「论坛催化剂」
-  evaluateAutoTitles(db, post.user_id);
-  const reply = db.prepare("SELECT * FROM forum_replies WHERE id = ?").get(Number(info.lastInsertRowid));
-  attachAuthors([reply]);
-  res.status(201).json({ reply: reply });
 });
 
 app.get("/api/recipes", function (req, res) {
@@ -1805,7 +1509,7 @@ app.get("/api/messages", requireLogin, function (req, res) {
   const before = parseInt(req.query.before, 10);
   const clauses = ["m.user_id = ?"];
   const params = [req.user.id];
-  const typeList = type && MESSAGE_TYPE_FILTERS[type] ? MESSAGE_TYPE_FILTERS[type] : type && ["system", "comment", "reply", "like"].indexOf(type) !== -1 ? [type] : null;
+  const typeList = type === "system" ? [type] : null;
   if (typeList) {
     clauses.push("m.type IN (" + typeList.map(function () { return "?"; }).join(",") + ")");
     typeList.forEach(function (t) { params.push(t); });
@@ -1816,7 +1520,7 @@ app.get("/api/messages", requireLogin, function (req, res) {
     params.push(before);
   }
   const sql =
-    "SELECT m.*, p.title AS target_title FROM messages m LEFT JOIN forum_posts p ON (m.target_kind = 'post' AND p.id = m.target_id) WHERE " +
+    "SELECT m.* FROM messages m WHERE " +
     clauses.join(" AND ") +
     " ORDER BY m.created_at DESC, m.id DESC LIMIT ?";
   params.push(pageSize + 1);
@@ -1825,15 +1529,12 @@ app.get("/api/messages", requireLogin, function (req, res) {
   const messages = rows.slice(0, pageSize).map(function (m) {
     let actors = [];
     try { actors = JSON.parse(m.actors) || []; } catch (e) { actors = []; }
-    const target = m.target_kind === "post" && m.target_id
-      ? { kind: "post", id: m.target_id, url: "post.html?id=" + m.target_id, title: m.target_title || "", snippet: m.snippet || "" }
-      : null;
     return {
       id: m.id,
       type: m.type,
       actors: actors,
       count: m.count,
-      target: target,
+      target: null,
       title: m.title || null,
       body: m.body || null,
       important: !!m.important,
@@ -1841,30 +1542,12 @@ app.get("/api/messages", requireLogin, function (req, res) {
       created_at: m.created_at
     };
   });
-  const counts = { all: 0, system: 0, comment: 0, reply: 0, like: 0 };
+  const counts = { all: 0, system: 0 };
   db.prepare("SELECT type, COUNT(*) AS n FROM messages WHERE user_id = ? AND read_at IS NULL GROUP BY type").all(req.user.id).forEach(function (c) {
     if (counts[c.type] !== undefined) counts[c.type] = Number(c.n);
     counts.all += Number(c.n);
   });
   res.json({ messages: messages, has_more: hasMore, counts: counts });
-});
-
-app.get("/api/user/preferences", requireLogin, function (req, res) {
-  const u = db.prepare("SELECT pref_comment, pref_reply, pref_like FROM users WHERE id = ?").get(req.user.id);
-  res.json({ comment: !!(u && u.pref_comment), reply: !!(u && u.pref_reply), like: !!(u && u.pref_like) });
-});
-
-app.put("/api/user/preferences", requireLogin, function (req, res) {
-  const body = req.body || {};
-  const u = db.prepare("SELECT pref_comment, pref_reply, pref_like FROM users WHERE id = ?").get(req.user.id);
-  function pick(key, current) {
-    return Object.prototype.hasOwnProperty.call(body, key) ? (body[key] ? 1 : 0) : current;
-  }
-  const comment = pick("comment", u ? u.pref_comment : 1);
-  const reply = pick("reply", u ? u.pref_reply : 1);
-  const like = pick("like", u ? u.pref_like : 1);
-  db.prepare("UPDATE users SET pref_comment = ?, pref_reply = ?, pref_like = ? WHERE id = ?").run(comment, reply, like, req.user.id);
-  res.json({ comment: !!comment, reply: !!reply, like: !!like });
 });
 
 app.post("/api/admin/notifications", requirePermission("announcement_publish"), function (req, res) {
@@ -1908,8 +1591,7 @@ mountTitleRoutes(app, db, {
 // 收藏夹（#23）
 mountCollectionRoutes(app, db, {
   requireLogin: requireLogin,
-  authenticate: checkRole(),
-  attachAuthors: attachAuthors
+  authenticate: checkRole()
 });
 app.use("/api", function (req, res) {
   res.status(404).json({ error: "not found" });

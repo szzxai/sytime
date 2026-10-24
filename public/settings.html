@@ -173,7 +173,6 @@
                     ><select class="select" id="defaultPage" name="defaultPage">
                       <option value="index.html">首页</option>
                       <option value="map.html">校园地图</option>
-                      <option value="forum.html">论坛</option>
                       <option value="recipe.html">菜品与食谱</option></select
                     ><span class="field__hint"
                       >访问网站首页时会自动跳转到所选界面</span
@@ -281,15 +280,6 @@
                     <span class="field__label">收藏默认页</span>
                     <div class="stack stack--sm">
                       <div class="field">
-                        <label class="field__label" for="defaultCollectionForum"
-                          >论坛默认收藏夹</label
-                        ><select
-                          class="select"
-                          id="defaultCollectionForum"
-                          name="defaultCollectionForum"
-                        ></select>
-                      </div>
-                      <div class="field">
                         <label class="field__label" for="defaultCollectionShops"
                           >必吃榜默认收藏夹</label
                         ><select
@@ -312,7 +302,7 @@
                         id="showRole"
                         name="showRole"
                       /><span class="check-row__text"
-                        >在论坛、评价等位置显示我的权限等级标签</span
+                        >在评价等位置显示我的权限等级标签</span
                       ></label
                     >
                     <span class="field__hint" id="showRoleHint"></span>
@@ -408,7 +398,7 @@
               <div class="panel__head">
                 <h2 class="panel__title">消息通知</h2>
                 <p class="panel__desc">
-                  关闭后不再产生对应的新消息；已收到的消息不受影响。
+                  管理员通知和头衔授予消息会显示在消息箱。
                 </p>
               </div>
               <div class="panel__body">
@@ -426,47 +416,6 @@
                     checked
                     disabled
                     aria-label="系统消息"
-                  />
-                </div>
-                <div class="switch-row">
-                  <div class="switch-row__text">
-                    <span class="switch-row__title">评论通知</span
-                    ><span class="switch-row__desc">有人评论你的帖子</span>
-                  </div>
-                  <input
-                    type="checkbox"
-                    class="switch"
-                    role="switch"
-                    id="prefComment"
-                    checked
-                    aria-label="评论通知"
-                  />
-                </div>
-                <div class="switch-row">
-                  <div class="switch-row__text">
-                    <span class="switch-row__title">回复通知</span
-                    ><span class="switch-row__desc">有人回复你的评论</span>
-                  </div>
-                  <input
-                    type="checkbox"
-                    class="switch"
-                    role="switch"
-                    id="prefReply"
-                    checked
-                    aria-label="回复通知"
-                  />
-                </div>
-                <div class="switch-row">
-                  <div class="switch-row__text">
-                    <span class="switch-row__title">点赞通知</span
-                    ><span class="switch-row__desc">有人赞了你的内容</span>
-                  </div>
-                  <input
-                    type="checkbox"
-                    class="switch"
-                    role="switch"
-                    id="prefLike"
-                    aria-label="点赞通知"
                   />
                 </div>
               </div>

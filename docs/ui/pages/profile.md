@@ -89,14 +89,13 @@
 首次切到「收藏」时调用 `UI.collectionsBrowser(#view-favorites, { mode: "owner" })`（`public/js/collections-view.js`），只复用 `site.css` 的 `.shell` / `.side-nav` / `.breadcrumb` / `.switch-row` / `.grid` / `.card` / `.pager`。
 
 - **左右分栏**：`.shell`（桌面 15rem + 内容；窄屏单列）。左侧 `.shell__nav` 为双层菜单：
-  - 第一层 `.side-nav`：论坛 / 必吃榜；点击切换版块。
+  - 第一层 `.side-nav`：必吃榜；点击切换版块。
   - 第二层 `.side-nav`：当前版块的收藏夹名 + 条目数；点击刷新右侧。当前项用 `.is-active` / `aria-current="page"`。
 - **右侧顶部**：`.breadcrumb` 显示「版块 · 收藏夹」；右侧 `.switch-row` 的 `.switch` 控制 `is_public`（`PUT /api/collections/:id/public`）。
 - **内容**：`.grid`（`--grid-min:20rem`）网格，每页 20 条，`.pager` 分页。
-  - 论坛卡片：标题 `var(--fs-lg)`（近黑），作者 + 发布时间用 `u-muted u-fs-xs`，正文开头用 `prose u-fs-sm`；卡片 `height:12rem; max-width:20rem` 固定，`card__link` 整卡跳 `post.html?id=`。
   - 店铺卡片：直接复用必吃榜列表的 `UI.shopCard()`（不显示收藏按钮）。
 - **移动端（UA 识别）**：`UI.isMobile` 为真时隐藏左右侧栏，顶部显示「选择收藏夹」下拉（`optgroup` 按版块分组），切换后刷新内容。
-- **默认**：进入时默认论坛；若账号设置了 `default_collection_forum` 则选中它，否则选中第一个（自动创建的「默认收藏夹」）。
+- **默认**：进入时默认必吃榜；若账号设置了 `default_collection_shops` 则选中它，否则选中第一个（自动创建的「默认收藏夹」）。
 - 加载/空/错误：骨架 / `UI.html.empty` / callout + 重试；公开切换失败回滚开关。
 
 ## 脚本行为
@@ -105,7 +104,7 @@
 2. 进页 `P.requireLogin()`；`GET /api/user/profile` 载入后填充用户名（`<h1>`）、权限等级标签、头像、昵称与签名编辑框。
 3. 昵称 / 签名：`bindInlineEdit`（见上）。所有 fetch → `UI.api`；错误 → `UI.errorText`。
 4. 头像上传：`#chooseAvatar` → `#avatarFile`，校验 2 MB / 类型后 `POST /api/user/avatar`（multipart），成功刷新头像与页头。
-5. 「头衔」分区进入时拉取 `GET /api/user/titles`；「收藏」分区首次进入时构建 `UI.collectionsBrowser`（拉取论坛 / 必吃榜收藏夹及当前收藏夹内容）；「主页」显示 `UI.html.empty` 空状态。
+5. 「头衔」分区进入时拉取 `GET /api/user/titles`；「收藏」分区首次进入时构建 `UI.collectionsBrowser`（拉取必吃榜收藏夹及当前收藏夹内容）；「主页」显示 `UI.html.empty` 空状态。
 
 ## 状态矩阵
 
@@ -128,7 +127,7 @@
 ## 接口与存储（保留清单）
 
 - 接口：`GET /api/user/profile`；`POST /api/user/avatar`；`PUT /api/user/nickname`；`PUT /api/user/signature`；`GET /api/user/titles`、`PUT /api/user/title`（#10）。
-- 收藏（#23）：`GET /api/collections?section=forum|shops`；`GET /api/collections/:id/items?page=`；`PUT /api/collections/:id/public`。
+- 收藏（#23）：`GET /api/collections?section=shops`；`GET /api/collections/:id/items?page=`；`PUT /api/collections/:id/public`。
 - localStorage：token、user。
 
 ## 响应式
@@ -155,9 +154,8 @@
 - [ ] 昵称/签名点击编辑，失焦弹确认；保存写入后端、取消还原。
 - [ ] 横向菜单栏滚动时吸顶，当前项高亮。
 - [ ] 主页为空页面；头衔为原「我的头衔」；设置跳转 `settings.html`。
-- [ ] 收藏：左右分栏 + 双层菜单（论坛/必吃榜、收藏夹）；切换版块/收藏夹刷新右侧。
+- [ ] 收藏：左右分栏 + 双层菜单（必吃榜、收藏夹）；切换版块/收藏夹刷新右侧。
 - [ ] 收藏顶部显示「版块 · 收藏夹」路径与公开开关；切换公开写入账号。
-- [ ] 论坛卡片固定宽高（标题 `fs-lg`、作者/时间、正文开头）；店铺卡片复用必吃榜样式；点击跳详情。
 - [ ] 收藏网格每页 20 条，分页器可用；手机 UA 降级为单列 + 顶部下拉。
 - [ ] hash 深链 `#home/#favorites/#titles` 刷新保持。
 - [ ] 360/768+ 正常；无 alert/confirm；axe=0；零报错。

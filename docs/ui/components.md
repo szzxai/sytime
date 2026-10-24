@@ -2,7 +2,7 @@
 
 > 当前共享视觉：拾光酥糕 v2.3（2026-10-18），颜色、字号、圆角与断点以 [UI.md](../../UI.md) 和 `public/css/site.css` 为准。下列组件钩子与状态继续适用。
 
-> 事实来源：[assets/site.css](./assets/site.css)（类名、变体、状态、数值）与 [assets/ui.js](./assets/ui.js)（脚本 API）。本文与之逐字一致；发现不一致以这两个文件为准，并回改本文。视觉基准：[assets/specimen.html](./assets/specimen.html)。
+> 事实来源：[assets/site.css](./assets/site.css)（类名、变体、状态、数值）与 [assets/ui.js](./assets/ui.js)（脚本 API）。这些资源是历史设计参考；当前行为以 `public/css/site.css`、`public/js/ui.js` 与页面实现为准。视觉基准：[assets/specimen.html](./assets/specimen.html)。
 
 ## 组件使用总则
 
@@ -69,7 +69,6 @@ JS 写法：`UI.icon('search')`、`UI.icon('search', 'icon--sm')`。
 
 骨架：
 ```html
-<button type="button" class="btn btn--primary"><svg class="icon" aria-hidden="true"><use href="img/icons.svg#i-plus"></use></svg>发布帖子</button>
 ```
 
 类与变体：
@@ -168,8 +167,8 @@ JS 写法：`UI.icon('search')`、`UI.icon('search', 'icon--sm')`。
 
 ```html
 <div class="switch-row">
-  <div class="switch-row__text"><span class="switch-row__title">评论通知</span><span class="switch-row__desc">有人评论你的帖子时提醒我</span></div>
-  <input type="checkbox" class="switch" role="switch" checked aria-label="评论通知">
+  <div class="switch-row__text"><span class="switch-row__title">公开收藏夹</span><span class="switch-row__desc">其他人可在你的主页查看</span></div>
+  <input type="checkbox" class="switch" role="switch" checked aria-label="公开收藏夹">
 </div>
 ```
 44×26 轨道，选中品牌绿；开关行之间用 1px 分割线（自动）。**必须有 `role="switch"` 与可读的 label**（title 即说明时也要 `aria-label`）。
@@ -363,11 +362,11 @@ JS 写法：`UI.icon('search')`、`UI.icon('search', 'icon--sm')`。
 ```
 尺寸 xs 24 / sm 32 / md 40 / lg 64 / xl 96；圆形；无图 = 底色 + 首字（白）；内描边自动。hue 由 `UI.hueFor(id或name)` 生成（只用 7 彩色）；页面静态写死也允许。JS：`UI.avatar(user, size)`。
 
-`UI.avatarLink(user, size)` 把头像包成链接（#21）：本人 → `profile.html`，他人 → `user.html?id=<id>`（`UI.userHref`）；user 无 id 时退化为不可点击的 `span`。论坛、帖子、评价等处的头像由它渲染，`a.user-avatar--link` 有 hover/focus 态。
+`UI.avatarLink(user, size)` 把头像包成链接（#21）：本人 → `profile.html`，他人 → `user.html?id=<id>`（`UI.userHref`）；user 无 id 时退化为不可点击的 `span`。评价等处的头像由它渲染，`a.user-avatar--link` 有 hover/focus 态。
 
 ### User Line 用户信息行
 
-**全站统一的用户展示**（论坛、评价、消息、后台都用它，不允许页面另写）。
+**全站统一的用户展示**（评价、消息、后台都用它，不允许页面另写）。
 
 ```html
 <a class="user-line" href="profile.html">
@@ -417,7 +416,7 @@ JS：`UI.userLine(user, {size, meta, href, large, showRole})`；meta 传 HTML �
 ```html
 <div class="prose">{{正文（已 esc，保留换行）}}</div>
 ```
-手机 15 / ≥768 16px、行高 1.85、`pre-wrap`、`anywhere` 断行。帖子正文、公告正文、工单内容用它。
+手机 15 / ≥768 16px、行高 1.85、`pre-wrap`、`anywhere` 断行。公告正文、工单内容用它。
 
 ---
 
@@ -468,7 +467,7 @@ JS：`UI.userLine(user, {size, meta, href, large, showRole})`；meta 传 HTML �
 
 ### Collection 收藏按钮与选择弹窗（#23）
 
-- 按钮：`UI.collections.button(section, itemId, { variant, className })`；`section` 为 `forum` / `shops`，生成 `[data-collect][data-section][data-item-id]` 按钮。列表 / 帖子用 `.action-btn.action-btn--collect`；店铺详情操作区传 `{variant:"btn"}` 用 `.btn.btn--sm.btn--collect`。已收藏时 `aria-pressed="true"`，用主色 `--primary` 高亮（区别于点赞的红色）。
+- 按钮：`UI.collections.button(section, itemId, { variant, className })`；`section` 为 `shops`，生成 `[data-collect][data-section][data-item-id]` 按钮。列表用 `.action-btn.action-btn--collect`；店铺详情操作区传 `{variant:"btn"}` 用 `.btn.btn--sm.btn--collect`。已收藏时 `aria-pressed="true"`，用主色 `--primary` 高亮（区别于点赞的红色）。
 - 弹窗：点击任意 `[data-collect]` 由 `ui.js` 全局委托调用 `UI.collections.open({section, itemId, button})`，使用 `dialog dialog--sheet dialog--wide`：列出 `GET /api/collections?section=` 的收藏夹（单选 `.choice`），可展开「新建收藏夹」（`.field` + `.input` + `.btn`），底部「取消 / 确认收藏」；确认调用 `POST /api/collections/:id/items`，成功后高亮触发按钮并 toast。
 - 未登录：toast「请先登录后再收藏」，不打开弹窗。收藏状态在浏览器 localStorage 按账号缓存（`collected:<userId>:<section>:<itemId>`），用于页面加载时恢复高亮。
 
@@ -476,14 +475,13 @@ JS：`UI.userLine(user, {size, meta, href, large, showRole})`；meta 传 HTML �
 
 `UI.collectionsBrowser(container, { mode, userId, defaultSection })`（`public/js/collections-view.js`），个人中心与用户主页共用：
 
-- `mode: "owner"`：拉取当前用户两个版块的收藏夹（`GET /api/collections?section=`），右侧公开开关可写；`mode: "public"`：拉取目标用户的公开收藏夹（`GET /api/users/:id/collections`），只读并显示「公开」徽章。
+- `mode: "owner"`：拉取当前用户必吃榜收藏夹（`GET /api/collections?section=`），右侧公开开关可写；`mode: "public"`：拉取目标用户的公开收藏夹（`GET /api/users/:id/collections`），只读并显示「公开」徽章。
 - 结构复用 `.shell`（左 15rem 侧栏 + 右内容）、`.side-nav`（版块 + 收藏夹双层菜单）、`.breadcrumb`、`.switch-row`、`.grid`、`.pager`；不新增 CSS 类。
-- 论坛卡片：`card` + `card__link`，标题 `var(--fs-lg)`，作者/时间 `u-muted u-fs-xs`，正文开头 `prose u-fs-sm`；固定高 `12rem`、最大宽 `20rem`。店铺卡片复用 `UI.shopCard()`（不显示收藏按钮）。
 - 移动端（`UI.isMobile`）隐藏侧栏，顶部改用 `.select` 下拉（按版块分组）。
 
 ### Sheet 底部面板
 
-即 `dialog--sheet` 在手机端的形态（同一元素，桌面自动居中圆角浮层）。宽度全屏、底部对齐；把手条自动渲染。用于发帖、写评价、添加菜品、封禁等表单。
+即 `dialog--sheet` 在手机端的形态（同一元素，桌面自动居中圆角浮层）。宽度全屏、底部对齐；把手条自动渲染。用于写评价、添加菜品、封禁等表单。
 
 ### Drawer 抽屉
 
@@ -517,7 +515,7 @@ JS：`UI.userLine(user, {size, meta, href, large, showRole})`；meta 传 HTML �
   <div class="empty__icon"><svg class="icon" aria-hidden="true"><use href="img/icons.svg#i-inbox"></use></svg></div>
   <div class="empty__title">暂无消息</div>
   <div class="empty__desc">有新的互动或通知时会出现在这里。</div>
-  <div class="empty__actions"><a class="btn btn--primary" href="forum.html">去论坛</a></div>
+  <div class="empty__actions"><a class="btn btn--primary" href="shops.html">去必吃榜</a></div>
 </div>
 ```
 变体：`empty--card`（虚线卡底，用于列表区中央）、`empty--compact`（小）、`empty--error`（红图标）、`empty--lock`（琥珀锁，权限不足）。JS：`UI.html.empty({icon,title,desc,actions,card,compact,tone})`；加载失败用 `UI.html.loadError(r)`（自带重试按钮，页面监听 `[data-retry]` 点击重新加载）。文案必须来自 copy.md 文案库。
@@ -554,7 +552,7 @@ JS：`UI.userLine(user, {size, meta, href, large, showRole})`；meta 传 HTML �
 
 ### Site Header 页头与主导航
 
-由 `UI.shell.mount()` 生成。`#siteHeader` 宿主吸顶，内部 `.site-header` 为纯色背景，首页无分隔线，功能页保留 1px 下边线。所有尺寸高度均为 56px。左上使用 32px 的苏州中学校徽图标，距顶栏左边 28px、顶部 15px，链接通过中文 aria-label 标注首页。桌面五个导航右对齐：「地图、论坛、菜谱、必吃榜、更新公告」，当前链接使用绿色下划线；手机保留汉堡抽屉和全部功能入口。
+由 `UI.shell.mount()` 生成。`#siteHeader` 宿主吸顶，内部 `.site-header` 为纯色背景，首页无分隔线，功能页保留 1px 下边线。所有尺寸高度均为 56px。左上使用 32px 的苏州中学校徽图标，距顶栏左边 28px、顶部 15px，链接通过中文 aria-label 标注首页。桌面四个导航右对齐：「地图、菜谱、必吃榜、更新公告」，当前链接使用绿色下划线；手机保留汉堡抽屉和全部功能入口。
 
 `.site-header__tools` 包含主题按钮和 `#authArea`。未登录显示绿色「登录 →」，注册入口保留在登录页和移动抽屉；已登录显示消息铃与头像菜单。账号权限与退出流程不变。主导航使用指定短名称；同源站内页面切换仅让顶栏与公告下方的内容以 420ms 同步左右滑动。跳转时记录公告高度，在目标页首帧提前预留，公告异步返回前顶栏位置不变；新顶栏快照保持可见，防止短暂空白。减少动态效果模式直接跳转。
 
@@ -621,7 +619,7 @@ JS：`UI.userLine(user, {size, meta, href, large, showRole})`；meta 传 HTML �
 ### Back Link 与面包屑
 
 ```html
-<a class="back-link" href="forum.html"><svg class="icon icon--sm" aria-hidden="true"><use href="img/icons.svg#i-arrow-left"></use></svg>返回论坛</a>
+<a class="back-link" href="shops.html"><svg class="icon icon--sm" aria-hidden="true"><use href="img/icons.svg#i-arrow-left"></use></svg>返回必吃榜</a>
 <nav class="breadcrumb" aria-label="面包屑"><a href="shops.html">必吃榜</a><svg class="icon icon--sm">chevron-right</svg><span>{{店铺名}}</span></nav>
 ```
 详情页二选一：单级返回用 back-link；两级以上用面包屑。
@@ -643,7 +641,7 @@ JS：`UI.userLine(user, {size, meta, href, large, showRole})`；meta 传 HTML �
 
 ### Workspace 筛选与结果工作区
 
-论坛与菜谱 `.workspace` 为 290px 侧栏 + 弹性内容列，必吃榜为 330px。`.workspace__sidebar` 只包含现有标题、筛选与操作，`.workspace__content` 放真实数据。桌面侧栏吸顶且独立滚动，小于 768px 变为顺排。DOM ID 保持不变，对话框放在两列之外。卡片 8px 圆角、1px 边框、无大阴影；输入与按钮 4px 圆角。
+菜谱 `.workspace` 为 290px 侧栏 + 弹性内容列，必吃榜为 330px。`.workspace__sidebar` 只包含现有标题、筛选与操作，`.workspace__content` 放真实数据。桌面侧栏吸顶且独立滚动，小于 768px 变为顺排。DOM ID 保持不变，对话框放在两列之外。卡片 8px 圆角、1px 边框、无大阴影；输入与按钮 4px 圆角。
 
 ### Filter Bar 筛选条
 
@@ -662,50 +660,6 @@ JS：`UI.userLine(user, {size, meta, href, large, showRole})`；meta 传 HTML �
 ---
 
 # 领域组件
-
-### Post 帖子卡
-
-```html
-<article class="card card--interactive post">
-  <header class="post__head">
-    {{UI.userLine(user, {meta: UI.timeEl(p.created_at)})}}
-    <span class="tag tag--primary">讨论</span>
-    <button class="icon-btn icon-btn--sm card__action" aria-label="更多操作" data-menu-trigger>…</button>  <!-- 仅作者/管理员 -->
-  </header>
-  <h3 class="post__title"><a class="card__link" href="post.html?id={{p.id}}">{{p.title}}</a></h3>
-  <p class="post__excerpt">{{p.content}}</p>
-  <footer class="post__foot">
-    <button type="button" class="action-btn card__action" aria-pressed="{{is_liked}}" data-like>{{heart icon}}<span>{{like_count}}</span></button>
-    <button type="button" class="action-btn card__action" aria-expanded="false" data-replies-toggle>{{message icon}}<span>{{reply_count}}</span></button>
-  </footer>
-  <div class="post__replies" hidden>…reply-list + composer…</div>
-</article>
-```
-摘要 3 行截断；`post__foot` 左右贯通（负外边距对齐卡片内边距）。整卡点击进详情（card__link），点赞/回复/菜单在 `card__action` 层。
-
-### Reply 回复
-
-```html
-<li class="reply" id="reply-{{r.id}}">
-  {{avatar sm}}
-  <div class="reply__body">
-    <div class="reply__meta"><span class="user-line__name">{{name}}</span>{{titleBadge}}{{roleTag}}<span>{{UI.timeEl}}</span><span class="reply__floor">{{n}} 楼</span></div>
-    <div class="reply__content">{{content}}</div>
-    <div class="reply__actions">…（预留：删除）</div>
-  </div>
-</li>
-```
-容器 `.reply-list`（间距 20）；hash 定位 `#reply-{{id}}` 时琥珀高亮（CSS `:target` 已内置）；楼层号右侧灰。**回复只支持平铺一层**。
-
-### Composer 发布框
-
-```html
-<form class="composer">
-  <textarea class="textarea" data-counter="1000" placeholder="写下你的回复…"></textarea>
-  <div class="composer__foot"><span class="field__counter"></span><button type="button" class="btn btn--primary btn--sm">发布回复</button></div>
-</form>
-```
-未登录替换为 callout（登录引导）。发帖用对话框承载，不用 composer 常驻。
 
 ### Action Button 操作按钮
 
@@ -802,8 +756,8 @@ JS：`UI.userLine(user, {size, meta, href, large, showRole})`；meta 传 HTML �
   <div class="hero__inner">
     <span class="hero__eyebrow">苏州中学 · 三元坊</span>
     <h1 class="hero__title">校园里的信息，<br>收进一个干净的地方</h1>
-    <p class="hero__lead">校园地图、论坛、食堂菜谱、三元坊必吃榜——少一点打扰，多一点有用的内容。</p>
-    <div class="hero__actions"><a class="btn btn--primary btn--lg" href="map.html">map 图标 打开校园地图</a><a class="btn btn--lg" href="forum.html">逛逛论坛</a></div>
+    <p class="hero__lead">校园地图、食堂菜谱、三元坊必吃榜——少一点打扰，多一点有用的内容。</p>
+    <div class="hero__actions"><a class="btn btn--primary btn--lg" href="map.html">map 图标 打开校园地图</a><a class="btn btn--lg" href="shops.html">逛逛必吃榜</a></div>
   </div>
 </section>
 ```

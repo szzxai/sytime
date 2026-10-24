@@ -234,7 +234,7 @@ document.getElementById("appealSubmit").addEventListener("click", function () {
 ## 验收清单
 
 - [ ] 三种登录结果（成功/错误/封禁两分支）全部正确呈现。
-- [ ] `?next=/forum.html` 登录后回论坛；无 next 回首页。
+- [ ] `?next=/shops.html` 登录后回必吃榜；无 next 回首页。
 - [ ] 申诉全流程：理由校验、图片选择/预览/移除、DataURL 提交、成功/失败/限流倒计时。
 - [ ] 无 alert/confirm；错误文案全中文；360px 正常。
 - [ ] 页头未登录态（登录 ghost + 注册 primary）正确显示。

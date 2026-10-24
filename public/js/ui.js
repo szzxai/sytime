@@ -184,8 +184,6 @@
     'title and content are required': '标题和内容都不能为空',
     'content is required': '内容不能为空',
     'category must be 讨论 or 提问': '请选择有效的分类',
-    'invalid post id': '帖子编号无效',
-    'post not found': '帖子不存在或已被删除',
     '已点赞': '你已经点过赞了',
     'name is required': '请填写名称',
     'rating must be between 0 and 5': '评分需在 0 到 5 分之间',
@@ -315,7 +313,7 @@
     if (!href) return '<span class="user-avatar' + (cls ? ' ' + cls : '') + '">' + inner + '</span>';
     return '<a class="user-avatar user-avatar--link' + (cls ? ' ' + cls : '') + '" href="' + UI.esc(href) + '" aria-label="查看用户主页">' + inner + '</a>';
   };
-  // 统一用户信息组件：论坛、评价、消息、后台都用它
+  // 统一用户信息组件：评价、消息、后台都用它
   UI.userLine = function (user, opt) {
     user = user || {}; opt = opt || {};
     var name = user.nickname || user.username || '已注销用户';
@@ -498,7 +496,7 @@
   };
 
   /* ---------- 收藏夹（#23） ---------- */
-  var COLLECT_ITEM_TYPE = { forum: "forum_post", shops: "shop" };
+  var COLLECT_ITEM_TYPE = { shops: "shop" };
   UI.collections = {
     key: function (section, itemId) {
       var me = UI.session.user();
@@ -514,7 +512,7 @@
         else localStorage.setItem(UI.collections.key(section, itemId), "1");
       } catch (e) { /* localStorage 不可用时忽略 */ }
     },
-    // 收藏按钮：action-btn（列表/帖子）或 btn--sm（详情页操作区）；已收藏用主色高亮
+    // 收藏按钮：action-btn（列表）或 btn--sm（详情页操作区）；已收藏用主色高亮
     button: function (section, itemId, opt) {
       opt = opt || {};
       var pressed = UI.collections.isCollected(section, itemId);
@@ -531,7 +529,7 @@
         UI.toast.warning("请先登录后再收藏");
         return;
       }
-      var section = opt.section === "shops" ? "shops" : "forum";
+      var section = "shops";
       var itemType = COLLECT_ITEM_TYPE[section];
       var itemId = Number(opt.itemId);
       if (!itemId) return;
@@ -1179,7 +1177,7 @@
   });
 
   // Keep both documents visible during a sideways navigation transition.
-  var pageOrder = ['index', 'map', 'forum', 'recipe', 'shops', 'announcements'];
+  var pageOrder = ['index', 'map', 'recipe', 'shops', 'announcements'];
   document.addEventListener('click', function (event) {
     var link = event.target.closest('a[href]');
     if (!link || link.tagName !== 'A' || event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey ||
@@ -1204,7 +1202,6 @@
   UI.nav = [
     { key: 'home', href: 'index.html', label: '首页', full: '首页', icon: 'home', onlyDrawer: true },
     { key: 'map', href: 'map.html', label: '地图', full: '地图', icon: 'map' },
-    { key: 'forum', href: 'forum.html', label: '论坛', full: '论坛', icon: 'message' },
     { key: 'recipe', href: 'recipe.html', label: '菜谱', full: '菜谱', icon: 'utensils' },
     { key: 'shops', href: 'shops.html', label: '必吃榜', full: '三元坊必吃榜', icon: 'store', feature: 'shops' },
     { key: 'announce', href: 'announcements.html', label: '更新公告', full: '更新公告', icon: 'megaphone' }
@@ -1264,7 +1261,7 @@
     return '<footer class="site-footer"><div class="site-footer__inner"><div class="site-footer__top">' +
       '<div class="site-footer__identity">' + brandHtml() + '<p>本站系学生自主运营的校园资讯聚合平台，与江苏省苏州中学官方无隶属关系。“苏州中学”名称、校徽及相关标识的知识产权均归原权利主体所有。所载信息仅供参考，不代表校方立场，权威资讯及具体事宜请以学校官方发布渠道为准。如有疑问或勘误，请致信 <a href="mailto:baimoqilin@gmail.com">baimoqilin@gmail.com</a>，我们将于核实后及时妥善处理。</p><a class="footer-project" href="about.html">' + UI.icon('graduation') + '校园里的事，在这里相遇</a></div>' +
       '<nav class="site-footer__columns" aria-label="页脚">' +
-      '<div><h2>交流与反馈</h2><a href="forum.html">校园论坛</a><a href="settings.html#tickets">提交工单</a><a href="announcements.html">更新公告</a></div>' +
+      '<div><h2>交流与反馈</h2><a href="settings.html#tickets">提交工单</a><a href="announcements.html">更新公告</a></div>' +
       '<div><h2>校园生活</h2><a href="map.html">校园地图</a><a href="recipe.html">食堂菜谱</a><a href="shops.html">三元坊必吃榜</a><a href="inbox.html">消息箱</a></div>' +
       '<div><h2>关于我们</h2><a href="about.html">拾光酥糕</a><a href="profile.html">个人中心</a><a href="student_verify.html">学生认证</a><a href="settings.html">网站设置</a></div></nav></div>' +
       '<div class="site-footer__bottom"><p>© 2026 苏州中学 VC 编程。</p>' + themeControls() + '</div></div></footer>';

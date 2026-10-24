@@ -66,7 +66,7 @@ UI.ready(function () {
   if (location.pathname !== "/" || location.hash) return;
   function go(target) {
     if (
-      ["map.html", "forum.html", "recipe.html", "announcements.html"].includes(
+      ["map.html", "recipe.html", "announcements.html"].includes(
         target,
       )
     )

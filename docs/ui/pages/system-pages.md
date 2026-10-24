@@ -35,7 +35,7 @@
       <div class="empty__desc">地址可能输入有误，或内容已被移除。</div>
       <div class="empty__actions">
         <a class="btn btn--primary" href="/">返回首页</a>
-        <a class="btn" href="forum.html">去论坛</a>
+        <a class="btn" href="shops.html">去必吃榜</a>
       </div>
     </div>
   </div>
@@ -113,7 +113,7 @@ if (!ok) {
 
 ## 7. 内容被删除的空状态
 
-- 帖子 → post.md；店铺 → shop-detail.md；菜品 → dishes.md；图片 → 占位。
+- 店铺 → shop-detail.md；菜品 → dishes.md；图片 → 占位。
 - 通用模板：`UI.html.empty({icon:'trash', title:'{{内容}}不存在或已被删除', desc:'', actions:[{label:'返回{{列表名}}', href:'…'}]})`。
 
 ## 8. 登录过期流程
@@ -141,7 +141,7 @@ if (!ok) {
 - [ ] 整页权限态三变体文案正确；有唯一 CTA。
 - [ ] noscript 提示显示；旧浏览器提示条（禁用 dialog 特性模拟）。
 - [ ] 登录过期：任意页操作触发 → 清会话 + 提示 + next 回跳。
-- [ ] 打印：公告/帖子详情打印干净（无按钮页头）。
+- [ ] 打印：公告详情打印干净（无按钮页头）。
 
 
 ### 2026-10-19 · 共享标识与运营声明
