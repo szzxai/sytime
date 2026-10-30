@@ -1,0 +1,182 @@
+/* React's mount node occupies the same flex slot as the former body children. */
+#root {
+  display: flex;
+  flex: 1 0 auto;
+  flex-direction: column;
+  min-height: 100dvh;
+}
+#root > main {
+  flex: 1 0 auto;
+}
+body[data-page='map'] #root {
+  height: 100%;
+  min-height: 0;
+  flex: 1 1 0;
+}
+body[data-page='map'] #root > .campus-page {
+  flex: 1 1 0;
+}
+/* Navigation is handled by TanStack Router; cross-document transitions are redundant. */
+@view-transition {
+  navigation: none;
+}
+
+/* Keep content and footer geometry stable while the next route is being prepared. */
+#root > main:not(.campus-page),
+#root > div:has(> main) {
+  min-height: calc(100svh - var(--landing-top, var(--header-h)));
+}
+.navigation-progress {
+  position: fixed;
+  inset: 0 0 auto;
+  height: 3px;
+  background: var(--primary);
+  z-index: 10000;
+  pointer-events: none;
+  animation: navigation-progress-reveal 0s 200ms both;
+}
+@keyframes navigation-progress-reveal {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Compact navigation keeps the original header above a full-width overlay. */
+.mobile-nav {
+  display: none;
+}
+.menu-glyph {
+  position: relative;
+  display: block;
+  width: 18px;
+  height: 18px;
+  transition: transform 200ms ease-out;
+}
+.menu-glyph span {
+  position: absolute;
+  left: 1px;
+  width: 16px;
+  height: 1.5px;
+  border-radius: 1px;
+  background: currentColor;
+  transition:
+    transform 200ms ease-out,
+    opacity 100ms ease-in-out;
+}
+.menu-glyph span:nth-child(1) {
+  top: 3px;
+}
+.menu-glyph span:nth-child(2) {
+  top: 8px;
+}
+.menu-glyph span:nth-child(3) {
+  top: 13px;
+}
+.site-header__menu[aria-expanded='true'] .menu-glyph {
+  transform: rotate(90deg);
+}
+.site-header__menu[aria-expanded='true'] .menu-glyph span:nth-child(1) {
+  transform: translateY(5px) rotate(45deg);
+}
+.site-header__menu[aria-expanded='true'] .menu-glyph span:nth-child(2) {
+  opacity: 0;
+}
+.site-header__menu[aria-expanded='true'] .menu-glyph span:nth-child(3) {
+  transform: translateY(-5px) rotate(-45deg);
+}
+@media (max-width: 992px) {
+  .mobile-nav {
+    display: block;
+    position: fixed;
+    inset: var(--mobile-nav-top, var(--header-h)) 0 0;
+    height: calc(100dvh - var(--mobile-nav-top, var(--header-h)));
+    background: var(--surface);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition:
+      opacity 200ms ease-out,
+      visibility 0s 200ms;
+  }
+  .mobile-nav[data-open='true'] {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transition-delay: 0s;
+  }
+  .mobile-nav__body {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 24px 24px calc(24px + var(--safe-bottom));
+  }
+  .mobile-nav .mobile-nav__link {
+    flex: none;
+    padding: 0;
+    min-height: 30px;
+    border-radius: 0;
+    font-size: 24px;
+    font-weight: 500;
+    line-height: 30px;
+    color: var(--ink);
+    background: transparent;
+  }
+  .mobile-nav .mobile-nav__link[aria-current='page'] {
+    color: var(--ink-3);
+  }
+  .mobile-nav__link,
+  .mobile-nav__account {
+    opacity: 0;
+    transform: translateY(12px);
+    transition:
+      opacity 150ms ease-out,
+      transform 150ms ease-out;
+  }
+  .mobile-nav[data-open='true'] .mobile-nav__link,
+  .mobile-nav[data-open='true'] .mobile-nav__account {
+    opacity: 1;
+    transform: translateY(0);
+    transition-duration: 300ms;
+    transition-delay: calc(100ms + var(--nav-order) * 50ms);
+  }
+  .mobile-nav__account {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-top: 16px;
+    padding-top: 20px;
+    border-top: 1px solid var(--line);
+  }
+  .mobile-nav__account-link {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 0;
+    min-height: 44px;
+    color: var(--ink-2);
+    background: none;
+    border: 0;
+    text-align: left;
+    font: inherit;
+    cursor: pointer;
+  }
+  .mobile-nav__link:hover,
+  .mobile-nav__account-link:hover {
+    opacity: 0.7;
+    text-decoration: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mobile-nav,
+  .mobile-nav__link,
+  .mobile-nav__account,
+  .menu-glyph,
+  .menu-glyph span {
+    transition: none !important;
+  }
+}

@@ -1,5 +1,16 @@
 # 用户主页 · user.html
 
+## 2026-10-25 · 导航行为同步
+
+用户主页中的站内页面链接支持意图预加载；同页标签局部切换，浏览器历史返回沿来源导航方向恢复。 共同规则见 [导航与加载规范](../../navigation.md)，实际验证见根目录 MAP 与 UI 验收记录。
+
+## 当前 React 实现 · 2026-10-25
+
+实现位于 `apps/web/src/pages/`：ProfilePage.tsx 中的 UserPage、../components/AccountManagement.tsx、../layouts/UserLayout.tsx。按 URL ID 请求公开用户资料、可见收藏与头衔；本人跳回个人中心。权限足够时显示管理面板，服务端继续核对当前权限。
+
+视觉令牌和资源位于 `apps/web/public/`；共享站点壳、弹窗、上传、主题和用户展示见 [组件规范](../components.md)。本页 HTML/CSS 示例用于说明最终 DOM 与视觉约束，旧 `UI.*` 或页面脚本示例属于迁移前实现，不是当前可调用 API。当前请求由 TanStack Query、路径/查询/hash 由 TanStack Router 管理，后端为 Hono + Drizzle。最新验证见根目录 [MAP.md](../../../MAP.md) 与 [验收记录](../acceptance.md)。
+
+
 ## 新建公开收藏夹的展示 · 2026-10-24（#29）
 
 收藏夹在创建时即可按所有者默认偏好或当次选择设为公开，公开后按原规则出现在该用户的只读收藏列表；私密夹不对其他人或匿名用户开放。默认公开偏好本身不属于他人公开资料，调整偏好不会改变已有收藏夹；本页不新增编辑、创建或默认设置入口。
@@ -29,7 +40,7 @@
 - 点击**他人的**头像 → `user.html?id=<id>`。
 - 未登录访问者点击他人头像 → `user.html?id=<id>`（只读）。
 
-链接生成见 `public/js/ui.js` 的 `UI.userHref(user)`（本人 → `profile.html`；有 id 的他人 → `user.html?id=`；无 id 则不可点击）。`UI.userLine` 在整行为链接（`opt.href`）时不再嵌套头像链接。
+链接生成见 旧版 `UI.*` 示例 的 `UI.userHref(user)`（本人 → `profile.html`；有 id 的他人 → `user.html?id=`；无 id 则不可点击）。`UI.userLine` 在整行为链接（`opt.href`）时不再嵌套头像链接。
 
 ## 布局
 

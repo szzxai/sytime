@@ -1,0 +1,58 @@
+import { SiteLink } from '../components/SiteLink';
+export function AboutPage() {
+  return (
+    <main id="main" className="main container container--prose about-page">
+      <header className="page-head">
+        <div>
+          <p className="page-head__eyebrow">{'由同学共建，为校园而生'}</p>
+          <h1 className="page-head__title">{'关于 拾光酥糕'}</h1>
+          <p className="page-head__desc">{'把校园里的信息，放在一个容易找到的地方。'}</p>
+        </div>
+      </header>
+      <img
+        className="about-page__art"
+        src="/img/fan-zhongyan-user.png"
+        alt="范仲淹像的绿色与白色剪影"
+        width="160"
+        height="390"
+      ></img>
+      <section className="about-story">
+        <h2>{'从一张地图开始'}</h2>
+        <p>
+          {
+            '拾光酥糕 的前身是校园信息网。最初，我们只是想做一张方便查找地点的校园地图。随着同学们的使用和反馈，食堂菜谱、周边美食和消息箱陆续来到这里。'
+          }
+        </p>
+      </section>
+      <section className="about-story">
+        <h2>{'由学生维护，与同学一起成长'}</h2>
+        <p>
+          {
+            '我们希望让分散的校园信息更容易被发现，让真实的体验被看见。你可以为食堂菜品写下评价，或在三元坊必吃榜分享喜欢的小店。'
+          }
+        </p>
+        <p>
+          {
+            '这是一个由学生维护的校园信息平台，并非学校官方网站。校园建筑和地点的介绍附有资料来源；如果发现不准确的地方，欢迎帮助我们修正。'
+          }
+        </p>
+      </section>
+      <section className="about-story">
+        <h2>{'让下一位同学少走一点弯路'}</h2>
+        <p>
+          {'有建议、遇到问题，或想参与维护？请在'}
+          <SiteLink href="settings.html#tickets">{'工单'}</SiteLink>
+          {'里告诉我们。网站以 AGPL-3.0 协议开源，更新动态可以在'}
+          <SiteLink href="announcements.html">{'更新公告'}</SiteLink>
+          {'查看。'}
+        </p>
+        <SiteLink className="btn btn--primary" href="shops.html">
+          {'去三元坊必吃榜'}
+          <svg className="icon" aria-hidden="true">
+            <use href="/img/icons.svg#i-arrow-right"></use>
+          </svg>
+        </SiteLink>
+      </section>
+    </main>
+  );
+}

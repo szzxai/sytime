@@ -1,5 +1,16 @@
 # 店铺详情 · shop-detail.md（#7/#8：shop.html?id=）
 
+## 2026-10-25 · 导航行为同步
+
+店铺详情和新增店铺是必吃榜的下一级；内部返回恢复来源列表，直接打开则回默认列表。正文外站点导航仍按栏目位置切换。地图生成的详情链接同样支持意图预加载。 共同规则见 [导航与加载规范](../../navigation.md)，实际验证见根目录 MAP 与 UI 验收记录。
+
+## 当前 React 实现 · 2026-10-25
+
+实现位于 `apps/web/src/pages/`：ShopPage.tsx、ShopNewPage.tsx、../components/ShopMap.tsx。详情保留手动/自动布局、点赞、评价及配图、收藏和路线。新增店铺保留围栏、地址、类型与距离验证，成功后清除未保存提醒再进入详情。
+
+视觉令牌和资源位于 `apps/web/public/`；共享站点壳、弹窗、上传、主题和用户展示见 [组件规范](../components.md)。本页 HTML/CSS 示例用于说明最终 DOM 与视觉约束，旧 `UI.*` 或页面脚本示例属于迁移前实现，不是当前可调用 API。当前请求由 TanStack Query、路径/查询/hash 由 TanStack Router 管理，后端为 Hono + Drizzle。最新验证见根目录 [MAP.md](../../../MAP.md) 与 [验收记录](../acceptance.md)。
+
+
 ## 新建收藏夹公开选择 · 2026-10-24（#29）
 
 详情点赞旁收藏弹窗使用共用「公开」开关；每个新建表单重新读取当前登录用户偏好，读取中禁用创建，失败默认私密，可手动覆盖。发送明确公开选择，失败保留填写；店铺评价、配图、布局模式及已有收藏夹的后续公开切换均不变。详见 [共享组件](../components.md)。
@@ -152,7 +163,7 @@ stat-block 数字直接用原始数值（420 米 / 1.2 公里换算：**≥1000 
 - 评价列表 `.review`（user-line + stars + `点了：{{dish}}` + text + thumbs）+ 评价间分割线（内置）。
 - 头部汇总：`rating-line`（均分 + 人数）——接口提供 `rating_avg/review_count` 时显示。
 - 「写评价」：登录即可；学生及以上才能点赞与提交评价。入口在评价区头部（primary）与表单 `#reviewForm`；评分控件 `#shopRating1..5`（DOM 5→1，`row-reverse` 呈现 1→5），选中值即上传值，选中星及其左侧一起点亮。
-- **收藏（#23）**：点赞按钮右侧有「收藏」按钮（`.btn.btn--sm.btn--collect`，已收藏用主色高亮）；点击由 `ui.js` 全局委托打开统一收藏夹弹窗（列出 `GET /api/collections?section=shops`，可新建，确认后 `POST /api/collections/:id/items`）。所有登录用户可收藏，不受学生点赞门槛限制；未登录提示先登录。
+- **收藏（#23）**：点赞按钮右侧有「收藏」按钮（`.btn.btn--sm.btn--collect`，已收藏用主色高亮）；点击由共享 React 收藏组件打开统一收藏夹弹窗（列出 `GET /api/collections?section=shops`，可新建，确认后 `POST /api/collections/:id/items`）。所有登录用户可收藏，不受学生点赞门槛限制；未登录提示先登录。
 - **删除本人评价**：`my_review` 存在时，自己的评价卡显示删除按钮（`data-delete-my-review`），危险确认后 `DELETE /api/shops/:id/reviews/me`，重置表单并刷新列表。
 - 空：empty「暂无评价」/「还没有人评价这家店，来写第一条吧。」+ 写评价（登录时）。
 

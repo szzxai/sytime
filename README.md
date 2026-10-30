@@ -4,9 +4,9 @@
 
 一个面向苏州中学、由学生维护的全中文校园信息平台；品牌为 **拾光酥糕**，以 **Berkeleytime 的布局与视觉风格**重制，采用源自 VC 团队橙子切面的青柠绿色图标、本地可变字重 Noto Sans SC 中文字形、绿色主题与维护者提供的范仲淹像插画，集成了交互式校园地图、三元坊必吃榜、菜谱评价、更新公告、消息箱、学生认证、个人中心与设置，并配套一套完整的账号系统与后台管理。
 
-本站由学生自主运营，与江苏省苏州中学官方无隶属关系；共享页脚说明相关标识的权利归属，资讯以学校官方渠道为准，提供 [勘误邮箱](mailto:baimoqilin@gmail.com)。品牌与浏览器图标使用 `public/img/brand-lime.svg`，首页团队区保留原橙色标志。
+本站由学生自主运营，与江苏省苏州中学官方无隶属关系；共享页脚说明相关标识的权利归属，资讯以学校官方渠道为准，提供 [勘误邮箱](mailto:baimoqilin@gmail.com)。品牌与浏览器图标使用 `apps/web/public/img/brand-lime.svg`，首页团队区保留原橙色标志。
 
-后端基于 **Node.js + Express**，数据库使用 Node 内置的 **`node:sqlite`**（零额外依赖），前端为**原生 JavaScript**（无框架、无构建工具）。
+当前运行栈为 **React 19 + TanStack Router/Query + Hono + Drizzle** 的 npm workspaces Monorepo；SQLite 由 better-sqlite3 提供，生产入口加载已构建的 API 与 Web 资源。
 
 ---
 
@@ -17,21 +17,21 @@
 - 角色体系（按权重）：`developer(6) > super_admin(5) > admin(4) > student(3) > user(2) > guest(1)`
 - **展示 ID（display_id）**：注册时自动生成
 - 用户封禁 / 解封（可附封禁理由与图片）+ 封禁申诉
-- **特殊权限系统**：可在角色之外给单个用户授予细粒度权限（编辑横幅、发布公告、学生审核、邀请码管理、菜谱上传、地图弹窗编辑、用户管理、申诉处理）
+- **特殊权限系统**：可在角色之外给单个用户授予细粒度权限（编辑横幅、发布公告、学生审核、邀请码管理、地图弹窗编辑、用户管理、申诉处理）
 
 ### 校园地图
 - 默认展示北向上的 SVG 校园导览，按校园位置参考图补齐 31 个地点，涵盖教学区、园林、运动场、南部校园及文庙区域。按新版参考图校准相对位置与建筑轮廓，补充政道楼（原墨子馆）、府学碑廊、泮池与泮桥，并细化水面、庭院、林地、竹林与运动场。建筑为示意插画。
 - 地点搜索（含「校史馆」别名）、分类筛选、点选介绍、键盘操作和回到全景；拖动或双指滚动平移，捏合或 Ctrl / ⌘ + 滚轮连续缩放；适配手机与明暗主题。
 - 点选保持建筑绘制顺序及当前缩放；仅在地标离屏或被详情遮挡时做最小缓动平移。31 个地点提供实际用途、历史背景与分段介绍，目录支持按「面档」「宿舍」等用途查找；可查阅的校方来源及校内补充口径见 [地点资料来源](./docs/map-sources.md)。
-- 只保留完整校园地图，移除旧楼层平面、视图切换和默认楼层设置。篮球场与操场均为大面积 SVG 场地；地点数据在 `public/js/campus-places.js`，插画在 `public/img/map/campus.svg`。旧 `data.json` 与相关后端接口仅保留兼容。
+- 只保留完整校园地图，移除旧楼层平面、视图切换和默认楼层设置。篮球场与操场均为大面积 SVG 场地；地点数据在 `apps/web/src/maps/places.ts`，插画在 `apps/web/public/img/map/campus.svg`。旧 `data.json` 与相关后端接口仅保留兼容。
 
 ### 拾光酥糕 · 全站重制
 - 苏州中学校徽图标、可变字重 Noto Sans SC 中文字体、白色工作区与绿色主色（`#218653`），支持浅色、深色、跟随系统，并保存外观选择。
 - 首页按参考站的布局重建：通栏渐变与维护者提供的透明范仲淹像插画、关于介绍、开发团队介绍、参与折叠区、校园寄语和三列页脚。`about.html` 是独立关于页。
 - 菜谱、必吃榜采用左侧控制区与右侧内容的布局；手机控制区在上。账户、消息、公告、详情、后台与地图目录使用同一套组件。
-- 原有功能与权限、后端接口、数据库、URL 和根路径默认页行为保留。网页无需构建，SVG 与 CSS 均由本站提供。
-- 桌面首屏根据公告和顶栏实际高度填满窗口；导航悬停、顶栏静止的横向页面切换、主题切换和参与区展开与收起均有平滑过渡，兼容减少动态效果设置。Inter 与 Noto 字体许可证位于 `public/fonts/`。
-- 样式入口 `public/css/site.css`，首页插画 `public/img/fan-zhongyan-user.png`，新版规范见 [UI.md](./UI.md)。验证记录见 [MAP.md](./MAP.md) 与 [验收记录](./docs/ui/acceptance.md)。
+- 原有功能与权限、后端接口、数据库、URL 和根路径默认页行为保留。源码开发使用 Vite 构建；生产由 Hono 提供构建后的 SVG、CSS 与页面资源。
+- 桌面首屏根据公告和顶栏实际高度填满窗口；导航悬停、顶栏静止的横向页面切换、主题切换和参与区展开与收起均有平滑过渡，兼容减少动态效果设置。Inter 与 Noto 字体许可证位于 `apps/web/public/fonts/`。
+- 样式入口 `apps/web/public/css/site.css`，首页插画 `apps/web/public/img/fan-zhongyan-user.png`，新版规范见 [UI.md](./UI.md)。验证记录见 [MAP.md](./MAP.md) 与 [验收记录](./docs/ui/acceptance.md)。
 
 ### 三元坊必吃榜
 - 高德地图支持拖动、滚轮/双指缩放和回到姑苏区全域；附近店铺自动聚合成带数量的点，点击后以该簇为中心放大。地图按店铺类型筛选；支持拼音 A–Z、店名/道路/商场搜索、距本部步行距离/时间过滤；适配手机与电脑
@@ -43,14 +43,12 @@
 - 默认学生及以上可上传；后台同时校验权限，可通过 `SHOP_CREATE_MIN_ROLE` 调整最低角色
 
 ### 菜品与食谱
-- 全部菜品 / 菜品评价 / 每周食谱三个页签
-- 1,243 道历史菜品、A–Z 索引，搜索菜名、拼音和首字母
-- 点击目录菜名进入独立详情，查看该菜品的平均评分、完整评论、作者、时间与配图；评价每次加载 20 条
-- 网站内直接获取学校菜单并用视觉模型转为八字段 JSON；developer 配置提供商、API Key、模型与每日同步时间
-- developer、super_admin、admin 可粘贴 JSON 手动导入、修改已发布菜单或失败识图候选；校验后整篇发布并记录操作者
-- 图文评价（已有菜品 / 评分 / 评论 / 图片）：输入菜名、拼音或首字母筛选，再从下拉列表明确选择；候选初始显示 50 条，点击「显示更多」每次追加最多 50 条，更换关键词重置为首批；不能自由新增菜名，详情页写评价时预选当前菜品
-- 「菜品评价」页签的卡片、排序与分页保持原样；旧评价按归一后的名称关联已有菜品，无法关联的历史内容仍完整保留
-- 每周食谱：按日期范围展开 / 收起菜谱大图，支持缩放查看
+- 学校官网每周食谱自动抓取，由 Gemini 读取图片并结构化，周末定时检查，周一补查。
+- 默认每周食谱，按周次、日期、地点、餐次和菜名/拼音筛选；卡片显示价格、辣椒、真实星级和评价数。
+- 菜品详情展示近期供应与学校原文，登录后可选 1–5 星并发表图文评价；评价与菜单更新相互独立。
+- 管理员可查看任务和失败诊断、补图或手动 JSON 恢复；未通过校验的菜单不发布，保留上一版。
+- 上线前旧菜单测试数据由一次迁移清空；新库不再导入历史种子。
+- 开发者首次可在后台保存、测试并启用 Gemini，或设置 GEMINI_API_KEY / MENU_KEY_FILE 后执行 `npm run menu:setup`。详见 [同步运维](docs/menu-sync.md)。
 
 ### 头衔系统
 - 头衔是全站徽章：店铺评价、个人中心等位置统一由用户信息组件渲染佩戴中的头衔；缺少头衔数据时不显示徽章也不报错
@@ -72,7 +70,8 @@
 - **用户主页**：评价等处的头像可点击进入主页——点自己的头像进入个人中心，点他人的进入其主页（同版式、只读、按其设置显示权限等级、可查看其头衔）；权限足够的管理员可在主页「管理」中修改该用户的权限等级、特殊权限、头衔或封号
 - **收藏夹**：必吃榜店铺卡片与店铺详情页的点赞旁有「收藏」按钮——弹窗内可选择或新建必吃榜收藏夹，确认后按钮高亮为「已收藏」；个人中心「收藏」按版块 / 收藏夹分栏浏览并分页，公开后可在他人主页只读查看；设置中可选择必吃榜的默认收藏夹，并在其下设置「新建收藏夹默认公开」，切换即保存。新建时重新读取账号偏好，可用「公开」开关单独调整；读取失败默认私密，已有收藏夹不变。
 - **全站横幅**：可由管理员配置，用户可关闭
-- **导航栏**：Logo 点击回首页、手机导航抽屉与账户菜单（个人中心 / 设置 / 管理后台）
+- **页面切换**：站内链接在悬停、聚焦或触摸表达意图时提前准备页面；慢网保留当前内容并延迟显示顶部细提示条。正文外导航按顶栏栏目位置横滑，内部详情按父子关系进入/返回，返回恢复筛选与列表位置。详见 [导航规范](docs/navigation.md)。运行 `npm run test:navigation` 验证导航专项。
+- **导航栏**：Logo 点击回首页、手机全屏展开导航与账户菜单（个人中心 / 设置 / 管理后台）
 - **统一交互**：表单校验、提交状态、确认对话框、图片查看器、加载与错误重试
 - **工单**：设置页提交与查看，后台按权限批复文字和图片
 
@@ -82,92 +81,48 @@
 
 | 层 | 技术 |
 | --- | --- |
-| 运行时 | Node.js（建议 **24+**，最低 22.5，见下） |
-| 后端 | Express 5、jsonwebtoken、bcrypt、multer、cors、dotenv |
-| 菜单识别 | Node worker、sharp、cheerio、Ajv、pinyin-pro |
-| 数据库 | SQLite（Node 内置 `node:sqlite`，无需编译） |
-| 前端 | 原生 HTML / CSS / JavaScript + Leaflet |
-| 地图数据 | `public/js/campus-places.js` + `public/img/map/campus.svg`；`data.json` 为旧楼层数据归档，当前页面不读取 |
+| 工作区 | npm workspaces，Node.js ≥22.13，推荐 24 LTS |
+| 前端 | React 19、TypeScript 严格模式、Vite、TanStack Router / Query |
+| 后端 | Hono、原生 Node HTTP、JWT / bcrypt、基于 FormData 的上传 |
+| 数据 | Drizzle ORM + better-sqlite3；保留 SQLite 数据、稳定 ID 与原有业务约束 |
+| 菜单识别 | 独立 Node worker、sharp、cheerio、Ajv、pinyin-pro |
+| 地图与视觉 | 原有 CSS 令牌、本地字体/图片/Leaflet、SVG 校园图；React 管理挂载与卸载 |
 
----
+架构边界、数据库升级与回退见 [架构说明](./docs/architecture.md)，完整接口及数据模型见 [项目地图](./MAP.md)。
 
 ## 目录结构
 
-```
-项目文件夹/
-├── public/              # 前端静态页面
-│   ├── index.html       # 首页（关于我们）
-│   ├── map.html         # 单一 SVG 校园地图
-│   ├── css/map.css      # 地图局部样式与明暗主题
-│   ├── img/map/campus.svg # 导览底图与建筑插画
-│   ├── js/campus-places.js # 31 个地点及示意坐标
-│   ├── js/pages/map.js  # 地图绘制、搜索、选点与触控板手势
-│   ├── login.html       # 登录（含封禁申诉）
-│   ├── register.html    # 注册
-│   ├── recipe.html      # 菜品目录、评价与每周食谱
-│   ├── dish.html        # 单道菜品的评分与分页评论
-│   ├── js/dish-review.js # 菜谱与详情共用的已有菜品选择及评价表单
-│   ├── js/pages/dish.js # 菜品详情、评论与加载更多
-│   ├── shops.html       # 三元坊必吃榜地图与店铺列表
-│   ├── shop.html        # 单店详情
-│   ├── shop-new.html    # 添加店铺（权限保护）
-│   ├── announcements.html
-│   ├── inbox.html       # 消息箱（系统通知与互动通知）
-│   ├── admin.html       # 管理后台
-│   ├── student_verify.html
-│   ├── profile.html     # 个人中心（个人资料、我的头衔）
-│   ├── settings.html    # 设置（账号安全、网站设置、工单、消息通知、退出登录）
-│   ├── user.html        # 其他用户主页（只读，权限足够时可管理）
-│   ├── about.html       # 独立关于页：起源、学生维护和反馈
-│   ├── 404.html         # 未知路径提示
-│   ├── css/site.css     # 全站设计令牌、组件与响应式样式
-│   ├── js/              # 共享 UI、页面工具与各页业务脚本
-│   ├── img/             # 图标库与网站图标
-│   ├── vendor/leaflet/  # 本地 Leaflet 1.9.4 与许可证
-│   └── auth.js          # 旧共享脚本的兼容入口
-├── uploads/             # 上传目录（随仓库提交）
-│   ├── weekly/          # 每周菜谱图片
-│   └── bans/            # 封禁图片
-├── data.json            # 旧楼层地图数据归档，后端保留兼容
-├── data.db              # SQLite 数据库（随仓库提交）
-├── server.js            # Express 后端、菜单与店铺路由
-├── lib/menu/            # 来源、模型、分块、校验、配置、存储、调度、任务及路由
-├── lib/dishes/          # 评价关联迁移、菜品详情与分页评价接口
-├── lib/shops/           # 店铺数据校验、SQLite 存储与权限 API
-├── lib/titles/          # 头衔目录与佩戴存储、自动规则注册表及接口
-├── data/shops-config.json # 高德地图中心、校门锚点及覆盖范围多边形（GCJ-02）
-├── data/menu-bootstrap.json # 十篇历史菜单种子，启动自动导入
-├── tools/build-menu-seed.py # 开发时离线重建种子，Python 标准库
-├── menu-json-rules.md    # 八字段 JSON 及图片读取的完整约定
-├── szzx-menu.skill       # 可导入 AI 客户端的图片转 JSON 技能包
-├── skills/szzx-menu/     # 技能源文件、规则引用及离线校验器
-├── tools/build-menu-skill.py # 同步规则并重新打包技能，开发时使用
-├── .private/            # 运行时密钥、原图、诊断和缓存（忽略，不公开）
-├── package.json
-├── .env.example         # 环境变量模板
-├── .gitignore           # 依赖、密钥、临时数据和测试产物忽略规则
-├── tests/ui-smoke.mjs    # 浏览器、布局与无障碍回归
-├── tests/shops.test.cjs # 店铺接口、校验、角色权限与范围测试
-├── tests/shops-ui.mjs   # 店铺页面端到端与无障碍回归
-├── tests/menu.test.cjs   # 调度、数据、识别、任务和权限测试
-├── tests/dishes.test.cjs # 历史评价迁移、详情、评价分页与提交校验
-├── tests/dishes-ui.mjs  # 详情跳转、已有菜品选择、每批 50 条候选及明暗主题回归
-├── tests/collections.test.cjs # 收藏接口、默认公开迁移、严格参数与账号隔离
-├── tests/collections-ui.mjs # 收藏按钮、弹窗及收藏浏览回归
-├── tests/collection-privacy-ui.mjs # 默认公开即改即存、创建覆盖与失败回滚回归
-├── tests/helpers/app-fixture.cjs # 临时数据库、上传目录与独立端口测试站点
-├── tests/titles.test.cjs # 头衔目录、授予撤销、佩戴、自动规则与序列化测试
-├── docs/menu-sync.md     # 配置、备份、故障处理及接口
-├── docs/issue-5-plan.md  # 用户确认的 Issue #5 实施范围
-├── docs/issue-7-plan.md  # 必吃榜店铺详情页双布局方案
-├── docs/issue-9-plan.md  # 消息箱与通知实施范围
-├── docs/issue-10-plan.md # 头衔系统实施范围与验收
-├── docs/ui/             # 组件、逐页规范、场景、文案、参考资产与验收记录
-├── UI.md                # UI 设计总纲
-├── MAP.md               # 当前项目结构、数据流与完整接口索引
-├── PLAN_2026-10-01.md    # 国庆里程碑原始需求快照
-├── CHANGELOG.md         # 面向使用者的功能更新日志
-└── progress.md          # 开发进度文档
+```text
+apps/
+  web/                  React 应用、Vite 入口与构建
+    src/pages/          页面组件，保留原有 .html 地址
+    src/components/     站点壳、表单、对话框、收藏、地图、评价及后台组件
+    src/layouts/        复杂页面的展示结构，属性按具体 HTML 元素类型约束
+    src/lib/            API、登录态、主题、URL 状态与表单 Hook
+    src/maps/           地图交互与地点数据
+    public/             原有 CSS、字体、品牌图片、SVG 与本地 Leaflet
+  api/
+    src/index.ts        Node 入口、静态资源、404 与优雅退出
+    src/app.js          Hono 组装与业务服务初始化
+    src/routes/         账号、公告、资料、消息、工单、认证等路由
+    src/domain/         菜单、店铺、菜品、头衔、收藏及历史迁移
+packages/
+  db/src/               Drizzle 类型化表结构、参数绑定及迁移入口
+  db/migrations/        可接入旧库的 SQL 基线及迁移元数据
+  shared/src/           共享 DTO、角色等级与标签
+server.js               生产入口，加载 apps/api/dist/index.cjs
+scripts/shops/          店铺数据整理工具
+skills/szzx-menu/        独立菜单读图技能源文件
+szzx-menu.skill          可导入的技能包
+menu-json-rules.md      八字段 JSON 与完整读图约定
+data.db                 运行数据库，保留历史快照
+uploads/                上传图片，必须持久化
+.private/               私有密钥、原图、诊断和缓存，禁止公开
+data/                   菜单种子和店铺范围配置
+data.json               旧地图兼容数据
+tools/                  API/worker 构建、开发进程管理、技能构建
+tests/                  后端、迁移、部署和浏览器回归
+docs/                   架构、菜单运维、逐页规范及历史验收
 ```
 
 ---
@@ -176,13 +131,13 @@
 
 ### 1. 环境要求
 
-- Node.js **24+**（推荐）。若使用 Node 22.5–23.x，启动时可能需要附加 `--experimental-sqlite`。
-- 无需安装数据库；SQLite 由 Node 内置模块提供。
+- Node.js **24 LTS**（推荐），最低 **22.13**；npm 支持 workspaces。
+- 无需独立数据库服务。better-sqlite3、bcrypt、sharp 使用平台原生模块，优先安装预编译版本；缺少预编译包的平台需要本机编译工具。
 
 ### 2. 安装依赖
 
 ```bash
-npm install
+npm ci
 ```
 
 ### 3. 配置环境变量
@@ -204,8 +159,9 @@ SHOP_CREATE_MIN_ROLE=student
 ### 4. 启动
 
 ```bash
+npm run build
 npm start
-# 等价于 node server.js
+# 生产入口：node server.js，提供已构建页面与 API
 ```
 
 Windows PowerShell 若拦截 `npm.ps1`，可使用：
@@ -227,15 +183,33 @@ npm.cmd start
 
 店铺页：`/shops.html`；详情：`/shop.html?id=<编号>`；上传：`/shop-new.html`。路线步行距离/时间由高德步行路线测算或查询后录入。店铺接口和权限测试：`npm run test:shops`；店铺页面浏览器测试：`npm run test:shops:ui`。
 
-生产只需 Node 和 npm 运行依赖，可使用 `npm ci --omit=dev`。不需要 Python 或第二台菜单服务器。登录 developer 后进入「管理后台 → 菜单自动同步」，保存并测试模型，再自行设置每日同步时间（默认北京时间 08:00）并开启自动同步。详细说明见 [菜单同步运维](./docs/menu-sync.md)。
+生产从源码部署需先执行 `npm ci`、`npm run build`，再按需执行 `npm prune --omit=dev` 后 `npm start`。不能在尚无构建产物时只安装生产依赖。不需要 Python 或第二台菜单服务器。登录 developer 后进入「管理后台 → 菜单自动同步」，保存并测试模型，开启周末同步（上海时间周六/日 08–22 点每小时，周一 08/12 点补查）。详细说明见 [菜单同步运维](./docs/menu-sync.md)。
 
 三种管理角色均可使用「管理后台 → 菜单手动导入」，无需 AI Key。支持新建批次、编辑已发布 JSON、载入已结束任务的识图候选并对照原图补全。已有来源会整篇替换，发布记录可追溯；编辑版本冲突或同步运行中会阻止发布。格式约定与流程见 [JSON 详细规则](./menu-json-rules.md)。
 
 将 [szzx-menu.skill](./szzx-menu.skill) 导入支持技能的 AI 客户端，附带完整图片和年份，即可直接生成八字段 JSON。也可解压读取 `SKILL.md`；技能不启动额外服务。修改规则后用 `npm run build:menu-skill` 重新打包，`npm run test:menu-skill` 验证；这两个开发命令使用 Python 标准库，生产网站不需要 Python。
 
+### 开发与数据库
+
+```bash
+npm run dev             # Vite 5173 + Hono 3000，前后端独立热更新
+npm run typecheck       # TypeScript 严格检查
+npm run lint
+npm run format:check
+npm run db:generate     # 根据 packages/db/src/schema.ts 生成下一次迁移
+```
+
+Vite 将 API 和上传请求代理到 3000；若改变 API 端口，同时调整 `apps/web/vite.config.ts`。API 与菜单 worker 的源码变更会重新打包并重启 API，停止开发主进程会同时关闭两者。生产静态文件修改后需要重新构建。
+
+首次接入旧库会登记 Drizzle 基线，再执行幂等历史升级，保留账号、内容、收藏夹、菜品和 ID。升级前停止旧服务，成套备份 `data.db`、`uploads/`、`.private/`、`data/` 与配置。不要同时启动新旧服务写同一库；回退需要恢复旧版本及整套备份。详见 [架构说明](./docs/architecture.md)。
+
+店铺开发脚本使用 `node --import tsx scripts/shops/collect-pois.mjs`、`node --import tsx scripts/shops/enrich-candidates.mjs`；它们会调用外部服务或写入目标数据，先核对各脚本参数。
+
 ### 回归验证
 
-运行 `npm test`，依次执行菜单、菜品详情及选菜、头衔、店铺、收藏、用户主页、全站与地图回归；不会改动项目的 `data.db` 或 `uploads/`。可分别运行 `npm run test:menu`、`npm run test:dishes`、`npm run test:dishes:ui`、`npm run test:ui` 和 `npm run test:map`（校园导览搜索、筛选、选点、触控、键盘、响应式与明暗主题）。Windows 默认使用已安装的 Microsoft Edge，其他平台先运行 `npx playwright install chromium`。
+先执行一次 `npm run build`，再运行需要的回归组。
+
+运行 `npm test`，依次执行架构迁移、菜单、菜品详情及选菜、头衔、店铺、收藏、用户主页、全站与地图回归；不会改动项目的 `data.db` 或 `uploads/`。可分别运行 `npm run test:menu`、`npm run test:dishes`、`npm run test:dishes:ui`、`npm run test:ui` 和 `npm run test:map`（校园导览搜索、筛选、选点、触控、键盘、响应式与明暗主题）。Windows 默认使用已安装的 Microsoft Edge，其他平台先运行 `npx playwright install chromium`。
 
 收藏默认公开可单独运行 `npm run test:collections`（含旧账号迁移、数值校验、两版块及账号隔离）和 `npm run test:collections:ui`（既有收藏交互 + 默认公开专项，覆盖手机/桌面、明暗主题、键盘及请求失败）。本轮结果与全量回归的已知限制见根目录 `MAP.md` 最新记录。
 
@@ -260,6 +234,8 @@ npm.cmd start
 
 **特殊权限**（可单独授予任意用户）：`banner_edit`、`announcement_publish`、`student_review`、`invite_manage`、`weekly_menu_upload`、`map_popup_edit`、`user_manage`、`ban_appeal_review`、`shop_create`（添加店铺）、`title_manage`（头衔管理）。
 
+所有受保护请求重新读取数据库中的角色和账号状态；封禁、降权和权限撤销立即约束已有登录凭据。改密后旧凭据的有效期沿用原有约定。
+
 `shop_create` 默认要求 `student` 及以上角色，也可在角色外单独授权。通过 `SHOP_CREATE_MIN_ROLE` 调整默认最低角色；后端每次创建请求都会重新核验。
 
 ---
@@ -270,7 +246,7 @@ npm.cmd start
 - 可部署到 Render / Railway / Fly.io 等支持 Node 的平台。
 - 需持久化 `data.db`、`uploads/` 与 `.private/`。数据库和菜单加密主密钥必须配套备份；丢失主密钥后需要重新保存 API Key 并测试。
 - `.gitignore` 忽略 `.env`、`.private/`、`node_modules/`、SQLite 临时文件和浏览器测试产物；`data.db` 与 `uploads/` 保留历史初始快照。不要将生产密钥或保存模型凭据后的生产数据库提交 Git。
-- 修改 `server.js` 需重启；修改 `data.json` 无需重启（每次请求实时读取）；`public/` 下的静态资源改动刷新即可。
+- 源码更新后执行 `npm run build` 并重启生产服务；开发用 `npm run dev`。`data.json` 每次请求实时读取。构建产物为 `apps/api/dist/` 与 `apps/web/dist/`，迁移文件必须随部署保留。
 
 ---
 
@@ -281,7 +257,7 @@ npm.cmd start
 | POST | `/api/register` / `/api/login` | 注册 / 登录 |
 | GET | `/api/user/profile` | 当前用户信息（含角色、权限及数值 `collection_default_public`，默认 0） |
 | PUT | `/api/user/settings` | 部分更新网站设置；`collection_default_public` 只接受数字 0/1，省略则保留原值 |
-| GET | `/api/weekly-menu` | 每周菜谱列表 |
+| GET | `/api/menu` | 已发布周次、供应和真实评分 |
 | GET | `/api/dishes` | 独立菜品目录和统一拼音排序 |
 | GET | `/api/dishes/:id` | 菜品详情、评价数和平均评分；没有评价时评分为 null |
 | GET | `/api/dishes/:id/reviews?offset=0` | 当前菜品的非每周评价，按时间及编号倒序，每页 20 条 |
@@ -341,3 +317,19 @@ This project is licensed under the **GNU Affero General Public License v3.0 (AGP
 验证命令为 `npm test`，其中收藏后端包含旧库迁移与论坛接口移除检查；最新结果见根目录 MAP.md。
 
 2026-10-24 合并验证：论坛移除与菜品详情、选菜追加、店铺收藏默认公开已共同通过 `npm test` 全量回归。升级保留店铺收藏及默认公开偏好；当前结果与测试数量见 [MAP.md](./MAP.md) 最新合并记录。
+
+## 食谱双栏与历史版式验证 · 2026-10-25
+
+默认菜谱以“今天我吃了…”和“明天吃什么？”展示，左上可选日期、星期和校区，两栏独立选餐，默认午餐。同菜多地点合并，风味不显示重复标签；右上可切换周视图或跨全部已发布周的高级筛选。一次偏好迁移不删除既有菜单或评价。
+
+识别按每张图片重新检测浅色网格和实际日期列，不假设列宽/行高相同；无法确定时整表读取，保留全图复核。新增前两周真实图片测试及非等宽网格回归，详见 docs/menu-validation.md。运行 node --import tsx tests/menu-daily-ui.mjs 验证双栏和交互，npm run test:dishes:ui 保留周视图及评价回归。
+
+
+### 2026-10-30 · 移动导航与团队署名
+
+手机/平板顶栏在 992px 及以下展开覆盖正文的纯文字菜单，保留顶栏工具，背景淡入、链接逐项出现；支持关闭动画、Esc、循环键盘焦点、减少动态效果、短屏滚动和切换桌面自动收起。首页开发团队为「软开人工智能部」（原图标不变），页脚版权为「© 2026 苏州中学软件开发社人工智能部」。实现及验证详见 docs/navigation.md 与根目录 MAP 最新记录。
+
+
+## 2026-10-30 · 团队简称与移动导航闪烁修复
+
+首页开发团队首项改为「软开人工智能部」，沿用原有橙子图标；页脚版权仍为「© 2026 苏州中学软件开发社人工智能部」。点击移动菜单的普通站内链接时，先同步提交关闭状态并完成菜单及按钮的关闭动画，再由 Router 捕获页面转场快照，避免把尚在淡出的导航重新显示到下一页。点击关闭按钮和 Esc 仍播放原有 200ms 淡出，修饰键打开新标签保留当前菜单；账户链接与主栏目使用相同处理，不增加等待定时器。

@@ -1,5 +1,16 @@
 # 登录 · login.html
 
+## 2026-10-25 · 导航行为同步
+
+登录页站内链接支持意图预加载并保留原生新标签页语义；提交登录及认证回跳保持原规则，正文保留可用视口高度。 共同规则见 [导航与加载规范](../../navigation.md)，实际验证见根目录 MAP 与 UI 验收记录。
+
+## 当前 React 实现 · 2026-10-25
+
+实现位于 `apps/web/src/pages/`：AuthPages.tsx 中的 LoginPage、../components/FormFields.tsx。表单直接组合共享字段和认证卡片；保留密码显隐、登录回跳、封禁信息与申诉上传；登录/注册链接保留 next。
+
+视觉令牌和资源位于 `apps/web/public/`；共享站点壳、弹窗、上传、主题和用户展示见 [组件规范](../components.md)。本页 HTML/CSS 示例用于说明最终 DOM 与视觉约束，旧 `UI.*` 或页面脚本示例属于迁移前实现，不是当前可调用 API。当前请求由 TanStack Query、路径/查询/hash 由 TanStack Router 管理，后端为 Hono + Drizzle。最新验证见根目录 [MAP.md](../../../MAP.md) 与 [验收记录](../acceptance.md)。
+
+
 ## 当前视觉与布局 · 2026-10-17
 
 登录页改为居中窄表单，无外部投影卡片，28px 标题和青柠切面标志；顶栏单一登录入口，表单下仍提供注册，所有校验与封禁申诉保留。 全站品牌字标为「拾光酥糕」，详细公共尺寸见 [UI.md](../../../UI.md)。本轮验证结果见 [验收记录](../acceptance.md) 和根目录 [MAP.md](../../../MAP.md)。

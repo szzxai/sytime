@@ -11,9 +11,10 @@ const temp = fs.mkdtempSync(path.join(os.tmpdir(), "szzx-collections-ui-"));
 fs.copyFileSync(path.join(root, "server.js"), path.join(temp, "server.js"));
 fs.copyFileSync(path.join(root, "data.json"), path.join(temp, "data.json"));
 fs.copyFileSync(path.join(root, "menu-json-rules.md"), path.join(temp, "menu-json-rules.md"));
-fs.cpSync(path.join(root, "lib"), path.join(temp, "lib"), { recursive: true });
+fs.cpSync(path.join(root, "apps"), path.join(temp, "apps"), { recursive: true, filter: source => !source.includes("node_modules") && (!source.includes("/src") && !source.includes("/public")) });
+fs.cpSync(path.join(root,"packages"),path.join(temp,"packages"),{recursive:true});
 fs.cpSync(path.join(root, "data"), path.join(temp, "data"), { recursive: true });
-fs.symlinkSync(path.join(root, "public"), path.join(temp, "public"), "junction");
+fs.symlinkSync(path.join(root, "apps/web/dist"), path.join(temp, "public"), "junction");
 
 const port = 4455 + Math.floor(Math.random() * 120);
 const base = `http://127.0.0.1:${port}`;
@@ -209,7 +210,7 @@ try {
   check("收藏页默认打开必吃榜默认收藏夹", (await profile.page.textContent("[data-path]")).includes("默认收藏夹"));
   const menuText = await profile.page.textContent("[data-collections]");
   check("收藏页列出必吃榜收藏夹", menuText.includes("默认收藏夹") && menuText.includes("稍后再看"));
-  check("收藏页展示店铺卡片", (await profile.page.$('[data-grid] a[href="shop.html?id=' + collectedShopId + '"]')) !== null);
+  check("收藏页展示店铺卡片", (await profile.page.$('[data-grid] a[href="/shop.html?id=' + collectedShopId + '"]')) !== null);
   check("私密收藏显示公开开关", await profile.page.$eval("[data-public-wrap]", (el) => !el.hidden));
   check("默认收藏夹为私密", !(await profile.page.$eval("[data-public]", (el) => el.checked)));
   check("收藏页无横向溢出且 axe=0", true);
@@ -232,7 +233,7 @@ try {
   check("存在公开收藏夹时显示收藏标签", !(await publicPage.page.$eval("#favoritesNav", (el) => el.hidden)));
   await publicPage.page.click("#favoritesNav");
   await publicPage.page.waitForSelector("[data-sections] [data-section]");
-  await publicPage.page.waitForSelector('[data-grid] a[href="shop.html?id=' + collectedShopId + '"]');
+  await publicPage.page.waitForSelector('[data-grid] a[href="/shop.html?id=' + collectedShopId + '"]');
   check("他人主页展示公开收藏内容", (await publicPage.page.textContent("[data-path]")).includes("稍后再看"));
   check("他人主页只读（无公开开关）", await publicPage.page.$eval("[data-public-wrap]", (el) => el.hidden));
   check("他人主页显示公开标识", !(await publicPage.page.$eval("[data-public-badge]", (el) => el.hidden)));

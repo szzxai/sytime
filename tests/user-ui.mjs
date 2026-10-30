@@ -13,9 +13,10 @@ fs.mkdirSync(output, { recursive: true });
 fs.copyFileSync(path.join(root, "server.js"), path.join(temp, "server.js"));
 fs.copyFileSync(path.join(root, "data.json"), path.join(temp, "data.json"));
 fs.copyFileSync(path.join(root, "menu-json-rules.md"), path.join(temp, "menu-json-rules.md"));
-fs.cpSync(path.join(root, "lib"), path.join(temp, "lib"), { recursive: true });
+fs.cpSync(path.join(root, "apps"), path.join(temp, "apps"), { recursive: true, filter: source => !source.includes("node_modules") && (!source.includes("/src") && !source.includes("/public")) });
+fs.cpSync(path.join(root,"packages"),path.join(temp,"packages"),{recursive:true});
 fs.cpSync(path.join(root, "data"), path.join(temp, "data"), { recursive: true });
-fs.symlinkSync(path.join(root, "public"), path.join(temp, "public"), "junction");
+fs.symlinkSync(path.join(root, "apps/web/dist"), path.join(temp, "public"), "junction");
 const port = 4345;
 const base = `http://127.0.0.1:${port}`;
 const server = spawn(process.execPath, [path.join(temp, "server.js")], {
@@ -86,7 +87,7 @@ try {
   check("hero shows nickname", (await other.page.$eval("#heroNickname", (e) => e.textContent)) === "target-user昵");
   check("hero shows signature", (await other.page.$eval("#heroSignature", (e) => e.textContent)) === "目标用户签名");
   check("hero shows role tag", (await other.page.$eval("#heroRole", (e) => e.textContent)).includes("普通用户"));
-  check("no settings tab on user page", !(await other.page.$('#userNav [href="settings.html"]')));
+  check("no settings tab on user page", !(await other.page.$('#userNav [href="/settings.html"]')));
   check("manage tab visible for admin", !(await other.page.$eval("#manageNav", (e) => e.hidden)));
   await other.page.click('#userNav [data-panel="titles"]');
   await other.page.waitForTimeout(300);

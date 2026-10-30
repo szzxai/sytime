@@ -4,7 +4,7 @@
  * Retrieves the official district boundary, saves it to shops-config.json,
  * queries small polygon tiles to avoid URL/result caps, then exact-filters by
  * the same district polygon used by the app geofence.
- * Run: node scripts/shops/collect-pois.mjs
+ * Run: node --import tsx scripts/shops/collect-pois.mjs
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -12,7 +12,7 @@ import { createRequire } from "node:module";
 import { createHash } from "node:crypto";
 
 const require = createRequire(import.meta.url);
-const store = require("../../lib/shops/store.js");
+const store = require("../../apps/api/src/domain/shops/store.js");
 const root = process.cwd();
 const configFile = path.join(root, "data", "shops-config.json");
 const outputDir = path.join(root, "output");

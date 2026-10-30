@@ -1,4 +1,5 @@
 // Illustrated campus map: isolated server, real interaction, responsive layout and accessibility.
+import { campusPlaces as CampusPlaces } from '../apps/web/src/maps/places.ts';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -10,8 +11,8 @@ const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'szzx-map-ui-'));
 const output = path.join(root, 'output/playwright/map');
 fs.mkdirSync(output, { recursive: true });
 for (const file of ['server.js', 'data.json', 'menu-json-rules.md']) fs.copyFileSync(path.join(root, file), path.join(temp, file));
-for (const dir of ['lib', 'data']) fs.cpSync(path.join(root, dir), path.join(temp, dir), { recursive: true });
-fs.symlinkSync(path.join(root, 'public'), path.join(temp, 'public'), 'junction');
+for (const dir of ['apps', 'packages', 'data']) fs.cpSync(path.join(root, dir), path.join(temp, dir), { recursive: true });
+fs.symlinkSync(path.join(root, 'apps/web/dist'), path.join(temp, 'public'), 'junction');
 const base = 'http://127.0.0.1:4348';
 const server = spawn(process.execPath, [path.join(temp, 'server.js')], { cwd: temp, env: { ...process.env, NODE_PATH: path.join(root, 'node_modules'), PORT: '4348', JWT_SECRET: 'map-ui-test' }, stdio: ['ignore', 'pipe', 'pipe'] });
 let log = '', checks = 0, browser;
@@ -44,14 +45,14 @@ try {
     await page.goto(base + '/map.html', { waitUntil: 'networkidle' });
     await page.waitForSelector('body[data-guide-ready="true"]');
     check('all reference locations included', await page.locator('[data-map-place]').count() === 31);
-    check('all landmarks have substantive introductions', await page.evaluate(() => CampusPlaces.every(p => p.summary && p.description.length >= 65 && !p.description.includes(p.area))));
+    check('all landmarks have substantive introductions', CampusPlaces.every(p => p.summary && p.description.length >= 65 && !p.description.includes(p.area)));
     check('view switcher and floor map removed', await page.locator('#floorView, #guideViewBtn, #floorViewBtn, .campus-view-switch').count() === 0);
     const courtBounds = await page.locator('[data-map-place="basketball"] > use').boundingBox();
     const trackBounds = await page.locator('[data-map-place="track"] > use').boundingBox();
     check('reference sports proportions: large courts and dominant southern track', courtBounds.height > trackBounds.height * 0.45 && trackBounds.height > courtBounds.height * 1.8 && trackBounds.width > courtBounds.width * 2);
     check('six grouped courts and a separate southern court', await page.locator('#art-courts-plan [data-court="grouped"]').count() === 6 && await page.locator('#art-courts-plan [data-court="separate"]').count() === 1);
     check('reference terrain subdivisions exist', await page.locator('#atlas-unnamed-plot, #atlas-woodland, #atlas-bamboo, #atlas-paths').count() === 4);
-    check('reference spatial relationships are preserved', await page.evaluate(() => {
+    check('reference spatial relationships are preserved', (() => {
       const p = Object.fromEntries(CampusPlaces.map(p => [p.id, p]));
       return p.weichang.y < p.laboratory.y && p.laboratory.y < p.zhengdao.y && p.zhengdao.y < p.basketball.y
         && p['west-red'].y < p['west-lawn'].y && p['east-red'].y < p['east-lawn'].y
@@ -60,9 +61,9 @@ try {
         && p.library.y < p.laixiu.y && p.laixiu.y < p.gym.y && p.gym.y < p.caiqin.y
         && p.temple.y < p.daomeng.y && p.daomeng.y < p.panchi.y && p.panchi.y < p.panshui.y
         && p.sanyuan.height > p.sanyuan.size * 3;
-    }));
+    })());
     check('no unknown label invented for pink plot', await page.locator('#atlas-unnamed-plot text, [data-map-place="unnamed"]').count() === 0);
-    check('all places reference existing vector artwork', await page.evaluate(() => CampusPlaces.every(p => document.getElementById('art-' + p.icon))));
+    check('all places reference existing vector artwork', await page.evaluate(places => places.every(p => document.getElementById('art-' + p.icon)), CampusPlaces));
     check('map has usable height', (await page.locator('#guideMap').boundingBox()).height > 200);
     await page.screenshot({ path: path.join(output, `${width}-${theme}.png`) });
     await audit(page, `${width}/${theme}/overview`);

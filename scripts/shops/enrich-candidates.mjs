@@ -3,15 +3,15 @@
  * walking-distance subway exit. All requests use AMAP_SERVICE_KEY server-side.
  * Default mode writes a reviewed enrichment snapshot only. Pass --import to
  * insert rows that satisfy the app's address, route, tag and geofence rules.
- * Run: node scripts/shops/enrich-candidates.mjs [--import]
+ * Run: node --import tsx scripts/shops/enrich-candidates.mjs [--import]
  */
 import fs from "node:fs";
 import path from "node:path";
 import { createRequire } from "node:module";
-import { DatabaseSync } from "node:sqlite";
+import { createDatabase, query } from "../../packages/db/src/client.ts";
 
 const require = createRequire(import.meta.url);
-const store = require("../../lib/shops/store.js");
+const store = require("../../apps/api/src/domain/shops/store.js");
 const root = process.cwd();
 const env = fs.readFileSync(path.join(root, ".env"), "utf8");
 const serviceKey = env.split(/\r?\n/).map((line) => line.replace(/^\uFEFF/, "")).find((line) => line.startsWith("AMAP_SERVICE_KEY="))?.slice("AMAP_SERVICE_KEY=".length).trim();
@@ -350,17 +350,17 @@ console.log(JSON.stringify({
 }, null, 2));
 
 if (process.argv.includes("--import")) {
-  const db = new DatabaseSync(path.join(root, "data.db"));
+  const db = createDatabase(path.join(root, "data.db"));
   const imported = [];
   const skipped = [];
   let removedPreviousAmap = 0;
   try {
-    db.exec("BEGIN IMMEDIATE");
+    db.$client.exec("BEGIN IMMEDIATE");
     if (process.argv.includes("--replace-amap")) {
-      removedPreviousAmap = Number(db.prepare("DELETE FROM shops WHERE created_by_name = ?").run("高德地图 POI").changes) || 0;
+      removedPreviousAmap = Number(query(db, "DELETE FROM shops WHERE created_by_name = ?").run("高德地图 POI").changes) || 0;
     }
     for (const poi of ready) {
-      const existing = db.prepare("SELECT id FROM shops WHERE name = ?").get(poi.name);
+      const existing = query(db, "SELECT id FROM shops WHERE name = ?").get(poi.name);
       if (existing) { skipped.push({ name: poi.name, reason: "name already exists", existing_id: existing.id }); continue; }
       try {
         const shop = store.create(db, {
@@ -382,12 +382,12 @@ if (process.argv.includes("--import")) {
         skipped.push({ name: poi.name, reason: error.message || "validation error" });
       }
     }
-    db.exec("COMMIT");
+    db.$client.exec("COMMIT");
   } catch (error) {
-    try { db.exec("ROLLBACK"); } catch { /* ignored */ }
+    try { db.$client.exec("ROLLBACK"); } catch { /* ignored */ }
     throw error;
   } finally {
-    db.close();
+    db.$client.close();
   }
   const report = { imported: imported.length, skipped: skipped.length, imported_shops: imported, skipped_shops: skipped };
   fs.writeFileSync(path.join(outputDir, "shops-amap-import-report.json"), JSON.stringify(report, null, 2) + "\n", "utf8");

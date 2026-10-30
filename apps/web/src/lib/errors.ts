@@ -1,0 +1,80 @@
+const ERROR_TEXT: Record<string, string> = {
+  network: '网络连接失败，请检查网络后重试',
+  'login required': '请先登录',
+  forbidden: '你没有权限执行此操作',
+  'server error': '服务器开小差了，请稍后再试',
+  'invalid username or password': '用户名或密码错误',
+  'username already exists': '用户名已被占用',
+  'username, nickname and password are required': '请填写完整的用户名、昵称和密码',
+  'username and password are required': '请输入用户名和密码',
+  'title and content are required': '标题和内容都不能为空',
+  'content is required': '内容不能为空',
+  'category must be 讨论 or 提问': '请选择有效的分类',
+  已点赞: '你已经点过赞了',
+  'name is required': '请填写名称',
+  'rating must be between 0 and 5': '评分需在 0 到 5 分之间',
+  'only jpg/png images are allowed': '仅支持 JPG / PNG 格式的图片',
+  'File too large': '图片太大，请压缩后重试',
+  'Unexpected field': '上传的文件字段不正确，请刷新页面后重试',
+  'avatar image is required': '请先选择头像图片',
+  'nickname is required': '昵称不能为空',
+  'oldPassword and newPassword are required': '请填写旧密码和新密码',
+  'old password is incorrect': '旧密码不正确',
+  'student_id, class_name and real_name are required': '请填写新生号、班级和真实姓名',
+  'invite_code is required': '请输入邀请码',
+  'code is required': '请输入邀请码',
+  'code already exists': '该邀请码已存在',
+  'invalid id': '编号无效',
+  'id is required': '缺少必要参数',
+  'application not found': '该申请不存在或已处理',
+  'appeal not found': '该申诉不存在或已处理',
+  'ticket not found': '该工单不存在',
+  'id and reply are required': '请填写批复内容',
+  'userId and a valid newRole are required': '请选择有效的角色',
+  'cannot change your own role': '不能修改自己的角色',
+  'cannot modify a user with equal or higher role': '不能操作同级或更高级别的用户',
+  'new role out of allowed range': '该角色超出你可分配的范围',
+  'user not found': '用户不存在',
+  'userId is required': '缺少用户编号',
+  'cannot ban yourself': '不能封禁自己',
+  'cannot ban a user with equal or higher role': '不能封禁同级或更高级别的用户',
+  'cannot modify this user': '你无权修改该用户',
+  'username and appeal_reason are required': '请填写申诉理由',
+  'user is not banned': '该账号当前没有被封禁',
+  'appealId and action (approve/reject) are required': '操作参数不完整',
+  'menu_start_date and menu_end_date are required': '请选择第一天和最后一天',
+  'image is required': '请先选择图片',
+  'image not found': '图片不存在或已被删除',
+  'feature not found': '没有找到该地图对象',
+  rate_limited: '操作太频繁，请稍后再试',
+  banned: '账号已被封禁',
+  'head title name already exists': '头衔名称已存在',
+  'head title not found': '头衔不存在或已被删除',
+  'head title not owned': '你尚未拥有该头衔',
+  'invalid head title': '头衔无效',
+  'auto head title cannot be revoked': '自动头衔由规则发放，不能撤销',
+  'auto head title cannot be granted': '自动头衔由规则发放，不能手动授予',
+  'built-in head title cannot be deleted': '内置头衔不能删除',
+};
+const STATUS_TEXT: Record<number, string> = {
+  0: '网络连接失败，请检查网络后重试',
+  400: '提交的内容有误，请检查后重试',
+  401: '请先登录',
+  403: '你没有权限执行此操作',
+  404: '内容不存在或已被删除',
+  409: '内容冲突，可能已经存在',
+  413: '文件太大，请压缩后重试',
+  429: '操作太频繁，请稍后再试',
+  500: '服务器开小差了，请稍后再试',
+};
+
+export function errorText(status: number, data: Record<string, unknown>) {
+  const message = String(data.message || '');
+  const key = String(data.error || data.message || '');
+  return /[一-龥]/.test(message)
+    ? message
+    : ERROR_TEXT[key] ||
+        (/[一-龥]/.test(key)
+          ? key
+          : STATUS_TEXT[status] || (status >= 500 ? STATUS_TEXT[500] : '操作失败，请稍后再试'));
+}

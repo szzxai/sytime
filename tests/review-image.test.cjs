@@ -13,7 +13,8 @@ const base = "http://127.0.0.1:" + port;
 fs.copyFileSync(path.join(root, "server.js"), path.join(temp, "server.js"));
 fs.copyFileSync(path.join(root, "data.json"), path.join(temp, "data.json"));
 fs.copyFileSync(path.join(root, "menu-json-rules.md"), path.join(temp, "menu-json-rules.md"));
-fs.cpSync(path.join(root, "lib"), path.join(temp, "lib"), { recursive: true });
+fs.cpSync(path.join(root, "apps"), path.join(temp, "apps"), { recursive: true, filter: source => !source.includes("node_modules") && (!source.includes("/src") && !source.includes("/public")) });
+fs.cpSync(path.join(root,"packages"),path.join(temp,"packages"),{recursive:true});
 fs.cpSync(path.join(root, "data"), path.join(temp, "data"), { recursive: true });
 
 let server = null, log = "";
@@ -86,7 +87,7 @@ async function apiForm(url, token, fields, fileField, filename) {
 test("评价配图与人均价", async () => {
   const student = await account("rev_student");
   // 升级为 student：直接改临时库
-  const { DatabaseSync } = require("node:sqlite");
+  const { DatabaseSync } = require("./helpers/database.cjs");
   const db = new DatabaseSync(path.join(temp, "data.db"));
   db.prepare("UPDATE users SET role = 'student', status = 'active' WHERE username = 'rev_student'").run();
 

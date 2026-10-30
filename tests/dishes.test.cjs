@@ -4,9 +4,9 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 const { test } = require("node:test");
-const { DatabaseSync } = require("node:sqlite");
-const store = require("../lib/dishes/store");
-const { nameFields } = require("../lib/menu/schema");
+const { DatabaseSync } = require("./helpers/database.cjs");
+const store = require("../apps/api/src/domain/dishes/store");
+const { nameFields } = require("../apps/api/src/domain/menu/schema");
 const { startApp } = require("./helpers/app-fixture.cjs");
 const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j6h0AAAAASUVORK5CYII=", "base64");
 
@@ -68,13 +68,14 @@ test("dish details isolate reviews and preserve newest-first pagination and aver
   assert.equal(store.detail(db, 2).rating_avg, null);
 });
 
-test("malformed, oversized, nonexistent and unpublished dish identities cannot resolve", context => {
+test("malformed, oversized, nonexistent dish identities cannot resolve", context => {
   const db = database(context);
   store.migrate(db);
-  for (const value of [null, undefined, [], {}, "", "01", 0, -1, 1.5, "1e0", "1 OR 1=1", "9007199254740992", 3, 999999]) {
+  for (const value of [null, undefined, [], {}, "", "01", 0, -1, 1.5, "1e0", "1 OR 1=1", "9007199254740992", 999999]) {
     assert.equal(store.findDish(db, value), null, String(value));
   }
   assert.equal(store.findDish(db, "1").name, "红烧牛肉面");
+  assert.equal(store.findDish(db, 3).name, "未发布菜品");
 });
 
 test("dish detail and review HTTP contracts", async context => {
@@ -110,7 +111,7 @@ test("dish detail and review HTTP contracts", async context => {
     assert.equal((await site.api("/api/recipes")).data.recipes.length, 0);
   });
   await context.test("invalid scores and comments cannot create a review", async () => {
-    for (const rating of [undefined, null, "", false, 6, -1, 4.5, "4invalid"]) {
+    for (const rating of [undefined, null, "", false, 0, 6, -1, 4.5, "4invalid"]) {
       assert.equal((await site.api("/api/recipes", { method: "POST", token, body: { dish_id: target.id, rating } })).status, 400);
     }
     for (const comment of [{ text: "invalid" }, "长".repeat(501)]) {

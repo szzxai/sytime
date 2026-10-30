@@ -1,0 +1,10 @@
+{
+  "name": "@sytime/db",
+  "private": true,
+  "version": "1.0.0",
+  "exports": "./src/client.ts",
+  "dependencies": {
+    "drizzle-orm": "^0.45.4",
+    "better-sqlite3": "^13.0.3"
+  }
+}

@@ -12,10 +12,9 @@ async function startApp(prefix) {
   for (const filename of ["server.js", "data.json", "menu-json-rules.md"]) {
     fs.copyFileSync(path.join(root, filename), path.join(directory, filename));
   }
-  for (const dirname of ["lib", "data"]) {
+  for (const dirname of ["apps", "packages", "data"]) {
     fs.cpSync(path.join(root, dirname), path.join(directory, dirname), { recursive: true });
   }
-  fs.symlinkSync(path.join(root, "public"), path.join(directory, "public"), "junction");
   const reservation = net.createServer();
   await new Promise(resolve => reservation.listen(0, "127.0.0.1", resolve));
   const port = reservation.address().port;
@@ -58,6 +57,13 @@ async function startApp(prefix) {
     await stop();
     throw error;
   }
+  const { DatabaseSync } = require('./database.cjs');
+  const { publishSource } = require('../../apps/api/src/domain/menu/store');
+  const { sha256 } = require('../../apps/api/src/domain/menu/schema');
+  const seedDb = new DatabaseSync(path.join(directory, 'data.db'));
+  try { publishSource(seedDb, {article_id:11427,title:'测试周菜单',content_hash:sha256('fixture')},
+    ['红烧牛肉面','A 套餐',...Array.from({length:60},(_,i)=>'豆腐测试菜品'+i)].map(name=>({date:'2026-10-26',weekday:null,time:['noon'],place:'希文楼',group:'面档',name,price:12,spicy:null}))); }
+  finally { seedDb.close(); }
   async function api(route, { method = "GET", token, body } = {}) {
     const headers = token ? { Authorization: "Bearer " + token } : {};
     if (body !== undefined && !(body instanceof FormData)) {

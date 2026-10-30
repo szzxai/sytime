@@ -1,0 +1,58 @@
+/* Keep related controls close, with clear space between review fields. */
+.dish-review {
+  width: min(34rem, calc(100vw - 2rem));
+}
+.dish-review .dialog__head {
+  padding: 1.5rem 1.5rem 0;
+  align-items: center;
+}
+.dish-review .dialog__title {
+  margin: 0;
+}
+.dish-review .dialog__body {
+  display: grid;
+  gap: 1.5rem;
+  padding: 1.25rem 1.5rem 1.5rem;
+}
+.dish-review .field {
+  gap: 0.5rem;
+}
+.dish-review .rating-input {
+  justify-self: start;
+}
+.dish-review .rating-input label {
+  width: 2.75rem;
+  height: 2.75rem;
+}
+.dish-review .textarea {
+  min-height: 7rem;
+  resize: vertical;
+}
+.dish-review .field__foot {
+  gap: 0;
+}
+.dish-review .upload {
+  padding: 1rem;
+}
+.dish-review .upload-preview-slot:empty {
+  display: none;
+}
+.dish-review .dialog__foot {
+  padding: 0 1.5rem calc(1.5rem + var(--safe-bottom));
+  gap: 0.75rem;
+}
+@media (max-width: 639.98px) {
+  .dish-review {
+    width: 100%;
+  }
+  .dish-review .dialog__head {
+    padding: 0.75rem 1rem 0;
+  }
+  .dish-review .dialog__body {
+    padding: 1rem;
+    gap: 1.25rem;
+  }
+  .dish-review .dialog__foot {
+    padding: 0.25rem 1rem calc(1rem + var(--safe-bottom));
+  }
+}

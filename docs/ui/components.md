@@ -1,8 +1,43 @@
 # 组件规范 · components.md
 
-> 当前共享视觉：拾光酥糕 v2.3（2026-10-24，含收藏默认公开开关），颜色、字号、圆角与断点以 [UI.md](../../UI.md) 和 `public/css/site.css` 为准。下列组件钩子与状态继续适用。
+## 2026-10-30 · 移动端全屏导航与团队署名
 
-> 事实来源：[assets/site.css](./assets/site.css)（类名、变体、状态、数值）与 [assets/ui.js](./assets/ui.js)（脚本 API）。这些资源是历史设计参考；当前行为以 `public/css/site.css`、`public/js/ui.js` 与页面实现为准。视觉基准：[assets/specimen.html](./assets/specimen.html)。
+移动导航参考 Berkeleytime 的手机展开形态：沿用现有品牌、菜单、明暗切换和登录/账户顶栏，992px 及以下从顶栏下缘覆盖剩余视口，不再使用左侧 Dialog 抽屉。背景采用当前主题的实色表面，导航内边距 24px，主栏目为 24px / 30px、500 字重的纯文字纵向链接，间距 8px；顺序为首页、地图、菜谱、必吃榜、更新公告，当前栏目以次要文字色标示。账户入口以分隔线另列，保留登录/注册、资料/设置/认证/管理权限、消息箱及退出入口；短屏内部滚动，底部兼容安全区。
+
+背景以 200ms ease-out 淡入/淡出；链接从下方 12px 淡入，持续 300ms，首项延迟 100ms、逐项递增 50ms。汉堡在 200ms 内旋转变为关闭符号。收起保留节点完成淡出，立即停止指针与键盘访问；连续反向点击可逆。减少动态效果时即时完成。按钮提供动态名称、aria-expanded 与 aria-controls；开启时正文/页脚 inert、背景滚动锁定，Tab 在顶栏和导航内循环，Esc 关闭并无滚动归还焦点。选择链接或窗口切至桌面时收起并清理状态，页面横滑规则继续适用。
+
+首页首个团队文字为「软开人工智能部」，沿用 /img/team-vc.svg 橙子切面图标；第二个团队仍为「苏州中学软件开发社」。全站页脚版权精确为「© 2026 苏州中学软件开发社人工智能部」，无末尾句号，窄屏允许自然换行。
+
+
+## 2026-10-25 · 导航与加载稳定性
+
+站内链接采用意图预加载，无全局点击拦截。正文外入口（顶栏、移动导航、页脚等）始终按主栏目位置横滑；正文内详情入口/返回按父子关系横滑。同页筛选与标签不横滑；手机公告列表/正文使用父子方向，桌面仍为并排主从。目标准备期间保留旧内容和位置，超过 200ms 才显示顶部 3px 品牌色提示条，准备好后一次转场；正文撑满视口，页脚不因占位塌陷上移，地图保留独立壳。详情返回恢复来源筛选和滚动；历史前进后退与减少动态效果设置一致。详细行为、边界与验证入口见 [导航规范](../navigation.md)。
+
+
+## 当前组件入口 · 2026-10-25
+
+运行时已由 React 组件替代全局 UI 对象。下列 HTML 示例是 DOM/CSS 合同；旧 `UI.*` 示例仅保留设计语义，不能复制到新组件执行。新实现统一从以下模块组合：
+
+| 能力 | 当前模块 |
+| --- | --- |
+| 顶栏、账户菜单、移动全屏导航、横幅、页脚、离线条 | `apps/web/src/components/Shell.tsx` |
+| 图标、头像、用户行、星级、分页、状态、Dialog / Confirm、Toast | `apps/web/src/components/ui.tsx` 与 `Collections.tsx` |
+| 文本、密码、认证卡片、字数统计 | `apps/web/src/components/FormFields.tsx` |
+| 上传、缩略图和图片查看器 | `apps/web/src/components/Media.tsx` |
+| 收藏操作与浏览 | `apps/web/src/components/Collections.tsx` |
+| 店铺卡片与地图 | `ShopCard.tsx`、`ShopMap.tsx`，位于同一 components 目录 |
+| 已有菜品选择与写评价 | `apps/web/src/components/DishReview.tsx`、`DishReview.css` |
+| 工单、后台、菜单与头衔 | `Tickets.tsx`、`AdminUsers.tsx`、`MenuAdmin.tsx`、`MenuImport.tsx`、`TitleManagement.tsx`、`AccountManagement.tsx` |
+| 主题、API、会话、URL 面板及未保存表单 | `apps/web/src/lib/` 下对应 Hook 与模块 |
+
+Dialog 使用原生 showModal 和 React portal，挂载后聚焦、关闭后恢复触发位置；图片查看和嵌套弹窗沿用同样的焦点/滚动规则。Toast 挂到当前顶层 dialog 内以保持可见。所有订阅、地图实例和观察器均随卸载清理。
+
+组件外观、类名与交互合同继续适用。新增组件直接组合既有 React 组件；动态文本交给 JSX 转义，禁止把业务内容当 HTML 注入。确认操作通过 Confirm 实际提交表单执行。当前样式以 apps/web/public 下资源为准，设计 assets 不参与生产运行。
+
+
+> 当前共享视觉：拾光酥糕 v2.3（2026-10-24，含收藏默认公开开关），颜色、字号、圆角与断点以 [UI.md](../../UI.md) 和 `apps/web/public/css/site.css` 为准。下列组件钩子与状态继续适用。
+
+> 事实来源：[assets/site.css](./assets/site.css)（类名、变体、状态、数值）与 [assets/ui.js](./assets/ui.js)（脚本 API）。这些资源是历史设计参考；当前行为以 `apps/web/public/css/site.css`、`apps/web/src/components/` 与页面组件为准。视觉基准：[assets/specimen.html](./assets/specimen.html)。
 
 ## 组件使用总则
 
@@ -10,8 +45,8 @@
 2. **颜色只来自令牌**；组件内禁止写十六进制（`--rating`、`--p` 等动态自定义属性除外）。
 3. **组件内部不写 `style` 属性**（动态值除外）；页面不得重写组件的响应式。
 4. 状态类一律 `is-` 前缀；选中/展开/按下用 ARIA 属性（`aria-selected` / `aria-expanded` / `aria-pressed` / `aria-current`），CSS 按属性匹配。
-5. 图标：`<svg class="icon" aria-hidden="true"><use href="img/icons.svg#i-名称"/></svg>`；JS 里用 `UI.icon('名称', '附加类')`。尺寸：默认 20、`icon--sm` 16、`icon--lg` 24、`icon--xl` 32。
-6. 新增组件流程：先查「组件选择决策表」→ 组合现有组件 → 确实不够，向设计负责人申请，同步更新 site.css、ui.js、specimen.html 与本文件。
+5. 图标：`<svg class="icon" aria-hidden="true"><use href="img/icons.svg#i-名称"/></svg>`；React 使用 `<Icon name="名称" />`。尺寸：默认 20、`icon--sm` 16、`icon--lg` 24、`icon--xl` 32。
+6. 新增组件流程：先查「组件选择决策表」→ 组合现有组件 → 确实不够，向设计负责人申请，同步更新 site.css、React 组件、必要的样张与本文件。
 7. 所有组件在 360px 正常、触控目标 ≥44px、键盘可达——这是组件的一部分，不是可选项。
 
 组件选择决策表（常见需求 → 组件）：
@@ -128,7 +163,7 @@ JS 写法：`UI.icon('search')`、`UI.icon('search', 'icon--sm')`。
 
 变体：`.field--full`（在 `form-grid--2` 里占满行）；`.field.is-invalid`（显示 error、隐藏 hint、控件变红）。
 
-状态脚本：`UI.form.fieldError(input, '消息')` / `UI.form.clearField(input)`；输入时自动清错（ui.js 全局委托）；`aria-invalid` 与 `aria-describedby` 由脚本维护。
+字段错误由 React 状态和 Field 组件渲染，校验结果同步到 aria-invalid 与相应错误说明；不再使用全局委托。
 
 常见错误：① 错误文案写在 hint 里而不切 error；② label 没有 for；③ 用 `.is-invalid` 但没填 error 文案。
 
@@ -144,7 +179,7 @@ JS 写法：`UI.icon('search')`、`UI.icon('search', 'icon--sm')`。
 ```html
 <textarea class="textarea" id="x" data-counter="2000" placeholder="{{提示}}"></textarea>
 ```
-同 input 外观；min-height 104、可纵向 resize；正文行高 1.6。计数器放 `field__foot` 里（`.field__counter`）。计数初始化：`UI.qsa('[data-counter]').forEach(UI.form.counter)`（ui.js 自动）。
+同 input 外观；min-height 104、可纵向 resize；正文行高 1.6。计数器放 `field__foot` 里（`.field__counter`）。非受控字段使用 `<FieldCounter htmlFor="字段 ID" max={上限} />`，输入与 reset 自动更新；受控字段直接渲染 value.length。
 
 ### Select 下拉选择
 
@@ -219,7 +254,7 @@ JS 写法：`UI.icon('search')`、`UI.icon('search', 'icon--sm')`。
   <div class="upload-preview-slot"></div>
 </div>
 ```
-初始化：`UI.upload.bind(root)`（页面有 `data-upload` 时 ui.js 自动绑定）。选中后 `.upload` 隐藏、`upload-preview-slot` 显示 `.upload-preview`（56px 预览 + 文件名/大小 + 移除按钮）。校验自动：类型/大小错误 → 字段级红色错误（文案见 copy.md 5.6）。取文件：`UI.upload.get(root)`；清空：`UI.upload.clear(root)`。拖入支持已内置。**禁止**页面再写 onchange 校验。
+使用 `<Upload file={file} onChange={setFile} />` 组合上传。选中后 `.upload` 隐藏、`upload-preview-slot` 显示 `.upload-preview`（56px 预览 + 文件名/大小 + 移除按钮）。校验自动：类型/大小错误 → 字段级红色错误（文案见 copy.md 5.6）。文件由父组件 state 持有，清空时置为 null。拖入支持已内置。**禁止**页面再写 onchange 校验。
 
 ### Rating Input 星级输入
 
@@ -251,7 +286,7 @@ JS 写法：`UI.icon('search')`、`UI.icon('search', 'icon--sm')`。
   <div class="input-group__end"><button type="button" class="icon-btn icon-btn--sm" data-password-toggle aria-label="显示密码"><svg class="icon" aria-hidden="true"><use href="img/icons.svg#i-eye"></use></svg></button></div>
 </div>
 ```
-显隐由 ui.js 委托（`data-password-toggle`），切换后 aria-label 与图标同步。autocomplete 按场景：登录 current-password，注册/修改 new-password。
+显隐由 PasswordField 的组件状态控制，切换后 aria-label、aria-pressed 与图标同步。autocomplete 按场景：登录 current-password，注册/修改 new-password。
 
 ---
 
@@ -401,7 +436,7 @@ JS：`UI.userLine(user, {size, meta, href, large, showRole})`；meta 传 HTML �
 ```html
 <span class="thumb" data-zoom="{{url}}" data-caption="{{说明}}"><img src="{{url}}" alt="{{说明}}" loading="lazy"></span>
 ```
-80px 圆角 10、`cursor:zoom-in`；`thumb--lg` 120。点击放大由 ui.js 委托（`data-zoom`）。加载失败自动占位（`is-broken` + `media-fallback`）。
+80px 圆角 10、`cursor:zoom-in`；`thumb--lg` 120。Picture 的点击处理打开 React 图片查看器。加载失败自动占位（`is-broken` + `media-fallback`）。
 
 ### Stat 统计小块
 
@@ -481,7 +516,7 @@ JS：`UI.userLine(user, {size, meta, href, large, showRole})`；meta 传 HTML �
 
 ### Collections Browser 收藏浏览（#23）
 
-`UI.collectionsBrowser(container, { mode, userId, defaultSection })`（`public/js/collections-view.js`），个人中心与用户主页共用：
+`UI.collectionsBrowser(container, { mode, userId, defaultSection })`（`apps/web/src/components/Collections.tsx`），个人中心与用户主页共用：
 
 - `mode: "owner"`：拉取当前用户必吃榜收藏夹（`GET /api/collections?section=`），右侧公开开关可写；`mode: "public"`：拉取目标用户的公开收藏夹（`GET /api/users/:id/collections`），只读并显示「公开」徽章。
 - 结构复用 `.shell`（左 15rem 侧栏 + 右内容）、`.side-nav`（版块 + 收藏夹双层菜单）、`.breadcrumb`、`.switch-row`、`.grid`、`.pager`；不新增 CSS 类。
@@ -491,20 +526,9 @@ JS：`UI.userLine(user, {size, meta, href, large, showRole})`；meta 传 HTML �
 
 即 `dialog--sheet` 在手机端的形态（同一元素，桌面自动居中圆角浮层）。宽度全屏、底部对齐；把手条自动渲染。用于写评价、添加菜品、封禁等表单。
 
-### Drawer 抽屉
+### Mobile navigation 移动导航
 
-```html
-<dialog class="dialog dialog--drawer" id="navDrawer" aria-label="站点导航">
-  <div class="drawer__head">{{brand}}<button class="icon-btn" data-dialog-close aria-label="关闭菜单">…</button></div>
-  <nav class="drawer__body" aria-label="主导航">
-    <a class="drawer-link" href="map.html" aria-current="page"><svg class="icon">…</svg>校园地图</a>
-    <div class="drawer-sep"></div>
-    …
-  </nav>
-  <div class="drawer__foot">拾光酥糕 · AGPL-3.0</div>
-</dialog>
-```
-左滑入 320px；由 ui.js 页头汉堡触发（`data-dialog-open="navDrawer"`）；≥768 窗口自动关闭。
+992px 及以下使用持久挂载的 #navDrawer.mobile-nav，显示于现有顶栏下方并占满剩余视口；不再创建原生对话框或左侧抽屉。布局、动效、焦点和账户规则见本文 2026-10-30 更新。桌面显示原有横向顶栏。
 
 ### Alert 提示条
 
@@ -552,7 +576,7 @@ JS：`UI.userLine(user, {size, meta, href, large, showRole})`；meta 传 HTML �
 
 ### Offline Bar 离线条
 
-`<div class="offline-bar" role="status">网络已断开，部分功能暂不可用</div>`；ui.js 在 offline 事件自动插入/移除；sticky 于页头之上。
+`<div class="offline-bar" role="status">网络已断开，部分功能暂不可用</div>`；NetworkStatus 在 online/offline 事件更新状态并自动插入/移除；sticky 于页头之上。
 
 ---
 
@@ -560,9 +584,9 @@ JS：`UI.userLine(user, {size, meta, href, large, showRole})`；meta 传 HTML �
 
 ### Site Header 页头与主导航
 
-由 `UI.shell.mount()` 生成。`#siteHeader` 宿主吸顶，内部 `.site-header` 为纯色背景，首页无分隔线，功能页保留 1px 下边线。所有尺寸高度均为 56px。左上使用 32px 的苏州中学校徽图标，距顶栏左边 28px、顶部 15px，链接通过中文 aria-label 标注首页。桌面四个导航右对齐：「地图、菜谱、必吃榜、更新公告」，当前链接使用绿色下划线；手机保留汉堡抽屉和全部功能入口。
+由 `UI.shell.mount()` 生成。`#siteHeader` 宿主吸顶，内部 `.site-header` 为纯色背景，首页无分隔线，功能页保留 1px 下边线。所有尺寸高度均为 56px。左上使用 32px 的苏州中学校徽图标，距顶栏左边 28px、顶部 15px，链接通过中文 aria-label 标注首页。桌面四个导航右对齐：「地图、菜谱、必吃榜、更新公告」，当前链接使用绿色下划线；手机保留汉堡展开菜单和全部功能入口。
 
-`.site-header__tools` 包含主题按钮和 `#authArea`。未登录显示绿色「登录 →」，注册入口保留在登录页和移动抽屉；已登录显示消息铃与头像菜单。账号权限与退出流程不变。主导航使用指定短名称；同源站内页面切换仅让顶栏与公告下方的内容以 420ms 同步左右滑动。跳转时记录公告高度，在目标页首帧提前预留，公告异步返回前顶栏位置不变；新顶栏快照保持可见，防止短暂空白。减少动态效果模式直接跳转。
+`.site-header__tools` 包含主题按钮和 `#authArea`。未登录显示绿色「登录 →」，注册入口保留在登录页和移动全屏导航；已登录显示消息铃与头像菜单。账号权限与退出流程不变。主导航使用指定短名称；同源站内页面切换仅让顶栏与公告下方的内容以 420ms 同步左右滑动。跳转时记录公告高度，在目标页首帧提前预留，公告异步返回前顶栏位置不变；新顶栏快照保持可见，防止短暂空白。减少动态效果模式直接跳转。
 
 ### Theme 主题
 
@@ -582,7 +606,7 @@ JS：`UI.userLine(user, {size, meta, href, large, showRole})`；meta 传 HTML �
   </div>
 </div>
 ```
-面板底圆角 8 阴影 `--sh-3`；右对齐（`menu__panel--left` 左对齐）；动效 pop-in 120ms。行为由 ui.js 委托：点击触发器开/关、外部点击关、Esc 关并还焦点、↑↓ 移动焦点。触屏项 44。**删除等危险项加 `menu__item--danger`（红字红底 hover）**。
+面板底圆角 8 阴影 `--sh-3`；右对齐（`menu__panel--left` 左对齐）；动效 pop-in 120ms。行为由 Shell 账户菜单状态和键盘事件控制：点击触发器开/关、外部点击关、Esc 关并还焦点、↑↓ 移动焦点。触屏项 44。**删除等危险项加 `menu__item--danger`（红字红底 hover）**。
 
 ### Tabs 标签页
 
@@ -622,7 +646,7 @@ JS：`UI.userLine(user, {size, meta, href, large, showRole})`；meta 传 HTML �
   <div class="collapse__panel"><div class="collapse__inner"><div class="collapse__content">{{内容}}</div></div></div>
 </div>
 ```
-展开态类 `is-open`；ui.js 委托点击切换（`aria-expanded` 同步）；收起时 `collapse__inner` 加 `inert`（内容不可聚焦）。grid-rows 动画 320ms。周食谱、长说明用它。
+展开态类 `is-open`；React 受控状态点击切换（`aria-expanded` 同步）；收起时 `collapse__inner` 加 `inert`（内容不可聚焦）。grid-rows 动画 320ms。周食谱、长说明用它。
 
 ### Back Link 与面包屑
 
@@ -641,7 +665,7 @@ JS：`UI.userLine(user, {size, meta, href, large, showRole})`；meta 传 HTML �
 
 ### Site Footer 页脚
 
-由 `footerHtml()` 生成，最大宽度 1136px，顶部细线，64px 顶部留白。`.site-footer__top` 左侧校徽品牌图标、维护说明和关于链接，右侧 `.site-footer__columns` 三列「交流与反馈 / 校园生活 / 关于我们」；`.site-footer__bottom` 使用固定版权文案「© 2026 苏州中学 VC 编程。」及主题按钮。手机品牌与链接列顺排，三列仍并列。所有链接指向现有站内页面，不显示虚构的在线状态。地图应用壳无页脚。
+由 `footerHtml()` 生成，最大宽度 1136px，顶部细线，64px 顶部留白。`.site-footer__top` 左侧校徽品牌图标、维护说明和关于链接，右侧 `.site-footer__columns` 三列「交流与反馈 / 校园生活 / 关于我们」；`.site-footer__bottom` 使用固定版权文案「© 2026 苏州中学软件开发社人工智能部」及主题按钮。手机品牌与链接列顺排，三列仍并列。所有链接指向现有站内页面，不显示虚构的在线状态。地图应用壳无页脚。
 
 ### Landing 首页布局
 
@@ -716,7 +740,7 @@ JS：`UI.userLine(user, {size, meta, href, large, showRole})`；meta 传 HTML �
 
 详情使用 `.dish-detail` 与 `.dish-review`：页面标题和动态评价使用完整系统中文字体栈，摘要及作者行可换行，评论保留换行、不截断，配图使用 `UI.page.picture` 和 `UI.viewer`，最大 24rem 且不超容器。没有评价时不渲染虚构评分。原 `.review-card` 的结构及四行文本截断保持不变。
 
-共用写评价组件 `UI.dishReview(options)` 由 `public/js/dish-review.js` 提供，在菜谱和详情初始化时各创建一个原生对话框；保留原评分、评论、上传及发布控件。返回的 `open(dish)` 可预选当前菜品，发布成功调用 `onPublished` 刷新当前页或跳往改选菜品。
+共用 `<DishReview dish={当前菜品} onClose={关闭} onPublished={回调} />` 由 `apps/web/src/components/DishReview.tsx` 提供，打开时挂载原生对话框；保留原评分、评论、上传及发布控件。可选 dish 预选当前菜品，发布成功调用 onPublished 并刷新当前页或跳往改选菜品。
 
 - `.dish-picker__control` 包含可编辑 `role="combobox"` 输入、隐藏的 `dish_id` 与候选浮层。`aria-expanded`、`aria-controls` 和活动后代反映展开及键盘选中状态；候选容器为 `listbox`，用 `tabindex="-1"` 避免滚动容器占用 Tab 顺序，候选为 `option` 并带选中状态。
 - 候选从真实目录加载，支持菜名、拼音和首字母筛选。未筛选或筛选后的首批均最多 50 条，`#dishPickerMore`「显示更多」每次追加最多 50 条，保留结果顺序和滚动位置，状态显示总数与已显示数；末批、不足 50 条、无匹配及加载失败时隐藏入口。重新输入、结束输入法组合或收起后重新展开恢复首批，不改变全量目录和后端接口。
@@ -847,7 +871,7 @@ JS：`UI.userLine(user, {size, meta, href, large, showRole})`；meta 传 HTML �
 
 ### Map Controls 地图控件
 
-校园地图的当前规范见 [pages/map.md](./pages/map.md)。`public/css/map.css` 为页面专用样式，不影响必吃榜地图。
+校园地图的当前规范见 [pages/map.md](./pages/map.md)。`apps/web/public/css/map.css` 为页面专用样式，不影响必吃榜地图。
 
 - `.campus-search` + `.campus-filters`：关键词与分类联合过滤，按钮 `aria-pressed`，数量 `role=status`；无结果可重置。
 - `.campus-place-row`：SVG 缩略图、名称、用途摘要；用途摘要及别名可搜索，选中背景和左侧细线同时提示状态。
@@ -878,3 +902,28 @@ JS：`UI.userLine(user, {size, meta, href, large, showRole})`；meta 传 HTML �
 ### 2026-10-19 · 青柠品牌与页脚声明
 
 品牌资源统一为 `/img/brand-lime.svg?v=20261019`，顶栏仍为 32px，抽屉及页脚仍为 40px；登录/注册卡片也使用该图形，团队区橙色原图不变。页脚以完整运营声明替代原维护短句，文案见 `copy.md`；邮箱为邮件链接，继承主题文字颜色并显示下划线，支持键盘访问。身份区允许收缩和长邮箱换行，正文 14px、1.8 行高，导航三列不被长文挤压；手机沿用纵向排列。
+
+## 2026-10-25 · 食谱供应卡与筛选
+
+`MenuPage.css` 提供 menu-toolbar、menu-days、menu-grid、menu-dish：四项筛选在窄屏变两列，日期横向滚动，菜品网格 3/2/1 列。按钮有可见键盘焦点和选中状态，价格未知/免费使用文字，星级仅来自真实评价。复用 Stars、DishReview、Dialog、Picture 和学校原文链接；评价成功失效菜单、目录、详情及评价查询。供应卡也用于详情近期供应。
+
+## 2026-10-25 · 食谱日期与视图组件
+
+MenuDaily 提供原生日历输入、当周七天弹出选择、本部/正谊切换、独立餐次和无边框供餐卡。RecipePage 右上视图组固定相同按钮与 SVG 尺寸，使用 aria-pressed/title/aria-label；选择保留在 URL，日期支持跨周。多地点卡先合并稳定菜品 ID，地点以“和”连接；风味标签隐藏，标题不加粗且不带附加日期。不新增共享站点壳样式。
+
+2026-10-30 起 menu-page.container 为所有菜单视图共用的视口容器，统一宽度、边距、顶部栏和切换器位置；menu-page--daily 仅负责双栏内容。局部样式不改变 Shell 和页脚，坐标一致性有手机/桌面/宽屏实测断言，详见 recipe.md。
+
+
+## 2026-10-30 · 评价表单留白
+
+DishReview.css 仅作用于 dish-review 弹窗，桌面最大 34rem、手机底部全宽；头部、字段和操作区按统一内边距排列，字段间 24px/20px、标签距控件 8px。星级每项 44×44px，评论至少 7rem 高，上传空预览区不占行，底部保留安全区。删除重复提示及失效的 aria-describedby，评分保留独立可访问名称、焦点提示及默认五分。
+
+
+## 2026-10-30 · 团队简称与移动导航闪烁修复
+
+首页开发团队首项改为「软开人工智能部」，沿用原有橙子图标；页脚版权仍为「© 2026 苏州中学软件开发社人工智能部」。点击移动菜单的普通站内链接时，先同步提交关闭状态并完成菜单及按钮的关闭动画，再由 Router 捕获页面转场快照，避免把尚在淡出的导航重新显示到下一页。点击关闭按钮和 Esc 仍播放原有 200ms 淡出，修饰键打开新标签保留当前菜单；账户链接与主栏目使用相同处理，不增加等待定时器。
+
+
+## 2026-10-30 · 移动菜单图标与高亮居中
+
+移动断点下菜单按钮保持 inline-grid，并沿用 icon-btn 的 place-items: center，让三横线/关闭图形始终位于 32px 按钮及其圆形高亮的中心。修复此前 inline-flex 覆盖网格布局后图形横向偏移的问题；悬停、展开、动画变形及触屏模式均使用相同中心点。

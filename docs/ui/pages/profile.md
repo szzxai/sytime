@@ -1,8 +1,19 @@
 # 个人中心 · profile.html
 
+## 2026-10-25 · 导航行为同步
+
+资料、收藏及相关正文页面入口支持意图预加载；同页个人中心标签保持局部切换，不触发整页横滑。正文外账户/导航入口采用栏目上下文规则。 共同规则见 [导航与加载规范](../../navigation.md)，实际验证见根目录 MAP 与 UI 验收记录。
+
+## 当前 React 实现 · 2026-10-25
+
+实现位于 `apps/web/src/pages/`：ProfilePage.tsx、../components/Collections.tsx、../layouts/ProfileLayout.tsx。本人资料、编辑确认、头像、店铺收藏和头衔拆为组件；hash 面板由 Router 管理。隐私默认和已有收藏不互相覆盖。
+
+视觉令牌和资源位于 `apps/web/public/`；共享站点壳、弹窗、上传、主题和用户展示见 [组件规范](../components.md)。本页 HTML/CSS 示例用于说明最终 DOM 与视觉约束，旧 `UI.*` 或页面脚本示例属于迁移前实现，不是当前可调用 API。当前请求由 TanStack Query、路径/查询/hash 由 TanStack Router 管理，后端为 Hono + Drizzle。最新验证见根目录 [MAP.md](../../../MAP.md) 与 [验收记录](../acceptance.md)。
+
+
 ## 收藏夹默认公开 · 2026-10-24（#29）
 
-在 [网站设置](settings.md) 的「收藏默认页」下，可即时保存「新建收藏夹默认公开」。之后在论坛或必吃榜主动新建的收藏夹按默认值及当次选择生成，本页展示实际公开状态；已有收藏夹不随账号偏好改变，仍可用原有公开开关单独调整。自动补建的「默认收藏夹」仍私密，本页不新增创建入口。
+在 [网站设置](settings.md) 的「收藏默认页」下，可即时保存「新建收藏夹默认公开」。之后在必吃榜主动新建的收藏夹按默认值及当次选择生成，本页展示实际公开状态；已有收藏夹不随账号偏好改变，仍可用原有公开开关单独调整。自动补建的「默认收藏夹」仍私密，本页不新增创建入口。
 
 ## 当前视觉与布局 · 2026-10-17
 
@@ -90,7 +101,7 @@
 
 ### #view-favorites 我的收藏（#23）
 
-首次切到「收藏」时调用 `UI.collectionsBrowser(#view-favorites, { mode: "owner" })`（`public/js/collections-view.js`），只复用 `site.css` 的 `.shell` / `.side-nav` / `.breadcrumb` / `.switch-row` / `.grid` / `.card` / `.pager`。
+首次切到「收藏」时调用 `UI.collectionsBrowser(#view-favorites, { mode: "owner" })`（`apps/web/src/components/Collections.tsx`），只复用 `site.css` 的 `.shell` / `.side-nav` / `.breadcrumb` / `.switch-row` / `.grid` / `.card` / `.pager`。
 
 - **左右分栏**：`.shell`（桌面 15rem + 内容；窄屏单列）。左侧 `.shell__nav` 为双层菜单：
   - 第一层 `.side-nav`：必吃榜；点击切换版块。

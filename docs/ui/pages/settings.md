@@ -1,5 +1,16 @@
 # 设置 · settings.html
 
+## 2026-10-25 · 导航行为同步
+
+设置相关页面链接支持意图预加载；安全、网站、工单与消息标签维持局部切换，加载下一页时保留当前表单与滚动，未保存离开提醒继续生效。 共同规则见 [导航与加载规范](../../navigation.md)，实际验证见根目录 MAP 与 UI 验收记录。
+
+## 当前 React 实现 · 2026-10-25
+
+实现位于 `apps/web/src/pages/`：SettingsPage.tsx、../layouts/SettingsLayout.tsx。安全、网站偏好、工单、消息设置保留；密码显隐使用共享 PasswordField，成功改密/提单重置表单。默认公开即时保存，失败恢复并提示。工单字数与未保存提醒随组件清理。
+
+视觉令牌和资源位于 `apps/web/public/`；共享站点壳、弹窗、上传、主题和用户展示见 [组件规范](../components.md)。本页 HTML/CSS 示例用于说明最终 DOM 与视觉约束，旧 `UI.*` 或页面脚本示例属于迁移前实现，不是当前可调用 API。当前请求由 TanStack Query、路径/查询/hash 由 TanStack Router 管理，后端为 Hono + Drizzle。最新验证见根目录 [MAP.md](../../../MAP.md) 与 [验收记录](../acceptance.md)。
+
+
 ## 当前视觉与布局 · 2026-10-17
 
 设置页采用 220px 左侧导航与细边框面板，手机横向分区导航；表单使用 4px 圆角。全站外观选择入口位于顶栏及页脚，不依赖登录；账号安全、默认页、工单及通知设置仍按原权限运行。 全站品牌字标为「拾光酥糕」，详细公共尺寸见 [UI.md](../../../UI.md)。本轮验证结果见 [验收记录](../acceptance.md) 和根目录 [MAP.md](../../../MAP.md)。
@@ -14,7 +25,7 @@
 
 ## 入口
 
-- 页头账户下拉菜单：`个人中心 · 设置 · [学生认证] · [管理后台] · 退出登录`（`public/js/ui.js` 的 `accountLinks()`；设置位于个人中心与管理后台之间）。
+- 页头账户下拉菜单：`个人中心 · 设置 · [学生认证] · [管理后台] · 退出登录`（旧版 `UI.*` 示例 的 `accountLinks()`；设置位于个人中心与管理后台之间）。
 - 手机抽屉同样列出；页脚「提交工单」指向 `settings.html#tickets`。
 
 ## 布局
@@ -166,7 +177,7 @@
 1. 进页 `P.requireLogin()`；`GET /api/user/profile` 载入后回填网站设置与 `#showRole`，期间提交按钮暂禁、`#settingsStatus` 显示载入中，失败可重试。
 2. 分区切换由 `UI.page.panels(#settingsNav)`：`data-panel` 点击 → 切 `.view.is-active` + `history.replaceState(null,'','#<name>')`；初始按 `location.hash` 选择，否则 `security`。切到 `tickets` 拉 `GET /api/tickets/mine`。
 3. 所有 fetch → `UI.api`；错误 → `UI.errorText` + toast / status-text。
-4. 退出登录：侧栏底部 `data-logout` 按钮（`ui.js` 事件委托），回首页。
+4. 退出登录：侧栏底部 `data-logout` 按钮（Shell / Settings 的点击处理），回首页。
 
 ## 状态矩阵
 
@@ -227,3 +238,11 @@
 ### 2026-10-19 · 共享标识与运营声明
 
 浏览器图标改为 `brand-lime.svg` 青柠切面；共享顶栏、抽屉、页脚及登录/注册卡片复用该图形，首页链接名称仍为「拾光酥糕 首页」。有页脚的页面展示完整学生自主运营、与校方无隶属关系、知识产权和信息参考声明，勘误邮箱可点击。地图应用壳与极简 404 页继续不显示页脚。完整文字见 [文案规范](../copy.md)。
+
+## 2026-10-25 · 食谱默认视图
+
+新注册账号默认每周食谱，用户仍可选择全部菜品或评价作为默认视图。上线前菜单重置迁移将现有测试账号的食谱偏好设为每周食谱；后续正常重启保留设置。显式 URL 的 view 优先。
+
+## 2026-10-25 · 食谱默认页更新
+
+菜品默认页增加 daily“今日与明日”，新用户默认 daily；一次迁移将此前自动设为 weekly 的账号切换为 daily，保留 all/reviews。设置仍可保存 weekly/all/reviews/daily，明确选择后普通重启不会覆盖。

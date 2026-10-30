@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#218653" />
+    <meta
+      name="description"
+      content="拾光酥糕，苏州中学的校园信息平台。探索校园地图、发现食堂菜谱与三元坊美食。"
+    />
+    <link rel="icon" href="/img/brand-lime.svg?v=20261019" type="image/svg+xml" />
+    <title>拾光酥糕 · 苏州中学校园信息平台</title>
+    <script>
+      try {
+        var t = localStorage.getItem('theme') || 'auto';
+        document.documentElement.dataset.theme =
+          t === 'dark' || (t === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches)
+            ? 'dark'
+            : 'light';
+      } catch {}
+    </script>
+  </head>
+  <body>
+    <noscript>本站需要启用 JavaScript 才能正常使用。</noscript>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

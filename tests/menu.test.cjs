@@ -1,19 +1,20 @@
 "use strict";
 const test = require("node:test"), assert = require("node:assert/strict");
 const fs = require("node:fs"), os = require("node:os"), path = require("node:path"), { EventEmitter } = require("node:events");
-const { DatabaseSync } = require("node:sqlite");
-const express = require("express");
+const { DatabaseSync } = require("./helpers/database.cjs");
+const { Hono } = require("hono");
+const { serve } = require("@hono/node-server");
 const sharp = require("sharp");
-const { MenuConfig, fingerprint } = require("../lib/menu/config");
-const { dueOccurrence, nextRun, validateTime, localDay } = require("../lib/menu/schedule");
-const { migrate, bootstrap, catalog, publishSource, sourceId } = require("../lib/menu/store");
-const { MenuError, nameFields, validateRecords, sha256 } = require("../lib/menu/schema");
-const { parseArticle, parseList, checkSchoolUrl, parseRobots, robotsAllows, SchoolSource } = require("../lib/menu/source");
-const { ModelClient, EXTRACTION_SCHEMA, testConfiguration } = require("../lib/menu/provider");
-const { extractImage, normalizeImage, structuralTables } = require("../lib/menu/images");
-const { MenuService } = require("../lib/menu/service");
-const { mountMenuRoutes } = require("../lib/menu/routes");
-const { runMenuJob } = require("../lib/menu/worker");
+const { MenuConfig, fingerprint } = require("../apps/api/src/domain/menu/config");
+const { dueOccurrence, nextRun, validateTime, localDay } = require("../apps/api/src/domain/menu/schedule");
+const { migrate, bootstrap, catalog, publishSource, sourceId } = require("../apps/api/src/domain/menu/store");
+const { MenuError, nameFields, validateRecords, sha256 } = require("../apps/api/src/domain/menu/schema");
+const { parseArticle, parseList, checkSchoolUrl, parseRobots, robotsAllows, SchoolSource } = require("../apps/api/src/domain/menu/source");
+const { ModelClient, EXTRACTION_SCHEMA, testConfiguration } = require("../apps/api/src/domain/menu/provider");
+const { extractImage, normalizeImage, structuralTables } = require("../apps/api/src/domain/menu/images");
+const { MenuService } = require("../apps/api/src/domain/menu/service");
+const { mountMenuRoutes } = require("../apps/api/src/domain/menu/routes");
+const { runMenuJob } = require("../apps/api/src/domain/menu/worker");
 const record = (name = "免费汤", price = 0) => ({date: "2026-10-01", weekday: "周四", time: ["noon"], place: "西区", group: "例汤", name, price, spicy: null});
 const source = id => ({article_id: id, title: "每周菜单", published_date: "2026-09-30", content_hash: sha256(String(id))});
 const at = value => Date.parse(value + "+08:00");
@@ -30,9 +31,86 @@ class FakeWorker extends EventEmitter {
   async terminate() { this.emit("exit", 0); }
 }
 function configure(service) {
-  service.saveSettings({model: "vision-test", api_key: "test-only-key", daily_time: "08:00"});
+  service.saveSettings({provider:"openrouter", schedule_mode:"daily", model: "vision-test", api_key: "test-only-key", daily_time: "08:00"});
   service.config.recordTest(fingerprint(service.config.raw()), {ok: true, message: "test"});
 }
+test('weekend schedule uses Shanghai slots, catches up once and retries in the next slot', () => {
+  const config={enabled:true,schedule_mode:'weekend',schedule_effective_at:at('2026-10-23T12:00:00')};
+  assert.equal(dueOccurrence(config,null,at('2026-10-24T07:59:00')),null);
+  const first=dueOccurrence(config,null,at('2026-10-24T08:00:00'));
+  assert.equal(first.day,'2026-10-24T08:00');
+  assert.equal(dueOccurrence(config,first.day,at('2026-10-24T08:45:00')),null);
+  assert.equal(dueOccurrence(config,first.day,at('2026-10-24T09:00:00')).day,'2026-10-24T09:00');
+  assert.equal(dueOccurrence(config,first.day,at('2026-10-25T23:00:00')).day,'2026-10-25T22:00');
+  assert.equal(nextRun(config,'2026-10-25T22:00',at('2026-10-25T23:00:00')),'2026-10-26T00:00:00.000Z');
+  assert.equal(nextRun(config,'2026-10-26T12:00',at('2026-10-26T13:00:00')),'2026-10-31T00:00:00.000Z');
+  assert.equal(dueOccurrence({...config,enabled:false},null,at('2026-10-24T09:00:00')),null);
+});
+test('fresh menu service never resurrects retired test menus', async t => {
+  const {root,db}=fixture(t), service=new MenuService(db,root);
+  assert.equal(catalog(db).dishes.length,0);
+  assert.equal(service.settings().provider,'gemini');
+  assert.equal(service.settings().schedule_mode,'weekend');
+  await service.close();
+});
+test('Gemini structured output validates, caches, normalizes boxes and redacts SDK credentials', async t => {
+  const {GeminiClient}=require('../apps/api/src/domain/menu/gemini');
+  const {root}=fixture(t);
+  let calls=0;
+  const schema={type:'object',properties:{ok:{type:'boolean'}},required:['ok'],additionalProperties:false};
+  const client={models:{async generateContent(input) {
+    calls++; assert.equal(input.config.responseMimeType,'application/json');
+    return {text:calls===1?'malformed':JSON.stringify({ok:true}),candidates:[{finishReason:'STOP'}]};
+  }}};
+  const model=new GeminiClient({model:'fake',api_key:'secret'}, {client,cacheDir:path.join(root,'cache')});
+  const request={name:'probe',schema,prompt:'Read data',images:[{data:Buffer.from('image')}]};
+  assert.deepEqual(await model.request(request),{ok:true});
+  assert.deepEqual(await model.request(request),{ok:true});
+  assert.equal(calls,2); assert.equal(model.stats.cache_hits,1);
+  const bad=new GeminiClient({model:'fake',api_key:'secret'}, {client:{models:{async generateContent(){throw Object.assign(new Error('secret'),{status:403});}}}});
+  await assert.rejects(bad.request(request),e=>!e.message.includes('secret')&&e.code==='model_http');
+  const budget=new GeminiClient({model:'fake'}, {client,maxRequests:0});
+  await assert.rejects(budget.request(request),e=>e.code==='model_budget');
+});
+test('weekly public data joins star ratings and replaces a source without losing dish reviews', t => {
+  const {db}=fixture(t);
+  db.exec('CREATE TABLE recipes(id INTEGER PRIMARY KEY,dish_id INTEGER,rating INTEGER,is_weekly INTEGER DEFAULT 0)');
+  const {weeklyMenu}=require('../apps/api/src/domain/menu/public');
+  assert.equal(weeklyMenu(db).week,null);
+  const s=source(11427);publishSource(db,s,[record('面条',12)]);
+  const id=catalog(db).dishes[0].id;
+  db.prepare('INSERT INTO recipes(dish_id,rating) VALUES (?,5),(?,3)').run(id,id);
+  let menu=weeklyMenu(db);
+  assert.equal(menu.records[0].rating_avg,4);assert.equal(menu.records[0].reviews_count,2);
+  publishSource(db,{...s,content_hash:sha256('updated')},[record('面条',13)]);
+  menu=weeklyMenu(db);
+  assert.equal(menu.records.length,1);assert.equal(menu.records[0].price,13);
+  assert.equal(menu.records[0].dish_id,id);assert.equal(menu.records[0].reviews_count,2);
+  assert.throws(()=>weeklyMenu(db,'missing'),e=>e.status===404);
+});
+test('Gemini extraction repairs rejected tables and never accepts a failed completeness audit', async () => {
+  const {extractGeminiImage,parsePrice}=require('../apps/api/src/domain/menu/extract');
+  assert.equal(parsePrice('15元/12个'),15);
+  assert.equal(parsePrice('6元/小份'),6);
+  assert.equal(parsePrice('1元/1.5元'),null);
+  assert.equal(parsePrice('免费'),0);assert.equal(parsePrice(null),null);
+  const image=await normalizeImage(await sharp({create:{width:200,height:200,channels:3,background:'white'}}).png().toBuffer());
+  let audits=0,attempts=0;
+  const model={async request(request) {
+    if(request.name==='menu_layout') return {complete:true,problems:[],tables:[{bbox:[0,0,1000,1000]}]};
+    if(request.name.startsWith('menu_table_review')) {audits++;return {problems:[],groups:[{date:'2026-10-26',time:['noon'],places:['希文楼'],group:'面档',items:[{name:'鲜肉大馄饨',price_text:'15元/12个',spicy:true}]}]};}
+    attempts++;
+    return {complete:true,issues:[],groups:[{date:'2026-10-26',time:['noon'],places:['希文楼'],group:'面档',
+      items:[{name:'鲜肉大馄饨',price_text:'15元/12个',spicy:false}]}]};
+  }};
+  const result=await extractGeminiImage(image,source(11427),model);
+  assert.equal(attempts,1);assert.equal(audits,2);assert.equal(result.records[0].price,15);assert.equal(result.records[0].spicy,true);
+  const rejecting={async request(request){
+    if(request.name.startsWith('menu_table_review'))return {complete:false,problems:['原图未覆盖']};
+    return model.request(request);
+  }};
+  await assert.rejects(extractGeminiImage(image,source(11427),rejecting),e=>e.menu_diagnostic.partial_records.length===0);
+});
 test("Shanghai daily schedule: midnight, edits, once per day and downtime catch-up", () => {
   const config = {enabled: true, daily_time: "08:00", schedule_effective_at: at("2026-09-29T12:00:00")};
   assert.equal(localDay(Date.parse("2026-09-30T16:01:00Z")), "2026-10-01");
@@ -212,9 +290,9 @@ test("website API checks current developer status on every request, including ol
   const {root, db} = fixture(t), service = new MenuService(db, root);
   t.after(() => service.close()); publishSource(db, source(1), [record()]);
   db.exec("INSERT INTO users VALUES(1,'developer','active'),(2,'super_admin','active'),(3,'user','active')");
-  const app = express(); app.use(express.json());
-  mountMenuRoutes(app, db, service, (req, res, next) => { const id = Number(req.headers.authorization); if (!id) return res.status(401).json({error: "login"}); req.user = {id, role: "developer"}; next(); });
-  const server = app.listen(0, "127.0.0.1"); await new Promise(r => server.once("listening", r)); t.after(() => new Promise(r => server.close(r)));
+  const app = new Hono(); app.use('*', async (c,next) => { if (c.req.method !== 'GET' && (c.req.header('content-type')||'').includes('application/json')) c.set('body', await c.req.json()); await next(); });
+  mountMenuRoutes(app, db, service, async (c, next) => { const id = Number(c.req.header("authorization")); if (!id) return c.json({error: "login"},401); c.set("user", {id, role: "developer"}); await next(); });
+  const server = serve({ fetch: app.fetch, port: 0, hostname: "127.0.0.1" }); await new Promise(r => server.once("listening", r)); t.after(() => new Promise(r => server.close(r)));
   const base = `http://127.0.0.1:${server.address().port}`;
   assert.equal((await fetch(base + "/api/dishes")).status, 200);
   assert.equal((await fetch(base + "/api/admin/menu-sync/settings")).status, 401);
@@ -310,8 +388,8 @@ test("upgrade permits manual sources without changing existing foreign keys or p
 test("manual APIs permit only active developer, super admin and admin without exposing AI settings",async t=>{
   const {root,db}=fixture(t),service=new MenuService(db,root);t.after(()=>service.close());
   db.exec("INSERT INTO users VALUES(1,'developer','active'),(2,'super_admin','active'),(3,'admin','active'),(4,'student','active'),(5,'user','active'),(6,'admin','banned')");
-  const app=express();app.use(express.json());mountMenuRoutes(app,db,service,(req,res,next)=>{const id=Number(req.headers.authorization);if(!id)return res.status(401).json({error:"login"});req.user={id,role:"developer"};next();});
-  const server=app.listen(0,"127.0.0.1");await new Promise(r=>server.once("listening",r));t.after(()=>new Promise(r=>server.close(r)));
+  const app=new Hono();app.use('*', async (c,next) => { if (c.req.method !== 'GET' && (c.req.header('content-type')||'').includes('application/json')) c.set('body', await c.req.json()); await next(); });mountMenuRoutes(app,db,service,async (c,next)=>{const id=Number(c.req.header("authorization"));if(!id)return c.json({error:"login"},401);c.set("user",{id,role:"developer"});await next();});
+  const server=serve({fetch:app.fetch,port:0,hostname:"127.0.0.1"});await new Promise(r=>server.once("listening",r));t.after(()=>new Promise(r=>server.close(r)));
   const base=`http://127.0.0.1:${server.address().port}/api/admin/menu-sync`,request=(url,id,body)=>fetch(base+url,{method:body?"POST":"GET",headers:{authorization:String(id),"content-type":"application/json"},body:body?JSON.stringify(body):undefined});
   assert.equal((await request("/imports",0)).status,401);
   for(const id of [4,5,6]){assert.equal((await request("/imports",id)).status,403);assert.equal((await request("/imports/preview",id,{json_text:"[]"})).status,403);assert.equal((await request("/imports",id,{json_text:"[]"})).status,403);}
@@ -323,4 +401,54 @@ test("manual APIs permit only active developer, super admin and admin without ex
     if(id!==1){assert.equal((await request("/settings",id)).status,403);assert.equal((await request("/jobs",id,{})).status,403);}
   }
   db.exec("UPDATE users SET role='user' WHERE id=3");assert.equal((await request("/imports",3)).status,403);
+});
+
+test('Gemini groups use consistent school names and explicit local stalls',()=>{
+  const {normalizeGroups}=require('../apps/api/src/domain/menu/extract');
+  const group={group:'早餐',places:['洋水居','洋水居'],items:[]};
+  assert.deepEqual(normalizeGroups([group])[0].places,['泮水居']);
+  assert.deepEqual(normalizeGroups([{...group,group:'泮水居二楼风味 & 紫阳楼风味'}])[0].places,['泮水居二楼','紫阳楼']);
+  assert.deepEqual(normalizeGroups([{...group,group:'一楼北厅风味'}])[0].places,['一楼北厅']);
+  assert.deepEqual(group.places,['洋水居','洋水居']);
+});
+
+test('public all-week supplies preserve older weeks and reject ambiguous selectors', async t=>{
+ const {root,db}=fixture(t),service=new MenuService(db,root);t.after(()=>service.close());
+ db.exec('CREATE TABLE recipes(dish_id INTEGER,rating INTEGER,is_weekly INTEGER)');
+ publishSource(db,source(1),[record('旧菜')]);publishSource(db,source(2),[{...record('新菜'),date:'2026-10-08',weekday:null}]);
+ const {weeklyMenu}=require('../apps/api/src/domain/menu/public');
+ assert.equal(weeklyMenu(db).records.length,1);assert.equal(weeklyMenu(db,undefined,true).records.length,2);
+ const app=new Hono();mountMenuRoutes(app,db,service,()=>{});
+ assert.equal((await app.request('/api/menu?all=1')).status,200);
+ assert.equal((await app.request('/api/menu?all=1&all=1')).status,400);
+ assert.equal((await app.request('/api/menu?all=1&source_id='+sourceId(1))).status,400);
+});
+
+test('physical table detection follows variable heights and pale wide-image grids',async()=>{
+ const height=1600,width=6096;
+ const svg='<svg xmlns="http://www.w3.org/2000/svg" width="6096" height="1600"><rect width="6096" height="1600" fill="white"/>'+[0,700].map((top,i)=>
+ '<g stroke="#aaa" stroke-width="5">'+[top,top+80,top+160,top+230+(i*30),top+340+(i*80),i?1598:700].map(y=>'<path d="M0 '+y+'H6096"/>').join('')+[0,900,1800,3000,4100,5100,6095].map(x=>'<path d="M'+x+' '+(top+80)+'V'+(i?1598:700)+'"/>').join('')+'</g><rect x="2400" y="'+(top+20)+'" width="1000" height="30" fill="black"/>').join('')+'</svg>';
+ const image=await normalizeImage(await sharp(Buffer.from(svg)).png().toBuffer());const tables=await structuralTables(image);
+ assert.equal(tables.length,2);assert.ok(Math.abs(tables[1].box.top-700)<20);
+ assert.equal(tables[0].box.width,width);assert.ok(tables[1].box.height>tables[0].box.height);
+});
+
+test('date grid uses measured unequal columns without treating earlier dates as labels',()=>{
+ const {dateColumns}=require('../apps/api/src/domain/menu/extract');
+ assert.deepEqual(dateColumns([0,445,1375,2374,3304,4234,5164,6094],6096),[445,1375,2374,3304,4234,5164,6094]);
+ assert.deepEqual(dateColumns([0,110,292,740,1188,1638,2090,2542,2992],2993),[292,740,1188,1638,2090,2542,2992]);
+ assert.deepEqual(dateColumns([0,100,200],3000),[]);
+});
+
+test('school course break is not breakfast even when a model calls it morning',()=>{
+ const {normalizeGroups}=require('../apps/api/src/domain/menu/extract');
+ const row=normalizeGroups([{group:'上午大课间',time:['morning'],places:['希文楼'],items:[]}])[0];assert.equal(row.group,'大课间');assert.deepEqual(row.time,[]);
+ const local=normalizeGroups([{group:'泮水居一楼北厅现煮',time:['noon'],places:['泮水居','正谊校区'],items:[]}])[0];assert.deepEqual(local.places,['泮水居一楼北厅']);
+});
+
+test('parenthesized stall overrides table campuses, while bare floor preserves the full campus',()=>{
+ const {normalizeGroups}=require('../apps/api/src/domain/menu/extract');
+ const base={time:['evening'],places:['泮水居','正谊校区'],items:[]};
+ const snack=normalizeGroups([{...base,group:'小吃 (泮水居三楼)'}])[0];assert.deepEqual(snack.places,['泮水居三楼']);assert.equal(snack.group,'小吃');
+ const floor=normalizeGroups([{...base,group:'二楼风味',places:['正谊校区二楼']}])[0];assert.deepEqual(floor.places,['正谊校区二楼']);
 });

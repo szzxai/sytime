@@ -1,5 +1,12 @@
 # 头衔系统 · titles.md（#10）
 
+## 当前 React 实现 · 2026-10-25
+
+实现位于 `apps/web/src/pages/`：../components/TitleManagement.tsx、AccountManagement.tsx、ProfilePage.tsx。目录、自动达成、专属头衔、授予/撤销与佩戴组件化；新 Hono 领域模块保留种子和规则，Query 刷新目录与用户状态。
+
+视觉令牌和资源位于 `apps/web/public/`；共享站点壳、弹窗、上传、主题和用户展示见 [组件规范](../components.md)。本页 HTML/CSS 示例用于说明最终 DOM 与视觉约束，旧 `UI.*` 或页面脚本示例属于迁移前实现，不是当前可调用 API。当前请求由 TanStack Query、路径/查询/hash 由 TanStack Router 管理，后端为 Hono + Drizzle。最新验证见根目录 [MAP.md](../../../MAP.md) 与 [验收记录](../acceptance.md)。
+
+
 ## 当前视觉与布局 · 2026-10-17
 
 头衔选择、预览和管理面板继承新版细边框、小圆角及明暗主题；徽章保留语义色，规则、进度、专属头衔和权限不变。 全站品牌字标为「拾光酥糕」，详细公共尺寸见 [UI.md](../../../UI.md)。本轮验证结果见 [验收记录](../acceptance.md) 和根目录 [MAP.md](../../../MAP.md)。
@@ -126,7 +133,7 @@
 | 创站元老 | teal 黛青 | 早期用户 |
 | 官方 | vermilion 朱印 | 管理团队标识 |
 
-共 7 个头衔（四个自动 + 三个手动）。种子写在 `lib/titles/store.js` 的 `SEED_TITLES`，启动幂等写入；种子带 `key`，因此**不可删除**（删除返回 409）。结构支持后续增删（后端规则注册表），后台新建自动头衔时从 `/api/admin/titles/rules` 读取可用规则。
+共 7 个头衔（四个自动 + 三个手动）。种子写在 `apps/api/src/domain/titles/store.js` 的 `SEED_TITLES`，启动幂等写入；种子带 `key`，因此**不可删除**（删除返回 409）。结构支持后续增删（后端规则注册表），后台新建自动头衔时从 `/api/admin/titles/rules` 读取可用规则。
 
 **成就头衔只增不减**：达成条件即发放，不会因数据变化收回。**手动头衔可由管理员撤销；自动头衔由规则管理，不能撤销**（撤销会被规则重新发放）。自动头衔在登录、创建店铺、发布菜品评价、打开「我的头衔」时即时评估发放，无需等待。
 

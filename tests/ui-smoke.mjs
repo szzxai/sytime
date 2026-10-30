@@ -4,7 +4,9 @@ import path from "node:path";
 import os from "node:os";
 import { spawn } from "node:child_process";
 import { chromium } from "playwright";
-import { DatabaseSync } from "node:sqlite";
+import databaseHelper from "./helpers/database.cjs";
+import menuStore from "../apps/api/src/domain/menu/store.js";
+const { DatabaseSync } = databaseHelper;
 
 const root = path.resolve(import.meta.dirname, "..");
 const temp = fs.mkdtempSync(path.join(os.tmpdir(), "szzx-ui-test-"));
@@ -13,11 +15,12 @@ fs.mkdirSync(output, { recursive: true });
 fs.copyFileSync(path.join(root, "server.js"), path.join(temp, "server.js"));
 fs.copyFileSync(path.join(root, "data.json"), path.join(temp, "data.json"));
 fs.copyFileSync(path.join(root, "menu-json-rules.md"), path.join(temp, "menu-json-rules.md"));
-fs.cpSync(path.join(root, "lib"), path.join(temp, "lib"), { recursive: true });
+fs.cpSync(path.join(root, "apps"), path.join(temp, "apps"), { recursive: true, filter: source => !source.includes("node_modules") && (!source.includes("/src") && !source.includes("/public")) });
+fs.cpSync(path.join(root,"packages"),path.join(temp,"packages"),{recursive:true});
 fs.cpSync(path.join(root, "data"), path.join(temp, "data"), { recursive: true });
 // The isolated app uses temporary SQLite/uploads and the current static files.
 fs.symlinkSync(
-  path.join(root, "public"),
+  path.join(root, "apps/web/dist"),
   path.join(temp, "public"),
   "junction",
 );
@@ -183,6 +186,7 @@ try {
     body: { username: "banned-user", appeal_reason: "测试申诉说明" },
   });
   const db = new DatabaseSync(path.join(temp, "data.db"));
+  menuStore.bootstrap(db, JSON.parse(fs.readFileSync(path.join(root,"data/menu-bootstrap.json"))));
   db.prepare(
     "INSERT INTO recipes (user_id, username, name, rating, comment) VALUES (?, ?, ?, ?, ?)",
   ).run(
@@ -222,7 +226,7 @@ try {
     "map",
     "404",
   ];
-  for (const width of [360, 1280]) {
+  if (!process.env.UI_FOCUS) for (const width of [360, 1280]) {
     for (const theme of ["light", "dark"]) {
       for (const file of files) {
         const login = ["profile", "admin", "student_verify", "settings", "inbox"].includes(file)
@@ -232,28 +236,11 @@ try {
         const { ctx, page } = await pageFor(login, url, width, theme);
         await audit(page, `${file}/${width}/${theme}`);
         if (file === "recipe") {
-          await page.waitForFunction(() => document.querySelectorAll(".dish-row__name").length === 1243);
-          const typography = await page.locator(".dish-directory .dish-row__name").evaluateAll(labels => {
-            const expectedFamily = getComputedStyle(document.documentElement)
-              .getPropertyValue("--font-sans-system").trim().replace(/\s+/g, " ");
-            return {
-              expectedFamily,
-              styles: labels.map(label => {
-                const style = getComputedStyle(label);
-                return { family: style.fontFamily, weight: style.fontWeight, size: style.fontSize };
-              }),
-            };
-          });
-          check(`dish names use complete system fonts (${width}/${theme})`,
-            !!typography.expectedFamily && !/NotoSansSC|InterVariable/.test(typography.expectedFamily) &&
-            typography.styles.length === 1243 &&
-            typography.styles.every(style => style.family === typography.expectedFamily));
-          check(`dish names use regular weight (${width}/${theme})`,
-            typography.styles.every(style => style.weight === "400"));
-          check(`dish names retain responsive size (${width}/${theme})`,
-            typography.styles.every(style => style.size === (width === 360 ? "13px" : "14px")));
-          await page.screenshot({ path: path.join(output, `dishes-${width}-${theme}.png`) });
+          await page.getByRole('heading',{name:'今天我吃了…'}).waitFor();
+          check('daily menu controls are accessible',await page.getByLabel('选择日期').isVisible());
+          await page.screenshot({path:path.join(output,`menu-${width}-${theme}.png`)});
         }
+
         if (
           theme === "light" &&
           ["index", "admin", "map", "profile"].includes(file)
@@ -267,9 +254,10 @@ try {
       console.log(`Page layouts audited: ${width}px / ${theme}`);
     }
   }
+  if (!['admin','profile'].includes(process.env.UI_FOCUS)) {
   // The new landing page and workspace shell must remain usable beyond the
   // two legacy layout sizes, including keyboard navigation and theme changes.
-  for (const width of [360, 768, 1440]) {
+  if (process.env.UI_FOCUS !== "motion") for (const width of [360, 768, 1440]) {
     const landing = await pageFor(null, "/index.html", width);
     check("Chinese homepage title", (await landing.page.locator("h1").innerText()) === "苏州中学最大的\n校园信息平台");
     check("shared navigation uses logo only", await landing.page.locator(".site-header .brand").evaluate(el =>
@@ -279,22 +267,24 @@ try {
       return icon.width === 32 && icon.left - header.left >= 28 && icon.top - header.top >= 12;
     }));
     check("lime mark is the favicon", await landing.page.locator('link[rel="icon"]').getAttribute("href") === "/img/brand-lime.svg?v=20261019");
+    if (width <= 992) await landing.page.locator('.site-header__menu').click();
     check("short Chinese primary navigation", width > 992
       ? (await landing.page.locator(".site-nav__link").allTextContents()).join("|") === "地图|菜谱|必吃榜|更新公告"
       : (await landing.page.locator("#navDrawer .drawer-link").allTextContents()).slice(0, 5).join("|") === "首页|地图|菜谱|必吃榜|更新公告");
+    if (width <= 992) await landing.page.keyboard.press('Escape');
     check("local Noto Sans SC is applied", await landing.page.evaluate(async () => {
       await document.fonts.load('16px "NotoSansSC"', "苏州中学地图");
       await document.fonts.load('600 32px "NotoSansSC"', "校园信息平台");
       const chineseFace = [...document.fonts].find(face => face.family.replaceAll('"', '') === "NotoSansSC");
       return document.fonts.check('16px "NotoSansSC"', "苏州中学地图") && chineseFace?.weight === "100 900";
     }));
-    check("all shared logos use lime artwork", await landing.page.locator(".brand__mark").evaluateAll(imgs => imgs.length >= 3 && imgs.every(img => img.getAttribute("src") === "/img/brand-lime.svg?v=20261019" && img.complete && img.naturalWidth > 0)));
+    check("all shared logos use lime artwork", await landing.page.locator(".brand__mark").evaluateAll(imgs => imgs.length >= 2 && imgs.every(img => img.getAttribute("src") === "/img/brand-lime.svg?v=20261019" && img.complete && img.naturalWidth > 0)));
     check("complete independent operation notice", (await landing.page.locator(".site-footer__identity > p").innerText()) === "本站系学生自主运营的校园资讯聚合平台，与江苏省苏州中学官方无隶属关系。“苏州中学”名称、校徽及相关标识的知识产权均归原权利主体所有。所载信息仅供参考，不代表校方立场，权威资讯及具体事宜请以学校官方发布渠道为准。如有疑问或勘误，请致信 baimoqilin@gmail.com，我们将于核实后及时妥善处理。");
     check("footer correction email link", await landing.page.locator('.site-footer__identity a[href="mailto:baimoqilin@gmail.com"]').count() === 1);
-    check("requested fixed footer credit", await landing.page.locator(".site-footer__bottom").innerText().then(text => text.includes("© 2026 苏州中学 VC 编程。")));
+    check("requested fixed footer credit", await landing.page.locator(".site-footer__bottom").innerText().then(text => text.includes("© 2026 苏州中学软件开发社人工智能部")));
     check("original campus illustration loaded", await landing.page.locator(".landing-hero__statue").evaluate(img => img.complete && img.naturalWidth > 0));
     check("user-supplied statue illustration", (await landing.page.locator(".landing-hero__statue").getAttribute("src")) === "/img/fan-zhongyan-user.png");
-    check("both development teams credited", (await landing.page.locator(".landing-team").allTextContents()).join("|") === "苏州中学 VC 团队|苏州中学软件开发社");
+    check("both development teams credited", (await landing.page.locator(".landing-team").allTextContents()).join("|") === "软开人工智能部|苏州中学软件开发社");
     check("both team marks loaded", await landing.page.locator(".landing-team img").evaluateAll(imgs => imgs.length === 2 && imgs.every(img => img.complete && img.naturalWidth > 0)));
     // Even the full illustration box stays clear of the heading.
     check("hero title has its own horizontal space", await landing.page.evaluate(() => {
@@ -309,13 +299,13 @@ try {
     await summary.focus();
     await summary.press("Enter");
     check("home contribution accordion opens from keyboard", await landing.page.locator(".landing-accordion details").first().evaluate(el => el.open));
-    check("open accordion provides real destination", await landing.page.locator(".landing-accordion details").first().getByRole("link", { name: "去三元坊必吃榜" }).getAttribute("href") === "shops.html");
+    check("open accordion provides real destination", await landing.page.locator(".landing-accordion details").first().getByRole("link", { name: "去三元坊必吃榜" }).getAttribute("href") === "/shops.html");
     await audit(landing.page, `landing/${width}/expanded`);
     await summary.press("Enter");
     check("home contribution accordion closes from keyboard", !await landing.page.locator(".landing-accordion details").first().evaluate(el => el.open));
     await landing.page.locator('[data-theme-choice="dark"]').click();
     check("dark theme activates", await landing.page.locator("html").getAttribute("data-theme") === "dark");
-    check("hero green shifts darker in dark mode", await landing.page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue("--hero-green").trim() === "#14532D"));
+    check("hero green shifts darker in dark mode", await landing.page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue("--hero-green").trim().toLowerCase() === "#14532d"));
     await audit(landing.page, `landing/${width}/dark`);
     await landing.page.reload({ waitUntil: "networkidle" });
     check("theme survives reload", await landing.page.locator("html").getAttribute("data-theme") === "dark");
@@ -349,17 +339,21 @@ try {
       check("drawer returns focus to opener", await landing.page.getByRole("button", { name: "打开菜单" }).evaluate(el => el === document.activeElement));
     }
     await landing.page.getByRole("link", { name: "了解更多", exact: true }).click();
+    await landing.page.waitForURL("**/about.html");
+    await landing.page.getByRole("heading", { level: 1, name: "关于 拾光酥糕" }).waitFor();
+    await landing.page.locator(".about-page__art").evaluate(img => img.decode());
     check("about page is reachable without a redirect loop", landing.page.url().endsWith("/about.html") && await landing.page.getByRole("heading", { level: 1, name: "关于 拾光酥糕" }).isVisible());
     check("about page reuses the supplied statue", await landing.page.locator(".about-page__art").evaluate(img =>
       img.getAttribute("src") === "/img/fan-zhongyan-user.png" && img.complete && img.naturalWidth > 0));
     await landing.ctx.close();
     for (const route of ["recipe", "shops"]) {
       const workspace = await pageFor(null, `/${route}.html`, width);
-      check(`${route} workspace adapts at ${width}`, await workspace.page.evaluate(() => {
+      check(`${route} workspace adapts at ${width}`, await workspace.page.evaluate((route) => {
+        if(route === "recipe") {const grid=document.querySelector(".daily-columns");return !!grid && getComputedStyle(grid).gridTemplateColumns.split(" ").length === (innerWidth<=600?1:2); }
         const side = document.querySelector(".workspace__sidebar").getBoundingClientRect();
         const content = document.querySelector(".workspace__content").getBoundingClientRect();
         return innerWidth < 768 ? content.top >= side.bottom - 1 : content.left >= side.right - 1;
-      }));
+      },route));
       if (width !== 360) await audit(workspace.page, `${route}/${width}/workspace`);
       await workspace.page.screenshot({ path: path.join(output, `fuxue-${route}-${width}.png`), fullPage: false });
       await workspace.ctx.close();
@@ -377,7 +371,7 @@ try {
   });
   await fittingPage.goto(base + "/index.html", { waitUntil: "domcontentloaded" });
   const fitsViewport = () => fittingPage.evaluate(() => Math.abs(document.querySelector(".landing-hero").getBoundingClientRect().bottom + scrollY - innerHeight) < 1);
-  await fittingPage.waitForFunction(() => document.querySelector(".landing-hero").style.getPropertyValue("--landing-top"));
+  await fittingPage.waitForFunction(() => document.querySelector(".landing-hero") && document.documentElement.style.getPropertyValue("--landing-top"));
   check("hero fills desktop without a banner", await fitsViewport());
   releaseBanner();
   await fittingPage.getByRole("button", { name: "关闭横幅" }).waitFor();
@@ -463,88 +457,55 @@ try {
   await fittingPage.locator('[data-theme-toggle]').click();
   check("reduced motion skips theme transition", await fittingPage.evaluate(() => !window.__unexpectedThemeTransition && !document.documentElement.classList.contains("theme-transitioning")));
   await fitted.close();
-  // Request interception disables Chromium's cross-document transition path.
-  // Use a clean context after the async-banner layout checks above.
+  // Same-document navigation keeps the shared shell mounted and uses View Transitions.
   const sliding = await pageFor(null, "/index.html", 1440);
-  await sliding.page.emulateMedia({ reducedMotion: "no-preference" });
-  const sourceBannerHeight = await sliding.page.locator("#siteBanner").evaluate(el => el.offsetHeight);
-  await sliding.page.addInitScript(() => {
-    addEventListener("pagereveal", event => {
-      window.__headerFrames = [];
-      let frame = 0;
-      function recordHeader() {
-        window.__headerFrames.push({
-          top: document.getElementById("siteHeader")?.getBoundingClientRect().top,
-          bannerHeight: document.getElementById("siteBanner")?.offsetHeight,
-        });
-        if (++frame < 10) requestAnimationFrame(recordHeader);
-      }
-      requestAnimationFrame(recordHeader);
-      requestAnimationFrame(() => { window.__pageSlide = {
-        present: !!event.viewTransition,
-        direction: document.documentElement.dataset.pageDirection,
-        oldName: getComputedStyle(document.documentElement, "::view-transition-old(root)").animationName,
-        newName: getComputedStyle(document.documentElement, "::view-transition-new(root)").animationName,
-        headerName: getComputedStyle(document.documentElement, "::view-transition-old(stationary-header)").animationName,
-        headerTransform: getComputedStyle(document.documentElement, "::view-transition-old(stationary-header)").transform,
-        bannerTransform: getComputedStyle(document.documentElement, "::view-transition-old(stationary-banner)").transform,
-        incomingHeaderOpacity: getComputedStyle(document.documentElement, "::view-transition-new(stationary-header)").opacity,
-      }; });
-    });
+  await sliding.page.emulateMedia({reducedMotion:'no-preference'});
+  await sliding.page.evaluate(() => {
+    window.__originalHeader=document.getElementById('siteHeader');
+    window.__originalDocument=document;
+    window.__headerFrames=[];
+    const original=document.startViewTransition.bind(document);
+    document.startViewTransition=(...args)=>{
+      const transition=original(...args);
+      transition.ready.then(()=>{
+        window.__pageSlide={present:true,direction:document.documentElement.dataset.pageDirection,
+          oldName:getComputedStyle(document.documentElement,'::view-transition-old(root)').animationName,
+          newName:getComputedStyle(document.documentElement,'::view-transition-new(root)').animationName,
+          headerName:getComputedStyle(document.documentElement,'::view-transition-old(stationary-header)').animationName};
+      });
+      return transition;
+    };
   });
-  const mapNavigation = sliding.page.waitForURL("**/map.html");
-  await sliding.page.locator(".site-nav__link").first().click();
-  await mapNavigation;
-  await sliding.page.waitForFunction(() => window.__pageSlide);
-  await sliding.page.waitForFunction(() => window.__headerFrames?.length === 10);
-  const pageSlide = await sliding.page.evaluate(() => window.__pageSlide);
-  check("primary navigation slides old and new full pages sideways: " + JSON.stringify(pageSlide),
-    pageSlide.present && pageSlide.direction === "forward" && pageSlide.oldName === "page-slide-out-left" &&
-    pageSlide.newName === "page-slide-in-right" && pageSlide.headerName === "none" &&
-    pageSlide.headerTransform === "none" && pageSlide.bannerTransform === "none" &&
-    pageSlide.incomingHeaderOpacity === "1");
-  check("banner reservation prevents header jump while destination loads", await sliding.page.evaluate(expected =>
-    expected > 0 && window.__headerFrames.every(frame => frame.top === expected && frame.bannerHeight === expected), sourceBannerHeight));
-  await sliding.page.waitForTimeout(450);
-  const homeNavigation = sliding.page.waitForURL("**/index.html");
-  await sliding.page.locator(".site-header .brand").click();
-  await homeNavigation;
-  await sliding.page.waitForFunction(() => window.__pageSlide);
-  const returnSlide = await sliding.page.evaluate(() => window.__pageSlide);
-  check("return navigation slides the full pages in reverse: " + JSON.stringify(returnSlide),
-    returnSlide.present && returnSlide.direction === "back" && returnSlide.oldName === "page-slide-out-right" &&
-    returnSlide.newName === "page-slide-in-left");
+  await sliding.page.locator('.site-nav__link').first().click();
+  await sliding.page.waitForURL('**/map.html');
+  await sliding.page.waitForFunction(()=>window.__pageSlide?.direction==='forward');
+  check('primary navigation preserves the document and header while sliding forward',await sliding.page.evaluate(()=>
+    window.__originalDocument===document&&window.__originalHeader===document.getElementById('siteHeader')&&
+    window.__pageSlide.oldName==='page-slide-out-left'&&window.__pageSlide.newName==='page-slide-in-right'&&window.__pageSlide.headerName==='none'));
+  await sliding.page.waitForFunction(()=>document.body.dataset.guideReady==='true');
+  await sliding.page.locator('.site-header .brand').click();
+  await sliding.page.waitForURL('**/index.html');
+  await sliding.page.waitForFunction(()=>window.__pageSlide?.direction==='back');
+  check('return navigation slides in reverse',await sliding.page.evaluate(()=>window.__pageSlide.oldName==='page-slide-out-right'&&window.__pageSlide.newName==='page-slide-in-left'));
+  const bannerHeight=await sliding.page.locator('#siteBanner').evaluate(el=>el.offsetHeight);
+  await sliding.page.route('**/api/settings/banner',async route=>{await new Promise(resolve=>setTimeout(resolve,250));await route.continue();});
+  await sliding.page.evaluate(()=>{window.__headerFrames=[];let frame=0;const record=()=>{window.__headerFrames.push(document.getElementById('siteHeader').getBoundingClientRect().top);if(++frame<18)requestAnimationFrame(record);};requestAnimationFrame(record);});
+  await sliding.page.locator('.site-nav__link').first().click();
+  await sliding.page.waitForURL('**/map.html');
+  await sliding.page.waitForFunction(()=>window.__headerFrames.length===18);
+  check('shared header stays fixed while the destination loads',await sliding.page.evaluate(expected=>expected>0&&window.__headerFrames.every(top=>top===expected),bannerHeight));
   await sliding.ctx.close();
-  const delayedContext = await browser.newContext({
-    viewport: { width: 1440, height: 850 },
-    reducedMotion: "no-preference",
-  });
-  const delayedPage = await delayedContext.newPage();
-  await delayedPage.goto(base + "/index.html", { waitUntil: "networkidle" });
-  const delayedBanner = { ctx: delayedContext, page: delayedPage };
-  const delayedSourceHeight = await delayedBanner.page.locator("#siteBanner").evaluate(el => el.offsetHeight);
-  await delayedBanner.page.route("**/api/settings/banner", async route => {
-    await new Promise(resolve => setTimeout(resolve, 250));
-    await route.continue();
-  });
-  await delayedBanner.page.addInitScript(() => {
-    addEventListener("pagereveal", () => {
-      window.__delayedHeaderTops = [];
-      let frame = 0;
-      function measure() {
-        window.__delayedHeaderTops.push(document.getElementById("siteHeader")?.getBoundingClientRect().top);
-        if (++frame < 18) requestAnimationFrame(measure);
-      }
-      requestAnimationFrame(measure);
-    });
-  });
-  const delayedNavigation = delayedBanner.page.waitForURL("**/map.html");
-  await delayedBanner.page.locator(".site-nav__link").first().click();
-  await delayedNavigation;
-  await delayedBanner.page.waitForFunction(() => window.__delayedHeaderTops?.length === 18);
-  check("header stays fixed while the next page announcement is delayed", await delayedBanner.page.evaluate(expected =>
-    expected > 0 && window.__delayedHeaderTops.every(top => top === expected), delayedSourceHeight));
-  await delayedBanner.ctx.close();
+  }
+  const fixture = {
+    name: "campus.png",
+    mimeType: "image/png",
+    buffer: Buffer.from(
+      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j6h0AAAAASUVORK5CYII=",
+      "base64",
+    ),
+  };
+  if (!['home','motion'].includes(process.env.UI_FOCUS)) {
+  if (process.env.UI_FOCUS !== "profile") {
   const { ctx, page } = await pageFor(ordinary, "/settings.html#tickets", 360);
   await page.goto(base + "/settings.html#tickets", { waitUntil: "networkidle" });
   await page.locator("#ticketTitle").fill("通过新 UI 提交");
@@ -581,7 +542,6 @@ try {
   for (const panel of [
     "banner",
     "announce",
-    "weekly",
     "review",
     "appeals",
     "tickets",
@@ -604,6 +564,7 @@ try {
   await adminPage.page.waitForLoadState("networkidle");
   // 面板打开时会异步 refresh(true) 回填表单；迟到的回填可能覆盖本次输入，
   // 因此以“表单提交后界面回显 10:35”为准，未回显就重试（落库结果由下面的接口断言保证）。
+  await adminPage.page.locator('#menuScheduleMode').selectOption('daily');
   let menuSaved = false;
   for (let attempt = 0; attempt < 4 && !menuSaved; attempt += 1) {
     await adminPage.page.locator("#menuDailyTime").fill("10:35");
@@ -685,7 +646,7 @@ try {
   await adminPage.page.locator("#ticketReplyInput").fill("已收到，谢谢反馈。");
   await adminPage.page.locator("#ticketConfirm").click();
   await adminPage.page.waitForFunction(
-    () => !document.getElementById("ticketModal").open,
+    () => !document.getElementById("ticketModal")?.open,
   );
   check(
     "admin ticket reply reaches the existing API",
@@ -712,21 +673,13 @@ try {
   await loggedOut.ctx.close();
 
   // Forms and administrative mutations use real endpoints in the temporary app.
-  const fixture = {
-    name: "campus.png",
-    mimeType: "image/png",
-    buffer: Buffer.from(
-      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j6h0AAAAASUVORK5CYII=",
-      "base64",
-    ),
-  };
+
   const member = await account("moderated-user");
   const extra = await pageFor(admin, "/admin.html#users", 360, "dark");
   const ep = extra.page;
   for (const panel of [
     "banner",
     "announce",
-    "weekly",
     "review",
     "appeals",
     "tickets",
@@ -746,25 +699,6 @@ try {
     document.querySelector("#inviteList").textContent.includes("CAMPUS-UI"),
   );
   check("invitation creation works", true);
-  await ep.locator('[data-panel="weekly"]').click();
-  await ep.locator("#weeklyStart").fill("2026-10-01");
-  await ep.locator("#weeklyEnd").fill("2026-10-07");
-  await ep.locator("#weeklyFile").setInputFiles(fixture);
-  check(
-    "weekly upload preview is visible",
-    await ep.locator("#weeklyPreview").isVisible(),
-  );
-  await ep.locator("#weeklyConfirm").click();
-  await ep.waitForFunction(
-    () => !!document.querySelector("#weeklyList [data-zoom]"),
-  );
-  check(
-    "weekly multipart upload works",
-    (await api("/api/weekly-menu")).data.images.length === 1,
-  );
-  await ep.locator("#weeklyList [data-zoom]").click();
-  await audit(ep, "weekly/viewer/dark");
-  await ep.keyboard.press("Escape");
   await ep.locator('[data-panel="users"]').click();
   await ep.waitForLoadState("networkidle");
   await ep
@@ -790,7 +724,7 @@ try {
   await audit(ep, "admin/permissions/dialog/dark");
   await ep.locator('#permsList input[value="banner_edit"]').check();
   await ep.locator("#permsConfirm").click();
-  await ep.waitForFunction(() => !document.getElementById("permsModal").open);
+  await ep.waitForFunction(() => !document.getElementById("permsModal")?.open);
   check(
     "special permissions save",
     (
@@ -802,7 +736,7 @@ try {
   await ep.locator("#banReasonInput").fill("测试理由");
   await ep.locator("#banImageInput").setInputFiles(fixture);
   await ep.locator("#banConfirm").click();
-  await ep.waitForFunction(() => !document.getElementById("banModal").open);
+  await ep.waitForFunction(() => !document.getElementById("banModal")?.open);
   check(
     "ban dialog multipart submit works",
     (await api("/api/admin/users", { token: admin.token })).data.users.find(
@@ -831,7 +765,7 @@ try {
   await ep.locator("#ticketReplyInput").fill("图片批复");
   await ep.locator("#ticketImageInput").setInputFiles(fixture);
   await ep.locator("#ticketConfirm").click();
-  await ep.waitForFunction(() => !document.getElementById("ticketModal").open);
+  await ep.waitForFunction(() => !document.getElementById("ticketModal")?.open);
   check(
     "ticket image DataURL submit works",
     (
@@ -857,68 +791,23 @@ try {
   await partial.ctx.close();
   check("ordinary token cannot access menu settings", (await api("/api/admin/menu-sync/settings", {token: ordinary.token})).status === 403);
   check("guest cannot fetch menu artifacts", (await api("/api/admin/menu-sync/jobs/" + menuJobId + "/artifacts/source?source_id=szzx1000:36:11392")).status === 401);
-  const recipe = await pageFor(ordinary, "/recipe.html", 360);
-  await recipe.page.locator("#allBtn").click();
-  await recipe.page.waitForFunction(() => document.querySelectorAll("[data-dish-id]").length === 1243);
-  check("historical dishes visible independently from reviews", true);
-  await recipe.page.locator('#dishRail a[href="#dish-group-H"]').click();
-  await recipe.page.waitForFunction(() => {
-    const group = document.getElementById("dish-group-H").getBoundingClientRect();
-    return group.top >= document.getElementById("dishSearchArea").getBoundingClientRect().bottom && group.top < innerHeight;
-  });
-  check("A-Z jump keeps group title visible below sticky search", true);
-  await recipe.page.evaluate(() => { const input = document.getElementById("dishSearch"); input.dispatchEvent(new CompositionEvent("compositionstart")); input.value = "hongshao"; input.dispatchEvent(new Event("input", {bubbles: true})); });
-  await recipe.page.waitForTimeout(350);
-  check("IME composing does not filter prematurely", await recipe.page.locator("[data-dish-id]").count() === 1243);
-  await recipe.page.evaluate(() => document.getElementById("dishSearch").dispatchEvent(new CompositionEvent("compositionend")));
-  await recipe.page.locator("#dishSearch").fill("hongshao");
-  await recipe.page.waitForFunction(() => document.querySelectorAll("[data-dish-id]").length > 0 && document.querySelectorAll("[data-dish-id]").length < 1243);
-  check("pinyin query persisted in URL", new URL(recipe.page.url()).searchParams.get("q") === "hongshao");
-  await recipe.page.locator("#dishSearch").fill("<script>invalid</script>");
-  await recipe.page.waitForFunction(() => document.querySelectorAll("[data-dish-id]").length === 0);
-  check("search empty state escapes query", await recipe.page.locator("#recipeList").getByText("没有找到相关菜品").isVisible());
-  await recipe.page.locator("#dishSearchClear").click();
-  check("clear restores directory and focus", await recipe.page.locator("#dishSearch").evaluate(el => el === document.activeElement));
-  await audit(recipe.page, "recipe/directory/360");
-  await recipe.page.screenshot({path: path.join(output, "dishes-360.png")});
-  await recipe.page.setViewportSize({width: 1280, height: 850});
-  await audit(recipe.page, "recipe/directory/1280");
-  await recipe.page.screenshot({path: path.join(output, "dishes-1280.png")});
-  await recipe.page.locator("#dishSearch").fill("牛肉");
-  await recipe.page.waitForFunction(() => !!document.querySelector("#recipeList mark"));
-  check("Chinese query highlighted safely", true);
-  check("Chinese search highlights inherit dish typography", await recipe.page.locator("#recipeList mark").evaluateAll(highlights =>
-    highlights.length > 0 && highlights.every(highlight => {
-      const highlightStyle = getComputedStyle(highlight);
-      const nameStyle = getComputedStyle(highlight.closest(".dish-row__name"));
-      return highlightStyle.fontFamily === nameStyle.fontFamily &&
-        highlightStyle.fontWeight === nameStyle.fontWeight && highlightStyle.fontSize === nameStyle.fontSize;
-    })));
-  await recipe.page.reload({waitUntil: "networkidle"});
-  check("query restored after refresh", await recipe.page.locator("#dishSearch").inputValue() === "牛肉");
-  await recipe.page.setViewportSize({width: 360, height: 850});
-  await recipe.page.locator("#reviewsBtn").click();
-  await recipe.page.locator("#writeBtn").click();
-  await audit(recipe.page, "recipe/dialog/360");
-  await recipe.page.locator("#name").fill("红烧牛肉面");
-  await recipe.page.locator("#dishOptions").getByRole("option", { name: "红烧牛肉面", exact: true }).click();
+  const recipe = await pageFor(ordinary, '/recipe.html?view=weekly', 360);
+  await recipe.page.locator('.menu-dish').first().waitFor();
+  check('weekly supply cards visible',await recipe.page.getByLabel('找一道菜').isVisible());
+  await recipe.page.locator('.menu-dish button').first().click();
+  await audit(recipe.page,'recipe/dialog/360');
+  const selectedName=await recipe.page.locator('#name').inputValue();
   await recipe.page.locator('label[for="r4"]').click();
-  await recipe.page.locator("#comment").fill("新 UI 的图片评价");
-  await recipe.page.locator("#image").setInputFiles(fixture);
-  await recipe.page.locator("#recipeSubmit").click();
-  await recipe.page.waitForFunction(
-    () => !document.getElementById("reviewDialog").open,
-  );
-  check(
-    "review multipart upload works",
-    (await api("/api/recipes")).data.recipes.some(
-      (r) => r.name === "红烧牛肉面" && r.dish_id && r.rating === 4 && r.image_url,
-    ),
-  );
-  await recipe.page.locator("#weeklyBtn").click();
-  await recipe.page.waitForLoadState("networkidle");
-  await audit(recipe.page, "recipe/weekly/360");
+  await recipe.page.locator('#comment').fill('新 UI 的图片评价');
+  await recipe.page.locator('#image').setInputFiles(fixture);
+  await recipe.page.locator('#recipeSubmit').click();
+  await recipe.page.waitForFunction(()=>!document.getElementById('reviewDialog')?.open);
+  check('review multipart upload works',(await api('/api/recipes')).data.recipes.some(r=>r.name===selectedName&&r.dish_id&&r.rating===4&&r.image_url));
+  await recipe.page.getByRole('button',{name:'全部菜品',exact:true}).click();
+  await recipe.page.locator('.menu-dish').first().waitFor();
+  await audit(recipe.page,'recipe/catalog/360');
   await recipe.ctx.close();
+  }
   const profile = await pageFor(ordinary, "/profile.html", 360);
   for (const panel of ["home", "favorites", "titles"]) {
     await profile.page.locator(`[data-panel="${panel}"]`).click();
@@ -1197,7 +1086,7 @@ try {
   check(
     "unknown page returns styled 404",
     notFound.status === 404 &&
-      (await notFound.text()).includes("/css/site.css"),
+      /\/assets\/[^" ]+\.css/.test(await notFound.text()),
   );
   check(
     "unknown API remains JSON 404",
@@ -1207,6 +1096,7 @@ try {
     fs.readFileSync(path.join(root, "data.json"), "utf8"),
   );
   check("map data matches feature count", oldData.features.length > 200);
+  }
   fs.writeFileSync(
     path.join(output, "audit.json"),
     JSON.stringify({ checks, issues }, null, 2),

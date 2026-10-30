@@ -1,5 +1,16 @@
 # 校园地图 · map.html
 
+## 2026-10-25 · 导航行为同步
+
+顶栏与移动导航进出地图按栏目位置切换；地图在新页面提交时才启用或退出全屏壳，页脚显示同步。地点详情卡保留局部交互。 共同规则见 [导航与加载规范](../../navigation.md)，实际验证见根目录 MAP 与 UI 验收记录。
+
+## 当前 React 实现 · 2026-10-25
+
+实现位于 `apps/web/src/pages/`：MapPage.tsx、../maps/campus.js、../maps/places.ts。React effect 挂载并清理校园导览；SVG、31 个地点、搜索/分类、手势、缩放、焦点和手机布局保持原规则。
+
+视觉令牌和资源位于 `apps/web/public/`；共享站点壳、弹窗、上传、主题和用户展示见 [组件规范](../components.md)。本页 HTML/CSS 示例用于说明最终 DOM 与视觉约束，旧 `UI.*` 或页面脚本示例属于迁移前实现，不是当前可调用 API。当前请求由 TanStack Query、路径/查询/hash 由 TanStack Router 管理，后端为 Hono + Drizzle。最新验证见根目录 [MAP.md](../../../MAP.md) 与 [验收记录](../acceptance.md)。
+
+
 ## 当前视觉与布局 · 2026-10-17
 
 校园地图的地点目录、搜索、分类、选中行和详情边框与新版工作区统一。校名说明改为中文；保留 31 个地点、地理插画、位置、资料来源与键盘/触控手势。地图应用壳不显示页脚，主题可在顶栏切换。 全站品牌字标为「拾光酥糕」，详细公共尺寸见 [UI.md](../../../UI.md)。本轮验证结果见 [验收记录](../acceptance.md) 和根目录 [MAP.md](../../../MAP.md)。
@@ -16,7 +27,7 @@
 
 ## 视觉与布局
 
-- 页面专用样式 `public/css/map.css`，不修改共享导航和其他页面。系统字体、近白底色、克制的圆角、细边框、半透明浮层和低饱和绿地，整体采用简约的系统应用风格。
+- 页面专用样式 `apps/web/public/css/map.css`，不修改共享导航和其他页面。系统字体、近白底色、克制的圆角、细边框、半透明浮层和低饱和绿地，整体采用简约的系统应用风格。
 - 桌面：左侧 308px 地点目录（窄桌面 280px、大桌面 340px），右侧地图占剩余视口。目录头部、搜索和筛选固定，地点列表独立滚动。
 - 700px 及以下：头部简化，搜索和分类在地图上方；「地点目录」展开可滚动目录，搜索与筛选自动展开，选择地点后收起。详情卡在地图下方浮动，右侧为独立缩放按钮，不遮挡操作入口。
 - 右上为北向标识，右下为放大、缩小和回到校园全景；不显示视图切换器。下方常驻示意图说明。
@@ -34,10 +45,10 @@
 | 文件 | 职责 |
 | --- | --- |
 | `public/map.html` | 应用壳、目录、单一地图容器、控制与详情 |
-| `public/js/campus-places.js` | 31 个地点；`id/name/alias/category/icon/x/y/size/height/labelX/labelY/labelSize/area/summary/description/sources`；`CampusSources` 登记来源标签和 URL。北向上 1000 × 1540 示意坐标；`height` 可选，供任意地块独立设置高度；标签偏移及字号可选，默认居中并使用标准字号 |
-| `public/img/map/campus.svg` | 校准后的边界、道路、未命名地块、林地、竹林、水岸、文庙院落和可复用建筑/地块插画 |
-| `public/js/pages/map.js` | 导览绘制、搜索、分类、选择、键盘与触控板手势 |
-| `public/css/map.css` | 页面局部样式、SVG 配色、响应式与暗色主题 |
+| `apps/web/src/maps/places.ts` | 31 个地点；`id/name/alias/category/icon/x/y/size/height/labelX/labelY/labelSize/area/summary/description/sources`；`CampusSources` 登记来源标签和 URL。北向上 1000 × 1540 示意坐标；`height` 可选，供任意地块独立设置高度；标签偏移及字号可选，默认居中并使用标准字号 |
+| `apps/web/public/img/map/campus.svg` | 校准后的边界、道路、未命名地块、林地、竹林、水岸、文庙院落和可复用建筑/地块插画 |
+| `apps/web/src/maps/campus.js` | 导览绘制、搜索、分类、选择、键盘与触控板手势 |
+| `apps/web/public/css/map.css` | 页面局部样式、SVG 配色、响应式与暗色主题 |
 | `data.json` | 原有 227 个楼层要素，仅保留归档与后端兼容，不再由地图页面读取 |
 | `docs/map-sources.md` | 公开资料链接、支持范围、维护者补充信息与地点对应 |
 

@@ -177,7 +177,9 @@ try {
   await page.locator("dialog[open] [data-new-public]").uncheck();
   await page.locator("dialog[open] [data-new-field] input.input").fill("失败后保留私密草稿");
   await page.route("**/api/collections", route => route.fulfill({ status: 503, contentType: "application/json", body: JSON.stringify({ error: "暂时不可用" }) }));
+  const failedCreate = page.waitForResponse(r => r.url().endsWith("/api/collections") && r.request().method() === "POST");
   await page.locator("dialog[open] [data-create]").click();
+  assert.equal((await failedCreate).status(),503);
   await page.waitForFunction(() => !document.querySelector("dialog[open] [data-create]").disabled);
   check("创建失败保留名称和本次公开选择", await page.locator("dialog[open] [data-new-field] input.input").inputValue() === "失败后保留私密草稿" &&
     !await page.locator("dialog[open] [data-new-public]").isChecked());

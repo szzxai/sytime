@@ -1,6 +1,7 @@
 /* 三元坊必吃榜（#6）浏览器回归：列表浏览、整卡点击进详情、上传权限前后端一致、表单校验。
    在临时目录启动独立后端（临时数据库），不改动项目 data.db。
    测试环境未配置高德 JS Key，因此同时验证地图降级路径。 */
+import { ShopsMap } from '../apps/web/src/maps/shops.js';
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -13,9 +14,10 @@ const temp = fs.mkdtempSync(path.join(os.tmpdir(), "szzx-shops-ui-"));
 fs.copyFileSync(path.join(root, "server.js"), path.join(temp, "server.js"));
 fs.copyFileSync(path.join(root, "data.json"), path.join(temp, "data.json"));
 fs.copyFileSync(path.join(root, "menu-json-rules.md"), path.join(temp, "menu-json-rules.md"));
-fs.cpSync(path.join(root, "lib"), path.join(temp, "lib"), { recursive: true });
+fs.cpSync(path.join(root, "apps"), path.join(temp, "apps"), { recursive: true, filter: source => !source.includes("node_modules") && (!source.includes("/src") && !source.includes("/public")) });
+fs.cpSync(path.join(root,"packages"),path.join(temp,"packages"),{recursive:true});
 fs.cpSync(path.join(root, "data"), path.join(temp, "data"), { recursive: true });
-fs.symlinkSync(path.join(root, "public"), path.join(temp, "public"), "junction");
+fs.symlinkSync(path.join(root, "apps/web/dist"), path.join(temp, "public"), "junction");
 
 const port = 4712;
 const base = `http://127.0.0.1:${port}`;
@@ -148,13 +150,13 @@ try {
   check("卡片含本部距离与步行时间", cardText.includes("距苏州中学本部") && cardText.includes("420 米") && cardText.includes("6 分钟"));
   check("卡片含地铁站出口与步行", cardText.includes("乐桥 3 号口") && cardText.includes("步行 480 米") && cardText.includes("7 分钟"));
   check("可选大众点评链接显示", await guest.page.$eval(".shop__dianping", (el) => el.href.includes("www.dianping.com/shop/test-shop")));
-  check("整卡可点（卡片内有详情链接）", (await guest.page.$(".shop.card .card__link[href='shop.html?id=" + shopId + "']")) !== null);
+  check("整卡可点（卡片内有详情链接）", (await guest.page.$(".shop.card .card__link[href='/shop.html?id=" + shopId + "']")) !== null);
   check("地图降级提示", (await guest.page.textContent("#shopMap")).includes("高德地图"));
-  const routeFormats = await guest.page.evaluate(() => ({
+  const routeFormats = {
     distance: ShopsMap.parseDistance("1.2公里"),
     minutes: ShopsMap.parseDuration("12分钟"),
     hours: ShopsMap.parseDuration("1小时 5分钟"),
-  }));
+  };
   check("高德路线距离/时间格式解析", routeFormats.distance === 1200 && routeFormats.minutes === 12 && routeFormats.hours === 65);
   check("覆盖范围文案", (await guest.page.textContent("#areaText")).includes("姑苏区"));
   await audit(guest.page, "shops.html 游客 1280");

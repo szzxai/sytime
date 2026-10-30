@@ -5,8 +5,8 @@
 const test = require("node:test"), assert = require("node:assert/strict");
 const fs = require("node:fs"), os = require("node:os"), path = require("node:path");
 const { spawn } = require("node:child_process");
-const { DatabaseSync } = require("node:sqlite");
-const collectionStore = require("../lib/collections/store");
+const { DatabaseSync } = require("./helpers/database.cjs");
+const collectionStore = require("../apps/api/src/domain/collections/store");
 
 const root = path.resolve(__dirname, "..");
 const temp = fs.mkdtempSync(path.join(os.tmpdir(), "szzx-collections-test-"));
@@ -16,7 +16,8 @@ const base = "http://127.0.0.1:" + port;
 fs.copyFileSync(path.join(root, "server.js"), path.join(temp, "server.js"));
 fs.copyFileSync(path.join(root, "data.json"), path.join(temp, "data.json"));
 fs.copyFileSync(path.join(root, "menu-json-rules.md"), path.join(temp, "menu-json-rules.md"));
-fs.cpSync(path.join(root, "lib"), path.join(temp, "lib"), { recursive: true });
+fs.cpSync(path.join(root, "apps"), path.join(temp, "apps"), { recursive: true, filter: source => !source.includes("node_modules") && (!source.includes("/src") && !source.includes("/public")) });
+fs.cpSync(path.join(root,"packages"),path.join(temp,"packages"),{recursive:true});
 fs.cpSync(path.join(root, "data"), path.join(temp, "data"), { recursive: true });
 
 let server = null;
@@ -286,7 +287,7 @@ test("论坛页面、接口、通知偏好及收藏版块已移除", async () =>
     }
   }
   for (const file of ["forum.html", "post.html", "js/forum.js", "js/pages/forum.js", "js/pages/post.js"]) {
-    assert.equal(fs.existsSync(path.join(root, "public", file)), false);
+    assert.equal(fs.existsSync(path.join(root, "apps/web/public", file)), false);
   }
   assert.equal((await api("/api/user/settings", { token: user.token, method: "PUT", body: { default_page: "forum.html" } })).status, 200);
   assert.equal((await api("/api/user/profile", { token: user.token })).data.user.default_page, "index.html");

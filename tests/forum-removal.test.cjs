@@ -1,10 +1,10 @@
 "use strict";
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { DatabaseSync } = require("node:sqlite");
-const titles = require("../lib/titles/store");
-const collections = require("../lib/collections/store");
-const removeForum = require("../lib/migrations/remove-forum");
+const { DatabaseSync } = require("./helpers/database.cjs");
+const titles = require("../apps/api/src/domain/titles/store");
+const collections = require("../apps/api/src/domain/collections/store");
+const removeForum = require("../apps/api/src/domain/migrations/remove-forum");
 
 test("旧库清除论坛及衍生数据，保留店铺收藏和系统通知，重复迁移结果一致", () => {
   const db = new DatabaseSync(":memory:");

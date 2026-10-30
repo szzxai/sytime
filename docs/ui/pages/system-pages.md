@@ -1,5 +1,16 @@
 # 系统页面与全局状态 · system-pages.md
 
+## 2026-10-25 · 导航行为同步
+
+系统页站内页面入口支持意图预加载，外部链接及下载保持原生语义；正文至少撑满可用视口，页脚不贴到页面顶部。 共同规则见 [导航与加载规范](../../navigation.md)，实际验证见根目录 MAP 与 UI 验收记录。
+
+## 当前 React 实现 · 2026-10-25
+
+实现位于 `apps/web/src/pages/`：NotFoundPage.tsx、../main.tsx。未知页面显示共享壳与原 404 文案；生产 HTTP 状态为 404，未知 API 返回 JSON 404，原有页面深链接可刷新。
+
+视觉令牌和资源位于 `apps/web/public/`；共享站点壳、弹窗、上传、主题和用户展示见 [组件规范](../components.md)。本页 HTML/CSS 示例用于说明最终 DOM 与视觉约束，旧 `UI.*` 或页面脚本示例属于迁移前实现，不是当前可调用 API。当前请求由 TanStack Query、路径/查询/hash 由 TanStack Router 管理，后端为 Hono + Drizzle。最新验证见根目录 [MAP.md](../../../MAP.md) 与 [验收记录](../acceptance.md)。
+
+
 ## 当前视觉与布局 · 2026-10-17
 
 404 页使用新版中文品牌、窄容器、绿色主操作与公共页脚，保留返回首页与地图入口；离线、异常、空状态继承新令牌。 全站品牌字标为「拾光酥糕」，详细公共尺寸见 [UI.md](../../../UI.md)。本轮验证结果见 [验收记录](../acceptance.md) 和根目录 [MAP.md](../../../MAP.md)。
@@ -119,7 +130,7 @@ if (!ok) {
 ## 8. 登录过期流程
 
 - 触发：任何带 token 的请求返回 401。
-- 处理（ui.js 自动）：清 token/user → toast.warning「登录已过期，请重新登录」→ 0.9s 后 `UI.goLogin()`（带 next）。
+- 处理（ui.js 自动）：清 token/user → toast.warning「登录已过期，请重新登录」→ 通过 RequireLogin 返回登录页（带 next）。
 - 页面脚本禁止自行处理 401（`UI.api({on401:false})` 显式豁免除外，如登录页预检）。
 
 ## 9. 使用中被封禁

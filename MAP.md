@@ -1,187 +1,85 @@
 # sytime 项目地图
 
-> 仓库归属与提交复核：2026-10-24。当前 GitHub 仓库为 `szzxai/sytime`，默认分支为 `main`；提交范围与本轮验证结果见文末最新记录。
-
-> 更新日期：2026-10-24（合并论坛移除与远端菜品、收藏改进；写评价选菜首批 50 条及「显示更多」；保留 #29 收藏夹默认公开、菜品详情、评论关联、已有菜品选择及目录字体统一）。本文描述 #4 UI 改版、#5 菜品目录与菜单同步、#6 三元坊必吃榜，#10 头衔系统，#11 优化地图UI，#19 个人中心拆分（新增 settings.html），#20 个人中心重做（类 B 站资料头部 + 吸顶横向菜单栏），#21 用户主页（头像跳转 + 他人主页只读 + 管理面板），#22 必吃榜详情页样式（手动/自动，自动为纯 CSS 按宽度切换），#23 收藏功能与 #29 默认公开偏好的代码，并包含完整 SVG 校园导览改版及新版位置图校准、地块补绘。最新共享界面顶栏仅使用青柠切面图标，全站品牌为「拾光酥糕」（SHSTime）；历史章节保留对应版本时点及其测试数字。
+> 更新日期：2026-10-30（Monorepo 重构、官网菜单集成、导航与视觉优化提交推送）。当前运行代码已迁移至 React 19 + TanStack Router/Query + Hono + Drizzle 的 npm workspaces Monorepo，沿用 SQLite、原有 URL、业务合同与视觉资产。当前仓库为 `szzxai/sytime`，分支 `main`。本地运行数据库 `data.db` 保留历史初始快照不纳入提交，业务与测试数据隔离。
 >
-> 本文依据实际文件、后端代码、全部前端页面、地图 JSON、SQLite 表结构及依赖清单整理。设计规范见 [UI.md](./UI.md)，验收记录见 [docs/ui/acceptance.md](./docs/ui/acceptance.md)，原始里程碑快照见 [PLAN_2026-10-01.md](./PLAN_2026-10-01.md)。
+> [架构说明](./docs/architecture.md) 描述实际模块边界、迁移、开发与部署；[2026-10-24 技术栈研究](./docs/tech-stack-recommendation-2026-10-24.md) 保留为候选比较，其中 Fastify/PostgreSQL 不是当前实现。文末按日期保留历史记录。
 
 ## 1. 项目概览
 
-拾光酥糕是一个按 Berkeleytime 的页面布局与视觉风格重制、采用中文内容和绿色主题的动态校园信息网站，现有校园地图、菜谱评价、每周食谱图片、公告、账号与权限、学生认证、个人中心、设置和管理后台。用户可在设置页提交工单，管理员可审核认证、处理封禁申诉及批复工单。
+拾光酥糕是一个按 Berkeleytime 的页面布局与视觉风格重制、采用中文内容和绿色主题的动态校园信息网站，现有校园地图、菜品星级评价、官网结构化每周食谱、公告、账号与权限、学生认证、个人中心、设置和管理后台。用户可在设置页提交工单，管理员可审核认证、处理封禁申诉及批复工单。
 
 | 层次 | 实际实现 | 入口 |
 | --- | --- | --- |
-| 服务端 | CommonJS、Node.js、Express 5；原有业务及网站内菜单 worker 模块 | [server.js](./server.js)、[lib/menu/](./lib/menu/) |
-| 数据库 | Node 内置 `node:sqlite` 的同步 `DatabaseSync`；11 张原有表、3 张必吃榜表、2 张头衔表、2 张收藏夹表及 8 张菜单表 | [data.db](./data.db)、[lib/menu/store.js](./lib/menu/store.js)、[lib/shops/store.js](./lib/shops/store.js)、[lib/titles/store.js](./lib/titles/store.js)、[lib/collections/store.js](./lib/collections/store.js) |
-| 前端 | 17 个功能页面及 404（含独立关于页与菜品详情），统一外部 CSS 与页面脚本；原生 JavaScript，无构建流程 | [public/](./public/) |
-| 共享前端逻辑 | 导航壳、登录态、用户展示、横幅、表单、对话框、上传、图片查看器及页面工具 | [public/js/ui.js](./public/js/ui.js)、[public/js/page.js](./public/js/page.js) |
-| 地图 | 本地 Leaflet 1.9.4；单一北向上 SVG 校园地图（31 个地点），支持触控板平移/捏合与大面积运动场插画 | [campus-places.js](./public/js/campus-places.js)、[campus.svg](./public/img/map/campus.svg)；[data.json](./data.json) 仅为旧数据归档 |
-| 文件存储 | 本地图片文件，通过 `/uploads` 静态提供 | [uploads/](./uploads/) |
-| 依赖与运行 | npm 安装；`npm start` 直接执行 `node server.js` | [package.json](./package.json)、[package-lock.json](./package-lock.json) |
-| 验证 | Playwright 浏览器回归、axe 无障碍与布局检查；临时数据库和上传目录 | [tests/ui-smoke.mjs](./tests/ui-smoke.mjs) |
-| 项目说明 | 使用说明、项目地图、开发记录、里程碑快照、UI 手册和许可证 | [README.md](./README.md)、[progress.md](./progress.md)、[UI.md](./UI.md)、[LICENSE](./LICENSE) |
+| Web | React 19、严格 TypeScript、TanStack Router/Query、Vite | `apps/web/src/main.tsx` |
+| HTTP | Hono 原生路由，按领域分拆，Node 生产入口 | `apps/api/src/index.ts`、`app.js`、`routes/`、`domain/` |
+| 数据 | Drizzle + better-sqlite3，27 张业务表及迁移 journal | `packages/db/src/schema.ts`、`packages/db/migrations/` |
+| 共享合同 | DTO、角色权重与标签 | `packages/shared/src/index.ts` |
+| 组件 | 持久 Shell、Dialog、表单、收藏、评价、后台、地图 | `apps/web/src/components/` 与 `layouts/` |
+| 地图 | 保留 Leaflet、31 个校园地点、SVG 与高德坐标规则 | `apps/web/src/maps/`、`apps/web/public/img/map/` |
+| 存储 | data.db、uploads、.private、data 与旧地图归档 | 根目录持久存储；私有文件不公开 |
+| 构建与验证 | API/worker esbuild、Web Vite；类型/lint/格式/隔离回归 | `tools/`、`tests/`、根 scripts |
 
 ## 2. 完整文件结构
 
-以下为改版后的源码、文档和持久数据目录。`node_modules/`、本机 `.env` 和浏览器测试产物不提交。
-
 ```text
-sytime/
-├── .gitignore                    依赖、密钥、数据库临时文件和测试产物忽略规则
-├── .env.example                  端口与 JWT 配置模板
-├── LICENSE                       GNU AGPL v3 许可证正文
-├── README.md                     项目功能、安装及部署说明
-├── progress.md                   既有开发记录、接口和数据说明
-├── package.json                  应用元数据、依赖、start/test 脚本
-├── package-lock.json             npm lockfileVersion 3 依赖锁定文件
-├── server.js                     原有后端逻辑、菜单模块与调度启动
-├── lib/migrations/remove-forum.js  旧论坛表、收藏、消息与设置的幂等清理
-├── lib/menu/
-│   ├── schema.js                 名称归一、拼音与八字段校验
-│   ├── store.js                  菜单建表、种子导入、原子发布与目录
-│   ├── config.js                 密钥加密、设置与模型测试指纹
-│   ├── schedule.js               北京时间每日调度纯函数
-│   ├── source.js                 官网 HTML/robots、内联图片与分页
-│   ├── provider.js               视觉 Chat Completions、严格 JSON 与缓存
-│   ├── images.js                 sharp 处理、重叠分块与覆盖复核
-│   ├── worker.js                 同步获取/识别任务
-│   ├── service.js                队列、租约、取消、重试与调度
-│   ├── manual.js                 JSON 预览、候选编辑、人工发布与审计
-│   └── routes.js                 目录、developer 配置及三种管理角色的导入 API
-├── data/menu-bootstrap.json      十篇历史菜单种子
-├── tools/build-menu-seed.py      开发时离线整理种子，标准库
-├── tools/build-menu-skill.py     同步规则并打包技能，标准库
-├── tools/summarize-menu-live.cjs 汇总真实模型实验的保存结果
-├── menu-json-rules.md            八字段 JSON、完整读图与人工导入规则
-├── szzx-menu.skill               可直接导入 AI 客户端的技能 ZIP 包
-├── skills/szzx-menu/             SKILL.md、references/menu-json-rules.md、scripts/validate_menu.py
-├── .private/                     运行时主密钥、原图、补图、诊断及缓存（忽略）
-├── data.db                       随仓库提交的 SQLite 数据库（启动迁移 shops / titles / collections 表）
-├── data.json                     旧楼层地图数据归档；后端保留兼容
-├── data/shops-config.json        高德地图中心、苏州中学参考点、姑苏区边界多边形（GCJ-02）
-├── lib/shops/store.js            shops 表、路线字段校验、列表/详情与地理围栏
-├── lib/dishes/store.js           recipes.dish_id 迁移、历史关联、详情统计及每页 20 条评论
-├── lib/dishes/routes.js          公开菜品详情与分页评价，严格校验目录身份和偏移量
-├── lib/shops/routes.js           店铺公开读取与带权限的创建 API
-├── lib/titles/store.js           titles/user_titles 表、佩戴状态、种子与增删改查
-├── lib/titles/rules.js           自动头衔规则注册表与发放逻辑
-├── lib/titles/routes.js          用户佩戴接口与后台头衔管理接口
-├── lib/collections/store.js      收藏夹表与默认公开偏好迁移、查询及默认收藏夹
-├── lib/collections/routes.js     收藏夹列表、收藏/取消、分页详情、公开状态、他人公开收藏与默认设置 API
-├── MAP.md                        项目结构与实现地图（本文）
-├── docs/map-sources.md           31 个地点介绍的校内补充、公开资料与引用范围
-├── docs/issue-10-plan.md         #10 头衔系统的实施范围与验收
-├── PLAN_2026-10-01.md             国庆里程碑与全部 issue 的原始快照
-├── UI.md                         全站 UI 设计总纲
-├── docs/ui/
-│   ├── assets/                   参考 CSS、JS、图标与可交互样张
-│   ├── pages/                    现有及后续新功能的逐页设计规范
-│   ├── components.md             组件骨架、状态与无障碍要求
-│   ├── scenarios.md              边界场景与交互约定
-│   ├── copy.md                   统一文案和错误提示
-│   ├── implementation.md         实施步骤与可复现验证方法
-│   └── acceptance.md             #4 实施范围及验收记录
-├── tests/
-│   ├── titles.test.cjs           头衔目录/授予撤销/佩戴/自动规则/序列化测试
-│   ├── shops.test.cjs            店铺 API、字段校验、覆盖区域、角色/显式权限测试
-│   ├── shops-ui.mjs              店铺列表/详情/创建与权限浏览器回归
-│   ├── menu.test.cjs             菜单数据/调度/提供商/队列/权限测试
-│   ├── forum-removal.test.cjs     旧库迁移、店铺数据保留与重复运行检查
-│   ├── dishes.test.cjs           历史关联、详情隔离、分页、提交校验与图片清理
-│   ├── dishes-ui.mjs             详情、选菜每批 50 条与边界、键盘、图文及明暗主题回归
-│   ├── collections.test.cjs      收藏接口、旧账号默认公开迁移、参数与账号隔离
-│   ├── collections-ui.mjs        收藏按钮、弹窗及收藏浏览回归
-│   ├── collection-privacy-ui.mjs 默认公开即时保存、双向覆盖、加载失败与回滚回归
-│   ├── helpers/app-fixture.cjs   独立临时站点、动态端口与受限目录清理
-│   ├── menu-live.cjs             可选真实模型与三张菜单检查
-│   ├── node-deploy.cjs           全新 Node 生产依赖安装检查
-│   ├── menu-skill.py             便携技能、离线验证器及包内文件检查
-│   ├── fixtures/menu-manual-review.json 三张原图的局部目视抽样
-│   └── ui-smoke.mjs              页面、权限、表单及无障碍回归
-├── public/
-│   ├── index.html                渐变地标首页、开发团队与参与入口；根路径默认页跳转
-│   ├── about.html                独立关于页：起源、学生维护与反馈
-│   ├── map.html                  单一 SVG 校园地图，无楼层切换
-│   ├── recipe.html               A–Z 菜品目录、评价与每周食谱三个页签
-│   ├── dish.html                 单道菜品详情、评分和分页评论
-│   ├── shops.html                三元坊必吃榜、高德地图与分类筛选
-│   ├── shop.html                 店铺步行路线和坐标详情
-│   ├── shop-new.html             权限校验后的店铺创建表单
-│   ├── announcements.html        更新公告列表与正文
-│   ├── login.html                登录与被封账号的解封申诉
-│   ├── register.html             注册并自动登录
-│   ├── student_verify.html       邀请码认证或提交学生审核申请
-│   ├── profile.html              个人资料、我的头衔
-│   ├── settings.html             设置：账号安全、网站设置、工单、消息通知、退出登录
-│   ├── user.html                 其他用户主页（只读 + 权限足够时的管理面板）
-│   ├── admin.html                权限控制的后台菜单、用户与头衔管理操作
-│   ├── 404.html                  未知页面提示，使用绝对资源路径
-│   ├── css/site.css              设计令牌、组件与响应式样式
-│   ├── css/map.css               校园导览局部样式与明暗主题
-│   ├── img/map/campus.svg        校园底图、路径、植被与建筑 symbol
-│   ├── img/fan-zhongyan-user.png 首页与关于页使用的透明范仲淹像（维护者提供）
-│   ├── img/brand-lime.svg        青柠切面，favicon 与共享品牌图标
-│   ├── img/suzhou-high-school-mark.png 历史校徽资产，页面不再引用
-│   ├── fonts/InterVariable.woff2 本地拉丁字母可变字体（Inter-LICENSE.txt 为 SIL OFL）
-│   ├── fonts/NotoSansSC.woff2  本地中文字形子集（NotoSansSC-LICENSE.txt 为 SIL OFL）
-│   ├── img/team-vc.svg           VC 团队橙子切面标志
-│   ├── img/team-software.svg     软件开发社简化 SVG 标志
-│   ├── img/                      icons.svg 与旧 favicon.svg（不再被页面引用）
-│   ├── js/
-│   │   ├── ui.js                 全站交互、导航壳与统一 API 客户端
-│   │   ├── page-transition.js    跨页滑动方向在目标页首帧前初始化
-│   │   ├── page.js               页面表单、请求、权限、面板和工单工具
-│   │   ├── dish-review.js        共用已有菜品组合框（首批/追加 50 条）与图文评价对话框
-│   │   ├── pages/dish.js         详情、评分统计、评价分页与发布后刷新
-│   │   ├── campus-places.js      31 个导览地点、分类、别名、示意坐标与介绍
-│   │   ├── pages/map.js          SVG 导览、搜索、选点与触控板手势
-│   │   ├── shops-map.js          高德地图加载、标记、路线查询与外链
-│   │   └── pages/                各页业务脚本、菜单同步/导入及店铺列表/创建/详情
-│   ├── vendor/leaflet/           Leaflet JS、CSS、图片与上游 LICENSE
-│   └── auth.js                   加载 ui.js 的旧调用兼容入口
-└── uploads/
-    └── weekly/
-        ├── 1790494439396-979963766.png
-        ├── 1790495069096-158832090.png
-        ├── 1790495081861-230074113.png
-        ├── 1790495090622-616644569.png
-        ├── 1790495393944-169103336.png
-        └── 1790495644744-976725163.png
+apps/
+  web/                  React 应用、Vite 入口与构建
+    src/pages/          页面组件，保留原有 .html 地址
+    src/components/     站点壳、表单、对话框、收藏、地图、评价及后台组件
+    src/layouts/        复杂页面的展示结构，属性按具体 HTML 元素类型约束
+    src/lib/            API、登录态、主题、URL 状态、导航层级/预加载与表单 Hook
+    src/maps/           地图交互与地点数据
+    public/             原有 CSS、字体、品牌图片、SVG 与本地 Leaflet
+  api/
+    src/index.ts        Node 入口、静态资源、404 与优雅退出
+    src/app.js          Hono 组装与业务服务初始化
+    src/routes/         账号、公告、资料、消息、工单、认证等路由
+    src/domain/         菜单、店铺、菜品、头衔、收藏及历史迁移
+packages/
+  db/src/               Drizzle 类型化表结构、参数绑定及迁移入口
+  db/migrations/        可接入旧库的 SQL 基线及迁移元数据
+  shared/src/           共享 DTO、角色等级与标签
+server.js               生产入口，加载 apps/api/dist/index.cjs
+scripts/shops/          店铺数据整理工具
+skills/szzx-menu/        独立菜单读图技能源文件
+szzx-menu.skill          可导入的技能包
+menu-json-rules.md      八字段 JSON 与完整读图约定
+data.db                 运行数据库，保留历史快照
+uploads/                上传图片，必须持久化
+.private/               私有密钥、原图、诊断和缓存，禁止公开
+data/                   菜单种子和店铺范围配置
+data.json               旧地图兼容数据
+tools/                  API/worker 构建、开发进程管理、技能构建
+tests/                  后端、迁移、部署和浏览器回归
+docs/                   架构、菜单运维、逐页规范及历史验收
 ```
 
-`npm ci` 创建依赖，运行时创建 uploads 及非公开 `.private/`。生产只运行 Node，Python 脚本仅在开发时重建种子，无第二个服务。部署与配套密钥备份见 [docs/menu-sync.md](./docs/menu-sync.md)，确认范围见 [docs/issue-5-plan.md](./docs/issue-5-plan.md)。
+生成目录为 `apps/api/dist`（index.cjs、worker.cjs 与 source map）和 `apps/web/dist`（SPA 入口、按页分块和资源），不提交。根目录旧 `apps/web/public/`、`apps/api/src/domain/` 已移除；既有算法和静态资产迁入各自工作区，运行时不依赖旧入口。
 
 ## 3. 请求与数据流
 
 ```mermaid
 flowchart LR
-    Browser[浏览器 HTML 与页面脚本] --> Shared[ui.js 交互与 API 客户端]
-    Browser --> Helpers[page.js 业务工具]
-    Helpers --> Shared
-    Shared --> Shell[公共导航、横幅和页脚]
-    Shared --> API[server.js /api 路由]
-    API --> DB[(data.db SQLite)]
-    API --> MapJSON[data.json 地图数据]
-    API --> Files[uploads 图片文件]
-    Static[Express 静态服务] --> Browser
-    Files --> Static
-    Public[public 静态页面] --> Static
-    Leaflet[public/vendor/leaflet 本地资源] --> Browser
+  Browser[React 页面与持久 Shell] --> Router[TanStack Router URL 状态]
+  Browser --> Query[TanStack Query 数据与 mutation]
+  Query --> Hono[Hono 路由与当前账号鉴权]
+  Hono --> Domains[菜单/店铺/菜品/头衔/收藏领域]
+  Hono --> DB[Drizzle]
+  Domains --> DB
+  DB --> SQLite[(data.db)]
+  Domains --> Worker[菜单 worker bundle]
+  Hono --> Uploads[uploads 公开图片]
+  Domains --> Private[.private 私有任务资料]
+  Vite[Web dist / CSS / 字体 / SVG] --> Browser
 ```
 
-`server.js` 启动顺序是加载环境变量、打开数据库、创建表与索引及迁移旧结构、创建上传目录、定义鉴权函数、挂载 CORS/JSON/静态服务、注册 API、404 兜底和错误处理，最后监听端口。
-
-- `public/` 挂载在站点根路径，`/` 默认提供 `index.html`。
-- `/uploads` 映射到项目内的 `uploads/`，图片 URL 保存到数据库或由文件名生成。
-- 普通 JSON 请求体上限为 `8mb`；上传请求使用 multer 的 multipart 处理。
-- 收藏新建流程（#29）：网站设置独立即时保存 `collection_default_public`；共享弹窗每次展开新建表单都从个人资料重新读取默认值，读取中禁用创建，失败回退私密，可手动覆盖。创建请求明确发送数值 `is_public`；旧客户端省略时由服务器读取当前登录用户最新偏好。不会更改已有收藏夹的公开状态，自动补建的「默认收藏夹」仍为私密。
-- 菜单目录初始化后运行 `lib/dishes/store.js` 迁移：增加可空菜品外键，按归一名称补关联旧非每周评价。目录行用原生链接进入 `dish.html?id=...`，详情和评论按菜品 ID 读取；发布时后端只接受已有目录菜品 ID，名称取自服务端。原「菜品评价」全站列表不改排序或过滤。
-- 两页共用写评价选择器继续一次读取完整已有目录，在前端筛选后按 50 条显示；首批 50，「显示更多」每次追加最多 50，所有匹配项均可访问。新关键词或收起后重新展开恢复首批，追加保留顺序与滚动位置；不改目录接口、数据表或评论列表的每页 20 条。
-- 页面通过共享 `UI.api` 封装同源 `fetch('/api/...')`，统一 token、失败提示和登录回跳；后端仍使用原有业务接口。
-- 未知 `/api` 路径返回 JSON 404；未知 GET 页面路径（无扩展名且不属于上传目录）返回 `404.html`。
-- 登录返回 JWT；浏览器以 `localStorage.token` 保存，并以 `Authorization: Bearer <token>` 请求登录接口。`localStorage.user` 保存用户缓存。
-- 网站默认页面、菜谱默认视图保存在用户表，同时用 `defaultPage`、`recipeDefaultView` 本地键作回退；旧 `default_floor` 字段保留兼容，设置页和地图均不再读取或写入楼层偏好。横幅关闭使用 `bannerDismissed:<用户名>` 与横幅版本。手机导航使用受控抽屉；旧 `navCollapsed` 设置不再使用。
+- 启动加载环境、连接数据库、登记 Drizzle 基线并运行历史升级、初始化非菜单领域种子与领域，监听后启动菜单调度。退出先关闭任务与 worker，再关闭 HTTP 和数据库。
+- 原 `.html` 页面由同一个 React 入口提供，Router 按页面懒加载；站内页面使用 Router Link 意图预加载，可预加载组件与主要查询就绪后一次同页转场，无全局点击拦截；正文外按顶栏位置、内部详情按父子关系切换，公告与顶栏持续挂载。未知页面保留带站点壳的 404；`/api` 与 `/api/*` 的未知路由均返回 JSON 404。
+- 页面路径、筛选、分页、hash 面板由 Router 管理；服务端数据由 Query 按公开/账号缓存。登录 token 仍由 Bearer 发送；每次受保护请求核对当前账号状态和权限。
+- JSON 上限 8 MiB；multipart 总请求限额 64 MiB，具体文件数量、类型、单文件大小在上传模块和领域路由校验。公开图片仍映射 uploads；私有原图、密钥、任务资料只走鉴权 API。
+- 默认页、菜谱视图、必吃榜设置、角色显示、收藏偏好及已有 localStorage 键保留。默认公开即时保存、新建收藏读取最新偏好、失败回退、自动默认夹私密等行为不变。
+- 本次按授权重置上线前菜单数据；此后的菜品 ID、评论关联、整篇菜单原子替换、租约与发布审计保留。共用评价组件按每批 50 条加载候选，评论分页仍为 20 条。
+- CSS、字体、品牌与地图素材保持；表单计数、密码显示、键盘操作、对话框焦点恢复、离线提示及未保存警告由组件/Hook 管理。
 
 ## 4. 前端页面地图
 
@@ -189,8 +87,8 @@ flowchart LR
 | --- | --- | --- |
 | `index.html` | 首页介绍、地图/菜谱/必吃榜/公告入口、关于我们与工单反馈；仅在根路径 `/` 且无锚点时按用户默认页面跳转 | `/api/user/profile`、本地默认页设置 |
 | `about.html` | 独立关于内容、原创地标插画与工单入口 | 共享导航与横幅接口 |
-| `map.html` | 单一北向上 SVG 校园地图：31 地点、名称/别名搜索、分类、介绍卡、大面积篮球场与操场、拖动/滚动平移、捏合或 Ctrl / ⌘ + 滚轮缩放、键盘与全景；无楼层视图及切换器 | 读取本地 `campus-places.js` + `campus.svg`，不调用旧地图接口或读取楼层偏好 |
-| `recipe.html` | A–Z 菜品目录链接与搜索；原评价卡及已有菜品选择对话框；每周食谱折叠、放大及授权删除 | `/api/dishes`、`/api/recipes`、`/api/weekly-menu`、`/api/user/profile` |
+| `map.html` | 单一北向上 SVG 校园地图：31 地点、名称/别名搜索、分类、介绍卡、大面积篮球场与操场、拖动/滚动平移、捏合或 Ctrl / ⌘ + 滚轮缩放、键盘与全景；无楼层视图及切换器 | 读取本地 `apps/web/src/maps/places.ts` + `campus.svg`，不调用旧地图接口或读取楼层偏好 |
+| `recipe.html` | 默认今天/明天双栏、日期/星期/校区/独立餐次、同菜合并地点；另有周视图与跨周高级筛选、星级及评价 | `/api/dishes`、`/api/recipes`、`/api/menu`、`/api/user/profile` |
 | `dish.html?id=...` | 菜名、平均评分与评价数、完整图文评论和作者时间；每页 20 条；预选当前菜品写评价 | `/api/dishes/:id`、`/api/dishes/:id/reviews`、`/api/dishes`、`/api/recipes` |
 | `shops.html` | 三元坊必吃榜；可拖动/缩放的高德地图，附近店铺按屏幕距离聚合为带数量的点，点击聚合点居中放大；分类、拼音 A–Z、道路/商场、距离/时间、点赞/评价/评分筛选与排序；列表分页（每页 20 条，`?page=` 保留）；店铺卡收藏按钮（#23） | `/api/shops`、`/api/shops/meta`、`/api/shops/map-image`；收藏夹接口 |
 | `shop.html` | 地址、路线、本部/地铁出口距离、点赞/评价/评分汇总；学生及以上可点赞、提交/更新及删除本人 1–5 星评价，评价可选带一张实拍图（JPG/PNG，≤2 MB）、选填人数与总价并自动计算人均价；点赞右侧收藏按钮（#23）；详情页样式由账号 `shop_layout_mode` 决定：手动显示「纵向 / 双栏」开关并记住上次选择，自动则隐藏开关、纯 CSS 按屏幕宽度切换（#22） | `/api/shops/:id`、`/api/shops/:id/reviews`、互动写接口；收藏夹接口 |
@@ -203,16 +101,16 @@ flowchart LR
 | `settings.html` | 设置页（左侧菜单，与个人中心同构）：账号安全（改密码）、网站设置（默认进入界面 / 菜品与食谱默认页 / 必吃榜默认排序与餐食类型 / 店铺详情页样式 / 收藏默认页 / 新建收藏夹默认公开（#29，切换即保存）/ 显示权限等级）、工单、退出登录 | `/api/user/profile`、`/api/user/settings`、`/api/user/settings/collection`、`/api/collections`、`/api/user/password`、`/api/tickets`、`/api/tickets/mine` |
 | `user.html` | #21 其他用户主页（类个人中心版式，#20；只读）：资料头部 + 吸顶横向菜单栏（主页 / 收藏 / 头衔 / [管理]）；权限等级按该用户 `show_role` 显示；头衔只读；仅在目标存在公开收藏夹时显示「收藏」标签，只读展示公开收藏（#23）；有 `user_manage` / `title_manage` 且目标权重低于自己（非本人）时出现「管理」：改权限等级、发放特殊权限、发放头衔、封号/解封；`?id=` 为本人时跳转 profile.html | 公开 `GET /api/users/:id/profile`、`GET /api/users/:id/titles`、`GET /api/users/:id/collections`、`GET /api/collections/:id/items`（公开收藏夹）；`GET /api/me`；管理接口同上 |
 | `inbox.html` | 消息箱：按天分组、全部/系统标签过滤、只看未读、全部标为已读、点击标记已读；页头消息铃显示未读数 | `/api/messages`、`/api/messages/unread-count`、`/api/messages/:id/read`、`/api/messages/read-all` |
-| `admin.html` | 横幅、公告、发送系统通知、学生审核、邀请码、每周菜谱、用户管理、头衔管理、申诉、工单、developer 菜单同步和三种管理角色的 JSON 手动导入；待办红点 | `/api/admin/*`，菜单接口见 [运维文档](./docs/menu-sync.md) |
+| `admin.html` | 横幅、公告、发送系统通知、学生审核、邀请码、用户管理、头衔管理、申诉、工单、developer 菜单同步和三种管理角色的 JSON 手动导入；待办红点 | `/api/admin/*`，菜单接口见 [运维文档](./docs/menu-sync.md) |
 | `404.html` | 404 提示、返回首页与返回上一页 | 无 |
-| `js/ui.js` | 公共导航/页脚、账户菜单、手机抽屉、横幅、用户信息与全站交互组件；头像跳转 `UI.avatarLink`/`UI.userHref`（#21）；收藏按钮与收藏夹选择弹窗 `UI.collections`（#23）；移动端判断 `UI.isMobile`、共享店铺卡片 `UI.shopCard`、分页器 `UI.pagerHtml` | `/api/user/profile`、`/api/settings/banner`、收藏夹接口 |
-| `js/collections-view.js` | `UI.collectionsBrowser`：个人中心 / 用户主页共用的收藏浏览（左右分栏、双层菜单、公开开关、卡片网格、分页、手机 UA 下拉） | 收藏夹接口 |
+| `components/Shell.tsx` 与 `components/ui.tsx` | 共享导航/页脚、账户菜单、手机抽屉、横幅、用户信息、主题、对话框、离线反馈 | 账号、横幅、消息数量接口 |
+| `components/Collections.tsx` | 收藏操作与本人/公开收藏浏览，分页、公开状态、默认选择与手机下拉 | 收藏夹接口 |
 
-页面布局由 `public/css/site.css` 统一维护，业务脚本位于 `public/js/pages/`。`ui.js` 集中处理角色权重、用户展示、日期、转义和交互；`page.js` 复用页面业务逻辑。动态文本使用 `UI.esc` 或 DOM `textContent` 输出。
+页面布局由 `apps/web/public/css/site.css` 和 React 展示组件维护，业务组合位于 `apps/web/src/pages/`。共享 API、会话、主题与 URL Hook 位于 `apps/web/src/lib/`；动态文本使用 JSX 转义。各页面对应源码见 `docs/ui/pages/` 的当前 React 实现节。
 
 ## 5. 后端 API 全量索引
 
-以下显式路由位于 [server.js](./server.js)。菜单新增的方法/路径组合位于 [lib/menu/routes.js](./lib/menu/routes.js)，索引见 [菜单同步接口](./docs/menu-sync.md#接口)。表中“公开”表示没有强制登录。
+HTTP 入口位于 [index.ts](./apps/api/src/index.ts)，业务路由位于 `apps/api/src/routes/` 与 `apps/api/src/domain/*/routes.js`。菜单的方法/路径组合位于 [apps/api/src/domain/menu/routes.js](./apps/api/src/domain/menu/routes.js)，索引见 [菜单同步接口](./docs/menu-sync.md#页面与接口)。表中“公开”表示没有强制登录。
 
 ### 5.1 账号、个人资料与设置
 
@@ -237,13 +135,12 @@ flowchart LR
 | 方法 | 路径 | 访问条件 | 作用 |
 | --- | --- | --- | --- |
 | GET | `/api/recipes` | 公开 | 按 `name COLLATE NOCASE, id` 排序读取评价记录 |
-| GET | `/api/recipes/weekly` | 公开 | 读取 `is_weekly=1` 的评价记录；当前每周食谱页面使用另一接口 |
-| POST | `/api/recipes` | 登录 | 必须传当前目录已有 `dish_id`，名称由服务端确定；评分为 0–5 整数，评论选填且最多 500 字，可选 JPG/PNG 图片 ≤2 MB；无效参数拒绝并清理该次上传文件 |
+| POST | `/api/recipes` | 登录 | 必须传当前目录已有 `dish_id`，名称由服务端确定；评分为 1–5 整数，评论选填且最多 500 字，可选 JPG/PNG 图片 ≤2 MB；无效参数拒绝并清理该次上传文件 |
 | GET | `/api/dishes` | 公开 | 有成功供应记录的独立菜品目录、拼音与索引元数据 |
-| GET | `/api/dishes/:id` | 公开 | `{dish}` 包含目录字段、`reviews_count` 和保留一位小数的 `rating_avg`；只统计 `is_weekly=0`，没有评价时评分为 null；非目录 ID 返回 404 |
+| GET | `/api/dishes/:id` | 公开 | `{dish,supplies}` 包含最近 100 条供应及来源；历史菜品仍可访问，dish 包含目录字段、`reviews_count` 和保留一位小数的 `rating_avg`；只统计 `is_weekly=0`，没有评价时评分为 null；不存在 ID 返回 404 |
 | GET | `/api/dishes/:id/reviews?offset=0` | 公开 | `{reviews,total,offset,has_more}`，每页 20 条，按 `created_at DESC,id DESC`；附作者昵称、头像、权限及头衔；偏移为 0–1000000 的整数字符串，否则 400；两种详情读取成功响应均 no-store |
 | GET | `/api/announcements` | 公开 | 按发布日期倒序读取公告 |
-| GET | `/api/weekly-menu` | 公开 | 每周食谱日期、图片 URL 和上传者 |
+| GET | `/api/menu?source_id=...` | 公开 | `{weeks,week,records,sync}`；默认最新供应周，all=1 跨全部已发布周（不可同时传 source_id）；供应含日期、餐次、地点、分类、菜名、价格、辣椒及真实评分；未知周 404，no-store |
 | GET | `/api/settings/banner` | 公开 | 当前横幅及版本 |
 | GET | `/api/map-data` | 公开 | 兼容旧地图数据，每次从磁盘读取 data.json；当前地图页面不调用 |
 | GET | `/api/shops` | 公开 | 店铺列表；支持 `type`、`q`、本部距离/时间及点赞/评价/评分范围过滤，`sort=campus/metro/likes/reviews/rating/new` 排序；拼音 A–Z 在前端排序 |
@@ -281,8 +178,6 @@ flowchart LR
 | PUT | `/api/admin/users/ban` | user_manage，另有目标角色限制 | 封禁并保存理由、可选图片及是否允许申诉 |
 | PUT | `/api/admin/users/unban` | user_manage，另有目标角色限制 | 解封并清空封禁信息 |
 | PUT | `/api/admin/users/permissions` | user_manage，另有目标角色限制 | 替换显式权限列表 |
-| POST | `/api/admin/weekly-menu/upload` | weekly_menu_upload | 上传日期范围内的每周食谱图片 |
-| DELETE | `/api/admin/weekly-menu/:id` | 登录，上传者或 super_admin 及以上 | 删除食谱记录及图片文件 |
 | GET | `/api/admin/titles` | title_manage | 头衔目录与持有人数 |
 | GET | `/api/admin/titles/rules` | title_manage | 可用的自动头衔规则清单 |
 | POST | `/api/admin/titles` | title_manage | 新建头衔；重名 409，名称超 8 字 422 |
@@ -323,11 +218,30 @@ flowchart LR
 | PUT | `/api/collections/:id/public` | 登录，限本人收藏夹 | 切换公开状态 `{is_public}` |
 | PUT | `/api/user/settings/collection` | 登录 | 保存默认收藏夹；支持 `{default_collection_shops}` 或 `{section, collection_id}`，并校验归属与版块 |
 
+### 5.6 菜单同步与人工导入
+
+| 方法 | 路径 | 访问条件 | 作用 |
+| --- | --- | --- | --- |
+| GET | `/api/admin/menu-sync/settings` | developer | 读取掩码配置与版本 |
+| PUT | `/api/admin/menu-sync/settings` | developer | 保存配置、定时与开关 |
+| POST | `/api/admin/menu-sync/test` | developer | 检查已保存模型与图片 JSON 能力 |
+| GET | `/api/admin/menu-sync/jobs` | developer | 任务、来源、配置摘要 |
+| POST | `/api/admin/menu-sync/jobs` | developer | 立即同步；支持最多六张补图 |
+| GET | `/api/admin/menu-sync/jobs/:id` | admin 及以上 | 任务详情、逐篇状态 |
+| POST | `/api/admin/menu-sync/jobs/:id/retry` | developer | 重试失败篇目 |
+| POST | `/api/admin/menu-sync/jobs/:id/cancel` | developer | 取消任务 |
+| GET | `/api/admin/menu-sync/jobs/:id/artifacts/:kind` | admin 及以上 | 按 source_id 读取原图、menu/diagnostic/source JSON |
+| GET | `/api/admin/menu-sync/imports` | admin 及以上 | 来源、结束任务及审计 |
+| GET | `/api/admin/menu-sync/imports/source` | admin 及以上 | 已发布记录或 job_id 对应候选 |
+| POST | `/api/admin/menu-sync/imports/preview` | admin 及以上 | 八字段校验、归一化及摘要 |
+| POST | `/api/admin/menu-sync/imports` | admin 及以上 | 校验版本、digest、reviewed 后原子发布 |
+| GET | `/menu-json-rules.md` | 公开 | 下载完整读图与 JSON 规则 |
+
 ## 6. 角色与权限模型
 
 角色权重为 `developer(6) > super_admin(5) > admin(4) > student(3) > user(2) > guest(1)`。
 
-- `checkRole(requiredRole)` 解析 JWT，缺失或无效 token 按 guest 处理；需要角色时比较权重。JWT 带有 id、role、username。
+- `checkRole(requiredRole)` 解析 JWT，缺失或无效 token 按 guest 处理；需要角色时比较权重。JWT 带有 id、role、username；角色判断使用数据库当前账号而非凭据中的旧角色。已封禁账号视为无有效登录。
 - `requireLogin` 在解析后要求有效用户 ID，否则返回 401。
 - `requirePermission` 调用 `hasPermission`：角色达到该权限默认等级，或 `user_permissions` 存在显式授权，即可通过。
 - 后台入口允许 admin 及以上或拥有任意显式权限的用户；后台菜单进一步按具体权限过滤。
@@ -342,7 +256,6 @@ flowchart LR
 | invite_manage | super_admin | 邀请码管理 |
 | user_manage | super_admin | 用户及显式权限管理 |
 | ban_appeal_review | super_admin | 封禁申诉审核 |
-| weekly_menu_upload | admin | 每周食谱上传 |
 | map_popup_edit | admin | 地图弹窗编辑 |
 | ticket_manage | admin | 工单管理 |
 | shop_create | student（由 `SHOP_CREATE_MIN_ROLE` 可配置） | 添加店铺；也可在用户显式权限中单独授权 |
@@ -352,7 +265,7 @@ flowchart LR
 
 ### 7.1 SQLite
 
-原有业务表中删除 3 张论坛表，其余 11 张保留；启动迁移另创建 `shops`、`shop_likes`、`shop_reviews` 三张店铺表、`titles`、`user_titles` 两张头衔表、`collections`、`collection_items` 两张收藏夹表和 8 张菜单表。店铺 schema 在 `lib/shops/store.js`，头衔 schema 与种子在 `lib/titles/store.js`，收藏夹 schema 在 `lib/collections/store.js`，菜单迁移与种子导入位于 `lib/menu/store.js`。另有内部表 sqlite_sequence；测试使用临时数据库。
+当前 Drizzle schema 与基线包含 27 张业务表；旧论坛表由历史迁移清除。包括账号/登录记录/权限、公告/设置、认证/邀请/申诉/工单/消息/评价、店铺互动、头衔、收藏和菜单等领域。店铺 schema 在 `apps/api/src/domain/shops/store.js`，头衔 schema 与种子在 `apps/api/src/domain/titles/store.js`，收藏夹 schema 在 `apps/api/src/domain/collections/store.js`，菜单迁移与显式测试种子工具位于 `apps/api/src/domain/menu/store.js`。另有内部表 sqlite_sequence、__drizzle_migrations。完整字段、默认值、外键和索引见下方「Drizzle 完整结构」，以 packages/db/src/schema.ts 及迁移为源；测试使用临时数据库。
 
 | 表 | 主要字段/约束 | 关联与用途 |
 | --- | --- | --- |
@@ -361,7 +274,7 @@ flowchart LR
 | collections | user_id、section（shops）、name、is_public（INTEGER NOT NULL DEFAULT 0）、created_at | 收藏夹（#23/#29）；主动创建保存明确选择或账号偏好；GET 时版块无收藏夹会自动创建私密「默认收藏夹」；修改默认偏好不追溯已有收藏夹 |
 | collection_items | collection_id、item_type（shop）、item_id、created_at；三者联合唯一 | 收藏项；必吃榜收藏夹只允许 shop |
 | recipes | user_id、username、name、rating、comment、image_url、is_weekly、可空 dish_id → dishes.id | 一条记录是一条评价；新评价必须选择已有菜品，保存规范名称；旧未匹配记录保留 NULL，无店铺关联；索引 `idx_recipes_dish(dish_id,created_at DESC,id DESC)` |
-| weekly_menu_images | user_id、menu_start_date、menu_end_date、filename、uploaded_at | 每周食谱整张图片，与 recipes 分开 |
+| weekly_menu_images | user_id、menu_start_date、menu_end_date、filename、uploaded_at | 已停用兼容空表，无上传与读取接口 |
 | announcements | title、content、publish_date | 公开公告 |
 | settings | key 主键、value | 横幅、邀请码兼容设置及加密 menu_ai_config |
 | student_applications | user_id、student_id、class_name、real_name、extra_info、reject_reason、status | 认证审核；pending/approved/rejected |
@@ -369,7 +282,7 @@ flowchart LR
 | ban_appeals | user_id、appeal_reason、appeal_image、status | 解封审核；pending/approved/rejected |
 | tickets | user_id、username、title、content、visibility、status、reply_content、reply_image、reply_by、replied_at | 工单；pending/resolved |
 | messages | user_id、type、actors(JSON)、count、target_kind/target_id、title/body/snippet、important、read_at | 消息箱；仅 system 消息，target 返回 null；旧互动消息由启动迁移清除 |
-| titles | key（种子标识，可空）、name、hue、source（grant/auto）、rule（自动规则 key）、description、`owner_user_id` | 头衔目录，共 7 个种子：四个自动头衔（三元坊老饕/夜读星/闲者爱上网/校园老吃家）与三个手动（师者/创站元老/官方）；角色等级头衔已下线（角色改由权限等级标签体现），旧库中的这类目录行会在启动迁移时清理；`owner_user_id` 为空是公共头衔（按名称全站唯一），非空是该账号的专属头衔（按「账号 + 名称」唯一，不进公共目录）；`rule` 关联 `lib/titles/rules.js` 的规则；来源为 auto 时不可手动授予也不可手动撤销，带 `key` 的种子头衔不可删除，专属头衔不得与公共头衔同名 |
+| titles | key（种子标识，可空）、name、hue、source（grant/auto）、rule（自动规则 key）、description、`owner_user_id` | 头衔目录，共 7 个种子：四个自动头衔（三元坊老饕/夜读星/闲者爱上网/校园老吃家）与三个手动（师者/创站元老/官方）；角色等级头衔已下线（角色改由权限等级标签体现），旧库中的这类目录行会在启动迁移时清理；`owner_user_id` 为空是公共头衔（按名称全站唯一），非空是该账号的专属头衔（按「账号 + 名称」唯一，不进公共目录）；`rule` 关联 `apps/api/src/domain/titles/rules.js` 的规则；来源为 auto 时不可手动授予也不可手动撤销，带 `key` 的种子头衔不可删除，专属头衔不得与公共头衔同名 |
 | user_titles | user_id、title_id 联合唯一、granted_by（NULL 表示自动发放）、created_at | 用户拥有的头衔，一人可多个；成就头衔只增不减；佩戴状态单独存在 users.equipped_title_id；撤销专属头衔时其 titles 目录行一并删除 |
 | user_login_days | user_id、day 联合主键 | 登录逐日历史（北京时间自然日，登录时写入），供「闲者爱上网」按周末窗口统计；不做回填 |
 | shops | name 唯一、address、location_note、可选 `dianping_url`、type、GCJ-02 lat/lng、本部/最近地铁出口 distance_m 与 walk_min、metro_station/metro_exit、created_by/created_at | 三元坊必吃榜；列表可按本部、地铁及互动统计排序筛选 |
@@ -384,22 +297,428 @@ flowchart LR
 | menu_sync_state | key/value | 发现锚点 |
 | menu_import_audit | source_id、actor_id、job_id、revision、records_json | 人工发布历史，与菜单发布同一事务 |
 
-原有 user_id/post_id 关系由应用维护；新增菜单记录和任务条目声明外键。菜单供应按篇事务替换；评价关联迁移在目录初始化后独立执行。只为 `dish_id IS NULL AND is_weekly=0` 的旧评价按 NFC、首尾及连续空白、大小写归一后的名称补关联，保留原菜名、无法匹配记录及每周记录，不覆盖已有关联；重复启动幂等。原有删帖、认证和申诉限频规则保持。
+迁移 `0001_menu_rebuild.sql` 一次清理菜单、评价、任务、配置，并将现有用户食谱默认页设为 weekly；新注册也显式设 weekly，schema 的 all 仅为历史基线默认值。启动不再自动导入菜单种子。原有用户关联主要由应用维护；新增菜单记录和任务条目声明外键。菜单供应按篇事务替换；评价关联迁移在目录初始化后独立执行。只为 `dish_id IS NULL AND is_weekly=0` 的旧评价按 NFC、首尾及连续空白、大小写归一后的名称补关联，保留原菜名、无法匹配记录及每周记录，不覆盖已有关联；重复启动幂等。认证和申诉限频规则保持。
 
 实际已提交数据库保留旧迁移结构，例如 users.display_id 通过后续 `ALTER TABLE` 添加，没有新建库 SQL 中的 UNIQUE 约束；不能假设旧库与新库的所有约束完全一致。
+
+### Drizzle 完整结构
+
+下表由隔离新库的实际 PRAGMA 生成（27 张业务表）；旧库既有约束差异仍按升级说明处理。所有时间戳单位沿用原接口。
+
+#### `announcements`
+
+| 字段 | SQLite 类型 | 非空 | 默认值 | 主键序位 |
+| --- | --- | --- | --- | --- |
+| id | INTEGER | 否 | — | 1 |
+| title | TEXT | 是 | — | — |
+| content | TEXT | 是 | — | — |
+| publish_date | TEXT | 是 | date('now') | — |
+
+索引：`idx_announcements_date`。
+#### `ban_appeals`
+
+| 字段 | SQLite 类型 | 非空 | 默认值 | 主键序位 |
+| --- | --- | --- | --- | --- |
+| id | INTEGER | 否 | — | 1 |
+| user_id | INTEGER | 是 | — | — |
+| appeal_reason | TEXT | 是 | — | — |
+| appeal_image | TEXT | 是 | '' | — |
+| status | TEXT | 是 | 'pending' | — |
+| created_at | INTEGER | 是 | strftime('%s','now') | — |
+
+索引：`idx_ban_appeals_user`、`idx_ban_appeals_status`。
+#### `collection_items`
+
+| 字段 | SQLite 类型 | 非空 | 默认值 | 主键序位 |
+| --- | --- | --- | --- | --- |
+| id | INTEGER | 否 | — | 1 |
+| collection_id | INTEGER | 是 | — | — |
+| item_type | TEXT | 是 | — | — |
+| item_id | INTEGER | 是 | — | — |
+| created_at | INTEGER | 是 | strftime('%s','now') | — |
+
+索引：`idx_collection_items_item`、`idx_collection_items_collection`、`sqlite_autoindex_collection_items_1`（唯一）。
+#### `collections`
+
+| 字段 | SQLite 类型 | 非空 | 默认值 | 主键序位 |
+| --- | --- | --- | --- | --- |
+| id | INTEGER | 否 | — | 1 |
+| user_id | INTEGER | 是 | — | — |
+| section | TEXT | 是 | — | — |
+| name | TEXT | 是 | — | — |
+| is_public | INTEGER | 是 | 0 | — |
+| created_at | INTEGER | 是 | strftime('%s','now') | — |
+
+索引：`idx_collections_user_section`。
+#### `dishes`
+
+| 字段 | SQLite 类型 | 非空 | 默认值 | 主键序位 |
+| --- | --- | --- | --- | --- |
+| id | INTEGER | 否 | — | 1 |
+| name | TEXT | 是 | — | — |
+| name_key | TEXT | 是 | — | — |
+| initial | TEXT | 是 | — | — |
+| pinyin | TEXT | 是 | — | — |
+| pinyin_initials | TEXT | 是 | — | — |
+| sort_key | TEXT | 是 | — | — |
+| created_at | INTEGER | 是 | — | — |
+
+索引：`sqlite_autoindex_dishes_1`（唯一）。
+#### `invite_codes`
+
+| 字段 | SQLite 类型 | 非空 | 默认值 | 主键序位 |
+| --- | --- | --- | --- | --- |
+| id | INTEGER | 否 | — | 1 |
+| code | TEXT | 是 | — | — |
+| max_uses | INTEGER | 是 | 0 | — |
+| used_count | INTEGER | 是 | 0 | — |
+| created_at | INTEGER | 是 | strftime('%s','now') | — |
+
+索引：`sqlite_autoindex_invite_codes_1`（唯一）。
+#### `menu_import_audit`
+
+| 字段 | SQLite 类型 | 非空 | 默认值 | 主键序位 |
+| --- | --- | --- | --- | --- |
+| id | TEXT | 否 | — | 1 |
+| source_id | TEXT | 是 | — | — |
+| actor_id | INTEGER | 是 | — | — |
+| job_id | TEXT | 否 | — | — |
+| created_at | INTEGER | 是 | — | — |
+| records_count | INTEGER | 是 | — | — |
+| records_json | TEXT | 是 | — | — |
+| revision | INTEGER | 是 | — | — |
+
+索引：`sqlite_autoindex_menu_import_audit_1`（唯一）。
+
+外键：`source_id → menu_sources.id`（删除 NO ACTION）。
+#### `menu_job_items`
+
+| 字段 | SQLite 类型 | 非空 | 默认值 | 主键序位 |
+| --- | --- | --- | --- | --- |
+| job_id | TEXT | 是 | — | 1 |
+| source_id | TEXT | 是 | — | 2 |
+| article_id | INTEGER | 是 | — | — |
+| title | TEXT | 是 | — | — |
+| status | TEXT | 是 | — | — |
+| phase | TEXT | 是 | 'fetch' | — |
+| records_count | INTEGER | 是 | 0 | — |
+| error | TEXT | 是 | '' | — |
+| artifact_path | TEXT | 否 | — | — |
+
+索引：`sqlite_autoindex_menu_job_items_1`（唯一）。
+
+外键：`job_id → menu_sync_jobs.id`（删除 NO ACTION）。
+#### `menu_records`
+
+| 字段 | SQLite 类型 | 非空 | 默认值 | 主键序位 |
+| --- | --- | --- | --- | --- |
+| source_id | TEXT | 是 | — | 1 |
+| record_key | TEXT | 是 | — | 2 |
+| dish_id | INTEGER | 是 | — | — |
+| date | TEXT | 否 | — | — |
+| weekday | TEXT | 否 | — | — |
+| time_json | TEXT | 是 | — | — |
+| place | TEXT | 否 | — | — |
+| group_name | TEXT | 否 | — | — |
+| price | REAL | 否 | — | — |
+| spicy | INTEGER | 否 | — | — |
+
+索引：`idx_menu_records_dish`、`sqlite_autoindex_menu_records_1`（唯一）。
+
+外键：`dish_id → dishes.id`（删除 NO ACTION）、`source_id → menu_sources.id`（删除 NO ACTION）。
+#### `menu_sources`
+
+| 字段 | SQLite 类型 | 非空 | 默认值 | 主键序位 |
+| --- | --- | --- | --- | --- |
+| id | TEXT | 否 | — | 1 |
+| article_id | INTEGER | 否 | — | — |
+| title | TEXT | 是 | — | — |
+| url | TEXT | 是 | — | — |
+| published_date | TEXT | 否 | — | — |
+| content_hash | TEXT | 否 | — | — |
+| updated_at | INTEGER | 否 | — | — |
+| checked_at | INTEGER | 否 | — | — |
+| records_count | INTEGER | 是 | 0 | — |
+| last_error | TEXT | 是 | '' | — |
+| kind | TEXT | 是 | 'school' | — |
+| publication_origin | TEXT | 是 | 'automatic' | — |
+| revision | INTEGER | 是 | 0 | — |
+
+索引：`sqlite_autoindex_menu_sources_2`（唯一）、`sqlite_autoindex_menu_sources_1`（唯一）。
+#### `menu_sync_jobs`
+
+| 字段 | SQLite 类型 | 非空 | 默认值 | 主键序位 |
+| --- | --- | --- | --- | --- |
+| id | TEXT | 否 | — | 1 |
+| trigger | TEXT | 是 | — | — |
+| auto_day | TEXT | 否 | — | — |
+| status | TEXT | 是 | — | — |
+| phase | TEXT | 是 | 'queued' | — |
+| created_at | INTEGER | 是 | — | — |
+| started_at | INTEGER | 否 | — | — |
+| finished_at | INTEGER | 否 | — | — |
+| config_revision | INTEGER | 是 | — | — |
+| provider | TEXT | 是 | — | — |
+| model | TEXT | 是 | — | — |
+| total | INTEGER | 是 | 0 | — |
+| processed | INTEGER | 是 | 0 | — |
+| succeeded | INTEGER | 是 | 0 | — |
+| failed | INTEGER | 是 | 0 | — |
+| cancel_requested | INTEGER | 是 | 0 | — |
+| error | TEXT | 是 | '' | — |
+
+索引：`sqlite_autoindex_menu_sync_jobs_2`（唯一）、`sqlite_autoindex_menu_sync_jobs_1`（唯一）。
+#### `menu_sync_lease`
+
+| 字段 | SQLite 类型 | 非空 | 默认值 | 主键序位 |
+| --- | --- | --- | --- | --- |
+| id | INTEGER | 否 | — | 1 |
+| owner | TEXT | 是 | — | — |
+| expires_at | INTEGER | 是 | — | — |
+
+索引：无独立索引。
+#### `menu_sync_state`
+
+| 字段 | SQLite 类型 | 非空 | 默认值 | 主键序位 |
+| --- | --- | --- | --- | --- |
+| key | TEXT | 否 | — | 1 |
+| value | TEXT | 是 | — | — |
+
+索引：`sqlite_autoindex_menu_sync_state_1`（唯一）。
+#### `messages`
+
+| 字段 | SQLite 类型 | 非空 | 默认值 | 主键序位 |
+| --- | --- | --- | --- | --- |
+| id | INTEGER | 否 | — | 1 |
+| user_id | INTEGER | 是 | — | — |
+| type | TEXT | 是 | — | — |
+| actors | TEXT | 是 | '[]' | — |
+| count | INTEGER | 是 | 1 | — |
+| target_kind | TEXT | 是 | '' | — |
+| target_id | INTEGER | 否 | — | — |
+| title | TEXT | 是 | '' | — |
+| body | TEXT | 是 | '' | — |
+| snippet | TEXT | 是 | '' | — |
+| important | INTEGER | 是 | 0 | — |
+| read_at | INTEGER | 否 | — | — |
+| created_at | INTEGER | 是 | strftime('%s','now') | — |
+
+索引：`idx_messages_created`、`idx_messages_user`。
+#### `recipes`
+
+| 字段 | SQLite 类型 | 非空 | 默认值 | 主键序位 |
+| --- | --- | --- | --- | --- |
+| id | INTEGER | 否 | — | 1 |
+| user_id | INTEGER | 是 | — | — |
+| username | TEXT | 是 | — | — |
+| name | TEXT | 是 | — | — |
+| rating | INTEGER | 是 | 0 | — |
+| comment | TEXT | 否 | — | — |
+| image_url | TEXT | 否 | — | — |
+| is_weekly | INTEGER | 是 | 0 | — |
+| created_at | INTEGER | 是 | strftime('%s','now') | — |
+| dish_id | INTEGER | 否 | — | — |
+
+索引：`idx_recipes_dish`、`idx_recipes_weekly`。
+
+外键：`dish_id → dishes.id`（删除 NO ACTION）。
+#### `settings`
+
+| 字段 | SQLite 类型 | 非空 | 默认值 | 主键序位 |
+| --- | --- | --- | --- | --- |
+| key | TEXT | 否 | — | 1 |
+| value | TEXT | 否 | — | — |
+
+索引：`sqlite_autoindex_settings_1`（唯一）。
+#### `shop_likes`
+
+| 字段 | SQLite 类型 | 非空 | 默认值 | 主键序位 |
+| --- | --- | --- | --- | --- |
+| id | INTEGER | 否 | — | 1 |
+| shop_id | INTEGER | 是 | — | — |
+| user_id | INTEGER | 是 | — | — |
+| created_at | INTEGER | 是 | strftime('%s','now') | — |
+
+索引：`idx_shop_likes_shop`、`sqlite_autoindex_shop_likes_1`（唯一）。
+#### `shop_reviews`
+
+| 字段 | SQLite 类型 | 非空 | 默认值 | 主键序位 |
+| --- | --- | --- | --- | --- |
+| id | INTEGER | 否 | — | 1 |
+| shop_id | INTEGER | 是 | — | — |
+| user_id | INTEGER | 是 | — | — |
+| rating | INTEGER | 是 | — | — |
+| content | TEXT | 是 | '' | — |
+| guests | INTEGER | 否 | — | — |
+| total_price | REAL | 否 | — | — |
+| image_url | TEXT | 是 | '' | — |
+| created_at | INTEGER | 是 | strftime('%s','now') | — |
+| updated_at | INTEGER | 是 | strftime('%s','now') | — |
+
+索引：`idx_shop_reviews_shop`、`sqlite_autoindex_shop_reviews_1`（唯一）。
+#### `shops`
+
+| 字段 | SQLite 类型 | 非空 | 默认值 | 主键序位 |
+| --- | --- | --- | --- | --- |
+| id | INTEGER | 否 | — | 1 |
+| name | TEXT | 是 | — | — |
+| address | TEXT | 是 | — | — |
+| location_note | TEXT | 是 | '' | — |
+| dianping_url | TEXT | 是 | '' | — |
+| type | TEXT | 是 | — | — |
+| lat | REAL | 是 | — | — |
+| lng | REAL | 是 | — | — |
+| north_gate_distance_m | INTEGER | 是 | — | — |
+| north_gate_walk_min | INTEGER | 是 | — | — |
+| east_gate_distance_m | INTEGER | 是 | — | — |
+| east_gate_walk_min | INTEGER | 是 | — | — |
+| campus_distance_m | INTEGER | 是 | 0 | — |
+| campus_walk_min | INTEGER | 是 | 0 | — |
+| metro_station | TEXT | 是 | '' | — |
+| metro_exit | TEXT | 是 | '' | — |
+| metro_distance_m | INTEGER | 是 | — | — |
+| metro_walk_min | INTEGER | 是 | — | — |
+| created_by | INTEGER | 否 | — | — |
+| created_by_name | TEXT | 是 | '' | — |
+| created_at | INTEGER | 是 | strftime('%s','now') | — |
+| updated_at | INTEGER | 是 | strftime('%s','now') | — |
+
+索引：`idx_shops_campus`、`idx_shops_metro`、`idx_shops_east`、`idx_shops_north`、`idx_shops_name`（唯一）。
+#### `student_applications`
+
+| 字段 | SQLite 类型 | 非空 | 默认值 | 主键序位 |
+| --- | --- | --- | --- | --- |
+| id | INTEGER | 否 | — | 1 |
+| user_id | INTEGER | 是 | — | — |
+| student_id | TEXT | 是 | — | — |
+| class_name | TEXT | 是 | — | — |
+| real_name | TEXT | 是 | — | — |
+| extra_info | TEXT | 否 | — | — |
+| reject_reason | TEXT | 否 | — | — |
+| status | TEXT | 是 | 'pending' | — |
+| created_at | INTEGER | 是 | strftime('%s','now') | — |
+
+索引：`idx_student_applications_user`。
+#### `tickets`
+
+| 字段 | SQLite 类型 | 非空 | 默认值 | 主键序位 |
+| --- | --- | --- | --- | --- |
+| id | INTEGER | 否 | — | 1 |
+| user_id | INTEGER | 是 | — | — |
+| username | TEXT | 是 | '' | — |
+| title | TEXT | 是 | — | — |
+| content | TEXT | 是 | — | — |
+| visibility | TEXT | 是 | 'admin' | — |
+| status | TEXT | 是 | 'pending' | — |
+| reply_content | TEXT | 是 | '' | — |
+| reply_image | TEXT | 是 | '' | — |
+| reply_by | TEXT | 是 | '' | — |
+| replied_at | INTEGER | 否 | — | — |
+| created_at | INTEGER | 是 | strftime('%s','now') | — |
+
+索引：`idx_tickets_user`、`idx_tickets_status`。
+#### `titles`
+
+| 字段 | SQLite 类型 | 非空 | 默认值 | 主键序位 |
+| --- | --- | --- | --- | --- |
+| id | INTEGER | 否 | — | 1 |
+| key | TEXT | 是 | '' | — |
+| name | TEXT | 是 | — | — |
+| hue | TEXT | 是 | 'stone' | — |
+| source | TEXT | 是 | 'grant' | — |
+| rule | TEXT | 是 | '' | — |
+| description | TEXT | 是 | '' | — |
+| owner_user_id | INTEGER | 否 | — | — |
+| created_at | INTEGER | 是 | strftime('%s','now') | — |
+
+索引：`idx_titles_owner`、`idx_titles_owner_name`（唯一）、`idx_titles_public_name`（唯一）、`idx_titles_key`（唯一）。
+#### `user_login_days`
+
+| 字段 | SQLite 类型 | 非空 | 默认值 | 主键序位 |
+| --- | --- | --- | --- | --- |
+| user_id | INTEGER | 是 | — | 1 |
+| day | TEXT | 是 | — | 2 |
+
+索引：`sqlite_autoindex_user_login_days_1`（唯一）。
+#### `user_permissions`
+
+| 字段 | SQLite 类型 | 非空 | 默认值 | 主键序位 |
+| --- | --- | --- | --- | --- |
+| id | INTEGER | 否 | — | 1 |
+| user_id | INTEGER | 是 | — | — |
+| permission | TEXT | 是 | — | — |
+| created_at | INTEGER | 是 | strftime('%s','now') | — |
+
+索引：`idx_user_permissions_user`、`sqlite_autoindex_user_permissions_1`（唯一）。
+#### `user_titles`
+
+| 字段 | SQLite 类型 | 非空 | 默认值 | 主键序位 |
+| --- | --- | --- | --- | --- |
+| id | INTEGER | 否 | — | 1 |
+| user_id | INTEGER | 是 | — | — |
+| title_id | INTEGER | 是 | — | — |
+| granted_by | INTEGER | 否 | — | — |
+| created_at | INTEGER | 是 | strftime('%s','now') | — |
+
+索引：`idx_user_titles_title`、`idx_user_titles_user`、`sqlite_autoindex_user_titles_1`（唯一）。
+#### `users`
+
+| 字段 | SQLite 类型 | 非空 | 默认值 | 主键序位 |
+| --- | --- | --- | --- | --- |
+| id | INTEGER | 否 | — | 1 |
+| display_id | TEXT | 否 | — | — |
+| email | TEXT | 否 | — | — |
+| password_hash | TEXT | 否 | — | — |
+| username | TEXT | 否 | — | — |
+| nickname | TEXT | 否 | — | — |
+| avatar_url | TEXT | 是 | '' | — |
+| signature | TEXT | 否 | — | — |
+| role | TEXT | 是 | 'user' | — |
+| default_page | TEXT | 是 | 'index.html' | — |
+| default_floor | INTEGER | 是 | 1 | — |
+| recipe_default_view | TEXT | 是 | 'all' | — |
+| shop_default_sort | TEXT | 是 | 'campus' | — |
+| shop_default_type | TEXT | 是 | '' | — |
+| shop_layout | TEXT | 是 | 'stacked' | — |
+| shop_layout_mode | TEXT | 是 | 'manual' | — |
+| default_collection_shops | INTEGER | 否 | — | — |
+| collection_default_public | INTEGER | 是 | 0 | — |
+| status | TEXT | 是 | 'active' | — |
+| ban_reason | TEXT | 是 | '' | — |
+| ban_image | TEXT | 是 | '' | — |
+| allow_appeal | INTEGER | 是 | 1 | — |
+| created_at | INTEGER | 是 | strftime('%s','now') | — |
+| last_login_date | TEXT | 是 | '' | — |
+| login_streak | INTEGER | 是 | 0 | — |
+| show_role | INTEGER | 是 | 1 | — |
+| equipped_title_id | INTEGER | 否 | — | — |
+
+索引：`sqlite_autoindex_users_3`（唯一）、`sqlite_autoindex_users_2`（唯一）、`sqlite_autoindex_users_1`（唯一）。
+#### `weekly_menu_images`
+
+| 字段 | SQLite 类型 | 非空 | 默认值 | 主键序位 |
+| --- | --- | --- | --- | --- |
+| id | INTEGER | 否 | — | 1 |
+| user_id | INTEGER | 否 | — | — |
+| menu_start_date | TEXT | 是 | — | — |
+| menu_end_date | TEXT | 是 | — | — |
+| filename | TEXT | 是 | — | — |
+| uploaded_at | INTEGER | 是 | strftime('%s','now') | — |
+
+索引：`idx_weekly_menu_dates`。
 
 ### 7.2 校园地图与旧数据归档
 
 2026-10-17 起，页面只展示北向上 SVG 校园地图。旧楼层平面、顶部视图切换器及设置页默认楼层字段已移除，旧前端渲染脚本已删除。
 
-- 导览 `public/js/campus-places.js` 含 31 个地点，字段为 `id`（唯一选择键）、`name`、可选 `alias`、`category`、`icon`（SVG symbol）、`x/y`、`size`、可选 `height`、可选 `labelX/labelY/labelSize`（标签偏移/基础字号）、`area`、`summary`（用途摘要）、`description`（以空行分段）、可选 `sources`（引用键数组）。同文件 `CampusSources` 登记 10 个来源的 `label/url`；引用范围与校内补充记录于 [docs/map-sources.md](./docs/map-sources.md)。静态示意范围 1000 × 1540；`[x,y]` 转为 Leaflet `[-y,x]`，上方为北。未指定高度时使用宽度的 0.75 倍；篮球场为 132 × 292，北部两列三排加南侧一片；操场为 310 × 568，含跑道和足球场细节。
-- `public/img/map/campus.svg` 提供边界、道路、植被、文庙区域和建筑图形；`map.js` 插入可点击、可键盘操作的 SVG 地点组。相同 symbol 复用于目录缩略图和地点详情。坐标与轮廓按用户2026-10-17提供的新版位置参考图校准；三元楼、科学楼、文庙、南部生活区采用地块结构插画，春雨池、碧霞池按不同岸线绘制，补充林地、交叉园路、竹林与未命名粉色地块；新增政道楼（原墨子馆）、府学碑廊、泮池与泮桥，周边梦工厂仅作参考轮廓。建筑与内部细节均为示意；不承诺实景还原或路线导航。
+- 导览 `apps/web/src/maps/places.ts` 含 31 个地点，字段为 `id`（唯一选择键）、`name`、可选 `alias`、`category`、`icon`（SVG symbol）、`x/y`、`size`、可选 `height`、可选 `labelX/labelY/labelSize`（标签偏移/基础字号）、`area`、`summary`（用途摘要）、`description`（以空行分段）、可选 `sources`（引用键数组）。同文件 `CampusSources` 登记 10 个来源的 `label/url`；引用范围与校内补充记录于 [docs/map-sources.md](./docs/map-sources.md)。静态示意范围 1000 × 1540；`[x,y]` 转为 Leaflet `[-y,x]`，上方为北。未指定高度时使用宽度的 0.75 倍；篮球场为 132 × 292，北部两列三排加南侧一片；操场为 310 × 568，含跑道和足球场细节。
+- `apps/web/public/img/map/campus.svg` 提供边界、道路、植被、文庙区域和建筑图形；`apps/web/src/maps/campus.js` 插入可点击、可键盘操作的 SVG 地点组。相同 symbol 复用于目录缩略图和地点详情。坐标与轮廓按用户2026-10-17提供的新版位置参考图校准；三元楼、科学楼、文庙、南部生活区采用地块结构插画，春雨池、碧霞池按不同岸线绘制，补充林地、交叉园路、竹林与未命名粉色地块；新增政道楼（原墨子馆）、府学碑廊、泮池与泮桥，周边梦工厂仅作参考轮廓。建筑与内部细节均为示意；不承诺实景还原或路线导航。
 - 搜索覆盖名称、别名、用途摘要、区域和分类，支持「校史馆」→「尊经阁」、「面档」→「希文楼」、「宿舍」→「采芹园」；与分类取交集。目录副标题显示用途，希文楼归入生活类。结果数量实时更新，不匹配地点淡化并退出焦点顺序，空结果可重置。
 - 地点介绍提供已确认用途与文化背景，新地点不编造未核实用途，采用维护者确认的校内信息和已阅读的公开原文。详情删除位置行，按段落渲染正文及来源链接，长文在卡内滚动；标题及关闭按钮保留，正文可键盘聚焦。政道楼按维护者确认改名，保留“墨子馆”搜索别名；介绍记录“文正之道”、对李政道先生的致敬及北京大学中学物理实验教学中心用途。引用网页仅在点击时打开，页面不联网抓取文章。
 - 选中不重排建筑、不自动放大。`map.js` 将全部光晕统一置于建筑组下方，避免东红楼等地点的选中背景遮挡相邻建筑。点选或键盘聚焦时保留当前缩放，按地图留白、详情及控制条的实际矩形求最短避让平移；地标已可见则不动，不强制居中。460ms 缓出平移可由新选点或手势中断，减少动态效果模式立即完成。关闭/Escape 恢复焦点。手机目录可折叠；全景模式下尺寸变化重新适配。拖动、按钮、方向键/WASD、加减键与 Home 提供操作入口。
 - 普通滚轮或触控板双指滚动双轴平移；Shift + 纵向滚轮横向移动。捏合或 Ctrl / ⌘ + 滚轮连续缩放并保持指针锚定；Safari 原生手势期间抑制重复滚轮事件。禁用 Leaflet 原生滚轮缩放，归一化增量并通过动画帧合并更新。手机保留双指缩放。
 - 移除固定平移边界，解决宽屏中拖动回弹和缩放锚点漂移；用户可通过全景按钮复位。设置页与地图均不消费旧楼层偏好。
-- 页面专用 `public/css/map.css` 管理简约面板、响应式、明暗地图与 reduced-motion；新增屋面、墙体、草坪、绿篱、水面、园路、运动标线及球场的明暗令牌；标签支持偏移与相对字号，点击热区限制在地块及文字，避免透明区域覆盖邻近地标。篮球场名称放回自身地块底部，与操场轮廓及热区分离，避免遮挡和误点。共享 `site.css` 和站点壳无改动。导览无需在线底图服务，也不依赖地图 API；SVG 请求失败可重试。
+- 页面专用 `apps/web/public/css/map.css` 管理简约面板、响应式、明暗地图与 reduced-motion；新增屋面、墙体、草坪、绿篱、水面、园路、运动标线及球场的明暗令牌；标签支持偏移与相对字号，点击热区限制在地块及文字，避免透明区域覆盖邻近地标。篮球场名称放回自身地块底部，与操场轮廓及热区分离，避免遮挡和误点。共享 `site.css` 和站点壳无改动。导览无需在线底图服务，也不依赖地图 API；SVG 请求失败可重试。
 
 `data.json` 仅作为旧楼层数据归档，旧读取/弹窗接口与数据库 `default_floor` 字段保留兼容，当前地图页面不调用或使用。此文件是自定义格式，顶层包含 `meta`、`style`、`features`，并非标准 GeoJSON；本次未修改其几何或后端结构。
 
@@ -421,7 +740,7 @@ flowchart LR
 `../szzx-mapeditor/map-editor.html` 是独立离线旧楼层编辑器。本站楼层页面已移除，其输出不再作用于当前校园地图。使用说明与完整字段表见 [编辑器 README](../szzx-mapeditor/README.md) 和 [编辑器 MAP.md](../szzx-mapeditor/MAP.md)。2026-10-09 编辑器内置数据与本项目归档 `data.json` 的 227 个要素一致，配色和 `minZoom=-2` 同步，几何不变。
 
 - 编辑器通过下载导出 JSON；不会调用网站接口或写入数据库。替换本项目归档文件只影响旧兼容接口的返回值。
-- 当前校园地图的位置、尺寸和介绍在 `campus-places.js` 维护，底图与插画在 `campus.svg` 维护；不读取编辑器的几何、楼层、字体或层级扩展字段。
+- 当前校园地图的位置、尺寸和介绍在 `apps/web/src/maps/places.ts` 维护，底图与插画在 `campus.svg` 维护；不读取编辑器的几何、楼层、字体或层级扩展字段。
 - 旧兼容接口按名称批量编辑弹窗；编辑器修改单个对象不会自动同步同名对象。
 - 编辑器回归只打开离线文件，不运行本网站，也不修改本项目的数据库、依赖或地图数据。2026-10-09 的配套编辑器协作仅更新文档；2026-10-17 的网站导览改版不修改编辑器或 `data.json`。
 
@@ -429,38 +748,36 @@ flowchart LR
 
 | 场景 | 存储位置 | 后端限制 |
 | --- | --- | --- |
-| 头像、菜谱评价图片 | uploads/ | multer；JPEG/PNG，最多 2 MiB |
-| 封禁图片 | uploads/bans/ | multer；JPEG/PNG，最多 2 MiB |
-| 每周食谱图片 | uploads/weekly/ | multer；JPEG/PNG，最多 5 MiB |
+| 头像、菜谱评价图片 | uploads/ | Hono FormData；JPEG/PNG，最多 2 MiB |
+| 封禁图片 | uploads/bans/ | Hono FormData；JPEG/PNG，最多 2 MiB |
+| 官网食谱原图、缓存与诊断 | .private/menu-sources、menu-cache、menu-jobs | 私有存档，正文内联 PNG 解码与铺白；后台鉴权读取 |
 | 申诉图片、工单批复图片 | 数据库文本字段 | 由页面读成 DataURL 后通过 JSON 提交，不使用上述 multipart 存储器 |
 
 ## 8. 运行、依赖与验证入口
 
-[package.json](./package.json) 的直接依赖及当前 lockfile 版本为：express 5.2.1、cors 2.8.6、bcrypt 6.0.0、jsonwebtoken 9.0.3、multer 2.4.0、dotenv 18.0.3。项目未声明 `engines`；README 推荐 Node.js 24+，后端要求运行时提供 `node:sqlite`。
+Node ≥22.13，推荐 24 LTS，npm workspaces。运行依赖分布在 API/Web/db/shared 的 package.json，根 package.json 管理构建、TypeScript、ESLint、Prettier、Drizzle Kit 与 Playwright；精确版本锁定在 package-lock.json。
 
-在根目录安装和启动：
-
-```powershell
-npm.cmd ci
-npm.cmd start
+```bash
+npm ci
+npm run build
+npm start
+# 开发：npm run dev（Web 5173，API 3000）
+# 生产构建后可 npm prune --omit=dev
 ```
 
-复制 `.env.example` 为本机 `.env` 并修改密钥：
+`PORT`、`JWT_SECRET`、`JWT_EXPIRES_IN` 等沿用 `.env.example`，密钥需显式配置。`APP_ROOT` 默认为工作目录，定位数据、迁移、前端构建与私有存储，测试使用完整临时应用根目录。没有构建产物时不能只安装生产依赖启动。
 
-```dotenv
-PORT=3000
-JWT_SECRET=replace_with_a_long_random_secret
-JWT_EXPIRES_IN=7d
-```
+| 验证命令 | 范围 |
+| --- | --- |
+| `npm run typecheck` / `lint` / `format:check` | TS 严格类型、React Hook 与通用代码规则、格式 |
+| `npm run test:architecture` | 无 journal 的旧库升级、重启幂等、原 ID/记录、当前权限与 JSON 404 |
+| `npm run test:backend` | 菜单、菜品、头衔、店铺、配图、收藏、论坛历史清理 |
+| `npm run test:dishes:ui` / `test:collections:ui` / `test:shops:ui` / `test:user` / `test:map` | 各业务浏览器回归，手机/桌面、明暗、键盘 |
+| `npm run test:ui` | 全站布局与 axe、首页转场、账号及后台场景 |
+| `npm run test:deploy` | 临时源码安装、构建、去开发依赖、生产启动及文件保护 |
+| `npm run test:menu-skill` | 离线菜单规则与技能包 |
 
-代码默认端口为 3000，JWT 有效期为 7d；JWT_SECRET 有开发用回退值，部署时应显式配置。访问 `/`、`/map.html` 可检查页面；校园地图使用同源 SVG 与地点目录，`/api/map-data` 只用于旧数据兼容。
-
-- 修改 server.js 需要重启服务；修改 public/ 静态文件刷新页面；修改 data.json 后下次 API 读取即生效。
-- data.db、data.json 的在线编辑结果、uploads/ 都是本地持久数据；部署需要可写、持久化的存储和 Node 服务。
-- 开发依赖为 Playwright 与 axe-core。运行 `npm.cmd test` 可执行浏览器回归；Windows 使用 Microsoft Edge，其他平台先运行 `npx playwright install chromium`。
-- 回归测试在系统临时目录启动独立后端并创建测试数据库与上传文件；项目内的 `data.db`、`uploads/` 和 `data.json` 不被测试改写。
-- 菜品专项命令为 `npm.cmd run test:dishes` 和 `npm.cmd run test:dishes:ui`，已加入 `npm.cmd test`；隔离夹具动态分配端口，等待目录就绪最多 60 秒，清理前核对临时目录真实路径与前缀。结果与截图位于 `output/playwright/dishes/`。
-- 当前验证见本文末尾「2026-10-24 · 菜品详情与已有菜品选评」，不得用历史全绿记录替代本轮结果。真实模型的失败与限制见 [菜单验证记录](./docs/menu-validation.md)，测试产物位于忽略的 output/。
+先构建再执行测试；浏览器首次安装用 `npx playwright install chromium`，Windows 使用现有 Edge。测试数据和上传目录隔离，截图在 output/playwright；不写业务 data.db。最新实际执行范围见文末重构记录；按变更补测，不重复已通过的无关组。开发启动/重建/退出也在临时 APP_ROOT 验证。
 
 ## 9. 文档与实现约定
 
@@ -470,31 +787,23 @@ JWT_EXPIRES_IN=7d
 | --- | --- |
 | README、MAP、progress | 当前使用方式、结构、业务能力与开发记录；历史变更按当时实现保留 |
 | UI.md、docs/ui/ | #4 设计手册、组件、逐页规范、场景、文案、样张与验收记录；P1 页面为后续 issue 的预设计 |
-| docs/ui/assets 与 public | 前者是设计参考，后者是实际运行代码；运行代码包含资源路径、未保存表单保护和地图布局适配 |
+| docs/ui/assets 与 apps/web | 前者是设计参考，后者为 React 实现与静态素材；文档旧 HTML 示例仅表达 DOM/CSS 规范 |
 | PLAN_2026-10-01.md | 保留需求读取时的原始正文和状态；执行进度见 progress 与验收记录，实时关闭状态以 GitHub 为准 |
 | package.json、package-lock.json、LICENSE | 根包许可为 AGPL-3.0；本地 Leaflet 另附上游许可证 |
 | #5 菜品与评价 | 独立目录、网站内同步、菜品详情与评价关联已实现；原评价栏保留，店铺关联后续实施 |
 
-## 10. 国庆计划的代码定位
+## 10. 历史需求与当前模块
 
-| Issue | 当前相关位置 | 实施状态或后续能力 |
-| --- | --- | --- |
-| [#4 修改UI](https://github.com/szzxvc/szzx-info/issues/4) | public HTML、css/site.css、js/、本地 Leaflet、UI.md 与 docs/ui/ | 已完成全站改版及浏览器验收，保留现有业务接口 |
-| [#5 全部菜品](https://github.com/szzxvc/szzx-info/issues/5) | recipe.html、dish.html、lib/menu、lib/dishes、data 种子、离线工具、开发者后台 | 独立目录、详情与分页评论、已有菜品选评、统一拼音搜索、网站内识别及运维 |
-| [#6 三元坊必吃榜](https://github.com/szzxvc/szzx-info/issues/6) | `shops.html`、`shop.html`、`shop-new.html`、`lib/shops/`、`data/shops-config.json`、高德 AMap JS API | 已实现：公开列表/分类筛选/搜索、拼音 A–Z、互动统计/排序/筛选、单一学校本部步行距离与地铁出口路线、自定义类型、认证学生互动和后端权限复验。围栏为高德姑苏区 adcode 320508 的完整 323 点 GCJ-02 边界；全区检索 5,942 条 POI，校验后导入 5,567 家，62 条同名记录跳过；未导入候选与高德检索范围限制见 README。静态地图使用服务器代理，Web 服务 Key 不下发浏览器。 |
-| [#7 三元坊必吃榜 UI适配](https://github.com/szzxvc/szzx-info/issues/7) | profile.html、用户默认设置的保存模式 | 店铺详情页的两种布局、粘性导航与持久布局设置 |
-| [#8 三元坊必吃榜菜谱上传](https://github.com/szzxvc/szzx-info/issues/8) | student 角色、multer 存储器、现有评价模型 | 菜品与店铺关联、学生上传权限、图片、去重及异常数据处理 |
-| [#9 消息箱](https://github.com/szzxvc/szzx-info/issues/9) | inbox.html、messages 系统消息、settings.html 通知说明、admin.html 发送系统通知、ui.js 消息铃 | 已实现：系统通知与头衔授予消息、已读与未读计数、按天分组、系统类型过滤、super_admin 发送系统通知 |
-| [#10 头衔系统](https://github.com/szzxvc/szzx-info/issues/10) | 用户资料、后台用户管理、各用户内容渲染处 | 头衔目录/拥有关系/佩戴状态、授予撤销、自动规则、统一用户展示 |
-| [#11 优化地图UI](https://github.com/szzxvc/szzx-info/issues/11) | `map.html`、`public/js/pages/map.js`、`public/css/map.css`、`public/img/map/campus.svg`、`public/js/campus-places.js`、`tests/map-ui.mjs` | 已实现：重做为北向上完整 SVG 校园导览，补齐 31 个地点及手绘示意插画；支持名称/别名搜索、分类过滤、详情卡片、目录折叠、明暗主题与全景复位；移除旧楼层视图与设置项；优化 Mac 触控板平移与捏合/连续缩放；按新版图校准位置并补绘林地、竹林、池岸和院落，新增政道楼（原墨子馆）、碑廊与泮池泮桥；点选保留建筑层级与缩放，必要时最小平移；31 地点补齐用途和文化介绍、引用与长文阅读 |
-| [#19 个人中心拆分](https://github.com/szzxvc/szzx-info/issues/19) | profile.html、settings.html、public/js/pages/profile.js、public/js/pages/settings.js、ui.js 账户菜单 | 已实现：账户菜单新增「设置」（个人中心与管理后台之间），新建 settings.html（同构左侧菜单），将账号安全、网站设置、工单、消息通知、退出登录从个人中心迁出；profile.html 仅保留个人资料与我的头衔 |
-| [#20 个人中心重做](https://github.com/szzxvc/szzx-info/issues/20) | profile.html、public/js/pages/profile.js、public/css/site.css（.profile-hero / .profile-tabs） | 已实现：简洁资料头部（头像 + 用户名/权限等级/昵称 + 个性签名，昵称与签名点击可编辑、失焦确认保存）+ 吸顶横向菜单栏（主页 / 收藏 / 头衔 / 设置）；主页、收藏为空页面，头衔沿用原面板，设置直接跳转 settings.html |
-| [#21 头像进入主页](https://github.com/szzxvc/szzx-info/issues/21) | public/js/ui.js（UI.userHref/UI.avatarLink）、reviews 头像、user.html、public/js/pages/user.js、server.js 公开用户接口 | 已实现：评价等处头像可点击，本人 → profile.html、他人 → user.html?id=；他人主页与个人中心同版式但只读、权限等级按 show_role 显示、无设置、头衔只读；有足够权限且目标权重更低时追加「管理」（改角色 / 权限 / 发头衔 / 封号） |
-| [#22 必吃榜布局自动切换](https://github.com/szzxvc/szzx-info/issues/22) | settings.html、public/js/pages/settings.js、public/js/pages/shop-detail.js、public/css/site.css、server.js（users.shop_layout_mode） | 已实现：设置项「店铺详情页样式」改为手动/自动（带悬停说明）；手动时详情页保留纵向/双栏开关并把选择写入账号，下次进入保持；自动时隐藏开关，用纯 CSS 媒体查询按宽度切换（≥900px 双栏，否则纵向），窗口缩放不重渲染、不丢输入 |
-| [#23 收藏功能](https://github.com/szzxvc/szzx-info/issues/23) | server.js（users 默认收藏夹字段）、lib/collections/store.js、lib/collections/routes.js、public/js/ui.js（UI.collections / shopCard / pager）、public/js/collections-view.js、shops/shop/profile/user/settings 页面脚本、tests/collections.test.cjs、tests/collections-ui.mjs | 已实现后端与数据库：collections / collection_items 表与启动迁移；收藏夹列表（无则自动建「默认收藏夹」）、新建、收藏/取消、分页详情、公开状态、默认收藏夹设置；公开收藏夹列表与条目支持匿名只读。已实现前端：店铺列表和详情页收藏按钮与统一弹窗；个人中心收藏页（左右分栏、双层菜单、公开开关、卡片网格、分页、手机 UA 下拉）；他人主页公开收藏只读标签；设置页必吃榜默认收藏夹 |
+| 能力 | 当前定位 |
+| --- | --- |
+| 全站 UI 与地图 | apps/web/src/pages、components、maps 与 public |
+| 菜单、目录和评价 | apps/api/src/domain/menu、dishes；RecipePage、DishPage、DishReview |
+| 必吃榜、配图和收藏 | domain/shops、collections；ShopPage、ShopsPage、Collections |
+| 消息、工单和账号 | apps/api/src/routes；InboxPage、SettingsPage、Tickets |
+| 头衔与公开用户主页 | domain/titles；ProfilePage、TitleManagement、AccountManagement |
+| 构建、部署与数据升级 | tools、packages/db、docs/architecture.md |
 
-菜品目录、消息箱与必吃榜开关已开启。#6 姑苏区全域边界取自高德行政区 adcode 320508（GCJ-02、323 点），范围文案/地图/服务端地理围栏共用该多边形。全区分块检索得到 5,942 条高德餐饮 POI，地址及步行路线补全后 5,629 条通过初筛；正式导入 5,567 条，62 条同名项跳过。其余候选因地址格式、明确停业标记、名称长度或缺少最近地铁步行路线未导入（原因可能重叠）；数据代表高德可检索 POI，不保证涵盖所有实际店铺。数据库店铺均通过区界校验。页面具备可拖动/缩放的同源高德底图与近邻聚合点（显示店数、点击居中放大）、拼音 A–Z、店名/道路/商场搜索及本部距离/时间和互动指标筛选；地图代理不向浏览器泄漏 Web 服务 Key。#7 店铺详情双布局、#9 消息箱与 #10 头衔系统已实现；#8 店铺菜品关联仍待实施。回归入口：`npm test` 包含 `npm run test:menu`（18 项）、`npm run test:titles`（13 项）、`npm run test:shops`（14 项）、`npm run test:collections`（9 项）、`npm run test:collections:ui`（75 项）、`npm run test:shops:ui`（86 项）、`npm run test:user`（28 项）、`npm run test:ui`（370 项）、`npm run test:map`（134 项）。
-菜品目录、消息箱与必吃榜开关已开启。#6 姑苏区全域边界取自高德行政区 adcode 320508（GCJ-02、323 点），范围文案/地图/服务端地理围栏共用该多边形。全区分块检索得到 5,942 条高德餐饮 POI，地址及步行路线补全后 5,629 条通过初筛；正式导入 5,567 条，62 条同名项跳过。其余候选因地址格式、明确停业标记、名称长度或缺少最近地铁步行路线未导入（原因可能重叠）；数据代表高德可检索 POI，不保证涵盖所有实际店铺。数据库店铺均通过区界校验。页面具备可拖动/缩放的同源高德底图与近邻聚合点（显示店数、点击居中放大）、拼音 A–Z、店名/道路/商场搜索及本部距离/时间和互动指标筛选；地图代理不向浏览器泄漏 Web 服务 Key。#7 店铺详情双布局、#9 消息箱与 #10 头衔系统已实现；#8 店铺菜品关联仍待实施。回归入口：`npm test` 包含 `npm run test:menu`（18 项）、`npm run test:titles`（13 项）、`npm run test:shops`（14 项）、`npm run test:shops:ui`（64 项）、`npm run test:user`（28 项）、`npm run test:ui`（370 项）、`npm run test:map`（217 项）。
+原国庆计划与 issues 是历史需求快照；本节映射当前实现路径，不改变其中未实施的后续需求。实际验证以最新记录为准。
 
 ## 2026-10-17 校园导览验证记录
 
@@ -711,3 +1020,96 @@ axe 无障碍违规：0；控制台页面报错：0；水平溢出：0。
 - 默认公开专项改用手机/桌面店铺列表与详情场景，保留明暗主题、键盘、双向覆盖、加载失败、回滚和重试覆盖；收藏后端只验证店铺版块，新旧库迁移额外确认默认公开偏好在论坛清理和重复启动后保留。完整接口与表结构已同步至本文当前索引。
 - 最终 `npm test` 全量通过：菜单 18、菜品后端 11、菜品浏览器 288、头衔 13、店铺及配图后端 14、收藏后端及旧库迁移 15、收藏浏览器 73、默认公开浏览器 88、店铺浏览器 86、用户主页 23、全站浏览器 552、地图 217 项。收藏迁移补充断言后单独复验 15 项通过；18 个 JavaScript 文件语法检查及差异检查通过，无未解决冲突。此前 Windows 的首页对比度失败保留为历史记录，本轮 macOS 全站检查通过。
 - 所有测试使用隔离数据库与上传目录；现有 `data.db` 本地修改保留、不纳入提交。完整测试日志为 `/tmp/sytime-merge-full.log`，地图与迁移复验分别为 `/tmp/sytime-merge-map.log`、`/tmp/sytime-merge-collections-final.log`；截图及结构化报告在忽略提交的 `output/playwright/`。
+
+## 2026-10-25 · React / Hono / Drizzle 全栈重构
+
+### 当前交付
+
+- npm workspaces 分为 apps/web、apps/api、packages/db 和 packages/shared。全部功能页面使用 React 19，TanStack Router 维护 URL / hash / query，TanStack Query 维护请求与 mutation；旧根 public / lib 入口已移除。
+- 后端为原生 Hono 路由；复杂业务按领域拆分，Drizzle 负责 SQLite 读写与版本迁移。保留 27 张业务表、稳定 ID、现有账号内容和文件目录；旧库可无 journal 接入，重复启动不改写已有关联记录。
+- 共享导航、表单、字数统计、密码显隐、离线提示、过期登录、对话框、焦点恢复、上传、图片查看、评价选择、收藏、后台、头衔及地图均由组件和 Hook 管理。原有 CSS、字体、SVG、图片及地图规则保留；已核对手机后台、桌面首页和既有明暗截图。
+- 每次鉴权读取当前角色与封禁状态，旧 JWT 无法保留已撤销权限。登录过期会清除本地会话并保留 next；未新增改密后撤销全部凭据的规则。
+- 开发模式同时运行 Vite / API，API 和 worker 共同重建并优雅重启；生产从源码构建后可移除开发依赖。部署、备份、数据升级和回退见 docs/architecture.md。
+
+### 实际验证
+
+| 范围 | 结果 |
+| --- | --- |
+| 构建与规范 | build、typecheck、lint、format:check 通过；Drizzle schema 生成核对无额外差异；git diff --check 通过 |
+| 后端 | 71/71，通过菜单、菜品、头衔、店铺/配图、收藏与历史清理 |
+| 架构 | 2/2，无 journal 接入、重复启动、账号/收藏/头衔/评价 ID 保留、数据库完整性、即时降权/封禁、API JSON 404 |
+| React / Router 兼容 | 16/16，表单计数/重置、脏表单取消离开、成功清理、返回恢复菜谱/店铺筛选、清筛选、消息 URL、公告 hash 历史、离线恢复、过期登录与目标回跳 |
+| 菜品浏览器 | 288/288，详情和两处共用选菜、50 条追加、输入法、键盘、焦点、手机/桌面明暗 |
+| 收藏浏览器 | 73/73；默认公开专项 88/88，失败回滚、读取偏好、隐私和公开只读 |
+| 店铺 / 用户 / 地图浏览器 | 店铺 86/86（Router 调整后补测通过）；用户 23/23；地图 217/217 |
+| 全站布局与流程 | 最新完整 UI 执行 551 项，四组 360/1280px 明暗页面扫描完成，仅工单列表标题层级报告问题；修为 h2 后补跑相关后台/资料等范围 216/216，axe/布局/脚本错误 0。首页与转场范围此前 29/29 通过。没有将分组覆盖描述成整条 npm test 一次全绿 |
+| 开发链路 | 临时 APP_ROOT 启动 API / Vite、API/worker 源变更重建、优雅重启与退出关闭通过 |
+| 生产部署 | 临时源码副本 npm ci → build → prune --omit=dev → start 通过；目录 1,243 / 供应 5,874、页面深链接、私有文件保护、管理员鉴权均通过 |
+| 菜单技能 | 示例、16 个拒绝用例、CLI、技能包和 CRLF 可重现构建通过；未调用真实付费模型 |
+
+测试分组使用临时数据库、端口和上传目录；原工作区 data.db 的既有改动未被测试写入。原研究文档和进度记录保留。未创建分支、提交或部署到外部环境。源码保留领域 JavaScript 以沿用成熟业务算法；严格 TypeScript 检查覆盖 TS/TSX，新库基线不会强行重建旧库既有约束差异。
+
+## 2026-10-25 · 意图预加载、导航层级与加载稳定性
+
+- 新增 `docs/navigation.md` 作为行为合同；`SiteLink.tsx` 替代全局 document 点击监听，`MapLinks.tsx` 将地图生成链接交给 React portal 保留意图预加载。外部/下载/锚点仍原生。
+- `navigation.ts` 统一顶栏序列、菜品/店铺归属、详情父子关系、历史方向与来源返回；`useDisplayedLocation` 隔离待加载目标 URL，避免旧页筛选/标签在提交前重置。
+- 页面采用可预加载组件；菜谱当前分类、必吃榜筛选/账号默认排序、菜品/店铺详情与公告共享 Query 缓存。准备期间保留旧页、位置和页脚，200ms 后顶部显示 3px 状态条。420ms 横滑与滚动恢复分开，减少动态效果不滑动。
+- 普通正文预留可用视口高度，地图在新快照前同步独立壳与页脚状态；手机公告正文按父子方向，桌面仍主从。同页搜索/标签不整页横滑。现有后端接口、数据表及持久数据契约未变化。
+- 新增 `npm run test:navigation` 并加入全量测试入口；回归选择器同步 Router Link 产生的根路径地址。
+- 验证：导航专项128项（360/1280px明暗、聚焦/Enter/悬停、慢网单次快照、状态/位置恢复、栏目/内部入口区别、地图店铺链接、连续选择、失败重试、手机公告、冷启动占位与减少动态效果）和路由兼容16项通过；构建、typecheck、lint、format:check与diff检查通过。后端71项与架构2项、菜品UI288、店铺UI86、用户主页23、地图217、收藏公开UI88通过；全站UI551项在最终冷启动修正后复验通过。已人工核对360px浅色与1280px暗色截图。
+- 全量限制：`npm test`在既有收藏UI「未设置时默认选中默认收藏夹」断言停止，现有设置显示“自动选择”，测试要求默认收藏夹编号；该默认选择逻辑本轮未改。其后分组已单独补跑，不记全量通过。测试数据隔离，原业务库和此前工作区改动保留；未建分支或提交。
+
+## 2026-10-25 · 官网周菜单与 Gemini 自动发布
+
+- 同仓库维护：`apps/api/src/domain/menu/gemini.js` 使用官方 `@google/genai`；`extract.js` 做分块、紧凑 Schema、原图复核及结果收敛；`public.js` 聚合公开周菜单与评分，`RecipePage`/`DishPage` 展示供应和评价。`tools/menu-setup.cjs`（`npm run menu:setup`）测试能力、加密配置并首次导入。
+- 数据流：栏目最新文章 → `#newstext` 内联图片解码/铺白 → 五表及日期/餐次分块 → 高分辨率 Gemini 识别与完整数据复核 → 八字段校验 → 单篇事务替换供应 → 页面每 60 秒刷新。失败保留旧发布结果；未变摘要跳过模型；稳定菜名沿用评价。
+- 默认 `gemini-flash-lite-latest`；上海时间周六/日 08–22 点每小时检查，周一 08/12 点补查；持久化时段键、任务、租约和发现锚点，停机补最近时段。能力测试通过才可开启，当前本地已配置启用。需要常驻 Node 服务及网络；免费额度不足时留待后续时段重试。
+- 官网 11427（10 月 26–31 日）成功发布 **966 条供应、252 个菜品**。正式 worker 复用研究阶段 37 个有效缓存，新增模型请求 0；重新抓取为 unchanged，模型请求 0、缓存命中 0，仍为 966 条。真实识别成功轮 33 次调用，地点规则修正后新增 7 次，不能把缓存命中记为新增模型测试。失败方案、抽样和限制见 `docs/menu-validation.md`。
+- 根库迁移前在线备份位于忽略目录 `.private/menu-research/backups/`。5 用户（除有意重置的菜单默认页）、5567 店铺、2 收藏夹、7 头衔逐行保持。未创建分支或提交。验证结果见最新 UI 验收追加记录。
+
+## 2026-10-25 · 双栏视口布局与历史菜单适配
+
+- 新组件 MenuDaily.tsx：默认标题严格“今天我吃了…”/“明天吃什么？”，400 字重，不在标题下写日期，不显示原食谱链接。顶部日期原生日历、星期七天弹层、校区切换；两栏午餐默认且独立选择，跨周分别读来源。稳定菜品 ID 合并同菜，去重地点用“和”连接，风味/现煮不显示标签，其他简短分类保留。
+- 默认正文解除 1280px 居中上限，以视口宽度布局，两侧 3.2vw（24–72px）留白，上边距 16px；2048px 下标题位于左右两栏各自中心，不再向页面中间收缩。手机上下堆叠。三个 34×32px 同高按钮使用同笔画 20px SVG；第二种保留周视图，第三种支持全部已发布周、日期/地点/餐次/分类/辣椒/评分/价格/搜索。
+- GET /api/menu?all=1 返回全部已发布供应，保留原单周合同；all 重复、非 1 或与 source_id 同传返回 400。前端高级页按 dish_id 去重。DTO、设置读写和新注册增加 daily；迁移 0002_menu_daily_view 一次把旧 weekly 默认改 daily，不清理数据，保留 all/reviews，之后可明确改回 weekly。当前迁移 journal 共三条。
+- 历史图发现并修复：6096px 宽图缩小时浅线消失，导致五表误识别为三表；日期列 930/999/930px 不等宽，等宽后缀曾把早几天当成标签。现按当前图浅网格测量每列，左侧仅保留真正标签；每餐分带沿真实合并标签边界，无法确定时完整表识别，不猜固定坐标。私有证据记录实际日期列与餐带坐标。现煮、括号地点及纯楼层误覆盖分别归一，课间固定为空餐次。
+- 前两周实际 Lite 测试：11415（10/19–24，6096×4707）最终 937 条、11408（10/12–17，2993×4860）1012 条，识别/完整结果复核通过。分别五表/六表；逐日切片只包含自己的日期，价格/辣椒/地点/空白抽样通过；历史结果留在隔离研究目录，未发布到业务菜单。累计研究含失败、修正及缓存，不能把最终命中当成新调用或全图准确率，详见 menu-validation.md。
+- 新增 npm run test:menu:ui；最终双栏 65（含 2048px 宽屏坐标）、周视图 26、导航 128、后端 82、迁移 2 项通过；构建/类型/lint/格式通过。全站、部署与最终汇总见最新验收追加记录。现有根库最新周仍 966 条，自动同步开启，未创建分支或提交。
+
+- 最终验证补记：布局修改后全站 UI 518 项、Router 16 项与全新安装→构建→裁剪开发依赖→生产启动链通过，菜单技能通过。2048px 实页正文覆盖视口、左右内距约 65.5px、双标题 y=208px，400 字重，无来源链接和横向溢出；截图 output/playwright/menu-daily/live-2048-light.png 已核对。最新 11427 按最终识别规则复验 966 条，命中缓存 37 次、新模型请求 0。完整记录见 docs/ui/acceptance.md 最新追加节；未宣称整条 npm test 全绿。
+
+
+## 2026-10-30 · 菜谱统一视口与评价表单
+
+- MenuPage.css 将全视口宽度、左右 3.2vw（24–72px）及顶部 16px 内边距提升至 menu-page.container，适用于双栏、周视图、全部菜品和兼容评价列表；顶部栏使用两列网格，右侧切换器与正文边界不随视图切换移动，手机为日期换行保留一致空间。
+- 新增 apps/web/src/components/DishReview.css，由 DishReview.tsx 引入：桌面弹窗最大 34rem、手机底部面板；字段间 24px/20px、44px 星级选项、收紧上传空白并保留正文滚动及底部安全区。删除重复选菜说明、默认评分说明和失效辅助引用，增加星级选项可访问名称；评分默认五分、提交合同不变。
+- 不改变接口、数据表、迁移、定时任务及业务数据。回归新增三视图坐标/尺寸/顶部栏一致性，以及评价提示、间距、键盘星级和弹窗无障碍检查；菜谱 UI 146 项、周菜单/评价 UI 44 项通过；三种尺寸切换器 x/y/宽/高、正文边界及顶部栏高度差均小于 1px。评价字段间距、44px 星级、键盘评分、发布刷新和 axe 检查通过，截图已人工核对。构建、类型、lint、format:check 通过；最终全站 UI 518 项及 git diff --check 通过；本轮未运行整条 npm test。
+
+
+## 2026-10-30 · 移动端导航重做与署名更新
+
+- Shell.tsx 将移动端 Dialog 左抽屉替换为顶栏内持久挂载的全宽 mobile-nav；992px 及以下覆盖顶栏下方剩余动态视口，顶栏品牌、主题、账户工具保持原位。app.css 管理 200ms 展开/关闭、300ms 逐项延迟淡入、汉堡变形与减少动态效果。
+- 开启时 inert 隔离正文/页脚并锁定背景滚动，Tab 循环覆盖顶栏与菜单，Esc 关闭、焦点无滚动归还；短屏内部滚动、底部安全区、路由关闭与桌面断点清理均集中在 Shell。保留全部主栏目和按权限生成的账户入口，补充移动端消息箱。
+- HomeContent.tsx 首个团队文案为「人工智能部」，team-vc.svg 资源不变；全站页脚版权精确为「© 2026 苏州中学软件开发社人工智能部」。无 API、数据表或业务数据变更。
+- 更新导航专项与全站首页断言；验证：npm run test:navigation 200 项通过，含全屏布局、固定顶栏、主栏目/账户入口、展开/关闭动画、快速反向切换、Esc、焦点循环与恢复、滚动锁定/原位置恢复、桌面断点清理、减少动态效果、短屏账户滚动、路由关闭、手机/桌面明暗和展开菜单 axe；npm run test:ui 518 项通过。npm run build、typecheck、lint（0 warning）、format:check 与 git diff --check 通过。人工核对 Berkeleytime 参考及手机浅/深色截图；测试使用隔离数据库/上传目录，导航时钟固定到夹具供餐日期 2026-10-26，避免运行日期漂移导致无菜品。没有运行整条 npm test，不声称全量回归通过。本轮沿用既有分支，保留迁移及数据库已有改动，不创建分支或提交。
+
+
+## 2026-10-30 · 团队简称与移动导航闪烁修复
+
+首页开发团队首项改为「软开人工智能部」，沿用原有橙子图标；页脚版权仍为「© 2026 苏州中学软件开发社人工智能部」。点击移动菜单的普通站内链接时，先同步提交关闭状态并完成菜单及按钮的关闭动画，再由 Router 捕获页面转场快照，避免把尚在淡出的导航重新显示到下一页。点击关闭按钮和 Esc 仍播放原有 200ms 淡出，修饰键打开新标签保留当前菜单；账户链接与主栏目使用相同处理，不增加等待定时器。
+
+实现：HomeContent.tsx 仅更新团队文字；Shell.tsx 的 closeForNavigation 在普通左键/键盘链接激活时使用 flushSync 先提交关闭状态，完成菜单/切换按钮有限 CSS 动画后进入现有 Router Link 流程，避免 stationary-header 快照捕获淡出中的菜单。保留预加载、历史方向、原生修饰键、手动关闭动效及版权。导航专项新增切页前菜单透明/隐藏、页面转场捕获时菜单隐藏的明暗回归断言；验证：导航专项 204 项、全站 UI 518 项通过；新增明暗主题断言确认菜单在页面转场开始前 opacity=0、visibility=hidden、data-open=false，避免关闭动画进入导航快照；既有键盘、滚动锁定、减少动态效果、历史方向和账户入口回归通过。构建、typecheck、lint、format:check、JavaScript 语法及差异检查通过。使用隔离数据库与上传目录，未运行整条 npm test。无 API/数据库变化，不创建分支或提交。
+
+
+## 2026-10-30 · 移动菜单图标与高亮居中
+
+移动断点下菜单按钮保持 inline-grid，并沿用 icon-btn 的 place-items: center，让三横线/关闭图形始终位于 32px 按钮及其圆形高亮的中心。修复此前 inline-flex 覆盖网格布局后图形横向偏移的问题；悬停、展开、动画变形及触屏模式均使用相同中心点。
+
+实现：apps/web/public/css/site.css 的 992px 移动断点将 site-header__menu 恢复为 inline-grid，复用 icon-btn 网格双轴居中，消除菜单图形相对背景约 7px 的横向偏移。导航专项增加关闭/悬停和展开状态的图形与按钮中心坐标断言。验证：导航专项 208 项通过；额外触屏检查覆盖 360/768/992px、浅/深色、收起/展开，共 12 个状态，按钮与图形的横纵中心偏差均小于 0.5px。构建、format:check、测试脚本语法与 git diff --check 通过，人工核对手机浅色首页及深色展开截图。测试数据库及上传目录隔离，本轮未运行整条 npm test 或全站 UI 套件。 无 API/数据变化。
+
+
+## 2026-10-30 · Monorepo 重构、导航优化与成果提交推送
+
+- 整理并提交 Monorepo 迁移与优化成果：React 19 + TypeScript + Vite 前端、Hono 领域分拆后端、Drizzle + better-sqlite3 数据层、DTO 共享包、全屏移动导航、意图预加载与平滑过渡、官网食谱自动分块提取与无人值守同步、双栏菜谱及评价间距精细优化。
+- 遵循运行数据安全与历史快照规范，本地运行数据库 `data.db` 保留历史初始快照不纳入提交，业务与测试数据完全隔离。
+- 验证：`npm run build`、`npm run typecheck`、`npm run lint`、`npm run format:check`、`npm run test:backend`（82 项通过）、`npm run test:architecture`（2 项通过）、`npm run test:architecture:ui`（16 项通过）、`npm run test:deploy`（通过）、`npm run test:navigation`（208 项通过）、`npm run test:menu:ui`（146 项通过）。配套文档完整同步，提交并推送到远端 `origin/main`。

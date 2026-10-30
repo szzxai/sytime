@@ -1,5 +1,16 @@
 # 三元坊必吃榜 · shops.md（#6：shops.html 与 shop-new.html）
 
+## 2026-10-25 · 导航行为同步
+
+列表意图预加载采用相同账号默认筛选/排序与查询缓存；正文内进入详情或新增店铺按下一级处理，返回恢复来源搜索、筛选、排序、页码与位置。地图店铺入口使用同样的可预加载页面链接。 共同规则见 [导航与加载规范](../../navigation.md)，实际验证见根目录 MAP 与 UI 验收记录。
+
+## 当前 React 实现 · 2026-10-25
+
+实现位于 `apps/web/src/pages/`：ShopsPage.tsx、../components/ShopCard.tsx、../components/ShopMap.tsx。Router 管理筛选与页码，Query 使用防抖后的筛选读取接口；保留高德代理、聚合、店铺卡片、排序与账号默认偏好。
+
+视觉令牌和资源位于 `apps/web/public/`；共享站点壳、弹窗、上传、主题和用户展示见 [组件规范](../components.md)。本页 HTML/CSS 示例用于说明最终 DOM 与视觉约束，旧 `UI.*` 或页面脚本示例属于迁移前实现，不是当前可调用 API。当前请求由 TanStack Query、路径/查询/hash 由 TanStack Router 管理，后端为 Hono + Drizzle。最新验证见根目录 [MAP.md](../../../MAP.md) 与 [验收记录](../acceptance.md)。
+
+
 ## 新建收藏夹公开选择 · 2026-10-24（#29）
 
 店铺卡片收藏弹窗的新建表单增加「公开」开关，从当前账号最新偏好初始化，可逐次手动覆盖；加载中禁用开关与创建，读取失败默认私密，创建失败保留名称与选择。只改变新收藏夹的初始公开状态，不更改筛选、地图、分页及已有收藏夹；详见 [共享组件](../components.md)。
@@ -114,7 +125,7 @@ function shopCard(s) {
 
 ### 1.6 收藏（#23）
 
-- 每张店铺卡片底部右侧有「收藏」按钮（`.action-btn.action-btn--collect` + `card__action`；已收藏用主色 `--primary` 高亮），点击由 `ui.js` 的全局委托打开统一收藏夹弹窗。
+- 每张店铺卡片底部右侧有「收藏」按钮（`.action-btn.action-btn--collect` + `card__action`；已收藏用主色 `--primary` 高亮），点击由共享 React 收藏组件打开统一收藏夹弹窗。
 - 弹窗：列出 `GET /api/collections?section=shops` 的收藏夹（首访自动建「默认收藏夹」）；可选择、可在弹窗内新建（统一 `.field` + `.input` + `.btn`）；确认后调用 `POST /api/collections/:id/items`，成功后按钮 `aria-pressed="true"` 并显示「已收藏」。
 - 未登录：toast「请先登录后再收藏」，不打开弹窗。
 

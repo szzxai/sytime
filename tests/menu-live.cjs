@@ -1,10 +1,10 @@
 "use strict";
 // Explicit, opt-in real provider check. No credentials are persisted or printed.
 const fs = require("node:fs"), path = require("node:path");
-const { testConfiguration, ModelClient } = require("../lib/menu/provider");
-const { parseArticle } = require("../lib/menu/source");
-const { normalizeImage, extractImage, preview } = require("../lib/menu/images");
-const { cleanError, VERSION } = require("../lib/menu/schema");
+const { testConfiguration, ModelClient } = require("../apps/api/src/domain/menu/provider");
+const { parseArticle } = require("../apps/api/src/domain/menu/source");
+const { normalizeImage, extractImage, preview } = require("../apps/api/src/domain/menu/images");
+const { cleanError, VERSION } = require("../apps/api/src/domain/menu/schema");
 const samples = require("./fixtures/menu-manual-review.json");
 async function main() {
   const key = process.env.OPENROUTER_API_KEY || process.env.OPENROUTER_CODE_API_KEY;
@@ -30,7 +30,7 @@ async function main() {
     const response = await fetch(url, options);
     if (!response.ok) {
       const body = await response.clone().json().catch(() => ({}));
-      console.log("Provider diagnostic:", cleanError(new (require("../lib/menu/schema").MenuError)(JSON.stringify(body.error || {status: response.status})), [key]));
+      console.log("Provider diagnostic:", cleanError(new (require("../apps/api/src/domain/menu/schema").MenuError)(JSON.stringify(body.error || {status: response.status})), [key]));
     }
     if (response.ok) {
       const body = await response.clone().json().catch(() => ({}));
@@ -77,5 +77,5 @@ async function main() {
 }
 main().catch(error => {
   const key = process.env.OPENROUTER_API_KEY || process.env.OPENROUTER_CODE_API_KEY;
-  console.error(error.name, cleanError(new (require("../lib/menu/schema").MenuError)(error.message), [key])); process.exitCode = 1;
+  console.error(error.name, cleanError(new (require("../apps/api/src/domain/menu/schema").MenuError)(error.message), [key])); process.exitCode = 1;
 });
