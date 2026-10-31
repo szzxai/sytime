@@ -1,6 +1,6 @@
 # sytime 项目地图
 
-> 更新日期：2026-10-31（首页文案焕新、公开前数据隔离与安全门禁）。当前运行代码已迁移至 React 19 + TanStack Router/Query + Hono + Drizzle 的 npm workspaces Monorepo，沿用 SQLite、原有 URL、业务合同与视觉资产。当前仓库为 `szzxai/sytime`，分支 `main`。本地运行数据库 `data.db`、上传文件与私有配置保留在工作区，已取消跟踪并从本地可达历史移除，业务与测试数据隔离；远端历史尚未替换，不可直接切换为 public。
+> 更新日期：2026-10-31（首页文案焕新、公开前数据隔离与安全门禁）。当前运行代码已迁移至 React 19 + TanStack Router/Query + Hono + Drizzle 的 npm workspaces Monorepo，沿用 SQLite、原有 URL、业务合同与视觉资产。当前仓库为 `szzxai/sytime`，分支 `main`。本地运行数据库 `data.db`、上传文件与私有配置保留在工作区，已取消跟踪并从本地可达历史移除，业务与测试数据隔离；远端两个分支已替换为清理后的历史，仓库仍为 private，切换 public 前需完成远端重新克隆与附件复核。
 >
 > [架构说明](./docs/architecture.md) 描述实际模块边界、迁移、开发与部署；[2026-10-24 技术栈研究](./docs/tech-stack-recommendation-2026-10-24.md) 保留为候选比较，其中 Fastify/PostgreSQL 不是当前实现。文末按日期保留历史记录。
 
@@ -977,7 +977,7 @@ axe 无障碍违规：0；控制台页面报错：0；水平溢出：0。
 ## 2026-10-31 · 公开前清理、历史净化与安全门禁
 
 - 清理根目录服务日志、测试输出和系统杂项；.gitignore 增加数据库及侧文件、uploads、备份/私钥、临时产物和生成技能包规则。真实数据库、7 张本地上传图和密钥保留，不随源码公开；公开地图、店铺范围、学校菜单历史测试来源保留，边界见 docs/public-release.md。未改变应用接口和表结构。
-- 获维护者授权后，在仓库外私有目录保存完整 Git、已验证 bundle 和工作区归档，用 git-filter-repo 清理全部本地分支与独立远端快照。12 个旧数据库 blob 在当前对象库均不可读取。原 36 个本地可达提交清理后为 34；补回远端另一个地图修复提交的清理后引用后为 35。当前 main=f191084，origin/main=5e86dae，本地尚未合入该地图修复；未创建分支、提交、推送或改可见性。远端仍有旧历史，需整合额外提交、授权替换全部远端分支并重新克隆复验后才能公开。
+- 获维护者授权后，在仓库外私有目录保存完整 Git、已验证 bundle 和工作区归档，用 git-filter-repo 清理全部本地分支与独立远端快照。12 个旧数据库 blob 在当前对象库均不可读取。原 36 个本地可达提交清理后为 34；补回远端另一个地图修复提交的清理后引用后为 35。当前 main=f191084，origin/main=5e86dae，本地尚未合入该地图修复；未创建分支；已提交并以旧 SHA 租约强制推送两个远端分支，未改可见性。远端 `main=2f957d5`、`feature/ui-redesign=a583f26`，仓库仍为 private，待重新克隆、附件复核和维护者决定后公开。
 - tools/public-safety.mjs 检查待公开工作文件、不同的索引内容、全引用路径和历史 blob，只输出脱敏位置；三项回归覆盖强制加入、伪装 SQLite、忽略后仍残留历史及索引秘密。package.json 增加 test:public-safety / public:check / public:check:history，并接入 npm test。新增 .gitleaks.toml、.github/workflows/public-safety.yml、SECURITY.md；Gitleaks 仅精确豁免 tests 内人工密码，不跳过整个目录。
 - tests/node-deploy.cjs 仅复制 Git 可公开候选文件，排除本机数据与构建；隔离环境、随机 JWT、关闭任务，在 production 下使用 npm ci --include=dev，裁剪后检查空菜单、私有文件 404、operator 创建与登录。技能包从源码生成再测试，修正 Python 3 命令。
 - 验证：门禁 3/3、后端 69/69、build、typecheck、lint、format:check、技能包（16 个无效样本及 CRLF 可复现性）、全新生产部署和 npm audit --omit=dev（0 漏洞）通过。源码及全部历史 Gitleaks 无发现；本机两项已配置秘密与源码/历史精确比对无匹配。全引用门禁无发现，git fsck 和差异检查通过。首次部署复验因 production 省略开发依赖而失败，显式包含后完整重跑通过。
