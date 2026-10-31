@@ -66,3 +66,5 @@ JSON 与 multipart 限额由 Hono 和领域校验控制。公开资料、菜品�
 ## 2026-10-31 公开源码边界
 
 运行库、uploads、私有配置、日志与生成技能包不再跟踪，所有本地可达历史中的旧运行数据已在外部备份后清除。公开地图配置和菜单测试来源保留；数据分类、历史处理、检查命令和远端发布阻塞项见 [公开仓库准备](public-release.md)。新增 public:check / public:check:history、三项门禁回归与只读 CI。生产部署测试只复制 Git 可发布文件，隔离本机环境，在 production 下显式安装构建依赖，构建并裁剪后验证空目录、私有文件 404 和 operator 登录。
+
+本地预览另可使用 `.claude/launch.json` 的 `sytime-dev`，固定 API 3000、Web 5173，复用开发进程退出清理。生产构建仍按前述部署流程执行。
