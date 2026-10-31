@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "sytime-dev",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["--input-type=module", "-e", "process.env.PORT='3000'; await import('./tools/dev.mjs');"],
+      "port": 5173
+    }
+  ]
+}

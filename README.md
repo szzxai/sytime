@@ -201,6 +201,8 @@ npm run db:generate     # 根据 packages/db/src/schema.ts 生成下一次迁移
 
 Vite 将 API 和上传请求代理到 3000；若改变 API 端口，同时调整 `apps/web/vite.config.ts`。API 与菜单 worker 的源码变更会重新打包并重启 API，停止开发主进程会同时关闭两者。生产静态文件修改后需要重新构建。
 
+Claude Code 浏览器预览可使用 `.claude/launch.json` 中的 `sytime-dev` 配置：从根目录通过 Node 导入 `tools/dev.mjs` 前显式设置 API 的 `PORT=3000`，避免预览工具注入的前端端口影响 API，同时启动上述前后端；访问 <http://localhost:5173/>。首次使用先执行 `npm ci` 安装包括 Vite 在内的开发依赖；停止预览复用现有子进程清理逻辑。
+
 首次接入旧库会登记 Drizzle 基线，再执行幂等历史升级，保留账号、内容、收藏夹、菜品和 ID。升级前停止旧服务，成套备份 `data.db`、`uploads/`、`.private/`、`data/` 与配置。不要同时启动新旧服务写同一库；回退需要恢复旧版本及整套备份。详见 [架构说明](./docs/architecture.md)。
 
 店铺开发脚本使用 `node --import tsx scripts/shops/collect-pois.mjs`、`node --import tsx scripts/shops/enrich-candidates.mjs`；它们会调用外部服务或写入目标数据，先核对各脚本参数。

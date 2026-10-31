@@ -78,6 +78,25 @@ try {
     check('bottom of basketball label selects basketball instead of track', await page.locator('#detailName').textContent() === '篮球场');
     await page.locator('#closeDetail').click();
     await page.locator('#guideReset').click();
+    for (const [id, name, summary, content, stale] of [
+      ['east-ziyang', '东紫阳楼', '高一、高二共同学习区域', ['高一、高二年级共同的学习区域', '二楼及三楼部分区域供高二年级使用', '三楼另一部分区域及四楼供高一年级使用'], ['高三', '与西紫阳楼共同构成高一年级']],
+      ['west-red', '西红楼', '少预班学习区域', ['少预班的学习区域', '日常授课、班级学习与师生交流'], ['高二年级', '进入高中学习的深化阶段']],
+    ]) {
+      await page.locator('#placeSearch').fill(name);
+      const row = page.locator('.campus-place-row').filter({ hasText: summary });
+      check(name + ': directory shows updated use', await row.count() === 1 && (await row.textContent()).includes(summary));
+      await row.focus();
+      await page.keyboard.press('Enter');
+      check(name + ': keyboard opens corrected description', await page.locator('#detailName').textContent() === name && await page.locator('#detailDescription').evaluate((el, text) => text.every(value => el.textContent.includes(value)), content));
+      check(name + ': outdated grade assignments removed', await page.locator('#detailDescription').evaluate((el, text) => text.every(value => !el.textContent.includes(value)), stale));
+      check(name + ': two-paragraph history and sources preserved', await page.locator('#detailDescription p').count() === 2 && await page.locator('#detailSources a').count() > 0);
+      check(name + ': detail remains inside viewport', await page.locator('#placeDetail').evaluate(el => { const b = el.getBoundingClientRect(); return b.left >= 0 && b.right <= innerWidth && b.top >= 0 && b.bottom <= innerHeight; }));
+      await page.screenshot({ path: path.join(output, `${width}-${theme}-${id}-use.png`) });
+      await page.keyboard.press('Escape');
+    }
+    await page.locator('#placeSearch').fill('少预班');
+    check('confirmed preparatory use finds only west red building', await page.locator('.campus-place-row').count() === 1 && (await page.locator('.campus-place-row').textContent()).includes('西红楼'));
+    check('east red introduction no longer assigns west red to grade two', !CampusPlaces.find(p => p.id === 'east-red').description.includes('与西红楼共同承担高二'));
     await page.locator('#placeSearch').fill('墨子馆');
     check('former name finds renamed Zhengdao building', await page.locator('.campus-place-row').count() === 1 && (await page.locator('.campus-place-row').textContent()).includes('政道楼'));
     await page.locator('.campus-place-row').click();
