@@ -36,7 +36,13 @@ function SettingsContent() {
   const mutation = useMutation({
     mutationFn: ({ path, body }: { path: string; body: unknown }) =>
       api(path, { method: 'PUT', body }),
-    onSuccess: () => {
+    onSuccess: (data) => {
+      if (data.reauthenticate) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        location.assign('/login.html');
+        return;
+      }
       toast('已保存');
       queryClient.invalidateQueries({ queryKey: ['/api/user/profile'] });
     },

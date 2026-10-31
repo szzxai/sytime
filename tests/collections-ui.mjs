@@ -37,8 +37,8 @@ async function api(url, { token, method = "GET", body } = {}) {
   return { status: res.status, data: await res.json() };
 }
 async function account(username) {
-  await api("/api/register", { method: "POST", body: { username, nickname: username + "昵", password: "test-password" } });
-  return (await api("/api/login", { method: "POST", body: { username, password: "test-password" } })).data;
+  await api("/api/register", { method: "POST", body: { username, nickname: username + "昵", password: "CampusTest2026" } });
+  return (await api("/api/login", { method: "POST", body: { username, password: "CampusTest2026" } })).data;
 }
 
 const axe = fs.readFileSync(path.join(root, "node_modules/axe-core/axe.min.js"), "utf8");
@@ -82,9 +82,7 @@ try {
   }
   const developer = await account("collections-ui-dev");
   const user = await account("collections-ui-user");
-  const shopRes = await api("/api/shops", { token: developer.token, method: "POST", body: SHOP });
-  check("创建测试店铺", shopRes.status === 201);
-  const shopId = shopRes.data.shop.id;
+  const seedDb=new (await import('./helpers/database.cjs')).default.DatabaseSync(path.join(temp,'data.db'));seedDb.prepare("UPDATE users SET role='student' WHERE id=?").run(user.user.id);user.user.role='student';const shopId=(await import('../apps/api/src/domain/shops/store.js')).default.create(seedDb,SHOP,developer.user,{}).id;seedDb.close();
   browser = await chromium.launch({ channel: process.platform === "win32" ? "msedge" : undefined });
   async function pageFor(login, url, width = 1280) {
     const ctx = await browser.newContext({ viewport: { width, height: 900 }, reducedMotion: "reduce" });
@@ -270,7 +268,7 @@ try {
   check("设置页列出必吃榜收藏夹", listingOptions.includes("默认收藏夹") && listingOptions.includes("稍后再看"));
   const shopsOptions = await settings.page.$$eval("#defaultCollectionShops option", (els) => els.map((e) => e.textContent));
   check("设置页列出必吃榜收藏夹", shopsOptions.includes("默认收藏夹"));
-  check("未设置时默认选中默认收藏夹", (await settings.page.$eval("#defaultCollectionShops", (el) => el.value)) === String(defaultCollection.id));
+  check("未设置时选择自动模式，由默认收藏夹提供内容", (await settings.page.$eval("#defaultCollectionShops", (el) => el.value)) === "");
   const siteSaved = settings.page.waitForResponse((r) => r.url().endsWith("/api/user/settings") && r.request().method() === "PUT");
   const defaultsSaved = settings.page.waitForResponse((r) => r.url().endsWith("/api/user/settings/collection") && r.request().method() === "PUT");
   await settings.page.selectOption("#defaultCollectionShops", String(laterCollection.id));

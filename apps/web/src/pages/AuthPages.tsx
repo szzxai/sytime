@@ -1,11 +1,11 @@
-import { atLeast, type User } from '@sytime/shared';
+import { type User } from '@sytime/shared';
 import { useMutation } from '@tanstack/react-query';
-import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Picture, Upload } from '../components/Media';
 import { Icon, useToast } from '../components/ui';
 import { AuthFrame, PasswordField, TextField } from '../components/FormFields';
-import { StudentVerifyLayout } from '../layouts/StudentVerifyLayout';
-import { api, ApiError, formValues, nextUrl, queryClient } from '../lib/api';
+import { StudentIdentity } from '../components/Submissions';
+import { api, ApiError, formValues, nextUrl } from '../lib/api';
 import { RequireLogin, useSession } from '../lib/session';
 function useCooldown() {
   const [remaining, setRemaining] = useState(0);
@@ -20,7 +20,9 @@ export function LoginPage() {
   const session = useSession(),
     toast = useToast();
   const [username, setUsername] = useState('');
+  const credentials = useRef('');
   const [ban, setBan] = useState<Record<string, unknown> | null>(null);
+  const lastAppeal = ban?.last_appeal as { status: string; reason: string } | null | undefined;
   const [file, setFile] = useState<File | null>(null);
   const reason = useRef<HTMLTextAreaElement>(null);
   const [cooldown, setCooldown] = useCooldown();
@@ -52,7 +54,12 @@ export function LoginPage() {
       return api('/api/user/appeal', {
         method: 'POST',
         auth: false,
-        body: { username, appeal_reason: reason.current.value, appeal_image: image },
+        body: {
+          username,
+          password: credentials.current,
+          appeal_reason: reason.current.value,
+          appeal_image: image,
+        },
       });
     },
     onSuccess: () => {
@@ -67,7 +74,7 @@ export function LoginPage() {
     },
   });
   return (
-    <AuthFrame title="欢迎回来" description="登录后即可发帖、评价和管理个人设置">
+    <AuthFrame title="欢迎回来" description="登录后管理个人设置，学生认证后可提交评价">
       <form
         id="loginForm"
         className="form"
@@ -76,6 +83,7 @@ export function LoginPage() {
           e.preventDefault();
           const body = formValues(e.currentTarget);
           setUsername(body.username);
+          credentials.current = body.password;
           setBan(null);
           login.mutate(body);
         }}
@@ -87,7 +95,21 @@ export function LoginPage() {
               <div className="alert__body">
                 <span className="alert__title">账号已被封禁</span>
                 {ban.ban_reason ? `封禁理由：${ban.ban_reason}` : '未填写封禁理由'}
-                {Number(ban.allow_appeal) !== 1 && <p>您已被封禁，如要解封请线下联系超级管理员</p>}
+                {Number(ban.allow_appeal) !== 1 && (
+                  <p>此账号不允许在线申诉，如需解封请联系运营者</p>
+                )}
+                {lastAppeal && (
+                  <p>
+                    最近申诉：
+                    {{
+                      pending: '待审核',
+                      approved: '已通过',
+                      rejected: '未通过',
+                      withdrawn: '已撤回',
+                    }[lastAppeal.status] || lastAppeal.status}
+                    {lastAppeal.reason && ` · ${lastAppeal.reason}`}
+                  </p>
+                )}
                 <Picture src={String(ban.ban_image || '')} caption="封禁说明图片" />
               </div>
             </div>
@@ -106,6 +128,7 @@ export function LoginPage() {
           id="password"
           name="password"
           autoComplete="current-password"
+          strength={false}
           enterKeyHint="go"
           required
         />
@@ -167,7 +190,7 @@ export function RegisterPage() {
     onError: (e) => toast(e.message, 'error'),
   });
   return (
-    <AuthFrame title="创建账号" description="注册后即可发帖、评价与认证学生" register>
+    <AuthFrame title="创建账号" description="注册普通账号，认证学生后可提交内容审核" register>
       <form
         id="registerForm"
         className="form"
@@ -228,49 +251,7 @@ export function RegisterPage() {
 export function StudentVerifyPage() {
   return (
     <RequireLogin>
-      <StudentVerifyContent />
+      <StudentIdentity />
     </RequireLogin>
-  );
-}
-function StudentVerifyContent() {
-  const { user } = useSession();
-  const toast = useToast();
-  const [cooldown, setCooldown] = useCooldown();
-  const [approved, setApproved] = useState(false);
-  const mutation = useMutation({
-    mutationFn: (body: Record<string, string>) =>
-      api<{ status: string }>('/api/student/apply', { method: 'POST', body }),
-    onSuccess: (data) => {
-      if (data.status === 'approved') {
-        setApproved(true);
-        toast('认证成功');
-        queryClient.invalidateQueries({ queryKey: ['/api/user/profile'] });
-      } else {
-        toast('已提交，等待管理员审核');
-        setCooldown(600);
-      }
-    },
-    onError: (e) => {
-      toast(e.message, 'error');
-      if (e instanceof ApiError && e.status === 429) setCooldown(Number(e.data.retry_after) || 600);
-    },
-  });
-  const already = approved || atLeast(user?.role, 'student');
-  return (
-    <StudentVerifyLayout
-      bind={{
-        alreadyBox: { hidden: !already },
-        formBox: { hidden: already },
-        applyForm: {
-          noValidate: false,
-          onSubmit: (e: FormEvent<HTMLFormElement>) => {
-            e.preventDefault();
-            mutation.mutate(formValues(e.currentTarget));
-          },
-        },
-        submitBtn: { disabled: mutation.isPending || cooldown > 0 },
-      }}
-      slots={cooldown ? { submitBtn: `等待 ${cooldown} 秒` } : {}}
-    />
   );
 }

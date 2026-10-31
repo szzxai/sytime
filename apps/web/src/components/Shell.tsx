@@ -125,7 +125,7 @@ export function Shell({ children }: { children: ReactNode }) {
     ...(!atLeast(user?.role, 'student')
       ? [{ href: 'student_verify.html', icon: 'graduation', label: '学生认证' }]
       : []),
-    ...(atLeast(user?.role, 'admin') || user?.permissions?.length
+    ...(atLeast(user?.role, 'admin')
       ? [{ href: 'admin.html', icon: 'shield', label: '管理后台' }]
       : []),
   ];

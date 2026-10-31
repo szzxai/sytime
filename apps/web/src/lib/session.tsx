@@ -1,7 +1,7 @@
 import type { User } from '@sytime/shared';
 import { useQuery } from '@tanstack/react-query';
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
-import { endpoint, queryClient } from './api';
+import { api, endpoint, queryClient } from './api';
 function storedUser(): User | null {
   try {
     return JSON.parse(localStorage.getItem('user') || 'null');
@@ -25,6 +25,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   });
   const user = token ? profile.data?.user || saved : null;
   function logout() {
+    void api('/api/logout', { method: 'POST' }).catch(() => {});
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     setToken('');
@@ -48,10 +49,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       value={{
         user,
         token,
-        login: (value, account) => {
-          localStorage.setItem('token', value);
+        login: (_value, account) => {
+          localStorage.setItem('token', 'session');
           localStorage.setItem('user', JSON.stringify(account));
-          setToken(value);
+          setToken('session');
           setSaved(account);
           queryClient.clear();
         },

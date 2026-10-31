@@ -16,7 +16,7 @@ export async function api<T = Record<string, unknown>>(
 ): Promise<T> {
   const headers = new Headers(options.headers);
   const token = localStorage.getItem('token');
-  if (auth && token) headers.set('Authorization', `Bearer ${token}`);
+  if (auth && token && token !== 'session') headers.set('Authorization', `Bearer ${token}`);
   let payload: BodyInit | undefined;
   if (body instanceof FormData) payload = body;
   else if (body !== undefined) {

@@ -36,6 +36,7 @@ function InboxContent() {
         `/api/messages?page_size=20${filter === 'system' ? '&type=system' : ''}${unread ? '&unread=1' : ''}${pageParam ? `&before=${pageParam}` : ''}`,
         { signal },
       ),
+    refetchInterval: 30_000,
     getNextPageParam: (last) => (last.has_more ? last.messages.at(-1)?.id : undefined),
   });
   const refresh = () =>
@@ -48,6 +49,14 @@ function InboxContent() {
     onSuccess: refresh,
     onError: (e) => toast(e.message, 'error'),
   });
+  async function openMessage(message: Message) {
+    try {
+      if (!message.read) await mutation.mutateAsync(message.id);
+      if (message.target?.url) location.assign(message.target.url);
+    } catch {
+      // Keep the notification visible when marking it read failed; the mutation shows a retryable error.
+    }
+  }
   function update(type: string, only: boolean) {
     updateSearch({ type: type === 'system' ? type : undefined, unread: only ? '1' : undefined });
   }
@@ -142,14 +151,11 @@ function InboxContent() {
                       role="button"
                       tabIndex={0}
                       data-msg-open={m.id}
-                      onClick={() => {
-                        if (!m.read) mutation.mutate(m.id);
-                        if (m.target?.url) location.href = m.target.url;
-                      }}
+                      onClick={() => void openMessage(m)}
                       onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
+                        if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) {
                           e.preventDefault();
-                          if (!m.read) mutation.mutate(m.id);
+                          void openMessage(m);
                         }
                       }}
                     >

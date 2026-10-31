@@ -7,8 +7,9 @@ let browser;
 let checks = 0;
 function check(value, message) { assert.ok(value, message); checks++; }
 try {
-  await app.api('/api/register', { method: 'POST', body: { username: 'state_admin', nickname: '状态测试', password: 'test-password' } });
-  const login = (await app.api('/api/login', { method: 'POST', body: { username: 'state_admin', password: 'test-password' } })).data;
+  await app.api('/api/register', { method: 'POST', body: { username: 'state_admin', nickname: '状态测试', password: 'CampusTest2026' } });
+  const seedDb=new (await import('./helpers/database.cjs')).default.DatabaseSync(app.directory+'/data.db');seedDb.prepare("UPDATE users SET role='admin' WHERE username='state_admin'").run();seedDb.close();
+  const login = (await app.api('/api/login', { method: 'POST', body: { username: 'state_admin', password: 'CampusTest2026' } })).data;
   for (const title of ['公告甲', '公告乙']) await app.api('/api/admin/announcements', { method: 'POST', token: login.token, body: { title, content: title + '正文' } });
   browser = await chromium.launch({ channel: process.platform === 'win32' ? 'msedge' : undefined });
   const context = await browser.newContext({ reducedMotion: 'reduce' });

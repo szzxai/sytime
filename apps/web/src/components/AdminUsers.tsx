@@ -1,167 +1,198 @@
-import { roleLabels, roleWeights, type Role, type User } from '@sytime/shared';
+import { roleLabels, type User } from '@sytime/shared';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { api, endpoint, formValues, queryClient } from '../lib/api';
 import { useSession } from '../lib/session';
-import { Upload } from './Media';
-import { GrantTitles, type CatalogTitle } from './TitleManagement';
-import { Confirm, Dialog, ErrorState, Field, Loading, Submit, TitleBadge, useToast } from './ui';
-
-type AdminUser = User & { status: string; titles: CatalogTitle[] };
-type Change = { title: string; path: string; body: unknown };
+import { GrantTitles } from './TitleManagement';
+import {
+  Confirm,
+  Dialog,
+  Empty,
+  ErrorState,
+  Field,
+  Loading,
+  RoleTag,
+  Submit,
+  useToast,
+} from './ui';
+type Account = User & { student_id?: string; allow_appeal: number; ban_reason: string };
 export function AdminUsers() {
   const { user: actor } = useSession();
   const toast = useToast();
-  const query = useQuery(endpoint<{ users: AdminUser[] }>('/api/admin/users'));
-  const permissions = useQuery(
-    endpoint<{ permissions: { key: string; label: string }[] }>('/api/admin/permissions'),
+  const [search, setSearch] = useState('');
+  const [page, setPage] = useState(0);
+  const [dialog, setDialog] = useState<{ user: Account; kind: 'ban' | 'role' | 'titles' } | null>(
+    null,
   );
-  const [dialog, setDialog] = useState<{
-    user: AdminUser;
-    kind: 'ban' | 'permissions' | 'titles';
+  const [confirm, setConfirm] = useState<{
+    title: string;
+    path: string;
+    body?: unknown;
+    method?: string;
   } | null>(null);
-  const [confirm, setConfirm] = useState<Change | null>(null);
-  const [image, setImage] = useState<File | null>(null);
+  const query = useQuery(
+    endpoint<{ users: Account[]; total: number }>(
+      `/api/admin/users?search=${encodeURIComponent(search)}&offset=${page * 20}`,
+    ),
+  );
   const action = useMutation({
-    mutationFn: ({ path, body }: Pick<Change, 'path' | 'body'>) =>
-      api(path, { method: 'PUT', body }),
+    mutationFn: ({
+      path,
+      body,
+      method = 'PUT',
+    }: {
+      path: string;
+      body?: unknown;
+      method?: string;
+    }) => api(path, { method, body }),
     onSuccess: () => {
+      toast('账号已更新，相关用户已收到通知');
       setDialog(null);
-      setImage(null);
-      toast('已保存');
+      setConfirm(null);
       queryClient.invalidateQueries();
     },
     onError: (e) => toast(e.message, 'error'),
   });
-  if (query.isPending) return <Loading />;
-  if (query.error) return <ErrorState error={query.error} retry={query.refetch} />;
+  const editable = (u: Account) =>
+    actor?.id !== u.id &&
+    u.role !== 'operator' &&
+    (u.role !== 'admin' || actor?.role === 'operator');
   return (
-    <>
-      <div className="table-wrap">
-        <table className="table table--stack">
-          <caption className="sr-only">用户与权限管理</caption>
-          <thead>
-            <tr>
-              {['ID', '用户名', '昵称', '角色', '头衔', '状态', '操作'].map((label) => (
-                <th key={label} scope="col">
-                  {label}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {query.data.users.map((user) => {
-              const editable =
-                actor && actor.id !== user.id && roleWeights[user.role] < roleWeights[actor.role];
-              return (
-                <tr key={user.id}>
-                  <td data-label="ID" className="mono">
-                    {user.display_id || user.id}
+    <section className="admin-panel">
+      <div className="admin-panel__head">
+        <div>
+          <h2>社区账号</h2>
+          <p>
+            {actor?.role === 'operator'
+              ? '管理普通账号与管理员，运营者账号由服务器维护。'
+              : '管理普通用户与学生；管理员由运营者管理。'}
+          </p>
+        </div>
+        <span>{query.data?.total || 0} 个账号</span>
+      </div>
+      <div className="admin-toolbar">
+        <label>
+          搜索用户
+          <input
+            className="input"
+            placeholder="用户名、昵称或展示 ID"
+            value={search}
+            maxLength={50}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPage(0);
+            }}
+          />
+        </label>
+      </div>
+      {query.isPending ? (
+        <Loading />
+      ) : query.error ? (
+        <ErrorState error={query.error} retry={query.refetch} />
+      ) : query.data?.users.length ? (
+        <div className="admin-table-wrap" tabIndex={0} role="region" aria-label="数据表格">
+          <table className="admin-table">
+            <thead>
+              <tr>
+                {['账号', '展示 ID', '角色', '学生身份', '状态', '管理操作'].map((h) => (
+                  <th key={h}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {query.data.users.map((u) => (
+                <tr key={u.id}>
+                  <td>
+                    <strong>{u.nickname}</strong>
+                    <small>
+                      @{u.username} · #{u.id}
+                    </small>
                   </td>
-                  <td data-label="用户名">{user.username}</td>
-                  <td data-label="昵称">{user.nickname}</td>
-                  <td data-label="角色">
-                    {editable ? (
-                      <select
-                        className="select"
-                        data-role-select={user.id}
-                        aria-label={`${user.username}的角色`}
-                        value={user.role}
-                        disabled={action.isPending}
-                        onChange={(e) =>
-                          setConfirm({
-                            title: `将 ${user.username} 的角色改为 ${roleLabels[e.target.value as Role]}？`,
-                            path: '/api/admin/users/role',
-                            body: { userId: user.id, newRole: e.target.value },
-                          })
-                        }
-                      >
-                        {(Object.keys(roleLabels) as Role[])
-                          .filter(
-                            (role) =>
-                              role !== 'guest' && roleWeights[role] < roleWeights[actor.role],
-                          )
-                          .reverse()
-                          .map((role) => (
-                            <option key={role} value={role}>
-                              {roleLabels[role]}
-                            </option>
-                          ))}
-                      </select>
-                    ) : (
-                      roleLabels[user.role]
-                    )}
+                  <td>{u.display_id}</td>
+                  <td>
+                    <RoleTag role={u.role} />
                   </td>
-                  <td data-label="头衔">
-                    {user.titles?.length ? (
-                      user.titles.map((t) => <TitleBadge key={t.id} title={t} />)
-                    ) : (
-                      <span className="u-muted">—</span>
-                    )}
-                  </td>
-                  <td data-label="状态">
-                    <span className={`badge badge--${user.status === 'banned' ? 'danger' : 'ok'}`}>
-                      {user.status === 'banned' ? '已封禁' : '正常'}
+                  <td>{u.student_id || '未绑定'}</td>
+                  <td>
+                    <span
+                      className={`review-status review-status--${u.status === 'active' ? 'approved' : 'rejected'}`}
+                    >
+                      {u.status === 'active' ? '正常' : '已封禁'}
                     </span>
                   </td>
-                  <td data-label="操作">
-                    {editable ? (
-                      <div className="row row--sm">
+                  <td>
+                    {editable(u) ? (
+                      <div className="admin-user-actions">
                         <button
-                          type="button"
                           className="btn btn--sm"
-                          data-titles={user.id}
-                          onClick={() => setDialog({ user, kind: 'titles' })}
+                          onClick={() => setDialog({ user: u, kind: 'role' })}
+                        >
+                          角色
+                        </button>
+                        <button
+                          className="btn btn--sm"
+                          onClick={() => setDialog({ user: u, kind: 'titles' })}
                         >
                           头衔
                         </button>
                         <button
-                          type="button"
                           className="btn btn--sm"
-                          data-perms={user.id}
-                          onClick={() => setDialog({ user, kind: 'permissions' })}
+                          onClick={() =>
+                            u.status === 'banned'
+                              ? setConfirm({
+                                  title: `解封 ${u.username}？`,
+                                  path: '/api/admin/users/unban',
+                                  body: { userId: u.id },
+                                })
+                              : setDialog({ user: u, kind: 'ban' })
+                          }
                         >
-                          权限
+                          {u.status === 'banned' ? '解封' : '封禁'}
                         </button>
-                        {user.status === 'banned' ? (
+                        {u.student_id && (
                           <button
-                            type="button"
                             className="btn btn--sm"
-                            data-unban={user.id}
                             onClick={() =>
                               setConfirm({
-                                title: '解封该用户？',
-                                path: '/api/admin/users/unban',
-                                body: { userId: user.id },
+                                title: `解绑 ${u.username} 的学生身份？`,
+                                path: `/api/admin/users/${u.id}/unbind`,
+                                method: 'POST',
                               })
                             }
                           >
-                            解封
-                          </button>
-                        ) : (
-                          <button
-                            type="button"
-                            className="btn btn--sm btn--danger-quiet"
-                            data-ban={user.id}
-                            onClick={() => {
-                              setImage(null);
-                              setDialog({ user, kind: 'ban' });
-                            }}
-                          >
-                            封号
+                            解绑
                           </button>
                         )}
                       </div>
                     ) : (
-                      '—'
+                      <span className="u-muted">
+                        {actor?.id === u.id ? '当前账号' : '受保护账号'}
+                      </span>
                     )}
                   </td>
                 </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <Empty title="没有匹配的账号" />
+      )}
+      {!!query.data && query.data.total > 20 && (
+        <div className="admin-pagination">
+          <span>共 {query.data.total} 个账号</span>
+          <button className="btn btn--sm" disabled={!page} onClick={() => setPage((p) => p - 1)}>
+            上一页
+          </button>
+          <button
+            className="btn btn--sm"
+            disabled={(page + 1) * 20 >= query.data.total}
+            onClick={() => setPage((p) => p + 1)}
+          >
+            下一页
+          </button>
+        </div>
+      )}
       {dialog?.kind === 'titles' && (
         <GrantTitles
           userId={dialog.user.id}
@@ -169,90 +200,75 @@ export function AdminUsers() {
           onClose={() => setDialog(null)}
         />
       )}
-      {dialog?.kind === 'permissions' && (
+      {dialog && dialog.kind !== 'titles' && (
         <Dialog
-          id="permsModal"
-          title={`设置权限 ${dialog.user.username}`}
-          className="dialog--sheet dialog--wide"
+          title={`${dialog.kind === 'ban' ? '封禁' : '调整角色'} · ${dialog.user.username}`}
           onClose={() => setDialog(null)}
         >
           <form
-            id="permsForm"
+            className="dialog__form"
             onSubmit={(e) => {
               e.preventDefault();
-              action.mutate({
-                path: '/api/admin/users/permissions',
-                body: {
-                  userId: dialog.user.id,
-                  permissions: new FormData(e.currentTarget).getAll('permissions'),
-                },
-              });
+              const value = formValues(e.currentTarget);
+              if (dialog.kind === 'ban')
+                action.mutate({
+                  path: '/api/admin/users/ban',
+                  body: {
+                    userId: dialog.user.id,
+                    ban_reason: value.ban_reason,
+                    allow_appeal: value.allow_appeal === 'on',
+                  },
+                });
+              else
+                setConfirm({
+                  title: `确认修改 ${dialog.user.username} 的角色？`,
+                  path: '/api/admin/users/role',
+                  body: { userId: dialog.user.id, newRole: value.role },
+                });
             }}
           >
-            <div className="dialog__body stack" id="permsList">
-              {permissions.error ? (
-                <ErrorState error={permissions.error} retry={permissions.refetch} />
-              ) : (
-                permissions.data?.permissions.map((p) => (
-                  <label key={p.key} className="check-row">
-                    <input
-                      type="checkbox"
-                      className="check"
-                      name="permissions"
-                      value={p.key}
-                      defaultChecked={dialog.user.permissions?.includes(p.key)}
-                    />
-                    <span>{p.label}</span>
+            <div className="dialog__body stack">
+              {dialog.kind === 'ban' ? (
+                <>
+                  <Field label="封禁原因">
+                    <textarea className="textarea" name="ban_reason" required maxLength={500} />
+                  </Field>
+                  <label className="row">
+                    <input type="checkbox" name="allow_appeal" defaultChecked />
+                    允许在线申诉
                   </label>
-                ))
+                  <p className="field__hint">
+                    封禁立即撤销所有设备会话。关闭申诉后，后端也会拒绝在线申请。
+                  </p>
+                </>
+              ) : (
+                <>
+                  <Field label="角色">
+                    <select className="select" name="role" defaultValue={dialog.user.role}>
+                      {(
+                        [
+                          'user',
+                          ...(dialog.user.student_id ? ['student'] : []),
+                          ...(actor?.role === 'operator' ? ['admin'] : []),
+                        ] as const
+                      ).map((r) => (
+                        <option key={r} value={r}>
+                          {roleLabels[r as keyof typeof roleLabels]}
+                        </option>
+                      ))}
+                    </select>
+                  </Field>
+                  <p className="field__hint">
+                    学生角色只能通过认证获得；改为普通用户会释放已绑定学号。角色变更使所有设备退出登录。
+                  </p>
+                </>
               )}
             </div>
             <div className="dialog__foot">
               <button type="button" className="btn" onClick={() => setDialog(null)}>
                 取消
               </button>
-              <Submit id="permsConfirm" pending={action.isPending} disabled={!permissions.data}>
-                保存
-              </Submit>
-            </div>
-          </form>
-        </Dialog>
-      )}
-      {dialog?.kind === 'ban' && (
-        <Dialog
-          id="banModal"
-          title={`封禁用户 ${dialog.user.username}`}
-          className="dialog--sheet dialog--wide"
-          onClose={() => setDialog(null)}
-        >
-          <form
-            id="banForm"
-            onSubmit={(e) => {
-              e.preventDefault();
-              const v = formValues(e.currentTarget);
-              const data = new FormData();
-              data.set('userId', String(dialog.user.id));
-              data.set('ban_reason', v.banReasonInput);
-              data.set('allow_appeal', v.allowAppeal === 'on' ? '1' : '0');
-              if (image) data.set('ban_image', image);
-              action.mutate({ path: '/api/admin/users/ban', body: data });
-            }}
-          >
-            <div className="dialog__body stack">
-              <Field label="封禁理由（选填）" name="banReasonInput" maxLength={100} />
-              <Upload name="banImageInput" file={image} onChange={setImage} maxMB={5} />
-              <label className="check-row">
-                <input className="check" type="checkbox" name="allowAppeal" defaultChecked />
-                <span>允许申诉</span>
-              </label>
-            </div>
-            <div className="dialog__foot">
-              <button type="button" className="btn" onClick={() => setDialog(null)}>
-                取消
-              </button>
-              <Submit id="banConfirm" pending={action.isPending}>
-                确认封禁
-              </Submit>
+              <Submit pending={action.isPending}>确认操作</Submit>
             </div>
           </form>
         </Dialog>
@@ -260,12 +276,13 @@ export function AdminUsers() {
       {confirm && (
         <Confirm
           title={confirm.title}
-          message="该用户的权限与账号状态将立即更新。"
-          label="确认修改"
+          message="操作将记录并通知用户；身份解绑会撤回待审内容，角色或封禁变更会撤销会话。"
+          label="确认"
           onClose={() => setConfirm(null)}
           onConfirm={() => action.mutate(confirm)}
+          pending={action.isPending}
         />
       )}
-    </>
+    </section>
   );
 }

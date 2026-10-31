@@ -201,12 +201,10 @@ try {
     assert.deepEqual(errors, []); checks++;
     await context.close();
   }
-  await app.api('/api/register', { method: 'POST', body: { username: 'navigation-admin', password: 'test-password', nickname: '导航测试' } });
-  const login = (await app.api('/api/login', { method: 'POST', body: { username: 'navigation-admin', password: 'test-password' } })).data;
-  const shop = (await app.api('/api/shops', { method: 'POST', token: login.token, body: {
-    name: '导航面馆', address: '十梓街 123 号', type: '面馆', lat: 31.3004, lng: 120.6226,
-    campus_distance_m: 420, campus_walk_min: 6, metro_station: '乐桥', metro_exit: '3 号口', metro_distance_m: 480, metro_walk_min: 7,
-  } })).data.shop;
+  await app.api('/api/register', { method: 'POST', body: { username: 'navigation-admin', password: 'CampusTest2026', nickname: '导航测试' } });
+  const seedDb = new (await import('./helpers/database.cjs')).default.DatabaseSync(path.join(app.directory,'data.db'));seedDb.prepare("UPDATE users SET role='admin' WHERE username='navigation-admin'").run();
+  const login = (await app.api('/api/login', { method: 'POST', body: { username: 'navigation-admin', password: 'CampusTest2026' } })).data;
+  const shop = (await import('../apps/api/src/domain/shops/store.js')).default.create(seedDb,{name:'导航面馆',address:'十梓街 123 号',type:'面馆',lat:31.3004,lng:120.6226,campus_distance_m:420,campus_walk_min:6,metro_station:'乐桥',metro_exit:'3 号口',metro_distance_m:480,metro_walk_min:7},login.user,{});seedDb.close();
   check(!!shop?.id, 'created isolated shop');
   await app.api('/api/admin/announcements', { method: 'POST', token: login.token, body: { title: '导航公告', content: '用于检查内部列表与详情。' } });
   const context = await browser.newContext({ viewport: { width: 1280, height: 800 } });

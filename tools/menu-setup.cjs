@@ -1,29 +1,18 @@
 'use strict';
 // Run with --import tsx after npm run build. Credentials come from the environment
-// or a local key file; never accept them as command-line arguments or log them.
+// only; never accept them as command-line arguments or log them.
 require('dotenv/config');
-const fs = require('node:fs');
 const path = require('node:path');
 const createApp = require('../apps/api/src/app');
 const root = path.resolve(process.env.APP_ROOT || process.cwd());
 process.env.MENU_WORKER_PATH = path.resolve('apps/api/dist/worker.cjs');
 async function main() {
-  const key = (
-    process.env.GEMINI_API_KEY ||
-    (process.env.MENU_KEY_FILE ? fs.readFileSync(process.env.MENU_KEY_FILE, 'utf8') : '')
-  ).trim();
-  if (!key) throw new Error('Set GEMINI_API_KEY or MENU_KEY_FILE before setup');
+  if (!(process.env.MENU_API_KEY || process.env.GEMINI_API_KEY))
+    throw new Error('Set MENU_API_KEY or GEMINI_API_KEY');
   const { db, menuService: service } = createApp(root);
   try {
-    service.saveSettings({
-      provider: 'gemini',
-      model: process.env.MENU_GEMINI_MODEL || 'gemini-flash-lite-latest',
-      api_key: key,
-      schedule_mode: 'weekend',
-    });
     await service.testSettings();
-    service.saveSettings({ enabled: true });
-    console.log('Gemini capability test passed; weekend schedule enabled.');
+    console.log('Environment menu configuration verified.');
     const job = await service.enqueue();
     let result;
     do {

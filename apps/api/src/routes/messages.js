@@ -1,8 +1,10 @@
 const { query } = require('../../../../packages/db/src/client.ts');
+const { syncHandledNotifications, messageTarget } = require('../domain/accounts/notifications');
 
 module.exports = function mountMessagesRoutes(app, services) {
   const { requireLogin, db, requirePermission } = services;
   app.get('/api/messages/unread-count', requireLogin, function (c) {
+    syncHandledNotifications(db, c.get('user').id);
     const row = query(
       db,
       'SELECT COUNT(*) AS n FROM messages WHERE user_id = ? AND read_at IS NULL',
@@ -29,6 +31,7 @@ module.exports = function mountMessagesRoutes(app, services) {
     c.res = c.json({ ok: true, changed: info.changes });
   });
   app.get('/api/messages', requireLogin, function (c) {
+    syncHandledNotifications(db, c.get('user').id);
     const pageSize = Math.min(50, Math.max(1, parseInt(c.req.query().page_size, 10) || 20));
     const type = c.req.query().type;
     const unreadOnly = c.req.query().unread === '1' || c.req.query().unread === 'true';
@@ -74,7 +77,7 @@ module.exports = function mountMessagesRoutes(app, services) {
         type: m.type,
         actors: actors,
         count: m.count,
-        target: null,
+        target: messageTarget(db, m, c.get('user')),
         title: m.title || null,
         body: m.body || null,
         important: !!m.important,

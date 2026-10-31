@@ -17,6 +17,7 @@ import {
 } from '../components/ui';
 import { api, distance, endpoint, loginUrl, money, queryClient } from '../lib/api';
 import { useSession } from '../lib/session';
+import { useReviewTarget } from '../lib/useReviewTarget';
 export function ShopPage() {
   const id = new URLSearchParams(location.search).get('id');
   const { user, token } = useSession();
@@ -34,13 +35,20 @@ export function ShopPage() {
     enabled: !!id,
   });
   const meta = useQuery(endpoint<ShopMeta>('/api/shops/meta'));
+  const targetId = Number(new URLSearchParams(location.search).get('review')) || null;
   const reviews = useInfiniteQuery({
-    queryKey: [`/api/shops/${id}/reviews`, token],
+    queryKey: [`/api/shops/${id}/reviews`, token, targetId],
     initialPageParam: 0,
     enabled: !!query.data,
     queryFn: ({ pageParam, signal }) =>
-      api<{ reviews: Review[]; total: number; my_review: Review | null; can_interact: boolean }>(
-        `/api/shops/${id}/reviews?offset=${pageParam}&limit=20`,
+      api<{
+        reviews: Review[];
+        total: number;
+        my_review: Review | null;
+        can_interact: boolean;
+        focus_review?: Review | null;
+      }>(
+        `/api/shops/${id}/reviews?offset=${pageParam}&limit=20${targetId ? `&review=${targetId}` : ''}`,
         { signal },
       ),
     getNextPageParam: (last, pages) => {
@@ -49,6 +57,13 @@ export function ShopPage() {
     },
   });
   const shop = query.data?.shop;
+  useReviewTarget(reviews.isSuccess);
+  const loadedReviews = reviews.data?.pages.flatMap((p) => p.reviews) || [];
+  const focused = reviews.data?.pages[0].focus_review;
+  const reviewRows =
+    focused && !loadedReviews.some((r) => r.id === focused.id)
+      ? [focused, ...loadedReviews]
+      : loadedReviews;
   const mine = reviews.data?.pages[0].my_review;
   const refresh = () =>
     queryClient.invalidateQueries({
@@ -328,36 +343,39 @@ export function ShopPage() {
                           <Loading />
                         ) : reviews.error ? (
                           <ErrorState error={reviews.error} retry={reviews.refetch} />
-                        ) : reviews.data?.pages.flatMap((p) => p.reviews).length ? (
-                          reviews.data.pages
-                            .flatMap((p) => p.reviews)
-                            .map((r) => (
-                              <article className="shop-review-item" key={r.id}>
-                                <div className="shop-review-item__head">
-                                  <UserLine user={{ ...r, id: r.user_id }} time={r.created_at} />
-                                  <span
-                                    className="shop-review-item__stars"
-                                    aria-label={`${r.rating} 星`}
-                                  >
-                                    {'★'.repeat(r.rating) + '☆'.repeat(5 - r.rating)}
-                                  </span>
-                                </div>
-                                {r.content && (
-                                  <p className="shop-review-item__content">{r.content}</p>
-                                )}
-                                {r.guests && r.total_price != null && (
-                                  <p className="u-muted u-fs-sm">
-                                    {r.guests} 人 · 合计 {money(r.total_price)} · 人均{' '}
-                                    {money(Number(r.total_price) / r.guests)}
-                                  </p>
-                                )}
-                                <Picture
-                                  src={r.image_url}
-                                  caption={`${shop.name}的评价配图`}
-                                  className="shop-review-thumb"
-                                />
-                              </article>
-                            ))
+                        ) : reviewRows.length ? (
+                          reviewRows.map((r) => (
+                            <article
+                              id={`review-${r.id}`}
+                              tabIndex={-1}
+                              className={`shop-review-item review-target${r.id === targetId ? ' is-highlighted' : ''}`}
+                              key={r.id}
+                            >
+                              <div className="shop-review-item__head">
+                                <UserLine user={{ ...r, id: r.user_id }} time={r.created_at} />
+                                <span
+                                  className="shop-review-item__stars"
+                                  aria-label={`${r.rating} 星`}
+                                >
+                                  {'★'.repeat(r.rating) + '☆'.repeat(5 - r.rating)}
+                                </span>
+                              </div>
+                              {r.content && (
+                                <p className="shop-review-item__content">{r.content}</p>
+                              )}
+                              {r.guests && r.total_price != null && (
+                                <p className="u-muted u-fs-sm">
+                                  {r.guests} 人 · 合计 {money(r.total_price)} · 人均{' '}
+                                  {money(Number(r.total_price) / r.guests)}
+                                </p>
+                              )}
+                              <Picture
+                                src={r.image_url}
+                                caption={`${shop.name}的评价配图`}
+                                className="shop-review-thumb"
+                              />
+                            </article>
+                          ))
                         ) : (
                           <Empty title="还没有评价" icon="message" />
                         )}
@@ -405,6 +423,7 @@ function ShopReviewForm({
 }) {
   const toast = useToast();
   const [file, setFile] = useState<File | null>(null);
+  const [preparingImage, setPreparingImage] = useState(false);
   const [hasImage, setHasImage] = useState(!!mine?.image_url);
   const [removed, setRemoved] = useState(false);
   const [guests, setGuests] = useState(mine?.guests ? String(mine.guests) : '');
@@ -418,7 +437,7 @@ function ShopReviewForm({
       return api(`/api/shops/${shopId}/reviews`, { method: 'POST', body });
     },
     onSuccess: () => {
-      toast(mine ? '评价已更新' : '评价已发布');
+      toast('评价已提交审核，原评价在通过前保持不变');
       onSaved();
     },
     onError: (e) => toast(e.message, 'error'),
@@ -429,7 +448,7 @@ function ShopReviewForm({
       className="shop-review-form"
       onSubmit={(e) => {
         e.preventDefault();
-        mutation.mutate(e.currentTarget);
+        if (!preparingImage) mutation.mutate(e.currentTarget);
       }}
     >
       <fieldset className="shop-rating-fieldset">
@@ -502,7 +521,7 @@ function ShopReviewForm({
       <label className="check-row">
         <span className="check-row__text">
           <span className="check-row__title">评价带图</span>
-          <span className="check-row__desc">选填一张实拍照片（JPG / PNG，不超过 2 MB）</span>
+          <span className="check-row__desc">选填一张实拍照片（JPG / PNG，超出 2 MB 自动压缩）</span>
         </span>
         <input
           className="check"
@@ -516,7 +535,7 @@ function ShopReviewForm({
         />
       </label>
       <div id="reviewUploadField" hidden={!hasImage}>
-        <Upload file={file} onChange={setFile}>
+        <Upload file={file} onChange={setFile} onProcessingChange={setPreparingImage}>
           {mine?.image_url && !removed && !file && (
             <>
               <div className="upload-preview">
@@ -536,8 +555,8 @@ function ShopReviewForm({
         </Upload>
       </div>
       <div className="row">
-        <Submit pending={mutation.isPending} id="reviewSubmit">
-          {mine ? '更新评价' : '发布评价'}
+        <Submit pending={mutation.isPending} disabled={preparingImage} id="reviewSubmit">
+          {mine ? '提交评价修改审核' : '提交评价审核'}
         </Submit>
         {mine && (
           <button

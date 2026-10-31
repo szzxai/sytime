@@ -1,3 +1,4 @@
+import './pages/AdminPage.css';
 import { QueryClientProvider } from '@tanstack/react-query';
 import {
   createRootRoute,

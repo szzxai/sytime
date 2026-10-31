@@ -53,9 +53,7 @@ app.onError((error, c) => {
   console.error('[api]', error.message);
   return c.json(
     {
-      error: c.req.path.startsWith('/api/admin/menu-sync')
-        ? '菜单请求执行失败，请重试'
-        : 'server error',
+      error: 'server error',
     },
     500,
   );

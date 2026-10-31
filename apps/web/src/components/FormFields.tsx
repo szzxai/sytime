@@ -1,8 +1,13 @@
+import { passwordRules } from '@sytime/shared';
 import { SiteLink } from './SiteLink';
 import { useEffect, useState, type InputHTMLAttributes, type ReactNode } from 'react';
 import { Icon } from './ui';
 
-type FieldProps = InputHTMLAttributes<HTMLInputElement> & { label: string; hint?: string };
+type FieldProps = InputHTMLAttributes<HTMLInputElement> & {
+  label: string;
+  hint?: string;
+  strength?: boolean;
+};
 
 export function TextField({ label, hint, id, ...input }: FieldProps) {
   return (
@@ -16,8 +21,10 @@ export function TextField({ label, hint, id, ...input }: FieldProps) {
   );
 }
 
-export function PasswordField({ label, hint, id, ...input }: FieldProps) {
+export function PasswordField({ label, hint, id, strength = true, ...input }: FieldProps) {
   const [visible, setVisible] = useState(false);
+  const [value, setValue] = useState('');
+  const rules = strength ? passwordRules(value) : [];
   return (
     <div className="field">
       <label className="field__label" htmlFor={id}>
@@ -29,6 +36,12 @@ export function PasswordField({ label, hint, id, ...input }: FieldProps) {
           id={id}
           {...input}
           type={visible ? 'text' : 'password'}
+          maxLength={strength ? 72 : undefined}
+          aria-describedby={strength ? `${id}-rules` : undefined}
+          onChange={(e) => {
+            setValue(e.target.value);
+            input.onChange?.(e);
+          }}
         />
         <div className="input-group__end">
           <button
@@ -43,6 +56,21 @@ export function PasswordField({ label, hint, id, ...input }: FieldProps) {
           </button>
         </div>
       </div>
+      {strength && (
+        <div className="password-checks" id={`${id}-rules`}>
+          <p className="field__hint">
+            {rules.every((r) => r.passed) ? '密码符合要求' : '密码需要满足以下要求：'}
+          </p>
+          <ul>
+            {rules.map((rule) => (
+              <li key={rule.label} className={rule.passed ? 'is-met' : ''}>
+                <span aria-hidden="true">{rule.passed ? '✓' : '○'}</span>
+                {rule.label}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
       {hint !== undefined && (
         <div className="field__foot">
           <span className="field__hint">{hint}</span>

@@ -18,8 +18,25 @@ const { localDay, shiftDay } = require('./domain/menu/schedule');
 module.exports = function createApp(root) {
   const app = new Hono();
   const { bodyLimit } = require('hono/body-limit');
-  const { cors } = require('hono/cors');
-  app.use('*', cors());
+  app.use('/api/*', async (c, next) => {
+    c.header('Cache-Control', 'no-store');
+    c.header('X-Content-Type-Options', 'nosniff');
+    if (!['GET', 'HEAD', 'OPTIONS'].includes(c.req.method)) {
+      const origin = c.req.header('Origin');
+      const allowed = new URL(process.env.APP_ORIGIN || c.req.url).origin;
+      if (
+        c.req.header('Sec-Fetch-Site') === 'cross-site' ||
+        (origin &&
+          origin !== allowed &&
+          !(
+            process.env.NODE_ENV !== 'production' &&
+            /^http:\/\/(localhost|127\.0\.0\.1):[0-9]+$/.test(origin)
+          ))
+      )
+        return c.json({ error: '请求来源不受信任' }, 403);
+    }
+    return next();
+  });
   app.use('*', async (c, next) => {
     const multipart = (c.req.header('content-type') || '').startsWith('multipart/form-data');
     return bodyLimit({
@@ -27,9 +44,7 @@ module.exports = function createApp(root) {
       onError: (c) =>
         c.json(
           {
-            error: c.req.path.startsWith('/api/admin/menu-sync')
-              ? '菜单请求超过大小限制'
-              : 'request too large',
+            error: 'request too large',
           },
           413,
         ),
@@ -40,9 +55,7 @@ module.exports = function createApp(root) {
         } catch {
           return c.json(
             {
-              error: c.req.path.startsWith('/api/admin/menu-sync')
-                ? '菜单设置 JSON 格式无效'
-                : 'invalid JSON',
+              error: 'invalid JSON',
             },
             400,
           );
@@ -52,100 +65,56 @@ module.exports = function createApp(root) {
     });
   });
 
-  const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret_change_me';
+  const privateDir = path.join(root, '.private');
+  fs.mkdirSync(privateDir, { recursive: true, mode: 0o700 });
+  const secretPath = path.join(privateDir, 'session-secret');
+  if (!process.env.JWT_SECRET && !fs.existsSync(secretPath))
+    fs.writeFileSync(secretPath, require('node:crypto').randomBytes(48).toString('hex'), {
+      mode: 0o600,
+      flag: 'wx',
+    });
+  const JWT_SECRET = process.env.JWT_SECRET || fs.readFileSync(secretPath, 'utf8');
   const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
   const DB_PATH = path.join(root, 'data.db');
   const db = createDatabase(DB_PATH);
   require('../../../packages/db/src/migrate').migrateDatabase(db, root);
   require('./database')(db);
+  require('./domain/accounts/migrate')(db);
   const UPLOAD_DIR = path.join(root, 'uploads');
   if (!fs.existsSync(UPLOAD_DIR)) {
     fs.mkdirSync(UPLOAD_DIR);
   }
-  const ROLE_WEIGHTS = { developer: 6, super_admin: 5, admin: 4, student: 3, user: 2, guest: 1 };
-  const TICKET_VISIBILITIES = ['admin', 'super_admin', 'developer'];
-  const BANS_DIR = path.join(UPLOAD_DIR, 'bans');
-  if (!fs.existsSync(BANS_DIR)) {
-    fs.mkdirSync(BANS_DIR);
-  }
-  const banUpload = { directory: BANS_DIR, maxBytes: 5 * 1024 * 1024 };
+  const { roleWeights: ROLE_WEIGHTS } = require('../../../packages/shared/src/index.ts');
   const { createAuth } = require('./auth');
   const { checkRole, requireLogin } = createAuth(db, JWT_SECRET);
-  const PERMISSIONS = {
-    banner_edit: '编辑横幅',
-    announcement_publish: '发布更新公告',
-    student_review: '学生认证审核',
-    invite_manage: '邀请码管理',
-    map_popup_edit: '地图弹窗编辑',
-    user_manage: '用户管理',
-    ban_appeal_review: '申诉处理',
-    ticket_manage: '工单管理',
-    shop_create: '添加店铺',
-    title_manage: '头衔管理',
-  };
-  // 添加店铺的最低角色：默认 student，可用环境变量 SHOP_CREATE_MIN_ROLE 调整
-  const SHOP_CREATE_ROLES = ['user', 'student', 'admin', 'super_admin', 'developer'];
-  const SHOP_CREATE_MIN_ROLE =
-    SHOP_CREATE_ROLES.indexOf(process.env.SHOP_CREATE_MIN_ROLE || '') !== -1
-      ? process.env.SHOP_CREATE_MIN_ROLE
-      : 'student';
-  const PERMISSION_REQUIRES = {
-    banner_edit: 'super_admin',
-    announcement_publish: 'super_admin',
-    student_review: 'super_admin',
-    invite_manage: 'super_admin',
-    user_manage: 'super_admin',
-    ban_appeal_review: 'super_admin',
-    map_popup_edit: 'admin',
-    ticket_manage: 'admin',
-    shop_create: SHOP_CREATE_MIN_ROLE,
-    title_manage: 'super_admin',
-  };
-  function userPermissionList(userId) {
-    return query(db, 'SELECT permission FROM user_permissions WHERE user_id = ?')
-      .all(userId)
-      .map(function (row) {
-        return row.permission;
-      });
-  }
-  function hasPermission(c, perm) {
-    if (!c.get('user') || c.get('user').id === null || c.get('user').id === undefined) return false;
-    // 角色或封禁状态可能在 JWT 签发后发生变化；权限写操作以数据库当前状态为准。
-    const account = query(db, 'SELECT role, status FROM users WHERE id = ?').get(c.get('user').id);
-    if (!account || account.status !== 'active') return false;
-    const needed = ROLE_WEIGHTS[PERMISSION_REQUIRES[perm]] || 0;
-    if ((ROLE_WEIGHTS[account.role] || 0) >= needed) return true;
-    const row = query(
-      db,
-      'SELECT id FROM user_permissions WHERE user_id = ? AND permission = ?',
-    ).get(c.get('user').id, perm);
-    return !!row;
-  }
-  function isVerifiedStudent(c) {
-    if (!c.get('user') || c.get('user').id === null || c.get('user').id === undefined) return false;
-    const account = query(db, 'SELECT role, status FROM users WHERE id = ?').get(c.get('user').id);
-    if (!account || account.status !== 'active') return false;
-    // 学生及以上角色（student / admin / super_admin / developer）均可点赞和评价。
-    return (ROLE_WEIGHTS[account.role] || 0) >= ROLE_WEIGHTS.student;
-  }
-  // 后台针对具体账号的写操作一律遵守：不能操作自己，也不能操作权重不低于自己的人。
-  // 与 PUT /api/admin/users/role、/ban、/permissions 的判定保持一致；返回值区分不存在与无权限。
-  function checkTarget(actorId, targetId) {
-    const target = query(db, 'SELECT role FROM users WHERE id = ?').get(targetId);
-    if (!target) return 'missing';
-    const actor = query(db, 'SELECT role, status FROM users WHERE id = ?').get(actorId);
-    if (!actor || actor.status !== 'active') return 'forbidden';
-    if (Number(actorId) === Number(targetId)) return 'forbidden';
-    return (ROLE_WEIGHTS[target.role] || 0) < (ROLE_WEIGHTS[actor.role] || 0) ? 'ok' : 'forbidden';
-  }
+  const permissions = new Set([
+    'banner_edit',
+    'announcement_publish',
+    'student_review',
+    'user_manage',
+    'ban_appeal_review',
+    'ticket_manage',
+    'title_manage',
+  ]);
   function requirePermission(perm) {
-    return async (c, next) => {
-      return checkRole()(c, async () => {
-        if (c.get('user').id == null) return c.json({ error: 'login required' }, 401);
-        if (!hasPermission(c, perm)) return c.json({ error: 'forbidden' }, 403);
+    return async (c, next) =>
+      checkRole('admin')(c, async () => {
+        if (!permissions.has(perm)) return c.json({ error: 'forbidden' }, 403);
         return next();
       });
-    };
+  }
+  function isVerifiedStudent(c) {
+    return (ROLE_WEIGHTS[c.get('user')?.role] || 0) >= ROLE_WEIGHTS.student;
+  }
+  function checkTarget(actorId, targetId) {
+    try {
+      const actor = query(db, 'SELECT id,role,status FROM users WHERE id=?').get(actorId);
+      if (actor?.status !== 'active') return 'forbidden';
+      require('./domain/accounts/security').target(db, actor, targetId);
+      return 'ok';
+    } catch (e) {
+      return e.status === 404 ? 'missing' : 'forbidden';
+    }
   }
   // 连续登录按北京时间自然日累计，用于「夜读星」自动头衔；登录成功后顺带发放已达成的自动头衔。
   function recordLogin(userId) {
@@ -210,17 +179,45 @@ module.exports = function createApp(root) {
     });
     return rows;
   }
+  app.use('/api/admin/*', async (c, next) => {
+    await next();
+    if (
+      !['GET', 'HEAD', 'OPTIONS'].includes(c.req.method) &&
+      c.res.status < 400 &&
+      c.get('user')?.id &&
+      !c.req.path.includes('/reviews/') &&
+      !c.req.path.includes('/users/') &&
+      !c.req.path.includes('/tickets/')
+    )
+      require('./domain/accounts/security').audit(
+        db,
+        c.get('user').id,
+        null,
+        'management.changed',
+        { method: c.req.method, path: c.req.path },
+      );
+  });
   const menuService = new MenuService(db, root);
   dishStore.migrate(db);
   mountDishRoutes(app, db, attachAuthors);
-  mountMenuRoutes(app, db, menuService, checkRole());
+  mountMenuRoutes(app, db);
+  const { moderation } = require('./domain/accounts/routes')(app, {
+    db,
+    root,
+    JWT_SECRET,
+    JWT_EXPIRES_IN,
+    checkRole,
+    requireLogin,
+    recordLogin,
+  });
   mountShopRoutes(app, db, {
     root: root,
     authenticate: checkRole(),
-    requirePermission: requirePermission,
-    hasPermission: hasPermission,
+    requirePermission: () => checkRole('student'),
+    moderation,
+    hasPermission: (c, perm) => perm === 'shop_create' && isVerifiedStudent(c),
     isVerifiedStudent: isVerifiedStudent,
-    createMinRole: SHOP_CREATE_MIN_ROLE,
+    createMinRole: 'student',
     mapKey: process.env.AMAP_JS_KEY || '',
     mapSecurityCode: process.env.AMAP_SECURITY_CODE || '',
     mapServiceKey: process.env.AMAP_SERVICE_KEY || '',
@@ -240,34 +237,9 @@ module.exports = function createApp(root) {
     requireLogin: requireLogin,
     authenticate: checkRole(),
   });
-  require('./routes/session')(app, {
-    db,
-    JWT_SECRET,
-    JWT_EXPIRES_IN,
-    recordLogin,
-    checkRole,
-    userPermissionList,
-    requirePermission,
-  });
   require('./routes/announcements')(app, { requirePermission, db });
-  require('./routes/verification')(app, { requireLogin, db, ROLE_WEIGHTS, requirePermission });
-  require('./routes/accounts-admin')(app, {
-    requirePermission,
-    db,
-    userPermissionList,
-    PERMISSIONS,
-    ROLE_WEIGHTS,
-    banUpload,
-  });
-  require('./routes/tickets')(app, {
-    requireLogin,
-    TICKET_VISIBILITIES,
-    db,
-    requirePermission,
-    ROLE_WEIGHTS,
-    hasPermission,
-  });
-  require('./routes/profile')(app, { requireLogin, db, userPermissionList, UPLOAD_DIR });
+  require('./routes/tickets')(app, { requireLogin, checkRole, db });
+  require('./routes/profile')(app, { requireLogin, db, UPLOAD_DIR });
   require('./routes/recipes')(app, {
     db,
     requireLogin,
@@ -275,7 +247,8 @@ module.exports = function createApp(root) {
     requirePermission,
     ROLE_WEIGHTS,
   });
-  require('./routes/map')(app, { root, requirePermission });
+  require('./routes/map')(app, { root });
   require('./routes/messages')(app, { requireLogin, db, requirePermission });
+  app.notFound((c) => c.json({ error: 'not found' }, 404));
   return { app, db, menuService };
 };

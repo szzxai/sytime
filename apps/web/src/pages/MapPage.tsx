@@ -275,7 +275,13 @@ export function MapPage() {
           </span>
         </div>
       </aside>
-      <section className="campus-stage" aria-label="校园导览">
+      <section
+        className="campus-stage"
+        aria-label="校园导览"
+        onPointerDownCapture={() => {
+          if (directory && window.matchMedia('(max-width: 700px)').matches) setDirectory(false);
+        }}
+      >
         <div
           id="guideMap"
           ref={host}

@@ -26,8 +26,7 @@ export function AnnouncementsPage() {
     });
   };
   const [confirm, setConfirm] = useState(false);
-  const canManage =
-    atLeast(user?.role, 'super_admin') || user?.permissions?.includes('announcement_publish');
+  const canManage = atLeast(user?.role, 'admin');
   const rows = query.data?.announcements || [];
   const a =
     rows.find((x) => String(x.id) === selected) ||

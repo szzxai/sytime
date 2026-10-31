@@ -51,8 +51,8 @@ async function api(url, { token, method = "GET", body } = {}) {
 }
 
 async function account(username) {
-  await api("/api/register", { method: "POST", body: { username, nickname: username, password: "test-password" } });
-  const login = await api("/api/login", { method: "POST", body: { username, password: "test-password" } });
+  await api("/api/register", { method: "POST", body: { username, nickname: username, password: "CampusTest2026" } });
+  const login = await api("/api/login", { method: "POST", body: { username, password: "CampusTest2026" } });
   assert.equal(login.status, 200, "login " + username);
   return login.data;
 }
@@ -89,15 +89,16 @@ test.before(async () => {
   user = await account("collections_user");
   other = await account("collections_other");
 
-  const shop = await api("/api/shops", { token: developer.token, method: "POST", body: SHOP });
-  assert.equal(shop.status, 201, "create shop");
-  shopId = shop.data.shop.id;
+  const {createDatabase,query}=require('../packages/db/src/client.ts');
+  const shopStore=require('../apps/api/src/domain/shops/store');
+  const db=createDatabase(path.join(temp,'data.db'));
+  try {
+    shopId=shopStore.create(db,SHOP,developer.user,shopStore.loadConfig(temp)).id;
+    for(let i=1;i<=21;i++)shopIds.push(shopStore.create(db,{...SHOP,name:'分页店铺 '+i},developer.user,shopStore.loadConfig(temp)).id);
+    // Published fixtures represent accounts that have already passed student review.
+    query(db,"UPDATE users SET role='student' WHERE id IN (?,?)").run(user.user.id,other.user.id);
+  } finally {db.$client.close();}
 
-  for (let i = 1; i <= 21; i++) {
-    const shop = await api("/api/shops", { token: developer.token, method: "POST", body: { ...SHOP, name: "分页店铺 " + i } });
-    assert.equal(shop.status, 201);
-    shopIds.push(shop.data.shop.id);
-  }
 });
 
 test.after(async () => {

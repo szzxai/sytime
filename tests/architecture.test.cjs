@@ -55,11 +55,11 @@ test("Hono checks current account authority even when a JWT remains valid", asyn
   let db;
   try {
     for (const username of ["developer", "member"]) {
-      assert.equal((await app.api("/api/register", { method: "POST", body: { username, nickname: username, password: "test-password" } })).status, 201);
+      assert.equal((await app.api("/api/register", { method: "POST", body: { username, nickname: username, password: "CampusTest2026" } })).status, 201);
     }
-    const login = (await app.api("/api/login", { method: "POST", body: { username: "member", password: "test-password" } })).data;
+    const login = (await app.api("/api/login", { method: "POST", body: { username: "member", password: "CampusTest2026" } })).data;
     db = createDatabase(path.join(app.directory, "data.db"));
-    query(db, "UPDATE users SET role='super_admin' WHERE id=?").run(login.user.id);
+    query(db, "UPDATE users SET role='admin' WHERE id=?").run(login.user.id);
     const settings = body => app.api("/api/admin/settings/banner", { method: "PUT", token: login.token, body });
     assert.equal((await settings({ value: "authorized" })).status, 200);
     query(db, "UPDATE users SET role='user' WHERE id=?").run(login.user.id);

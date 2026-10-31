@@ -16,9 +16,10 @@ function check(name, condition) {
 }
 async function account(username) {
   const registration = await site.api("/api/register", { method: "POST",
-    body: { username, nickname: "收藏隐私体验员", password: "test-password" } });
+    body: { username, nickname: "收藏隐私体验员", password: "CampusTest2026" } });
   assert.equal(registration.status, 201);
-  return (await site.api("/api/login", { method: "POST", body: { username, password: "test-password" } })).data;
+  const seedDb=new (await import('./helpers/database.cjs')).default.DatabaseSync(path.join(site.directory,'data.db'));seedDb.prepare("UPDATE users SET role='student' WHERE id=?").run(registration.data.id);seedDb.close();
+  return (await site.api("/api/login", { method: "POST", body: { username, password: "CampusTest2026" } })).data;
 }
 async function audit(page, name) {
   await page.evaluate(axe);
@@ -90,11 +91,7 @@ async function closeCollector(page, confirm = false) {
 
 try {
   const developer = await account("privacy-ui-developer");
-  const shop = await site.api("/api/shops", { token: developer.token, method: "POST", body: {
-    name: "收藏隐私测试面馆", address: "苏州市姑苏区十梓街 777 号", type: "面馆", lat: 31.3004, lng: 120.6226,
-    campus_distance_m: 420, campus_walk_min: 6, metro_station: "乐桥", metro_exit: "3 号口", metro_distance_m: 480, metro_walk_min: 7,
-  } });
-  assert.equal(shop.status, 201);
+  const seedDb=new (await import('./helpers/database.cjs')).default.DatabaseSync(path.join(site.directory,'data.db'));const shop={data:{shop:(await import('../apps/api/src/domain/shops/store.js')).default.create(seedDb,{name:'隐私验证面馆',address:'十梓街 123 号',type:'面馆',lat:31.3004,lng:120.6226,campus_distance_m:420,campus_walk_min:6,metro_station:'乐桥',metro_exit:'3 号口',metro_distance_m:480,metro_walk_min:7},developer.user,{})}};seedDb.close();
   const samples = [
     { width: 360, theme: "light", url: "/shops.html", section: "shops", itemId: shop.data.shop.id },
     { width: 360, theme: "dark", url: "/shop.html?id=" + shop.data.shop.id, section: "shops", itemId: shop.data.shop.id },

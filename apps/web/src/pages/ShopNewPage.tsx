@@ -22,7 +22,7 @@ export function ShopNewPage() {
   const mutation = useMutation({
     mutationFn: (form: HTMLFormElement) => {
       const v = formValues(form);
-      return api<{ shop: Shop }>('/api/shops', {
+      return api<{ id: number; status: string }>('/api/shops', {
         method: 'POST',
         body: {
           name: v.sName,
@@ -41,10 +41,10 @@ export function ShopNewPage() {
         },
       });
     },
-    onSuccess: (r) => {
+    onSuccess: () => {
       draft.clean();
-      toast('已添加');
-      location.href = `/shop.html?id=${r.shop.id}`;
+      toast('店铺推荐已提交审核');
+      location.href = '/profile.html';
     },
     onError: (e) => {
       toast(e.message, 'error');
@@ -162,7 +162,7 @@ export function ShopNewPage() {
         ) : (
           <Empty
             title={token ? '需要学生认证' : '登录后才能添加店铺'}
-            description="添加店铺需要学生及以上权限。"
+            description="学生每天最多推荐 10 家，审核通过后收录。"
           >
             <SiteLink
               className="btn btn--primary"

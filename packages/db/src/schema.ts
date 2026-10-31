@@ -104,24 +104,6 @@ export const dishes = sqliteTable(
   (table) => [unique('dishes_name_key_unique').on(table.name_key)],
 );
 
-export const inviteCodes = sqliteTable(
-  'invite_codes',
-  {
-    id: integer('id').primaryKey({ autoIncrement: true }),
-    code: text('code').notNull(),
-    max_uses: integer('max_uses')
-      .notNull()
-      .default(sql`0`),
-    used_count: integer('used_count')
-      .notNull()
-      .default(sql`0`),
-    created_at: integer('created_at')
-      .notNull()
-      .default(sql`(strftime('%s','now'))`),
-  },
-  (table) => [unique('invite_codes_code_unique').on(table.code)],
-);
-
 export const menuImportAudit = sqliteTable('menu_import_audit', {
   id: text('id').primaryKey(),
   source_id: text('source_id')
@@ -538,22 +520,6 @@ export const userLoginDays = sqliteTable(
   (table) => [primaryKey({ columns: [table.user_id, table.day] })],
 );
 
-export const userPermissions = sqliteTable(
-  'user_permissions',
-  {
-    id: integer('id').primaryKey({ autoIncrement: true }),
-    user_id: integer('user_id').notNull(),
-    permission: text('permission').notNull(),
-    created_at: integer('created_at')
-      .notNull()
-      .default(sql`(strftime('%s','now'))`),
-  },
-  (table) => [
-    index('idx_user_permissions_user').on(table.user_id),
-    unique('user_permissions_user_id_permission_unique').on(table.user_id, table.permission),
-  ],
-);
-
 export const userTitles = sqliteTable(
   'user_titles',
   {
@@ -579,6 +545,7 @@ export const users = sqliteTable(
     display_id: text('display_id'),
     email: text('email'),
     password_hash: text('password_hash'),
+    session_version: integer('session_version').notNull().default(0),
     username: text('username'),
     nickname: text('nickname'),
     avatar_url: text('avatar_url')
@@ -646,17 +613,71 @@ export const users = sqliteTable(
   ],
 );
 
-export const weeklyMenuImages = sqliteTable(
-  'weekly_menu_images',
+// Account v2 tables are upgraded transactionally after adoption of legacy databases.
+export const accountSessions = sqliteTable('account_sessions', {
+  id: text('id').primaryKey(),
+  user_id: integer('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  version: integer('version').notNull(),
+  expires_at: integer('expires_at').notNull(),
+  created_at: integer('created_at')
+    .notNull()
+    .default(sql`(unixepoch())`),
+});
+export const studentBindings = sqliteTable('student_bindings', {
+  student_id: text('student_id').primaryKey(),
+  user_id: integer('user_id')
+    .notNull()
+    .unique()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  real_name: text('real_name').notNull(),
+  class_name: text('class_name').notNull(),
+  bound_at: integer('bound_at')
+    .notNull()
+    .default(sql`(unixepoch())`),
+});
+export const moderationRequests = sqliteTable(
+  'moderation_requests',
   {
     id: integer('id').primaryKey({ autoIncrement: true }),
-    user_id: integer('user_id'),
-    menu_start_date: text('menu_start_date').notNull(),
-    menu_end_date: text('menu_end_date').notNull(),
-    filename: text('filename').notNull(),
-    uploaded_at: integer('uploaded_at')
+    user_id: integer('user_id')
       .notNull()
-      .default(sql`(strftime('%s','now'))`),
+      .references(() => users.id, { onDelete: 'cascade' }),
+    kind: text('kind').notNull(),
+    subject_key: text('subject_key').notNull(),
+    payload: text('payload').notNull(),
+    status: text('status').notNull().default('pending'),
+    reason: text('reason').notNull().default(''),
+    reviewer_id: integer('reviewer_id').references(() => users.id, { onDelete: 'set null' }),
+    created_at: integer('created_at')
+      .notNull()
+      .default(sql`(unixepoch())`),
+    reviewed_at: integer('reviewed_at'),
+    published_id: integer('published_id'),
   },
-  (table) => [index('idx_weekly_menu_dates').on(table.menu_start_date, table.menu_end_date)],
+  (table) => [
+    uniqueIndex('moderation_one_pending')
+      .on(table.user_id, table.kind, table.subject_key)
+      .where(sql`status='pending'`),
+  ],
 );
+export const accountAudit = sqliteTable('account_audit', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  actor_id: integer('actor_id').references(() => users.id, { onDelete: 'set null' }),
+  target_id: integer('target_id').references(() => users.id, { onDelete: 'set null' }),
+  action: text('action').notNull(),
+  detail: text('detail').notNull().default('{}'),
+  created_at: integer('created_at')
+    .notNull()
+    .default(sql`(unixepoch())`),
+});
+export const authLimits = sqliteTable('auth_limits', {
+  key: text('key').primaryKey(),
+  count: integer('count').notNull(),
+  reset_at: integer('reset_at').notNull(),
+});
+export const accountMigrations = sqliteTable('account_migrations', {
+  key: text('key').primaryKey(),
+  applied_at: integer('applied_at').notNull(),
+});

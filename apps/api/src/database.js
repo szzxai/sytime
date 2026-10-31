@@ -154,15 +154,6 @@ CREATE TABLE IF NOT EXISTS recipes (
   created_at INTEGER NOT NULL DEFAULT (strftime('%s','now'))
 );
 
-CREATE TABLE IF NOT EXISTS user_permissions (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  user_id INTEGER NOT NULL,
-  permission TEXT NOT NULL,
-  created_at INTEGER NOT NULL DEFAULT (strftime('%s','now')),
-  UNIQUE (user_id, permission)
-);
-
-CREATE INDEX IF NOT EXISTS idx_user_permissions_user ON user_permissions(user_id);
 CREATE INDEX IF NOT EXISTS idx_recipes_weekly ON recipes(is_weekly);
 
 CREATE TABLE IF NOT EXISTS announcements (
@@ -181,7 +172,6 @@ CREATE TABLE IF NOT EXISTS settings (
 
 INSERT OR IGNORE INTO settings (key, value) VALUES ('banner', '欢迎来到校园信息网');
 INSERT OR IGNORE INTO settings (key, value) VALUES ('banner_version', '0');
-INSERT OR IGNORE INTO settings (key, value) VALUES ('student_invite_code', '');
 
 CREATE TABLE IF NOT EXISTS student_applications (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -196,25 +186,6 @@ CREATE TABLE IF NOT EXISTS student_applications (
 );
 
 CREATE INDEX IF NOT EXISTS idx_student_applications_user ON student_applications(user_id);
-
-CREATE TABLE IF NOT EXISTS invite_codes (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  code TEXT NOT NULL UNIQUE,
-  max_uses INTEGER NOT NULL DEFAULT 0,
-  used_count INTEGER NOT NULL DEFAULT 0,
-  created_at INTEGER NOT NULL DEFAULT (strftime('%s','now'))
-);
-
-CREATE TABLE IF NOT EXISTS weekly_menu_images (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  user_id INTEGER,
-  menu_start_date TEXT NOT NULL,
-  menu_end_date TEXT NOT NULL,
-  filename TEXT NOT NULL,
-  uploaded_at INTEGER NOT NULL DEFAULT (strftime('%s','now'))
-);
-
-CREATE INDEX IF NOT EXISTS idx_weekly_menu_dates ON weekly_menu_images(menu_start_date, menu_end_date);
 
 CREATE TABLE IF NOT EXISTS ban_appeals (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -265,13 +236,6 @@ CREATE TABLE IF NOT EXISTS messages (
 CREATE INDEX IF NOT EXISTS idx_messages_user ON messages(user_id, read_at);
 CREATE INDEX IF NOT EXISTS idx_messages_created ON messages(user_id, created_at);
 `);
-  (function migrateInviteCode() {
-    const row = query(db, "SELECT value FROM settings WHERE key = 'student_invite_code'").get();
-    if (row && row.value) {
-      query(db, 'INSERT OR IGNORE INTO invite_codes (code, max_uses) VALUES (?, 0)').run(row.value);
-      query(db, "UPDATE settings SET value = '' WHERE key = 'student_invite_code'").run();
-    }
-  })();
   (function migrateStudentApplications() {
     const cols = query(db, 'PRAGMA table_info(student_applications)')
       .all()
@@ -283,16 +247,6 @@ CREATE INDEX IF NOT EXISTS idx_messages_created ON messages(user_id, created_at)
     }
     if (cols.indexOf('reject_reason') === -1) {
       db.$client.exec('ALTER TABLE student_applications ADD COLUMN reject_reason TEXT');
-    }
-  })();
-  (function migrateWeeklyMenuImages() {
-    const cols = query(db, 'PRAGMA table_info(weekly_menu_images)')
-      .all()
-      .map(function (c) {
-        return c.name;
-      });
-    if (cols.indexOf('user_id') === -1) {
-      db.$client.exec('ALTER TABLE weekly_menu_images ADD COLUMN user_id INTEGER');
     }
   })();
   // 三元坊必吃榜（#6）：店铺表

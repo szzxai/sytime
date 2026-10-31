@@ -1,6 +1,6 @@
 # sytime 项目地图
 
-> 更新日期：2026-10-30（Monorepo 重构、官网菜单集成、导航与视觉优化提交推送）。当前运行代码已迁移至 React 19 + TanStack Router/Query + Hono + Drizzle 的 npm workspaces Monorepo，沿用 SQLite、原有 URL、业务合同与视觉资产。当前仓库为 `szzxai/sytime`，分支 `main`。本地运行数据库 `data.db` 保留历史初始快照不纳入提交，业务与测试数据隔离。
+> 更新日期：2026-10-31（首页文案焕新、公开前数据隔离与安全门禁）。当前运行代码已迁移至 React 19 + TanStack Router/Query + Hono + Drizzle 的 npm workspaces Monorepo，沿用 SQLite、原有 URL、业务合同与视觉资产。当前仓库为 `szzxai/sytime`，分支 `main`。本地运行数据库 `data.db`、上传文件与私有配置保留在工作区，已取消跟踪并从本地可达历史移除，业务与测试数据隔离；远端历史尚未替换，不可直接切换为 public。
 >
 > [架构说明](./docs/architecture.md) 描述实际模块边界、迁移、开发与部署；[2026-10-24 技术栈研究](./docs/tech-stack-recommendation-2026-10-24.md) 保留为候选比较，其中 Fastify/PostgreSQL 不是当前实现。文末按日期保留历史记录。
 
@@ -12,7 +12,7 @@
 | --- | --- | --- |
 | Web | React 19、严格 TypeScript、TanStack Router/Query、Vite | `apps/web/src/main.tsx` |
 | HTTP | Hono 原生路由，按领域分拆，Node 生产入口 | `apps/api/src/index.ts`、`app.js`、`routes/`、`domain/` |
-| 数据 | Drizzle + better-sqlite3，27 张业务表及迁移 journal | `packages/db/src/schema.ts`、`packages/db/migrations/` |
+| 数据 | Drizzle + better-sqlite3，29 张应用表及迁移 journal | `packages/db/src/schema.ts`、`packages/db/migrations/` |
 | 共享合同 | DTO、角色权重与标签 | `packages/shared/src/index.ts` |
 | 组件 | 持久 Shell、Dialog、表单、收藏、评价、后台、地图 | `apps/web/src/components/` 与 `layouts/` |
 | 地图 | 保留 Leaflet、31 个校园地点、SVG 与高德坐标规则 | `apps/web/src/maps/`、`apps/web/public/img/map/` |
@@ -33,8 +33,8 @@ apps/
   api/
     src/index.ts        Node 入口、静态资源、404 与优雅退出
     src/app.js          Hono 组装与业务服务初始化
-    src/routes/         账号、公告、资料、消息、工单、认证等路由
-    src/domain/         菜单、店铺、菜品、头衔、收藏及历史迁移
+    src/routes/         公告、资料、消息、工单等路由；账号工作流集中于 domain/accounts
+    src/domain/         账号与审核、菜单、店铺、菜品、头衔、收藏及历史迁移
 packages/
   db/src/               Drizzle 类型化表结构、参数绑定及迁移入口
   db/migrations/        可接入旧库的 SQL 基线及迁移元数据
@@ -42,19 +42,19 @@ packages/
 server.js               生产入口，加载 apps/api/dist/index.cjs
 scripts/shops/          店铺数据整理工具
 skills/szzx-menu/        独立菜单读图技能源文件
-szzx-menu.skill          可导入的技能包
+szzx-menu.skill          本地生成的可导入技能包，忽略、不随源码提交
 menu-json-rules.md      八字段 JSON 与完整读图约定
-data.db                 运行数据库，保留历史快照
-uploads/                上传图片，必须持久化
+data.db                 本地运行数据库，必须持久化，不跟踪、不公开历史快照
+uploads/                本地上传图片，必须持久化，不跟踪
 .private/               私有密钥、原图、诊断和缓存，禁止公开
 data/                   菜单种子和店铺范围配置
 data.json               旧地图兼容数据
-tools/                  API/worker 构建、开发进程管理、技能构建
+tools/                  API/worker/operator CLI 构建、开发进程、技能构建
 tests/                  后端、迁移、部署和浏览器回归
 docs/                   架构、菜单运维、逐页规范及历史验收
 ```
 
-生成目录为 `apps/api/dist`（index.cjs、worker.cjs 与 source map）和 `apps/web/dist`（SPA 入口、按页分块和资源），不提交。根目录旧 `apps/web/public/`、`apps/api/src/domain/` 已移除；既有算法和静态资产迁入各自工作区，运行时不依赖旧入口。
+生成目录为 `apps/api/dist`（index.cjs、worker.cjs、operator.cjs 与 source map）和 `apps/web/dist`（SPA 入口、按页分块和资源），不提交。根目录旧 `public/` 与 `lib/` 入口已移除；既有算法和静态资产迁入各自工作区的 `apps/web/public/` 与 `apps/api/src/domain/`，运行时不依赖旧入口。
 
 ## 3. 请求与数据流
 
@@ -75,8 +75,8 @@ flowchart LR
 
 - 启动加载环境、连接数据库、登记 Drizzle 基线并运行历史升级、初始化非菜单领域种子与领域，监听后启动菜单调度。退出先关闭任务与 worker，再关闭 HTTP 和数据库。
 - 原 `.html` 页面由同一个 React 入口提供，Router 按页面懒加载；站内页面使用 Router Link 意图预加载，可预加载组件与主要查询就绪后一次同页转场，无全局点击拦截；正文外按顶栏位置、内部详情按父子关系切换，公告与顶栏持续挂载。未知页面保留带站点壳的 404；`/api` 与 `/api/*` 的未知路由均返回 JSON 404。
-- 页面路径、筛选、分页、hash 面板由 Router 管理；服务端数据由 Query 按公开/账号缓存。登录 token 仍由 Bearer 发送；每次受保护请求核对当前账号状态和权限。
-- JSON 上限 8 MiB；multipart 总请求限额 64 MiB，具体文件数量、类型、单文件大小在上传模块和领域路由校验。公开图片仍映射 uploads；私有原图、密钥、任务资料只走鉴权 API。
+- 页面路径、筛选、分页、hash 面板由 Router 管理；服务端数据由 Query 按公开/账号缓存。浏览器使用 HttpOnly/SameSite=Strict Cookie，localStorage 只保留会话标记；API 可使用 Bearer。每次受保护请求核对当前账号、状态、会话与版本。
+- JSON 上限 8 MiB；multipart 总请求限额 64 MiB，具体文件数量、类型、单文件大小在上传模块和领域路由校验。公开图片仍映射 uploads；待审图片只保存在私有审核载荷，批准后才写 uploads/approved；菜单原图、密钥与诊断不提供 HTTP 下载。
 - 默认页、菜谱视图、必吃榜设置、角色显示、收藏偏好及已有 localStorage 键保留。默认公开即时保存、新建收藏读取最新偏好、失败回退、自动默认夹私密等行为不变。
 - 本次按授权重置上线前菜单数据；此后的菜品 ID、评论关联、整篇菜单原子替换、租约与发布审计保留。共用评价组件按每批 50 条加载候选，评论分页仍为 20 条。
 - CSS、字体、品牌与地图素材保持；表单计数、密码显示、键盘操作、对话框焦点恢复、离线提示及未保存警告由组件/Hook 管理。
@@ -94,618 +94,404 @@ flowchart LR
 | `shop.html` | 地址、路线、本部/地铁出口距离、点赞/评价/评分汇总；学生及以上可点赞、提交/更新及删除本人 1–5 星评价，评价可选带一张实拍图（JPG/PNG，≤2 MB）、选填人数与总价并自动计算人均价；点赞右侧收藏按钮（#23）；详情页样式由账号 `shop_layout_mode` 决定：手动显示「纵向 / 双栏」开关并记住上次选择，自动则隐藏开关、纯 CSS 按屏幕宽度切换（#22） | `/api/shops/:id`、`/api/shops/:id/reviews`、互动写接口；收藏夹接口 |
 | `shop-new.html` | 最低角色提示；店铺、地址、自定义类型、可选大众点评链接、GCJ-02 坐标和本部/地铁两组步行路线表单；高德步行路线测算 | `/api/shops/meta`、`POST /api/shops`、高德 AMap.Walking |
 | `announcements.html` | 桌面主从列表；手机先看列表，选择后显示正文并可返回 | `/api/announcements` |
-| `login.html` | 用户名/密码登录；封禁错误展示；允许申诉时提交理由及可选图片 | `/api/login`、`/api/user/appeal` |
-| `register.html` | 用户名/昵称/密码及重复密码校验；注册后调用登录 | `/api/register`、`/api/login` |
-| `student_verify.html` | 已达到学生角色时隐藏表单；否则填写新生号、班级、真实姓名，可填邀请码及补充信息 | `/api/user/profile`、`/api/student/apply` |
-| `profile.html` | #20 类 B 站布局：资料头部（头像含编辑按钮 + 用户名/权限等级标签/昵称 + 个性签名；昵称与签名点击即可编辑、失焦弹确认保存）+ 吸顶横向菜单栏（主页 / 收藏 / 头衔 / 设置）；主页为空页面；收藏（#23）为左右分栏（必吃榜双层菜单 + 卡片网格 + 公开开关 + 分页，手机 UA 降级为顶部下拉）；头衔为佩戴/不佩戴选择；设置跳转 settings.html | `/api/user/profile`、`/api/user/avatar`、`/api/user/nickname`、`/api/user/signature`、`/api/user/titles`、`/api/user/title`；收藏夹接口 |
+| `login.html` | 用户名/密码登录，不显示或检查密码强度；封禁状态、最近申诉结果及允许申诉入口 | `/api/login`、`/api/user/appeal` |
+| `register.html` | 用户名/昵称、新密码逐项检查、重复密码；注册一律 user，昵称待审核 | `/api/register`、`/api/login` |
+| `student_verify.html` | 新生号/学号、班级与姓名认证，绑定状态和密码确认解绑；待审不占用、通过唯一绑定 | `/api/student/binding`、`/api/student/apply`、`/api/student/unbind` |
+| `profile.html` | 用户名/昵称为主、ID 辅助展示；资料修改与审核记录、学生绑定、收藏与头衔，公开资料先审后发 | `/api/user/profile`、`/api/user/submissions`、资料审核及收藏/头衔接口 |
 | `settings.html` | 设置页（左侧菜单，与个人中心同构）：账号安全（改密码）、网站设置（默认进入界面 / 菜品与食谱默认页 / 必吃榜默认排序与餐食类型 / 店铺详情页样式 / 收藏默认页 / 新建收藏夹默认公开（#29，切换即保存）/ 显示权限等级）、工单、退出登录 | `/api/user/profile`、`/api/user/settings`、`/api/user/settings/collection`、`/api/collections`、`/api/user/password`、`/api/tickets`、`/api/tickets/mine` |
-| `user.html` | #21 其他用户主页（类个人中心版式，#20；只读）：资料头部 + 吸顶横向菜单栏（主页 / 收藏 / 头衔 / [管理]）；权限等级按该用户 `show_role` 显示；头衔只读；仅在目标存在公开收藏夹时显示「收藏」标签，只读展示公开收藏（#23）；有 `user_manage` / `title_manage` 且目标权重低于自己（非本人）时出现「管理」：改权限等级、发放特殊权限、发放头衔、封号/解封；`?id=` 为本人时跳转 profile.html | 公开 `GET /api/users/:id/profile`、`GET /api/users/:id/titles`、`GET /api/users/:id/collections`、`GET /api/collections/:id/items`（公开收藏夹）；`GET /api/me`；管理接口同上 |
-| `inbox.html` | 消息箱：按天分组、全部/系统标签过滤、只看未读、全部标为已读、点击标记已读；页头消息铃显示未读数 | `/api/messages`、`/api/messages/unread-count`、`/api/messages/:id/read`、`/api/messages/read-all` |
-| `admin.html` | 横幅、公告、发送系统通知、学生审核、邀请码、用户管理、头衔管理、申诉、工单、developer 菜单同步和三种管理角色的 JSON 手动导入；待办红点 | `/api/admin/*`，菜单接口见 [运维文档](./docs/menu-sync.md) |
+| `user.html` | 只读已审核资料、公开收藏及头衔；有权管理目标账号时显示管理入口，不支持个人特殊授权 | `/api/users/:id/profile`、`/api/users/:id/titles`、公开收藏接口及分级管理接口 |
+| `inbox.html` | 消息箱：分组/筛选/未读、点击先标已读再定位评论或私人申请；已处理待办自动已读，页头显示未读数 | `/api/messages`、`/api/messages/unread-count`、`/api/messages/:id/read`、`/api/messages/read-all` |
+| `admin.html` | 现代工作台：概览、统一审核、用户、申诉、工单、内容、头衔与审计；按角色保护管理目标 | `/api/admin/*`，详见下方接口索引 |
 | `404.html` | 404 提示、返回首页与返回上一页 | 无 |
 | `components/Shell.tsx` 与 `components/ui.tsx` | 共享导航/页脚、账户菜单、手机抽屉、横幅、用户信息、主题、对话框、离线反馈 | 账号、横幅、消息数量接口 |
 | `components/Collections.tsx` | 收藏操作与本人/公开收藏浏览，分页、公开状态、默认选择与手机下拉 | 收藏夹接口 |
 
 页面布局由 `apps/web/public/css/site.css` 和 React 展示组件维护，业务组合位于 `apps/web/src/pages/`。共享 API、会话、主题与 URL Hook 位于 `apps/web/src/lib/`；动态文本使用 JSX 转义。各页面对应源码见 `docs/ui/pages/` 的当前 React 实现节。
 
-## 5. 后端 API 全量索引
+## 5. 后端 API 全量索引（2026-10-31）
 
-HTTP 入口位于 [index.ts](./apps/api/src/index.ts)，业务路由位于 `apps/api/src/routes/` 与 `apps/api/src/domain/*/routes.js`。菜单的方法/路径组合位于 [apps/api/src/domain/menu/routes.js](./apps/api/src/domain/menu/routes.js)，索引见 [菜单同步接口](./docs/menu-sync.md#页面与接口)。表中“公开”表示没有强制登录。
+下表从本次实际 Hono 注册路由核对；中间件和重复鉴权不计为接口。未知接口返回 JSON 404。所有后台写入另受目标角色、自审/状态、工单可见范围保护。分页审核/账号/记录 limit 默认 20、最多 50。
 
-### 5.1 账号、个人资料与设置
-
-| 方法 | 路径 | 访问条件 | 作用 |
-| --- | --- | --- | --- |
-| POST | `/api/register` | 公开 | 创建用户；首个用户为 developer，其余为 user；生成 display_id |
-| POST | `/api/login` | 公开 | 验证密码、封禁状态，签发 JWT |
-| GET | `/api/me` | 公开，可携带 token | 返回解析后的用户及显式权限 |
-| GET | `/api/user/profile` | 登录 | 当前用户资料、设置、状态、权限与佩戴中的头衔；含数值 `collection_default_public`（0/1，默认 0），不在他人公开资料中返回 |
-| GET | `/api/user/titles` | 登录 | 已拥有头衔（含佩戴状态）与未达成自动头衔的条件进度 |
-| PUT | `/api/user/title` | 登录 | 佩戴或取消佩戴；未拥有的头衔 403，`title_id: null` 表示不佩戴 |
-| PUT | `/api/user/settings` | 登录 | 部分更新：默认页、菜谱视图、必吃榜默认排序/餐食类型、`shop_layout_mode`（manual/auto）、`shop_layout`（stacked/split）、`show_role`、`collection_default_public`（仅数字 0/1，省略保留；非法值 400 且不写入其他字段）；响应回显新偏好；旧楼层字段仅保留后端兼容 |
-| POST | `/api/user/avatar` | 登录 | 上传头像，更新 avatar_url |
-| PUT | `/api/user/nickname` | 登录 | 修改昵称 |
-| PUT | `/api/user/signature` | 登录 | 修改签名 |
-| PUT | `/api/user/password` | 登录 | 校验旧密码并修改密码 |
-| GET | `/api/users/:id/profile` | 公开 | 指定用户的公开资料（昵称/签名/头像/角色/`show_role`/状态/佩戴头衔）；用于用户主页（#21） |
-| GET | `/api/users/:id/titles` | 公开 | 指定用户已拥有的头衔（只读，不含自动头衔进度）；用于用户主页「头衔」分区 |
-
-### 5.2 菜谱、公告与地图
-
-| 方法 | 路径 | 访问条件 | 作用 |
-| --- | --- | --- | --- |
-| GET | `/api/recipes` | 公开 | 按 `name COLLATE NOCASE, id` 排序读取评价记录 |
-| POST | `/api/recipes` | 登录 | 必须传当前目录已有 `dish_id`，名称由服务端确定；评分为 1–5 整数，评论选填且最多 500 字，可选 JPG/PNG 图片 ≤2 MB；无效参数拒绝并清理该次上传文件 |
-| GET | `/api/dishes` | 公开 | 有成功供应记录的独立菜品目录、拼音与索引元数据 |
-| GET | `/api/dishes/:id` | 公开 | `{dish,supplies}` 包含最近 100 条供应及来源；历史菜品仍可访问，dish 包含目录字段、`reviews_count` 和保留一位小数的 `rating_avg`；只统计 `is_weekly=0`，没有评价时评分为 null；不存在 ID 返回 404 |
-| GET | `/api/dishes/:id/reviews?offset=0` | 公开 | `{reviews,total,offset,has_more}`，每页 20 条，按 `created_at DESC,id DESC`；附作者昵称、头像、权限及头衔；偏移为 0–1000000 的整数字符串，否则 400；两种详情读取成功响应均 no-store |
-| GET | `/api/announcements` | 公开 | 按发布日期倒序读取公告 |
-| GET | `/api/menu?source_id=...` | 公开 | `{weeks,week,records,sync}`；默认最新供应周，all=1 跨全部已发布周（不可同时传 source_id）；供应含日期、餐次、地点、分类、菜名、价格、辣椒及真实评分；未知周 404，no-store |
-| GET | `/api/settings/banner` | 公开 | 当前横幅及版本 |
-| GET | `/api/map-data` | 公开 | 兼容旧地图数据，每次从磁盘读取 data.json；当前地图页面不调用 |
-| GET | `/api/shops` | 公开 | 店铺列表；支持 `type`、`q`、本部距离/时间及点赞/评价/评分范围过滤，`sort=campus/metro/likes/reviews/rating/new` 排序；拼音 A–Z 在前端排序 |
-| GET | `/api/shops/meta` | 公开 | 浏览器端 JS Key（仅另配时返回）、静态地图是否可用、坐标/范围配置、分类和当前用户创建权限；不返回 Web 服务 Key |
-| GET | `/api/shops/map-image?lat=..&lng=..&zoom=..` | 公开、同源代理 | 服务器端用 `AMAP_SERVICE_KEY` 按当前视图获取并缓存底图；中心限制在姑苏区边界外扩范围内，缩放级别限制为 9–18，不向浏览器暴露 Key |
-| GET | `/api/shops/:id` | 公开 | 店铺详情，含路线、互动计数、平均评分与评分数 |
-| GET | `/api/shops/:id/reviews` | 公开 | 评价列表和总数，含人数/总价/人均与配图地址；只回传当前用户自己的评价内容供编辑 |
-| POST | `/api/shops/:id/like` | 登录 + 学生及以上 | 切换点赞状态；后端重新核验当前角色/状态 |
-| POST | `/api/shops/:id/reviews` | 登录 + 学生及以上 | 创建或更新本人的评价；评分必填 1–5，文字最多 500 字；multipart 可选 `image`（JPG/PNG，≤2 MB），可选 `guests`（1–99）与 `total_price`（0–100000 元）字段，`per_person` 由服务端计算；`remove_image=1` 清除配图 |
-| DELETE | `/api/shops/:id/reviews/me` | 登录 + 学生及以上 | 删除本人的评价并重算统计 |
-| POST | `/api/shops` | 登录 + `shop_create`；默认 student 及以上 | 后端验证地址、分类、GCJ-02 坐标、路线字段与已配置覆盖多边形；同名返回 409 |
-| PUT | `/api/admin/map-popup` | map_popup_edit | 兼容旧地图弹窗，按 feature.name 更新所有同名对象的 popup，回写 data.json；当前地图页面无编辑入口 |
-
-### 5.3 学生认证、后台内容与用户管理
-
-| 方法 | 路径 | 访问条件 | 作用 |
-| --- | --- | --- | --- |
-| GET | `/api/admin/ping` | super_admin 及以上 | 后台连通性检查 |
-| POST | `/api/admin/announcements` | announcement_publish | 发布公告 |
-| DELETE | `/api/admin/announcements/:id` | announcement_publish | 删除公告；不存在返回 404 |
-| PUT | `/api/admin/settings/banner` | banner_edit | 修改/清空横幅并增加版本 |
-| POST | `/api/student/apply` | 登录 | 有效邀请码直接认证，否则提交审核申请 |
-| GET | `/api/admin/settings/invite-code` | invite_manage | 读取兼容的单邀请码设置 |
-| PUT | `/api/admin/settings/invite-code` | invite_manage | 写入兼容的单邀请码设置 |
-| GET | `/api/admin/invite-codes` | invite_manage | 多邀请码列表 |
-| POST | `/api/admin/invite-codes` | invite_manage | 添加邀请码和使用上限，0 表示不限 |
-| DELETE | `/api/admin/invite-codes/:id` | invite_manage | 删除邀请码 |
-| GET | `/api/admin/student-applications` | student_review | 待审核认证申请 |
-| PUT | `/api/admin/student-applications/approve` | student_review | 通过申请并提升未达学生级别用户的角色 |
-| PUT | `/api/admin/student-applications/reject` | student_review | 拒绝申请并记录可选原因 |
-| GET | `/api/admin/users` | user_manage | 用户 ID、显示 ID、账号、角色、状态与额外权限 |
-| GET | `/api/admin/users/:id` | user_manage | 单个用户的管理信息（角色、状态、显式权限、头衔）；用于用户主页「管理」分区（#21） |
-| GET | `/api/admin/permissions` | user_manage | 权限目录 |
-| PUT | `/api/admin/users/role` | user_manage，另有目标角色限制 | 修改角色 |
-| PUT | `/api/admin/users/ban` | user_manage，另有目标角色限制 | 封禁并保存理由、可选图片及是否允许申诉 |
-| PUT | `/api/admin/users/unban` | user_manage，另有目标角色限制 | 解封并清空封禁信息 |
-| PUT | `/api/admin/users/permissions` | user_manage，另有目标角色限制 | 替换显式权限列表 |
-| GET | `/api/admin/titles` | title_manage | 头衔目录与持有人数 |
-| GET | `/api/admin/titles/rules` | title_manage | 可用的自动头衔规则清单 |
-| POST | `/api/admin/titles` | title_manage | 新建头衔；重名 409，名称超 8 字 422 |
-| PUT | `/api/admin/titles/:id` | title_manage | 修改名称、颜色与描述 |
-| DELETE | `/api/admin/titles/:id` | title_manage | 删除头衔并清理所有拥有与佩戴记录 |
-| POST | `/api/admin/users/:id/titles` | title_manage，目标权重须低于自己 | 授予公共头衔；重复幂等，自动头衔 409 |
-| POST | `/api/admin/users/:id/titles/custom` | title_manage，目标权重须低于自己 | 为该账号创建并颁发专属头衔；同名沿用同一行，不进公共目录 |
-| DELETE | `/api/admin/users/:id/titles/:titleId` | title_manage，目标权重须低于自己 | 撤销头衔；佩戴中会清空佩戴并写入系统消息 |
-
-### 5.4 申诉、工单与消息
-
-| 方法 | 路径 | 访问条件 | 作用 |
-| --- | --- | --- | --- |
-| POST | `/api/user/appeal` | 公开；目标账号须已封禁 | 按用户名提交解封理由与可选 DataURL 图片 |
-| GET | `/api/admin/ban-appeals` | ban_appeal_review | 待处理申诉 |
-| PUT | `/api/admin/ban-appeals/review` | ban_appeal_review | 通过并解封，或驳回 |
-| POST | `/api/tickets` | 登录 | 提交标题、正文及可见角色范围 |
-| GET | `/api/tickets/mine` | 登录 | 本人工单与批复 |
-| GET | `/api/admin/tickets` | ticket_manage，按角色再过滤 | 当前管理者可见的工单 |
-| PUT | `/api/admin/tickets/reply` | ticket_manage，按工单可见级别再校验 | 批复正文及可选 DataURL 图片 |
-| GET | `/api/admin/pending-counts` | 登录，按权限和工单范围统计 | 学生认证、申诉、工单待办数量 |
-| GET | `/api/messages` | 登录 | 消息列表；支持 type(system)、unread、before 游标与 page_size |
-| GET | `/api/messages/unread-count` | 登录 | 未读总数（页头消息铃轮询） |
-| PUT | `/api/messages/:id/read` | 登录，限本人 | 单条标记已读 |
-| PUT | `/api/messages/read-all` | 登录 | 全部标记已读 |
-| POST | `/api/admin/notifications` | announcement_publish | 向全体用户发送系统通知（标题/正文/重要性） |
-
-### 5.5 收藏夹（#23）
-
-| 方法 | 路径 | 访问条件 | 作用 |
-| --- | --- | --- | --- |
-| GET | `/api/collections?section=shops` | 登录 | 当前用户该版块的收藏夹（含条目数）；该版块没有收藏夹时自动创建「默认收藏夹」；同时返回 `defaults` 默认收藏夹 |
-| POST | `/api/collections` | 登录 | 新建 `{section, name, is_public?}`；版块 shops，名称 1–40 字；`is_public` 明确值只接受数字 0/1（非法 400），省略时读取当前登录用户最新 `collection_default_public`；响应 `collection.is_public` 仍为布尔值 |
-| POST | `/api/collections/:id/items` | 登录，限本人收藏夹 | 收藏 `{item_type, item_id}`；item_type 必须与收藏夹版块匹配（shops→shop），重复收藏幂等 |
-| DELETE | `/api/collections/:id/items/:itemType/:itemId` | 登录，限本人收藏夹 | 取消收藏 |
-| GET | `/api/collections/:id/items?page=1` | 登录或公开收藏夹（可匿名）；私密仅本人 | 每页 20 条；店铺返回卡片信息；已删除内容标记 `deleted` |
-| GET | `/api/users/:id/collections` | 公开 | 指定用户的公开收藏夹（`is_public=1`），供他人主页只读展示 |
-| PUT | `/api/collections/:id/public` | 登录，限本人收藏夹 | 切换公开状态 `{is_public}` |
-| PUT | `/api/user/settings/collection` | 登录 | 保存默认收藏夹；支持 `{default_collection_shops}` 或 `{section, collection_id}`，并校验归属与版块 |
-
-### 5.6 菜单同步与人工导入
-
-| 方法 | 路径 | 访问条件 | 作用 |
-| --- | --- | --- | --- |
-| GET | `/api/admin/menu-sync/settings` | developer | 读取掩码配置与版本 |
-| PUT | `/api/admin/menu-sync/settings` | developer | 保存配置、定时与开关 |
-| POST | `/api/admin/menu-sync/test` | developer | 检查已保存模型与图片 JSON 能力 |
-| GET | `/api/admin/menu-sync/jobs` | developer | 任务、来源、配置摘要 |
-| POST | `/api/admin/menu-sync/jobs` | developer | 立即同步；支持最多六张补图 |
-| GET | `/api/admin/menu-sync/jobs/:id` | admin 及以上 | 任务详情、逐篇状态 |
-| POST | `/api/admin/menu-sync/jobs/:id/retry` | developer | 重试失败篇目 |
-| POST | `/api/admin/menu-sync/jobs/:id/cancel` | developer | 取消任务 |
-| GET | `/api/admin/menu-sync/jobs/:id/artifacts/:kind` | admin 及以上 | 按 source_id 读取原图、menu/diagnostic/source JSON |
-| GET | `/api/admin/menu-sync/imports` | admin 及以上 | 来源、结束任务及审计 |
-| GET | `/api/admin/menu-sync/imports/source` | admin 及以上 | 已发布记录或 job_id 对应候选 |
-| POST | `/api/admin/menu-sync/imports/preview` | admin 及以上 | 八字段校验、归一化及摘要 |
-| POST | `/api/admin/menu-sync/imports` | admin 及以上 | 校验版本、digest、reviewed 后原子发布 |
-| GET | `/menu-json-rules.md` | 公开 | 下载完整读图与 JSON 规则 |
-
-## 6. 角色与权限模型
-
-角色权重为 `developer(6) > super_admin(5) > admin(4) > student(3) > user(2) > guest(1)`。
-
-- `checkRole(requiredRole)` 解析 JWT，缺失或无效 token 按 guest 处理；需要角色时比较权重。JWT 带有 id、role、username；角色判断使用数据库当前账号而非凭据中的旧角色。已封禁账号视为无有效登录。
-- `requireLogin` 在解析后要求有效用户 ID，否则返回 401。
-- `requirePermission` 调用 `hasPermission`：角色达到该权限默认等级，或 `user_permissions` 存在显式授权，即可通过。
-- 后台入口允许 admin 及以上或拥有任意显式权限的用户；后台菜单进一步按具体权限过滤。
-- 修改用户角色、封禁/解封和替换权限时，禁止操作自己或同级/更高级目标；新角色最高只能低于操作者一级。
-- 工单可见范围为 `admin`、`super_admin`、`developer`，后台在 ticket_manage 之外另按角色权重过滤。
-
-| 权限 | 默认最低角色 | 功能 |
+| 方法 | 路径 | 访问与行为 |
 | --- | --- | --- |
-| banner_edit | super_admin | 横幅编辑 |
-| announcement_publish | super_admin | 发布公告 |
-| student_review | super_admin | 学生认证审核 |
-| invite_manage | super_admin | 邀请码管理 |
-| user_manage | super_admin | 用户及显式权限管理 |
-| ban_appeal_review | super_admin | 封禁申诉审核 |
-| map_popup_edit | admin | 地图弹窗编辑 |
-| ticket_manage | admin | 工单管理 |
-| shop_create | student（由 `SHOP_CREATE_MIN_ROLE` 可配置） | 添加店铺；也可在用户显式权限中单独授权 |
-| title_manage | super_admin | 头衔目录维护与用户头衔授予/撤销 |
+| DELETE | `/api/admin/announcements/:id` | admin/operator；管理账号须满足目标保护 |
+| DELETE | `/api/admin/titles/:id` | admin/operator；管理账号须满足目标保护 |
+| DELETE | `/api/admin/users/:id/titles/:titleId` | admin/operator；管理账号须满足目标保护 |
+| DELETE | `/api/collections/:id/items/:itemType/:itemId` | 登录且归属本人；公开创建/切换另需 student 及以上 |
+| DELETE | `/api/shops/:id/reviews/me` | student 及以上；仅本人互动 |
+| GET | `/api/admin/audit` | admin/operator；管理账号须满足目标保护 |
+| GET | `/api/admin/overview` | admin/operator；管理账号须满足目标保护 |
+| GET | `/api/admin/reviews` | admin/operator；管理账号须满足目标保护 |
+| GET | `/api/admin/reviews/:id` | admin/operator；管理账号须满足目标保护 |
+| GET | `/api/admin/tickets` | admin/operator；管理账号须满足目标保护 |
+| GET | `/api/admin/titles` | admin/operator；管理账号须满足目标保护 |
+| GET | `/api/admin/titles/rules` | admin/operator；管理账号须满足目标保护 |
+| GET | `/api/admin/users` | admin/operator；管理账号须满足目标保护 |
+| GET | `/api/admin/users/:id` | admin/operator；管理账号须满足目标保护 |
+| GET | `/api/announcements` | 公开；登录可返回本人互动状态 |
+| GET | `/api/collections` | 有效会话，限本人 |
+| GET | `/api/collections/:id/items` | 私密仅本人；公开可匿名 |
+| GET | `/api/dishes` | 公开；登录可返回本人互动状态 |
+| GET | `/api/dishes/:id` | 公开；登录可返回本人互动状态 |
+| GET | `/api/dishes/:id/reviews` | 公开；登录可返回本人互动状态 |
+| GET | `/api/map-data` | 公开；登录可返回本人互动状态 |
+| GET | `/api/me` | 公开；登录可返回本人互动状态 |
+| GET | `/api/menu` | 公开；登录可返回本人互动状态 |
+| GET | `/api/messages` | 有效会话，限本人 |
+| GET | `/api/messages/unread-count` | 有效会话，限本人 |
+| GET | `/api/recipes` | 公开；登录可返回本人互动状态 |
+| GET | `/api/settings/banner` | 公开；登录可返回本人互动状态 |
+| GET | `/api/shops` | 公开；登录可返回本人互动状态 |
+| GET | `/api/shops/:id` | 公开；登录可返回本人互动状态 |
+| GET | `/api/shops/:id/reviews` | 公开；登录可返回本人互动状态 |
+| GET | `/api/shops/map-image` | 公开；登录可返回本人互动状态 |
+| GET | `/api/shops/meta` | 公开；登录可返回本人互动状态 |
+| GET | `/api/student/binding` | 有效会话，限本人 |
+| GET | `/api/tickets/mine` | 有效会话，限本人 |
+| GET | `/api/user/profile` | 有效会话，限本人 |
+| GET | `/api/user/submissions` | 有效会话，限本人 |
+| GET | `/api/user/titles` | 有效会话，限本人 |
+| GET | `/api/users/:id/collections` | 公开；登录可返回本人互动状态 |
+| GET | `/api/users/:id/profile` | 公开；登录可返回本人互动状态 |
+| GET | `/api/users/:id/titles` | 公开；登录可返回本人互动状态 |
+| POST | `/api/admin/announcements` | admin/operator；管理账号须满足目标保护 |
+| POST | `/api/admin/notifications` | admin/operator；管理账号须满足目标保护 |
+| POST | `/api/admin/reviews/:id/decision` | admin/operator；管理账号须满足目标保护 |
+| POST | `/api/admin/titles` | admin/operator；管理账号须满足目标保护 |
+| POST | `/api/admin/users/:id/titles` | admin/operator；管理账号须满足目标保护 |
+| POST | `/api/admin/users/:id/titles/custom` | admin/operator；管理账号须满足目标保护 |
+| POST | `/api/admin/users/:id/unbind` | admin/operator；管理账号须满足目标保护 |
+| POST | `/api/collections` | 登录且归属本人；公开创建/切换另需 student 及以上 |
+| POST | `/api/collections/:id/items` | 登录且归属本人；公开创建/切换另需 student 及以上 |
+| POST | `/api/login` | 公开、限流；注册固定 user，登录只核对凭据 |
+| POST | `/api/logout` | 有效会话，限本人 |
+| POST | `/api/recipes` | student 及以上；202 先审后发；店铺每日最多 10 次 |
+| POST | `/api/register` | 公开、限流；注册固定 user，登录只核对凭据 |
+| POST | `/api/shops` | student 及以上；202 先审后发；店铺每日最多 10 次 |
+| POST | `/api/shops/:id/like` | student 及以上；仅本人互动 |
+| POST | `/api/shops/:id/reviews` | student 及以上；202 先审后发；店铺每日最多 10 次 |
+| POST | `/api/student/apply` | 登录；待审不占用学号，事务批准唯一绑定 |
+| POST | `/api/student/unbind` | 本人密码确认，解绑并撤销全部会话 |
+| POST | `/api/tickets` | 有效会话，限本人 |
+| POST | `/api/user/appeal` | 正确用户名/密码、已封禁且允许申诉 |
+| POST | `/api/user/avatar` | 登录；202 提交私有资料审核 |
+| POST | `/api/user/sessions/revoke` | 本人密码确认，撤销全部会话 |
+| POST | `/api/user/submissions/:id/withdraw` | 有效会话，限本人 |
+| PUT | `/api/admin/settings/banner` | admin/operator；管理账号须满足目标保护 |
+| PUT | `/api/admin/tickets/reply` | admin/operator；管理账号须满足目标保护 |
+| PUT | `/api/admin/titles/:id` | admin/operator；管理账号须满足目标保护 |
+| PUT | `/api/admin/users/ban` | admin/operator；管理账号须满足目标保护 |
+| PUT | `/api/admin/users/role` | admin/operator；管理账号须满足目标保护 |
+| PUT | `/api/admin/users/unban` | admin/operator；管理账号须满足目标保护 |
+| PUT | `/api/collections/:id/public` | 登录且归属本人；公开创建/切换另需 student 及以上 |
+| PUT | `/api/messages/:id/read` | 有效会话，限本人 |
+| PUT | `/api/messages/read-all` | 有效会话，限本人 |
+| PUT | `/api/user/display_id` | 登录；202 提交私有资料审核 |
+| PUT | `/api/user/nickname` | 登录；202 提交私有资料审核 |
+| PUT | `/api/user/password` | 旧密码确认，新密码策略，撤销全部会话 |
+| PUT | `/api/user/settings` | 有效会话，限本人 |
+| PUT | `/api/user/settings/collection` | 有效会话，限本人 |
+| PUT | `/api/user/signature` | 登录；202 提交私有资料审核 |
+| PUT | `/api/user/title` | 有效会话，限本人 |
+
+展示 ID/昵称/签名为 PUT、头像为 POST。学生认证、申诉与内容进入 moderation_requests；决定统一经 `/api/admin/reviews/:id/decision`，decision=approve/reject，拒绝必须提供 reason。仅 pending 可决定，不能自审；202 返回 id/status/message，批准返回 published_id。
+
+本人历史提供摘要、状态、原因、时间与已发布链接；私有图片不在公共读取中返回。已封禁账号在凭据正确的登录响应中可查询最近申诉状态/原因；申诉被拒后仍受十分钟提交限制。
+
+删除店铺评价同时撤回同店待审修改。`/api/admin/menu-sync/*`、旧菜单上传/每周图片、地图编辑、邀请码、权限授予、旧认证/申诉审核接口均已删除。菜单公开 GET 接口与环境驱动自动任务保留。
+
+## 6. 角色、安全与审核
+
+`operator(5) > admin(4) > student(3) > user(2) > guest(1)`。guest 公开浏览，user 个人基础/私密功能，student 内容提交和点赞，admin 正常管理，operator 另管 admin；不存在个人授权绕过。
+
+账号管理禁止操作自己或 operator；admin 不能管理 admin。学生角色必须有已批准绑定。历史 developer/super_admin 映射 operator/admin，无唯一绑定的旧 student 回到 user 重验；迁移用 account_migrations 幂等标记。
+
+JWT 限定 HS256、签发者、接收者，包含用户 ID 和随机 sid；数据库会话及版本有效才允许操作。浏览器 Cookie HttpOnly、SameSite=Strict，HTTPS/生产 Secure；改密/封禁/角色变化/解绑撤销全部会话。退出只撤销当前会话。API 客户端可用 Bearer，角色不信任 token 中的旧字段。开发无 JWT_SECRET 时持久生成私有随机密钥，生产显式设随机密钥、准确 APP_ORIGIN 和 HTTPS。
+
+注册/新密码至少 8 字符、大小写英文字母与数字、首尾无空白、最多 72 UTF-8 字节；bcrypt cost12。**登录不检查或显示密码强度**，旧弱密码仍可凭正确值登录，下一次改密必须符合新规则。持久限流覆盖登录（来源30/10分钟、用户名10/10分钟）、注册10/10分钟、申诉15/10分钟、改密10/10分钟、解绑5/10分钟、提交30/10分钟；学生/申诉自身每十分钟一次。限流键散列保存；写请求校验 Origin/Sec-Fetch-Site。
+
+学号 NFKC/大写归一化，批准使用立即写事务与唯一约束保证单一绑定，同时拒绝竞争申请、通知、留审计。解绑释放身份、降级学生、撤回未处理内容并将收藏转私密；历史已发布内容保留。
+
+公开资料、菜品/店铺评价、推荐一律私有待审；同账号同类同对象最多一项 pending。店铺限北京时间自然日 10 次（含拒绝和撤回），额度及申请同一事务写入。图片限2MB与真实解码，限制像素、去元数据、转PNG，通过前无公开路径。通过时才修改公开表/评分；拒绝和撤回删除私有图片字节。审核、发布、站内消息与审计原子提交，文件失败回滚清理。角色降级/封禁后的内容不能获批。
 
 ## 7. 数据模型与文件存储
 
-### 7.1 SQLite
-
-当前 Drizzle schema 与基线包含 27 张业务表；旧论坛表由历史迁移清除。包括账号/登录记录/权限、公告/设置、认证/邀请/申诉/工单/消息/评价、店铺互动、头衔、收藏和菜单等领域。店铺 schema 在 `apps/api/src/domain/shops/store.js`，头衔 schema 与种子在 `apps/api/src/domain/titles/store.js`，收藏夹 schema 在 `apps/api/src/domain/collections/store.js`，菜单迁移与显式测试种子工具位于 `apps/api/src/domain/menu/store.js`。另有内部表 sqlite_sequence、__drizzle_migrations。完整字段、默认值、外键和索引见下方「Drizzle 完整结构」，以 packages/db/src/schema.ts 及迁移为源；测试使用临时数据库。
-
-| 表 | 主要字段/约束 | 关联与用途 |
-| --- | --- | --- |
-| users | id、display_id、username、nickname、password_hash、avatar_url、signature、role、网站设置（默认页/楼层/菜谱视图/必吃榜排序与餐食类型/`shop_layout_mode`/`shop_layout`/`show_role`）、默认收藏夹 `default_collection_shops`（可空）、`collection_default_public INTEGER NOT NULL DEFAULT 0`、status、封禁字段、`equipped_title_id`、`last_login_date`/`login_streak`；username/email 唯一 | email 为兼容字段；布局模式决定手动开关或按宽度切换，`shop_layout` 记住手动布局；默认收藏夹字段指向本人的店铺版块；`collection_default_public` 为主动新建收藏夹的默认公开偏好，旧/新账号默认 0，迁移幂等且不改已有收藏夹；头衔为单值，连续登录供自动规则使用；普通用户强制展示角色 |
-| user_permissions | user_id、permission；二者联合唯一 | 用户显式授权 |
-| collections | user_id、section（shops）、name、is_public（INTEGER NOT NULL DEFAULT 0）、created_at | 收藏夹（#23/#29）；主动创建保存明确选择或账号偏好；GET 时版块无收藏夹会自动创建私密「默认收藏夹」；修改默认偏好不追溯已有收藏夹 |
-| collection_items | collection_id、item_type（shop）、item_id、created_at；三者联合唯一 | 收藏项；必吃榜收藏夹只允许 shop |
-| recipes | user_id、username、name、rating、comment、image_url、is_weekly、可空 dish_id → dishes.id | 一条记录是一条评价；新评价必须选择已有菜品，保存规范名称；旧未匹配记录保留 NULL，无店铺关联；索引 `idx_recipes_dish(dish_id,created_at DESC,id DESC)` |
-| weekly_menu_images | user_id、menu_start_date、menu_end_date、filename、uploaded_at | 已停用兼容空表，无上传与读取接口 |
-| announcements | title、content、publish_date | 公开公告 |
-| settings | key 主键、value | 横幅、邀请码兼容设置及加密 menu_ai_config |
-| student_applications | user_id、student_id、class_name、real_name、extra_info、reject_reason、status | 认证审核；pending/approved/rejected |
-| invite_codes | code 唯一、max_uses、used_count | 多邀请码及次数限制 |
-| ban_appeals | user_id、appeal_reason、appeal_image、status | 解封审核；pending/approved/rejected |
-| tickets | user_id、username、title、content、visibility、status、reply_content、reply_image、reply_by、replied_at | 工单；pending/resolved |
-| messages | user_id、type、actors(JSON)、count、target_kind/target_id、title/body/snippet、important、read_at | 消息箱；仅 system 消息，target 返回 null；旧互动消息由启动迁移清除 |
-| titles | key（种子标识，可空）、name、hue、source（grant/auto）、rule（自动规则 key）、description、`owner_user_id` | 头衔目录，共 7 个种子：四个自动头衔（三元坊老饕/夜读星/闲者爱上网/校园老吃家）与三个手动（师者/创站元老/官方）；角色等级头衔已下线（角色改由权限等级标签体现），旧库中的这类目录行会在启动迁移时清理；`owner_user_id` 为空是公共头衔（按名称全站唯一），非空是该账号的专属头衔（按「账号 + 名称」唯一，不进公共目录）；`rule` 关联 `apps/api/src/domain/titles/rules.js` 的规则；来源为 auto 时不可手动授予也不可手动撤销，带 `key` 的种子头衔不可删除，专属头衔不得与公共头衔同名 |
-| user_titles | user_id、title_id 联合唯一、granted_by（NULL 表示自动发放）、created_at | 用户拥有的头衔，一人可多个；成就头衔只增不减；佩戴状态单独存在 users.equipped_title_id；撤销专属头衔时其 titles 目录行一并删除 |
-| user_login_days | user_id、day 联合主键 | 登录逐日历史（北京时间自然日，登录时写入），供「闲者爱上网」按周末窗口统计；不做回填 |
-| shops | name 唯一、address、location_note、可选 `dianping_url`、type、GCJ-02 lat/lng、本部/最近地铁出口 distance_m 与 walk_min、metro_station/metro_exit、created_by/created_at | 三元坊必吃榜；列表可按本部、地铁及互动统计排序筛选 |
-| shop_likes | shop_id、user_id 唯一、created_at | 每名学生及以上用户每店一个点赞；重复点击取消 |
-| shop_reviews | shop_id、user_id 唯一、rating 1–5、content、guests、total_price、image_url、created_at/updated_at | 每名学生及以上用户每店一条评价，可更新；可选带一张图（存 `uploads/shops/`）与人数/总价，人均价按总价/人数自动计算；汇总评价数、评分数和平均星级 |
-| dishes | id、name、唯一 name_key、initial、pinyin、pinyin_initials、sort_key | 独立稳定 ID 菜品 |
-| menu_sources | 来源 ID、可空 article_id、kind、publication_origin、revision、title/url、日期/摘要/计数/错误 | 官网队列与独立手动批次 |
-| menu_records | source_id/record_key 联合主键、dish_id、日期/餐次/地点/档口/价格/辣椒 | 供应记录，明确外键 |
-| menu_sync_jobs | UUID、唯一 auto_day、状态/阶段、配置版本、计数、取消标记 | 持久同步任务 |
-| menu_job_items | job_id/source_id 联合主键、状态、阶段、错误及资料路径 | 逐篇结果 |
-| menu_sync_lease | 单例 ID、owner、expires_at | 防并发同步与发布 fencing |
-| menu_sync_state | key/value | 发现锚点 |
-| menu_import_audit | source_id、actor_id、job_id、revision、records_json | 人工发布历史，与菜单发布同一事务 |
-
-迁移 `0001_menu_rebuild.sql` 一次清理菜单、评价、任务、配置，并将现有用户食谱默认页设为 weekly；新注册也显式设 weekly，schema 的 all 仅为历史基线默认值。启动不再自动导入菜单种子。原有用户关联主要由应用维护；新增菜单记录和任务条目声明外键。菜单供应按篇事务替换；评价关联迁移在目录初始化后独立执行。只为 `dish_id IS NULL AND is_weekly=0` 的旧评价按 NFC、首尾及连续空白、大小写归一后的名称补关联，保留原菜名、无法匹配记录及每周记录，不覆盖已有关联；重复启动幂等。认证和申诉限频规则保持。
-
-实际已提交数据库保留旧迁移结构，例如 users.display_id 通过后续 `ALTER TABLE` 添加，没有新建库 SQL 中的 UNIQUE 约束；不能假设旧库与新库的所有约束完全一致。
-
-### Drizzle 完整结构
-
-下表由隔离新库的实际 PRAGMA 生成（27 张业务表）；旧库既有约束差异仍按升级说明处理。所有时间戳单位沿用原接口。
-
-#### `announcements`
-
-| 字段 | SQLite 类型 | 非空 | 默认值 | 主键序位 |
-| --- | --- | --- | --- | --- |
-| id | INTEGER | 否 | — | 1 |
-| title | TEXT | 是 | — | — |
-| content | TEXT | 是 | — | — |
-| publish_date | TEXT | 是 | date('now') | — |
-
-索引：`idx_announcements_date`。
-#### `ban_appeals`
-
-| 字段 | SQLite 类型 | 非空 | 默认值 | 主键序位 |
-| --- | --- | --- | --- | --- |
-| id | INTEGER | 否 | — | 1 |
-| user_id | INTEGER | 是 | — | — |
-| appeal_reason | TEXT | 是 | — | — |
-| appeal_image | TEXT | 是 | '' | — |
-| status | TEXT | 是 | 'pending' | — |
-| created_at | INTEGER | 是 | strftime('%s','now') | — |
-
-索引：`idx_ban_appeals_user`、`idx_ban_appeals_status`。
-#### `collection_items`
-
-| 字段 | SQLite 类型 | 非空 | 默认值 | 主键序位 |
-| --- | --- | --- | --- | --- |
-| id | INTEGER | 否 | — | 1 |
-| collection_id | INTEGER | 是 | — | — |
-| item_type | TEXT | 是 | — | — |
-| item_id | INTEGER | 是 | — | — |
-| created_at | INTEGER | 是 | strftime('%s','now') | — |
-
-索引：`idx_collection_items_item`、`idx_collection_items_collection`、`sqlite_autoindex_collection_items_1`（唯一）。
-#### `collections`
-
-| 字段 | SQLite 类型 | 非空 | 默认值 | 主键序位 |
-| --- | --- | --- | --- | --- |
-| id | INTEGER | 否 | — | 1 |
-| user_id | INTEGER | 是 | — | — |
-| section | TEXT | 是 | — | — |
-| name | TEXT | 是 | — | — |
-| is_public | INTEGER | 是 | 0 | — |
-| created_at | INTEGER | 是 | strftime('%s','now') | — |
-
-索引：`idx_collections_user_section`。
-#### `dishes`
-
-| 字段 | SQLite 类型 | 非空 | 默认值 | 主键序位 |
-| --- | --- | --- | --- | --- |
-| id | INTEGER | 否 | — | 1 |
-| name | TEXT | 是 | — | — |
-| name_key | TEXT | 是 | — | — |
-| initial | TEXT | 是 | — | — |
-| pinyin | TEXT | 是 | — | — |
-| pinyin_initials | TEXT | 是 | — | — |
-| sort_key | TEXT | 是 | — | — |
-| created_at | INTEGER | 是 | — | — |
-
-索引：`sqlite_autoindex_dishes_1`（唯一）。
-#### `invite_codes`
-
-| 字段 | SQLite 类型 | 非空 | 默认值 | 主键序位 |
-| --- | --- | --- | --- | --- |
-| id | INTEGER | 否 | — | 1 |
-| code | TEXT | 是 | — | — |
-| max_uses | INTEGER | 是 | 0 | — |
-| used_count | INTEGER | 是 | 0 | — |
-| created_at | INTEGER | 是 | strftime('%s','now') | — |
-
-索引：`sqlite_autoindex_invite_codes_1`（唯一）。
-#### `menu_import_audit`
-
-| 字段 | SQLite 类型 | 非空 | 默认值 | 主键序位 |
-| --- | --- | --- | --- | --- |
-| id | TEXT | 否 | — | 1 |
-| source_id | TEXT | 是 | — | — |
-| actor_id | INTEGER | 是 | — | — |
-| job_id | TEXT | 否 | — | — |
-| created_at | INTEGER | 是 | — | — |
-| records_count | INTEGER | 是 | — | — |
-| records_json | TEXT | 是 | — | — |
-| revision | INTEGER | 是 | — | — |
-
-索引：`sqlite_autoindex_menu_import_audit_1`（唯一）。
-
-外键：`source_id → menu_sources.id`（删除 NO ACTION）。
-#### `menu_job_items`
-
-| 字段 | SQLite 类型 | 非空 | 默认值 | 主键序位 |
-| --- | --- | --- | --- | --- |
-| job_id | TEXT | 是 | — | 1 |
-| source_id | TEXT | 是 | — | 2 |
-| article_id | INTEGER | 是 | — | — |
-| title | TEXT | 是 | — | — |
-| status | TEXT | 是 | — | — |
-| phase | TEXT | 是 | 'fetch' | — |
-| records_count | INTEGER | 是 | 0 | — |
-| error | TEXT | 是 | '' | — |
-| artifact_path | TEXT | 否 | — | — |
-
-索引：`sqlite_autoindex_menu_job_items_1`（唯一）。
-
-外键：`job_id → menu_sync_jobs.id`（删除 NO ACTION）。
-#### `menu_records`
-
-| 字段 | SQLite 类型 | 非空 | 默认值 | 主键序位 |
-| --- | --- | --- | --- | --- |
-| source_id | TEXT | 是 | — | 1 |
-| record_key | TEXT | 是 | — | 2 |
-| dish_id | INTEGER | 是 | — | — |
-| date | TEXT | 否 | — | — |
-| weekday | TEXT | 否 | — | — |
-| time_json | TEXT | 是 | — | — |
-| place | TEXT | 否 | — | — |
-| group_name | TEXT | 否 | — | — |
-| price | REAL | 否 | — | — |
-| spicy | INTEGER | 否 | — | — |
-
-索引：`idx_menu_records_dish`、`sqlite_autoindex_menu_records_1`（唯一）。
-
-外键：`dish_id → dishes.id`（删除 NO ACTION）、`source_id → menu_sources.id`（删除 NO ACTION）。
-#### `menu_sources`
-
-| 字段 | SQLite 类型 | 非空 | 默认值 | 主键序位 |
-| --- | --- | --- | --- | --- |
-| id | TEXT | 否 | — | 1 |
-| article_id | INTEGER | 否 | — | — |
-| title | TEXT | 是 | — | — |
-| url | TEXT | 是 | — | — |
-| published_date | TEXT | 否 | — | — |
-| content_hash | TEXT | 否 | — | — |
-| updated_at | INTEGER | 否 | — | — |
-| checked_at | INTEGER | 否 | — | — |
-| records_count | INTEGER | 是 | 0 | — |
-| last_error | TEXT | 是 | '' | — |
-| kind | TEXT | 是 | 'school' | — |
-| publication_origin | TEXT | 是 | 'automatic' | — |
-| revision | INTEGER | 是 | 0 | — |
-
-索引：`sqlite_autoindex_menu_sources_2`（唯一）、`sqlite_autoindex_menu_sources_1`（唯一）。
-#### `menu_sync_jobs`
-
-| 字段 | SQLite 类型 | 非空 | 默认值 | 主键序位 |
-| --- | --- | --- | --- | --- |
-| id | TEXT | 否 | — | 1 |
-| trigger | TEXT | 是 | — | — |
-| auto_day | TEXT | 否 | — | — |
-| status | TEXT | 是 | — | — |
-| phase | TEXT | 是 | 'queued' | — |
-| created_at | INTEGER | 是 | — | — |
-| started_at | INTEGER | 否 | — | — |
-| finished_at | INTEGER | 否 | — | — |
-| config_revision | INTEGER | 是 | — | — |
-| provider | TEXT | 是 | — | — |
-| model | TEXT | 是 | — | — |
-| total | INTEGER | 是 | 0 | — |
-| processed | INTEGER | 是 | 0 | — |
-| succeeded | INTEGER | 是 | 0 | — |
-| failed | INTEGER | 是 | 0 | — |
-| cancel_requested | INTEGER | 是 | 0 | — |
-| error | TEXT | 是 | '' | — |
-
-索引：`sqlite_autoindex_menu_sync_jobs_2`（唯一）、`sqlite_autoindex_menu_sync_jobs_1`（唯一）。
-#### `menu_sync_lease`
-
-| 字段 | SQLite 类型 | 非空 | 默认值 | 主键序位 |
-| --- | --- | --- | --- | --- |
-| id | INTEGER | 否 | — | 1 |
-| owner | TEXT | 是 | — | — |
-| expires_at | INTEGER | 是 | — | — |
-
-索引：无独立索引。
-#### `menu_sync_state`
-
-| 字段 | SQLite 类型 | 非空 | 默认值 | 主键序位 |
-| --- | --- | --- | --- | --- |
-| key | TEXT | 否 | — | 1 |
-| value | TEXT | 是 | — | — |
-
-索引：`sqlite_autoindex_menu_sync_state_1`（唯一）。
-#### `messages`
-
-| 字段 | SQLite 类型 | 非空 | 默认值 | 主键序位 |
-| --- | --- | --- | --- | --- |
-| id | INTEGER | 否 | — | 1 |
-| user_id | INTEGER | 是 | — | — |
-| type | TEXT | 是 | — | — |
-| actors | TEXT | 是 | '[]' | — |
-| count | INTEGER | 是 | 1 | — |
-| target_kind | TEXT | 是 | '' | — |
-| target_id | INTEGER | 否 | — | — |
-| title | TEXT | 是 | '' | — |
-| body | TEXT | 是 | '' | — |
-| snippet | TEXT | 是 | '' | — |
-| important | INTEGER | 是 | 0 | — |
-| read_at | INTEGER | 否 | — | — |
-| created_at | INTEGER | 是 | strftime('%s','now') | — |
-
-索引：`idx_messages_created`、`idx_messages_user`。
-#### `recipes`
-
-| 字段 | SQLite 类型 | 非空 | 默认值 | 主键序位 |
-| --- | --- | --- | --- | --- |
-| id | INTEGER | 否 | — | 1 |
-| user_id | INTEGER | 是 | — | — |
-| username | TEXT | 是 | — | — |
-| name | TEXT | 是 | — | — |
-| rating | INTEGER | 是 | 0 | — |
-| comment | TEXT | 否 | — | — |
-| image_url | TEXT | 否 | — | — |
-| is_weekly | INTEGER | 是 | 0 | — |
-| created_at | INTEGER | 是 | strftime('%s','now') | — |
-| dish_id | INTEGER | 否 | — | — |
-
-索引：`idx_recipes_dish`、`idx_recipes_weekly`。
-
-外键：`dish_id → dishes.id`（删除 NO ACTION）。
-#### `settings`
-
-| 字段 | SQLite 类型 | 非空 | 默认值 | 主键序位 |
-| --- | --- | --- | --- | --- |
-| key | TEXT | 否 | — | 1 |
-| value | TEXT | 否 | — | — |
-
-索引：`sqlite_autoindex_settings_1`（唯一）。
-#### `shop_likes`
-
-| 字段 | SQLite 类型 | 非空 | 默认值 | 主键序位 |
-| --- | --- | --- | --- | --- |
-| id | INTEGER | 否 | — | 1 |
-| shop_id | INTEGER | 是 | — | — |
-| user_id | INTEGER | 是 | — | — |
-| created_at | INTEGER | 是 | strftime('%s','now') | — |
-
-索引：`idx_shop_likes_shop`、`sqlite_autoindex_shop_likes_1`（唯一）。
-#### `shop_reviews`
-
-| 字段 | SQLite 类型 | 非空 | 默认值 | 主键序位 |
-| --- | --- | --- | --- | --- |
-| id | INTEGER | 否 | — | 1 |
-| shop_id | INTEGER | 是 | — | — |
-| user_id | INTEGER | 是 | — | — |
-| rating | INTEGER | 是 | — | — |
-| content | TEXT | 是 | '' | — |
-| guests | INTEGER | 否 | — | — |
-| total_price | REAL | 否 | — | — |
-| image_url | TEXT | 是 | '' | — |
-| created_at | INTEGER | 是 | strftime('%s','now') | — |
-| updated_at | INTEGER | 是 | strftime('%s','now') | — |
-
-索引：`idx_shop_reviews_shop`、`sqlite_autoindex_shop_reviews_1`（唯一）。
-#### `shops`
-
-| 字段 | SQLite 类型 | 非空 | 默认值 | 主键序位 |
-| --- | --- | --- | --- | --- |
-| id | INTEGER | 否 | — | 1 |
-| name | TEXT | 是 | — | — |
-| address | TEXT | 是 | — | — |
-| location_note | TEXT | 是 | '' | — |
-| dianping_url | TEXT | 是 | '' | — |
-| type | TEXT | 是 | — | — |
-| lat | REAL | 是 | — | — |
-| lng | REAL | 是 | — | — |
-| north_gate_distance_m | INTEGER | 是 | — | — |
-| north_gate_walk_min | INTEGER | 是 | — | — |
-| east_gate_distance_m | INTEGER | 是 | — | — |
-| east_gate_walk_min | INTEGER | 是 | — | — |
-| campus_distance_m | INTEGER | 是 | 0 | — |
-| campus_walk_min | INTEGER | 是 | 0 | — |
-| metro_station | TEXT | 是 | '' | — |
-| metro_exit | TEXT | 是 | '' | — |
-| metro_distance_m | INTEGER | 是 | — | — |
-| metro_walk_min | INTEGER | 是 | — | — |
-| created_by | INTEGER | 否 | — | — |
-| created_by_name | TEXT | 是 | '' | — |
-| created_at | INTEGER | 是 | strftime('%s','now') | — |
-| updated_at | INTEGER | 是 | strftime('%s','now') | — |
-
-索引：`idx_shops_campus`、`idx_shops_metro`、`idx_shops_east`、`idx_shops_north`、`idx_shops_name`（唯一）。
-#### `student_applications`
-
-| 字段 | SQLite 类型 | 非空 | 默认值 | 主键序位 |
-| --- | --- | --- | --- | --- |
-| id | INTEGER | 否 | — | 1 |
-| user_id | INTEGER | 是 | — | — |
-| student_id | TEXT | 是 | — | — |
-| class_name | TEXT | 是 | — | — |
-| real_name | TEXT | 是 | — | — |
-| extra_info | TEXT | 否 | — | — |
-| reject_reason | TEXT | 否 | — | — |
-| status | TEXT | 是 | 'pending' | — |
-| created_at | INTEGER | 是 | strftime('%s','now') | — |
-
-索引：`idx_student_applications_user`。
-#### `tickets`
-
-| 字段 | SQLite 类型 | 非空 | 默认值 | 主键序位 |
-| --- | --- | --- | --- | --- |
-| id | INTEGER | 否 | — | 1 |
-| user_id | INTEGER | 是 | — | — |
-| username | TEXT | 是 | '' | — |
-| title | TEXT | 是 | — | — |
-| content | TEXT | 是 | — | — |
-| visibility | TEXT | 是 | 'admin' | — |
-| status | TEXT | 是 | 'pending' | — |
-| reply_content | TEXT | 是 | '' | — |
-| reply_image | TEXT | 是 | '' | — |
-| reply_by | TEXT | 是 | '' | — |
-| replied_at | INTEGER | 否 | — | — |
-| created_at | INTEGER | 是 | strftime('%s','now') | — |
-
-索引：`idx_tickets_user`、`idx_tickets_status`。
-#### `titles`
-
-| 字段 | SQLite 类型 | 非空 | 默认值 | 主键序位 |
-| --- | --- | --- | --- | --- |
-| id | INTEGER | 否 | — | 1 |
-| key | TEXT | 是 | '' | — |
-| name | TEXT | 是 | — | — |
-| hue | TEXT | 是 | 'stone' | — |
-| source | TEXT | 是 | 'grant' | — |
-| rule | TEXT | 是 | '' | — |
-| description | TEXT | 是 | '' | — |
-| owner_user_id | INTEGER | 否 | — | — |
-| created_at | INTEGER | 是 | strftime('%s','now') | — |
-
-索引：`idx_titles_owner`、`idx_titles_owner_name`（唯一）、`idx_titles_public_name`（唯一）、`idx_titles_key`（唯一）。
-#### `user_login_days`
-
-| 字段 | SQLite 类型 | 非空 | 默认值 | 主键序位 |
-| --- | --- | --- | --- | --- |
-| user_id | INTEGER | 是 | — | 1 |
-| day | TEXT | 是 | — | 2 |
-
-索引：`sqlite_autoindex_user_login_days_1`（唯一）。
-#### `user_permissions`
-
-| 字段 | SQLite 类型 | 非空 | 默认值 | 主键序位 |
-| --- | --- | --- | --- | --- |
-| id | INTEGER | 否 | — | 1 |
-| user_id | INTEGER | 是 | — | — |
-| permission | TEXT | 是 | — | — |
-| created_at | INTEGER | 是 | strftime('%s','now') | — |
-
-索引：`idx_user_permissions_user`、`sqlite_autoindex_user_permissions_1`（唯一）。
-#### `user_titles`
-
-| 字段 | SQLite 类型 | 非空 | 默认值 | 主键序位 |
-| --- | --- | --- | --- | --- |
-| id | INTEGER | 否 | — | 1 |
-| user_id | INTEGER | 是 | — | — |
-| title_id | INTEGER | 是 | — | — |
-| granted_by | INTEGER | 否 | — | — |
-| created_at | INTEGER | 是 | strftime('%s','now') | — |
-
-索引：`idx_user_titles_title`、`idx_user_titles_user`、`sqlite_autoindex_user_titles_1`（唯一）。
-#### `users`
-
-| 字段 | SQLite 类型 | 非空 | 默认值 | 主键序位 |
-| --- | --- | --- | --- | --- |
-| id | INTEGER | 否 | — | 1 |
-| display_id | TEXT | 否 | — | — |
-| email | TEXT | 否 | — | — |
-| password_hash | TEXT | 否 | — | — |
-| username | TEXT | 否 | — | — |
-| nickname | TEXT | 否 | — | — |
-| avatar_url | TEXT | 是 | '' | — |
-| signature | TEXT | 否 | — | — |
-| role | TEXT | 是 | 'user' | — |
-| default_page | TEXT | 是 | 'index.html' | — |
-| default_floor | INTEGER | 是 | 1 | — |
-| recipe_default_view | TEXT | 是 | 'all' | — |
-| shop_default_sort | TEXT | 是 | 'campus' | — |
-| shop_default_type | TEXT | 是 | '' | — |
-| shop_layout | TEXT | 是 | 'stacked' | — |
-| shop_layout_mode | TEXT | 是 | 'manual' | — |
-| default_collection_shops | INTEGER | 否 | — | — |
-| collection_default_public | INTEGER | 是 | 0 | — |
-| status | TEXT | 是 | 'active' | — |
-| ban_reason | TEXT | 是 | '' | — |
-| ban_image | TEXT | 是 | '' | — |
-| allow_appeal | INTEGER | 是 | 1 | — |
-| created_at | INTEGER | 是 | strftime('%s','now') | — |
-| last_login_date | TEXT | 是 | '' | — |
-| login_streak | INTEGER | 是 | 0 | — |
-| show_role | INTEGER | 是 | 1 | — |
-| equipped_title_id | INTEGER | 否 | — | — |
-
-索引：`sqlite_autoindex_users_3`（唯一）、`sqlite_autoindex_users_2`（唯一）、`sqlite_autoindex_users_1`（唯一）。
-#### `weekly_menu_images`
-
-| 字段 | SQLite 类型 | 非空 | 默认值 | 主键序位 |
-| --- | --- | --- | --- | --- |
-| id | INTEGER | 否 | — | 1 |
-| user_id | INTEGER | 否 | — | — |
-| menu_start_date | TEXT | 是 | — | — |
-| menu_end_date | TEXT | 是 | — | — |
-| filename | TEXT | 是 | — | — |
-| uploaded_at | INTEGER | 是 | strftime('%s','now') | — |
-
-索引：`idx_weekly_menu_dates`。
+### 7.1 SQLite 当前完整结构
+
+Drizzle 基线三条迁移后运行历史升级，再执行 `domain/accounts/migrate.js` 的账号工作流幂等迁移。users 新增 session_version；student_bindings 的 student_id 主键、user_id UNIQUE，moderation_requests 同人/类型/对象仅一个 pending（部分唯一索引）。account_sessions 按 user_id、审核队列按状态/类型/时间、本人记录按 user_id/时间建索引。
+
+删除 invite_codes、user_permissions、weekly_menu_images 和旧设置凭据。student_applications、ban_appeals 只保留旧数据兼容，不再接受 HTTP 新写入；新请求全在统一队列。本次账户清理命令可删除旧测试记录，先备份。
+
+以下为隔离新库实际 DDL（共 30 表；省略索引 SQL，约束保留）：
+
+```sql
+CREATE TABLE account_audit (
+      id INTEGER PRIMARY KEY AUTOINCREMENT, actor_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      target_id INTEGER REFERENCES users(id) ON DELETE SET NULL, action TEXT NOT NULL,
+      detail TEXT NOT NULL DEFAULT '{}', created_at INTEGER NOT NULL DEFAULT (unixepoch())
+    );
+
+CREATE TABLE account_migrations (key TEXT PRIMARY KEY, applied_at INTEGER NOT NULL);
+
+CREATE TABLE account_sessions (
+      id TEXT PRIMARY KEY, user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      version INTEGER NOT NULL, expires_at INTEGER NOT NULL, created_at INTEGER NOT NULL DEFAULT (unixepoch())
+    );
+
+CREATE TABLE announcements (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  title TEXT NOT NULL,
+  content TEXT NOT NULL,
+  publish_date TEXT NOT NULL DEFAULT (date('now'))
+);
+
+CREATE TABLE auth_limits (key TEXT PRIMARY KEY, count INTEGER NOT NULL, reset_at INTEGER NOT NULL);
+
+CREATE TABLE ban_appeals (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL,
+  appeal_reason TEXT NOT NULL,
+  appeal_image TEXT NOT NULL DEFAULT '',
+  status TEXT NOT NULL DEFAULT 'pending',
+  created_at INTEGER NOT NULL DEFAULT (strftime('%s','now'))
+);
+
+CREATE TABLE collection_items (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      collection_id INTEGER NOT NULL,
+      item_type TEXT NOT NULL CHECK (item_type IN ('shop')),
+      item_id INTEGER NOT NULL,
+      created_at INTEGER NOT NULL DEFAULT (strftime('%s','now')),
+      UNIQUE(collection_id, item_type, item_id)
+    );
+
+CREATE TABLE collections (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      section TEXT NOT NULL CHECK (section IN ('shops')),
+      name TEXT NOT NULL,
+      is_public INTEGER NOT NULL DEFAULT 0,
+      created_at INTEGER NOT NULL DEFAULT (strftime('%s','now'))
+    );
+
+CREATE TABLE dishes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, name_key TEXT NOT NULL UNIQUE,
+      initial TEXT NOT NULL, pinyin TEXT NOT NULL, pinyin_initials TEXT NOT NULL, sort_key TEXT NOT NULL,
+      created_at INTEGER NOT NULL
+    );
+
+CREATE TABLE menu_import_audit (
+    id TEXT PRIMARY KEY,source_id TEXT NOT NULL REFERENCES menu_sources(id),actor_id INTEGER NOT NULL,
+    job_id TEXT,created_at INTEGER NOT NULL,records_count INTEGER NOT NULL,records_json TEXT NOT NULL,revision INTEGER NOT NULL
+  );
+
+CREATE TABLE menu_job_items (
+      job_id TEXT NOT NULL REFERENCES menu_sync_jobs(id), source_id TEXT NOT NULL,
+      article_id INTEGER NOT NULL, title TEXT NOT NULL, status TEXT NOT NULL,
+      phase TEXT NOT NULL DEFAULT 'fetch', records_count INTEGER NOT NULL DEFAULT 0,
+      error TEXT NOT NULL DEFAULT '', artifact_path TEXT, PRIMARY KEY (job_id, source_id)
+    );
+
+CREATE TABLE menu_records (
+      source_id TEXT NOT NULL REFERENCES menu_sources(id), record_key TEXT NOT NULL,
+      dish_id INTEGER NOT NULL REFERENCES dishes(id), date TEXT, weekday TEXT, time_json TEXT NOT NULL,
+      place TEXT, group_name TEXT, price REAL, spicy INTEGER,
+      PRIMARY KEY (source_id, record_key)
+    );
+
+CREATE TABLE menu_sources (
+      id TEXT PRIMARY KEY, article_id INTEGER UNIQUE, title TEXT NOT NULL, url TEXT NOT NULL,
+      published_date TEXT, content_hash TEXT, updated_at INTEGER, checked_at INTEGER,
+      records_count INTEGER NOT NULL DEFAULT 0, last_error TEXT NOT NULL DEFAULT ''
+    , kind TEXT NOT NULL DEFAULT 'school', publication_origin TEXT NOT NULL DEFAULT 'automatic', revision INTEGER NOT NULL DEFAULT 0);
+
+CREATE TABLE menu_sync_jobs (
+      id TEXT PRIMARY KEY, trigger TEXT NOT NULL, auto_day TEXT UNIQUE, status TEXT NOT NULL,
+      phase TEXT NOT NULL DEFAULT 'queued', created_at INTEGER NOT NULL, started_at INTEGER, finished_at INTEGER,
+      config_revision INTEGER NOT NULL, provider TEXT NOT NULL, model TEXT NOT NULL,
+      total INTEGER NOT NULL DEFAULT 0, processed INTEGER NOT NULL DEFAULT 0,
+      succeeded INTEGER NOT NULL DEFAULT 0, failed INTEGER NOT NULL DEFAULT 0,
+      cancel_requested INTEGER NOT NULL DEFAULT 0, error TEXT NOT NULL DEFAULT ''
+    );
+
+CREATE TABLE menu_sync_lease (id INTEGER PRIMARY KEY CHECK(id=1), owner TEXT NOT NULL, expires_at INTEGER NOT NULL);
+
+CREATE TABLE menu_sync_state (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+
+CREATE TABLE messages (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL,
+  type TEXT NOT NULL,
+  actors TEXT NOT NULL DEFAULT '[]',
+  count INTEGER NOT NULL DEFAULT 1,
+  target_kind TEXT NOT NULL DEFAULT '',
+  target_id INTEGER,
+  title TEXT NOT NULL DEFAULT '',
+  body TEXT NOT NULL DEFAULT '',
+  snippet TEXT NOT NULL DEFAULT '',
+  important INTEGER NOT NULL DEFAULT 0,
+  read_at INTEGER,
+  created_at INTEGER NOT NULL DEFAULT (strftime('%s','now'))
+);
+
+CREATE TABLE moderation_requests (
+      id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      kind TEXT NOT NULL CHECK(kind IN ('student','display_id','avatar','nickname','signature','dish_review','shop','shop_review','appeal')),
+      subject_key TEXT NOT NULL, payload TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','approved','rejected','withdrawn')),
+      reason TEXT NOT NULL DEFAULT '', reviewer_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      created_at INTEGER NOT NULL DEFAULT (unixepoch()), reviewed_at INTEGER, published_id INTEGER
+    );
+
+CREATE TABLE recipes (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL,
+  username TEXT NOT NULL,
+  name TEXT NOT NULL,
+  rating INTEGER NOT NULL DEFAULT 0,
+  comment TEXT,
+  image_url TEXT,
+  is_weekly INTEGER NOT NULL DEFAULT 0,
+  created_at INTEGER NOT NULL DEFAULT (strftime('%s','now'))
+, dish_id INTEGER REFERENCES dishes(id));
+
+CREATE TABLE settings (
+  key TEXT PRIMARY KEY,
+  value TEXT
+);
+
+CREATE TABLE shop_likes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      shop_id INTEGER NOT NULL,
+      user_id INTEGER NOT NULL,
+      created_at INTEGER NOT NULL DEFAULT (strftime('%s','now')),
+      UNIQUE(shop_id, user_id)
+    );
+
+CREATE TABLE shop_reviews (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      shop_id INTEGER NOT NULL,
+      user_id INTEGER NOT NULL,
+      rating INTEGER NOT NULL CHECK(rating BETWEEN 1 AND 5),
+      content TEXT NOT NULL DEFAULT '',
+      guests INTEGER,
+      total_price REAL,
+      image_url TEXT NOT NULL DEFAULT '',
+      created_at INTEGER NOT NULL DEFAULT (strftime('%s','now')),
+      updated_at INTEGER NOT NULL DEFAULT (strftime('%s','now')),
+      UNIQUE(shop_id, user_id)
+    );
+
+CREATE TABLE shops (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      address TEXT NOT NULL,
+      location_note TEXT NOT NULL DEFAULT '',
+      dianping_url TEXT NOT NULL DEFAULT '',
+      type TEXT NOT NULL,
+      lat REAL NOT NULL,
+      lng REAL NOT NULL,
+      north_gate_distance_m INTEGER NOT NULL,
+      north_gate_walk_min INTEGER NOT NULL,
+      east_gate_distance_m INTEGER NOT NULL,
+      east_gate_walk_min INTEGER NOT NULL,
+      campus_distance_m INTEGER NOT NULL DEFAULT 0,
+      campus_walk_min INTEGER NOT NULL DEFAULT 0,
+      metro_station TEXT NOT NULL DEFAULT '',
+      metro_exit TEXT NOT NULL DEFAULT '',
+      metro_distance_m INTEGER NOT NULL,
+      metro_walk_min INTEGER NOT NULL,
+      created_by INTEGER,
+      created_by_name TEXT NOT NULL DEFAULT '',
+      created_at INTEGER NOT NULL DEFAULT (strftime('%s','now')),
+      updated_at INTEGER NOT NULL DEFAULT (strftime('%s','now'))
+    );
+
+CREATE TABLE student_applications (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL,
+  student_id TEXT NOT NULL,
+  class_name TEXT NOT NULL,
+  real_name TEXT NOT NULL,
+  extra_info TEXT,
+  reject_reason TEXT,
+  status TEXT NOT NULL DEFAULT 'pending',
+  created_at INTEGER NOT NULL DEFAULT (strftime('%s','now'))
+);
+
+CREATE TABLE student_bindings (
+      student_id TEXT PRIMARY KEY, user_id INTEGER NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+      real_name TEXT NOT NULL, class_name TEXT NOT NULL, bound_at INTEGER NOT NULL DEFAULT (unixepoch())
+    );
+
+CREATE TABLE tickets (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL,
+  username TEXT NOT NULL DEFAULT '',
+  title TEXT NOT NULL,
+  content TEXT NOT NULL,
+  visibility TEXT NOT NULL DEFAULT 'admin',
+  status TEXT NOT NULL DEFAULT 'pending',
+  reply_content TEXT NOT NULL DEFAULT '',
+  reply_image TEXT NOT NULL DEFAULT '',
+  reply_by TEXT NOT NULL DEFAULT '',
+  replied_at INTEGER,
+  created_at INTEGER NOT NULL DEFAULT (strftime('%s','now'))
+);
+
+CREATE TABLE titles (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      key TEXT NOT NULL DEFAULT '',
+      name TEXT NOT NULL,
+      hue TEXT NOT NULL DEFAULT 'stone',
+      source TEXT NOT NULL DEFAULT 'grant',
+      rule TEXT NOT NULL DEFAULT '',
+      description TEXT NOT NULL DEFAULT '',
+      owner_user_id INTEGER,
+      created_at INTEGER NOT NULL DEFAULT (strftime('%s','now'))
+    );
+
+CREATE TABLE user_login_days (
+      user_id INTEGER NOT NULL,
+      day TEXT NOT NULL,
+      PRIMARY KEY (user_id, day)
+    );
+
+CREATE TABLE user_titles (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      title_id INTEGER NOT NULL,
+      granted_by INTEGER,
+      created_at INTEGER NOT NULL DEFAULT (strftime('%s','now')),
+      UNIQUE(user_id, title_id)
+    );
+
+CREATE TABLE users (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  display_id TEXT UNIQUE,
+  email TEXT UNIQUE,
+  password_hash TEXT,
+  username TEXT UNIQUE,
+  nickname TEXT,
+  avatar_url TEXT NOT NULL DEFAULT '',
+  signature TEXT,
+  role TEXT NOT NULL DEFAULT 'user',
+  default_page TEXT NOT NULL DEFAULT 'index.html',
+  default_floor INTEGER NOT NULL DEFAULT 1,
+  recipe_default_view TEXT NOT NULL DEFAULT 'all',
+  shop_default_sort TEXT NOT NULL DEFAULT 'campus',
+  shop_default_type TEXT NOT NULL DEFAULT '',
+  shop_layout TEXT NOT NULL DEFAULT 'stacked',
+  shop_layout_mode TEXT NOT NULL DEFAULT 'manual',
+  default_collection_shops INTEGER,
+  collection_default_public INTEGER NOT NULL DEFAULT 0,
+  status TEXT NOT NULL DEFAULT 'active',
+  ban_reason TEXT NOT NULL DEFAULT '',
+  ban_image TEXT NOT NULL DEFAULT '',
+  allow_appeal INTEGER NOT NULL DEFAULT 1,
+  created_at INTEGER NOT NULL DEFAULT (strftime('%s','now'))
+, last_login_date TEXT NOT NULL DEFAULT '', login_streak INTEGER NOT NULL DEFAULT 0, show_role INTEGER NOT NULL DEFAULT 1, equipped_title_id INTEGER, session_version INTEGER NOT NULL DEFAULT 0);
+```
 
 ### 7.2 校园地图与旧数据归档
 
@@ -720,7 +506,7 @@ HTTP 入口位于 [index.ts](./apps/api/src/index.ts)，业务路由位于 `apps
 - 移除固定平移边界，解决宽屏中拖动回弹和缩放锚点漂移；用户可通过全景按钮复位。设置页与地图均不消费旧楼层偏好。
 - 页面专用 `apps/web/public/css/map.css` 管理简约面板、响应式、明暗地图与 reduced-motion；新增屋面、墙体、草坪、绿篱、水面、园路、运动标线及球场的明暗令牌；标签支持偏移与相对字号，点击热区限制在地块及文字，避免透明区域覆盖邻近地标。篮球场名称放回自身地块底部，与操场轮廓及热区分离，避免遮挡和误点。共享 `site.css` 和站点壳无改动。导览无需在线底图服务，也不依赖地图 API；SVG 请求失败可重试。
 
-`data.json` 仅作为旧楼层数据归档，旧读取/弹窗接口与数据库 `default_floor` 字段保留兼容，当前地图页面不调用或使用。此文件是自定义格式，顶层包含 `meta`、`style`、`features`，并非标准 GeoJSON；本次未修改其几何或后端结构。
+`data.json` 仅作为旧楼层数据归档，旧读取接口与数据库 `default_floor` 字段保留兼容；写接口已删除，当前地图页面不调用或使用。此文件是自定义格式，顶层包含 `meta`、`style`、`features`，并非标准 GeoJSON；本次未修改其几何或后端结构。
 
 | 部分 | 字段与当前内容 |
 | --- | --- |
@@ -731,27 +517,22 @@ HTTP 入口位于 [index.ts](./apps/api/src/index.ts)，业务路由位于 `apps
 | 几何字段 | points 为 `[x,y]` 点数组；fill/stroke/dash/weight 控制路径 |
 | 文字字段 | text、x1/y1/x2/y2、scale 控制区域文字；name/popup 控制名称与弹窗 |
 
-归档楼层集合为：20 个 base 对象、118 个仅 1F 对象、42 个仅 2F 对象、2 个同时位于 1F/2F 的对象、45 个同时位于 2F/3F/4F 的对象。旧方向约定是左北、上东；不适用于当前北向上的 SVG 校园地图。兼容读取接口仍每次访问磁盘，兼容弹窗接口仍按名称批量更新同名对象；两者均不改变当前地图。
+归档楼层集合为：20 个 base 对象、118 个仅 1F 对象、42 个仅 2F 对象、2 个同时位于 1F/2F 的对象、45 个同时位于 2F/3F/4F 的对象。旧方向约定是左北、上东；不适用于当前北向上的 SVG 校园地图。兼容读取接口仍每次访问磁盘；弹窗写接口已删除，当前地图只通过仓库代码维护。
 
 店铺地图使用服务器端高德静态图代理与前端自绘交互层，无需浏览器 JS Key；`data/shops-config.json` 坐标为 GCJ-02：`center` 为初始地图中心，`anchors.campus` 为苏中本部步行路线起点，`area.polygon` 为 `[纬度,经度]` 多边形。Web 服务 Key 放在被 `.gitignore` 排除的 `.env`（`AMAP_SERVICE_KEY`），仅服务器端使用且不下发。前端支持拖动、滚轮/双指缩放、缩放按钮及回到全域；店铺按当前视图的屏幕距离聚合，圆点显示数量，点击后以聚合中心放大。底图接口只允许姑苏区边界外扩范围内的中心点、缩放 9–18，并缓存近期视图。源码、测试和文档不含实际 Key。地图初始中心/缩放与本部路线起点分别来自配置的中心点和高德 POI「江苏省苏州中学本部」（120.622380, 31.295509）。地理围栏只有在多边形至少 3 个有效点时才生效；范围配置为空时后端无法判定区域。店铺初始化不使用虚构坐标或路线。
 
-### 7.2.1 配套离线地图编辑器
+### 7.2.1 地图维护边界
 
-`../szzx-mapeditor/map-editor.html` 是独立离线旧楼层编辑器。本站楼层页面已移除，其输出不再作用于当前校园地图。使用说明与完整字段表见 [编辑器 README](../szzx-mapeditor/README.md) 和 [编辑器 MAP.md](../szzx-mapeditor/MAP.md)。2026-10-09 编辑器内置数据与本项目归档 `data.json` 的 227 个要素一致，配色和 `minZoom=-2` 同步，几何不变。
-
-- 编辑器通过下载导出 JSON；不会调用网站接口或写入数据库。替换本项目归档文件只影响旧兼容接口的返回值。
-- 当前校园地图的位置、尺寸和介绍在 `apps/web/src/maps/places.ts` 维护，底图与插画在 `campus.svg` 维护；不读取编辑器的几何、楼层、字体或层级扩展字段。
-- 旧兼容接口按名称批量编辑弹窗；编辑器修改单个对象不会自动同步同名对象。
-- 编辑器回归只打开离线文件，不运行本网站，也不修改本项目的数据库、依赖或地图数据。2026-10-09 的配套编辑器协作仅更新文档；2026-10-17 的网站导览改版不修改编辑器或 `data.json`。
+本站不含地图编辑器或写接口；当前地图通过仓库的 places.ts 和 SVG 修改，旧楼层 JSON 只保留兼容读取。仓库外的历史工具不是站内功能。
 
 ### 7.3 图片
 
 | 场景 | 存储位置 | 后端限制 |
 | --- | --- | --- |
-| 头像、菜谱评价图片 | uploads/ | Hono FormData；JPEG/PNG，最多 2 MiB |
-| 封禁图片 | uploads/bans/ | Hono FormData；JPEG/PNG，最多 2 MiB |
-| 官网食谱原图、缓存与诊断 | .private/menu-sources、menu-cache、menu-jobs | 私有存档，正文内联 PNG 解码与铺白；后台鉴权读取 |
-| 申诉图片、工单批复图片 | 数据库文本字段 | 由页面读成 DataURL 后通过 JSON 提交，不使用上述 multipart 存储器 |
+| 待审头像、菜品/店铺评价图片 | 私有 moderation_requests 载荷 | 前端超限先压缩；后端真实解码、像素限制、最多 2 MiB、去元数据转 PNG；终态清理字节 |
+| 已批准图片 | uploads/approved/ 随机 PNG | 批准时生成，事务失败清理；旧公开文件保留兼容 |
+| 官网食谱原图、缓存与诊断 | .private/menu-sources、menu-cache、menu-jobs | 服务器私有存储，无网页管理或下载入口 |
+| 封禁、申诉与工单图片 | 历史文件/记录只读兼容 | 新操作不接受图片 |
 
 ## 8. 运行、依赖与验证入口
 
@@ -765,13 +546,14 @@ npm start
 # 生产构建后可 npm prune --omit=dev
 ```
 
-`PORT`、`JWT_SECRET`、`JWT_EXPIRES_IN` 等沿用 `.env.example`，密钥需显式配置。`APP_ROOT` 默认为工作目录，定位数据、迁移、前端构建与私有存储，测试使用完整临时应用根目录。没有构建产物时不能只安装生产依赖启动。
+`PORT`、`JWT_SECRET`、`JWT_EXPIRES_IN` 等沿用 `.env.example`，密钥需显式配置。`APP_ROOT` 默认为工作目录，定位数据、迁移、前端构建与私有存储，测试使用完整临时应用根目录。没有构建产物时不能只安装生产依赖启动。构建后 `npm run account:operator` 在服务器本地创建运营账号，支持裁剪开发依赖后的部署；非生产测试清理选项会先备份。配置与使用边界见 [账号重建说明](./docs/account-rebuild.md)。菜单同步凭据仅使用环境变量，见 [菜单运维](./docs/menu-sync.md)。
 
 | 验证命令 | 范围 |
 | --- | --- |
 | `npm run typecheck` / `lint` / `format:check` | TS 严格类型、React Hook 与通用代码规则、格式 |
 | `npm run test:architecture` | 无 journal 的旧库升级、重启幂等、原 ID/记录、当前权限与 JSON 404 |
-| `npm run test:backend` | 菜单、菜品、头衔、店铺、配图、收藏、论坛历史清理 |
+| `npm run test:backend` | 账号审核、迁移、菜单、菜品、头衔、店铺、配图、收藏、论坛历史清理 |
+| `npm run test:accounts` / `test:accounts:ui` | 角色、会话、唯一绑定、先审后发、申诉、后台与密码提示 |
 | `npm run test:dishes:ui` / `test:collections:ui` / `test:shops:ui` / `test:user` / `test:map` | 各业务浏览器回归，手机/桌面、明暗、键盘 |
 | `npm run test:ui` | 全站布局与 axe、首页转场、账号及后台场景 |
 | `npm run test:deploy` | 临时源码安装、构建、去开发依赖、生产启动及文件保护 |
@@ -790,7 +572,7 @@ npm start
 | docs/ui/assets 与 apps/web | 前者是设计参考，后者为 React 实现与静态素材；文档旧 HTML 示例仅表达 DOM/CSS 规范 |
 | PLAN_2026-10-01.md | 保留需求读取时的原始正文和状态；执行进度见 progress 与验收记录，实时关闭状态以 GitHub 为准 |
 | package.json、package-lock.json、LICENSE | 根包许可为 AGPL-3.0；本地 Leaflet 另附上游许可证 |
-| #5 菜品与评价 | 独立目录、网站内同步、菜品详情与评价关联已实现；原评价栏保留，店铺关联后续实施 |
+| #5 菜品与评价 | 独立目录、服务器环境驱动同步、菜品详情与待审评价关联已实现；原评价栏保留，店铺关联后续实施 |
 
 ## 10. 历史需求与当前模块
 
@@ -799,7 +581,7 @@ npm start
 | 全站 UI 与地图 | apps/web/src/pages、components、maps 与 public |
 | 菜单、目录和评价 | apps/api/src/domain/menu、dishes；RecipePage、DishPage、DishReview |
 | 必吃榜、配图和收藏 | domain/shops、collections；ShopPage、ShopsPage、Collections |
-| 消息、工单和账号 | apps/api/src/routes；InboxPage、SettingsPage、Tickets |
+| 消息、工单和账号 | apps/api/src/routes、domain/accounts；InboxPage、SettingsPage、Tickets、Submissions、AdminPage |
 | 头衔与公开用户主页 | domain/titles；ProfilePage、TitleManagement、AccountManagement |
 | 构建、部署与数据升级 | tools、packages/db、docs/architecture.md |
 
@@ -1113,3 +895,90 @@ axe 无障碍违规：0；控制台页面报错：0；水平溢出：0。
 - 整理并提交 Monorepo 迁移与优化成果：React 19 + TypeScript + Vite 前端、Hono 领域分拆后端、Drizzle + better-sqlite3 数据层、DTO 共享包、全屏移动导航、意图预加载与平滑过渡、官网食谱自动分块提取与无人值守同步、双栏菜谱及评价间距精细优化。
 - 遵循运行数据安全与历史快照规范，本地运行数据库 `data.db` 保留历史初始快照不纳入提交，业务与测试数据完全隔离。
 - 验证：`npm run build`、`npm run typecheck`、`npm run lint`、`npm run format:check`、`npm run test:backend`（82 项通过）、`npm run test:architecture`（2 项通过）、`npm run test:architecture:ui`（16 项通过）、`npm run test:deploy`（通过）、`npm run test:navigation`（208 项通过）、`npm run test:menu:ui`（146 项通过）。配套文档完整同步，提交并推送到远端 `origin/main`。
+
+## 2026-10-31 · 账号与审核 V2（当前规则，取代旧角色/邀请码/立即发布描述）
+
+- 当前角色：guest → user → student → admin → operator。注册永远为 user；operator 仅服务器 `npm run account:operator` 创建，不开放 HTTP 提权入口。历史 developer→operator、super_admin→admin；历史无绑定学生需重新认证。
+- `apps/api/src/domain/accounts/`：安全校验、会话、幂等迁移、审核事务及账号路由。移除旧 session/verification/accounts-admin 路由文件；移除邀请码和个人特殊授权表/接口。菜单管理、菜单上传及地图编辑 HTTP 接口全部移除，公开菜单与地图保留。同步凭据来自环境变量。
+- 登录为 HttpOnly + SameSite=Strict 会话 Cookie，HTTPS/生产 Secure；浏览器本地只存登录标记。JWT 限定算法、签发者和接收者，必须匹配有效会话及数据库版本。改密、封禁、角色变更及解绑撤销所有会话。注册/登录/改密/申诉/提交均有限流；写操作校验来源。
+- 学号规范化（NFKC/大写）后唯一绑定，待审不占用。批准时写事务/唯一键兜底，并自动拒绝竞争申请。允许验证密码解绑；解绑降级学生、撤回待审内容、释放学号并通知。本人申请不能自审。
+- 展示 ID、头像、昵称、签名、菜品评价、店铺创建与店铺评价采用独立审核记录；只在批准后写公开表。图片真实解码/限制像素/去元数据后保存于私有申请载荷，批准后才生成公开随机 PNG 文件。店铺每天北京时间最多提交 10 家，撤回或拒绝不返还次数。
+- admin 管理 user/student；operator 额外管理 admin。两者不能管理自己或 operator 账号，解封与申诉遵守同一边界。拒绝必填原因，仅 pending 可处理，申请记录不被重提覆盖。
+- 申诉需用户名和密码，后端检查封禁状态和允许申诉开关。审核、竞争失败、解绑、封禁/解封、角色变更、工单提交/回复均通知并留记录。
+
+### V2 接口索引
+
+| 方法 | 路径 | 行为与权限 |
+| --- | --- | --- |
+| POST | `/api/register`、`/api/login` | 普通注册、限流登录；无首次注册提权 |
+| POST | `/api/logout`、`/api/user/sessions/revoke` | 撤销本次/全部会话；全部撤销需密码 |
+| GET | `/api/me` | 当前数据库身份 |
+| PUT | `/api/user/password` | 校验旧密码与新密码策略，撤销全部会话 |
+| GET/POST | `/api/student/binding`、`/api/student/apply` | 本人绑定信息 / 提交人工认证 |
+| POST | `/api/student/unbind` | 密码确认解绑 |
+| PUT/POST | `/api/user/display_id`、`/api/user/nickname`、`/api/user/signature`、`/api/user/avatar` | 公开资料提交审核（头像 POST，其余 PUT），202 |
+| POST | `/api/recipes`、`/api/shops`、`/api/shops/:id/reviews` | student 及以上提交审核，202；不直接公开 |
+| POST | `/api/user/appeal` | 密码验证且允许申诉的封禁账号提交 |
+| GET/POST | `/api/user/submissions`、`/api/user/submissions/:id/withdraw` | 分页查询本人历史 / 撤回本人 pending |
+| GET | `/api/admin/overview`、`/api/admin/reviews`、`/api/admin/reviews/:id` | 工作台统计、分页筛选及私有申请详情 |
+| POST | `/api/admin/reviews/:id/decision` | 通过/拒绝；事务发布、通知及审计 |
+| GET | `/api/admin/users`、`/api/admin/users/:id` | 分页搜索账号及头衔管理详情 |
+| PUT/POST | `/api/admin/users/role`、`/api/admin/users/ban`、`/api/admin/users/unban`、`/api/admin/users/:id/unbind` | 前三项 PUT，解绑 POST；按目标角色保护 |
+| GET | `/api/admin/audit` | 分页查看操作记录 |
+| POST/GET/PUT | `/api/tickets`、`/api/tickets/mine`、`/api/admin/tickets`、`/api/admin/tickets/reply` | 提交、本人历史、分级查看、一次性回复通知 |
+
+### V2 新增数据结构
+
+- `users.session_version INTEGER NOT NULL DEFAULT 0`：凭据版本；角色、封禁与改密变更递增。
+- `account_sessions(id PK, user_id FK, version, expires_at, created_at)`：随机会话标识、数据库版本与期限。
+- `student_bindings(student_id PK, user_id UNIQUE FK, real_name, class_name, bound_at)`：一号一身份，唯一约束作为事务兜底。
+- `moderation_requests(id PK, user_id FK, kind, subject_key, payload JSON, status, reason, reviewer_id FK, created_at, reviewed_at, published_id)`：状态 pending/approved/rejected/withdrawn；同人同类同对象仅一个 pending，保留历史。
+- `account_audit(id PK, actor_id FK, target_id FK, action, detail JSON, created_at)`：操作追溯，不保存密码或 token。
+- `auth_limits(key PK, count, reset_at)`：散列限流键；`account_migrations(key PK, applied_at)`：幂等升级标记。
+- 删除 `invite_codes`、`user_permissions`、`weekly_menu_images`；旧认证/申诉表仅迁移兼容，不再接受写入。
+
+### 验证（2026-10-31 完成）
+
+- 完整 `npm test` 退出 0：账号后端 11、账号/后台浏览器 113、导航 208、架构 2、路由 16、菜单后端 29、菜品后端 4/浏览器 48、双栏菜单 146、头衔 4、店铺/配图后端 3、收藏后端 15/浏览器 72+88、店铺浏览器 85、用户主页 30、全站 360、地图 217 项通过；另行后端合并 68/68 通过。
+- typecheck、lint、format:check、生产构建通过。生产安装/构建/裁剪依赖/启动、裁剪后 operator CLI 与实际登录通过；菜单技能使用 python3 构建并校验通过。
+- 账号/后台覆盖 390/1280px、明暗、键盘、axe 与溢出；人工核对截图。登录无密码强度校验，注册/新密码有逐项检查；历史弱密码登录和删除评价撤回待审修改均有回归。
+- 本地测试账号已备份后清理，operator 已创建并验证登录；保留 5,567 店铺、966 菜单供应、252 菜品，完整性与外键检查通过。凭据不写入文档。当前未配置菜单模型 Key，需服务器环境配置后同步。详见 docs/account-rebuild.md 与 docs/ui/acceptance.md。
+
+---
+
+## 2026-10-31 · 公开仓库筹备：Logo 重新设计与 README 用户化重写
+
+- **Logo 重新设计**：新增品牌矢量 Logo 资产 `docs/logo.svg`、`docs/assets/logo.svg` 与 `apps/web/public/img/logo.svg`。设计融合江南传统如意海棠酥糕造型、苏中竹柏绿（`#248A57` / `#1B6D44`）与晨曦拾光金芒（`#F59E0B` / `#FCD34D`），适配暗色/浅色视口与 GitHub 仓库展示。
+- **README 重构**：根目录 `README.md` 全面去除技术栈、数据表模型、接口路由与开发启动部署指令，重构为面向苏州中学师生、校友与访客的极简、温润、面向使用者的项目总览，涵盖校园手绘导览、三元坊必吃榜、食堂每周食谱、场景化使用指南、学生共建机制、勘误邮箱与自主运营免责声明。
+- **文档与代码状态**：同步更新 `CHANGELOG.md`、`progress.md` 与本文件。未修改任何应用或后端代码文件，用户正在进行的开发工作区完全保持原样。
+
+## 2026-10-31 · 上传与九项交互修正（当前行为）
+
+- 新增 apps/web/src/lib/imageUpload.ts / useReviewTarget.ts 与 apps/api/src/domain/accounts/notifications.js。超限图片本机压缩后提交，头像和评价处理期禁止提交，输入字号在最终主题样式后纠正；用户名/昵称优先、ID 次要，后台满宽、单弹窗审核、认证桌面双栏和手机地图目录外关闭。
+- 不增加数据表/字段。messages.target_kind 使用 moderation_pending / moderation_result / ticket_pending / ticket_result，target_id 为对应申请/工单 ID。安全校验后的目标由后端生成，不保存任意外部跳转地址。审核/工单事务将所有相关旧待办已读，新结果维持未读；列表/统计按本人补偿同步终态。notification-targets-v2 幂等标记仅回填可唯一对应的旧系统文案。
+- GET /api/messages 的 target.url 可指向公开具体评价、本人私人申请、管理员对应审核详情及工单面板。已批准且未删除的评价定位公开卡片，拒绝/撤回/删除后定位私人原文。鼠标/键盘均在已读响应成功后导航；列表 30 秒刷新。
+- GET /api/user/submissions 新增可选 id 过滤，只查当前用户；返回安全 summary 与 target_url，公开详情失败时可回看原评论。GET /api/dishes/:id/reviews 与 /api/shops/:id/reviews 新增可选 review，返回限于当前资源的 focus_review，普通分页合同不变；前端去重、聚焦和强调第一页外的目标。
+- 前端地址：/profile.html?submission=<申请号>#home、/admin.html?request=<申请号>#reviews、菜品/店铺详情 ?id=<对象号>&review=<评价号>#review-<评价号>。
+- 新增 tests/accounts-followup-ui.mjs，接入 test:accounts:ui；账号后端增加通知目标、处理后已读、私人拒绝记录及跨页评论定位回归。
+- 最终验证：完整 npm test 退出 0，账号后端 12、账号后台浏览器 113+新增交互 64、导航 208、架构 2、路由 16、菜单后端 29、菜品后端 4/浏览器 48、菜单双栏 146、头衔 4、店铺配图后端 3、收藏后端 15/浏览器 72+88、店铺浏览器 85、用户主页 32、全站 360、地图 217 项通过。额外后端合并 69/69 与历史通知升级/幂等专项、build/typecheck/lint/format/diff 通过。
+- 已核对 1920/1280/390px 明暗、键盘、axe、溢出和截图，未验证实体 iPhone/Safari。首轮旧 ID 主标题断言按新需求更新后全链重跑通过。本地 notification-targets-v2 已应用，未重置账号或清理业务数据；没有创建分支或提交。详细记录见 docs/ui/acceptance.md 和 progress.md 第 98 条。
+
+## 2026-10-31 · 首页文案焕新（当前行为）
+
+- **文案更新**：更新 `apps/web/src/pages/HomeContent.tsx` 首页正文及寄语。
+  - 「关于我们」：『「拾光酥糕」是由苏中学子自主构建的校园数字指南。从每日三餐的食谱测评，到校园角落的地理坐标，我们致力于整合分散的校园资讯，让每一份信息都触手可及。』
+  - 「开发团队」说明：『源于热爱，始于代码。由志愿者构建和维护，用技术探索校园生活的更多可能。』
+  - 「一起完善」说明：『这是一个工具，更是一座由全体同学共建的校园信息库。你的每一次标注与评价，都在让这个平台变得更加完整。』
+  - 底部大标题与副标题：大标题『探索苏中日常，定格校园拾光』；副标题『连接三餐四季与道山风物，汇聚属于苏中人的共同记忆。』。
+- **文档同步**：同步 `docs/ui/copy.md`、`docs/ui/pages/home.md`、`CHANGELOG.md`、`progress.md` 与根目录 `MAP.md`。
+- **验证记录**：生产构建 `npm run build`、类型检查 `npm run typecheck`、ESLint `npm run lint`（0 warning）、代码风格 `npm run format:check`、208 项导航专项测试 `npm run test:navigation` 与 360 项全站 UI 回归 `npm run test:ui` 全部通过。
+
+
+## 2026-10-31 · 公开前清理、历史净化与安全门禁
+
+- 清理根目录服务日志、测试输出和系统杂项；.gitignore 增加数据库及侧文件、uploads、备份/私钥、临时产物和生成技能包规则。真实数据库、7 张本地上传图和密钥保留，不随源码公开；公开地图、店铺范围、学校菜单历史测试来源保留，边界见 docs/public-release.md。未改变应用接口和表结构。
+- 获维护者授权后，在仓库外私有目录保存完整 Git、已验证 bundle 和工作区归档，用 git-filter-repo 清理全部本地分支与独立远端快照。12 个旧数据库 blob 在当前对象库均不可读取。原 36 个本地可达提交清理后为 34；补回远端另一个地图修复提交的清理后引用后为 35。当前 main=f191084，origin/main=5e86dae，本地尚未合入该地图修复；未创建分支、提交、推送或改可见性。远端仍有旧历史，需整合额外提交、授权替换全部远端分支并重新克隆复验后才能公开。
+- tools/public-safety.mjs 检查待公开工作文件、不同的索引内容、全引用路径和历史 blob，只输出脱敏位置；三项回归覆盖强制加入、伪装 SQLite、忽略后仍残留历史及索引秘密。package.json 增加 test:public-safety / public:check / public:check:history，并接入 npm test。新增 .gitleaks.toml、.github/workflows/public-safety.yml、SECURITY.md；Gitleaks 仅精确豁免 tests 内人工密码，不跳过整个目录。
+- tests/node-deploy.cjs 仅复制 Git 可公开候选文件，排除本机数据与构建；隔离环境、随机 JWT、关闭任务，在 production 下使用 npm ci --include=dev，裁剪后检查空菜单、私有文件 404、operator 创建与登录。技能包从源码生成再测试，修正 Python 3 命令。
+- 验证：门禁 3/3、后端 69/69、build、typecheck、lint、format:check、技能包（16 个无效样本及 CRLF 可复现性）、全新生产部署和 npm audit --omit=dev（0 漏洞）通过。源码及全部历史 Gitleaks 无发现；本机两项已配置秘密与源码/历史精确比对无匹配。全引用门禁无发现，git fsck 和差异检查通过。首次部署复验因 production 省略开发依赖而失败，显式包含后完整重跑通过。
+- 历史替换瞬间 257 文件 SHA-256 一致。后续检查本地业务各表行内容与备份一致，完整性 ok、外键 0 违规；运行库仅 SQLite 自增序列有差异，来源未确定，未回滚正在使用的数据。上传与密钥校验一致。未运行整条 npm test 或 UI/Computer Use，因本轮无页面行为变更；既有未提交功能与并行工作保留。

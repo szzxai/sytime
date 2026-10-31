@@ -9,6 +9,7 @@ const { Hono } = require('hono');
 const fs = require('node:fs');
 const path = require('node:path');
 const { withUpload } = require('../../upload');
+const { image } = require('../accounts/moderation');
 const store = require('./store');
 const { equippedTitleMap } = require('../titles/store');
 function intParam(value) {
@@ -35,7 +36,7 @@ function mountShopRoutes(app, db, options) {
   // 评价配图：JPG / PNG，2 MB 内，存 uploads/shops
   const REVIEWS_DIR = path.join(root, 'uploads', 'shops');
   if (!fs.existsSync(REVIEWS_DIR)) fs.mkdirSync(REVIEWS_DIR, { recursive: true });
-  const reviewUpload = { directory: REVIEWS_DIR, maxBytes: 2 * 1024 * 1024 };
+  const reviewUpload = { memory: true, maxBytes: 2 * 1024 * 1024 };
   // 删除评价配图文件（仅限本目录内，防路径穿越）
   function removeReviewImage(url) {
     const s = String(url || '');
@@ -48,7 +49,10 @@ function mountShopRoutes(app, db, options) {
     return next();
   });
   function fail(c, error) {
-    const status = error instanceof store.ShopError ? error.status : 500;
+    const status =
+      Number.isInteger(error.status) && error.status >= 400 && error.status < 500
+        ? error.status
+        : 500;
     const body = {
       error: error.error || 'shop error',
       message: error.message || '操作失败，请稍后再试',
@@ -58,7 +62,7 @@ function mountShopRoutes(app, db, options) {
     if (status === 500) console.error('[shops]', error);
     c.res = c.json(body, status);
   }
-  // 复用 server.js 的 hasPermission：角色权重达到默认等级，或存在显式授权
+  // 创建店铺仅依据当前数据库角色，不支持单独授权。
   function canCreate(c) {
     if (!opt.hasPermission) return false;
     return !!opt.hasPermission(c, 'shop_create');
@@ -329,21 +333,28 @@ function mountShopRoutes(app, db, options) {
     const parsedOffset = Number(c.req.query().offset);
     const offset = Number.isInteger(parsedOffset) ? Math.max(0, parsedOffset) : 0;
     // 头衔系统（#10）：评价卡统一用 UI.userLine，需要作者的头像/角色/佩戴头衔
-    const rows = query(
-      db,
-      `SELECT r.id, r.rating, r.content, r.guests, r.total_price, r.image_url, r.created_at, r.updated_at,
+    const reviewQuery = `SELECT r.id, r.rating, r.content, r.guests, r.total_price, r.image_url, r.created_at, r.updated_at,
       r.user_id, u.username, u.nickname, u.avatar_url, u.role, u.show_role,
       COALESCE(u.nickname, u.username, '同学') AS author
       FROM shop_reviews r LEFT JOIN users u ON u.id = r.user_id
-      WHERE r.shop_id = ? ORDER BY r.updated_at DESC, r.id DESC LIMIT ? OFFSET ?`,
+      WHERE r.shop_id = ?`;
+    const rows = query(
+      db,
+      reviewQuery + ' ORDER BY r.updated_at DESC, r.id DESC LIMIT ? OFFSET ?',
     ).all(id, limit, offset);
+    const focusId = Number(c.req.query().review);
+    const focus =
+      Number.isSafeInteger(focusId) && focusId > 0
+        ? query(db, reviewQuery + ' AND r.id=?').get(id, focusId) || null
+        : null;
+    const allRows = focus ? [...rows, focus] : rows;
     const reviewTitles = equippedTitleMap(
       db,
-      rows.map(function (row) {
+      allRows.map(function (row) {
         return row.user_id;
       }),
     );
-    rows.forEach(function (row) {
+    allRows.forEach(function (row) {
       row.guests = row.guests === null || row.guests === undefined ? null : Number(row.guests);
       row.total_price =
         row.total_price === null || row.total_price === undefined ? null : Number(row.total_price);
@@ -359,6 +370,7 @@ function mountShopRoutes(app, db, options) {
     if (mineRow) mineRow.image_url = mineRow.image_url || '';
     c.res = c.json({
       reviews: rows,
+      ...(c.req.query().review ? { focus_review: focus } : {}),
       total: Number(
         query(db, 'SELECT COUNT(*) AS n FROM shop_reviews WHERE shop_id = ?').get(id).n,
       ),
@@ -388,7 +400,7 @@ function mountShopRoutes(app, db, options) {
     c.res = c.json({ liked: !liked, shop: enriched });
   });
   router.post('/shops/:id/reviews', authenticate, requireVerifiedStudent, async function (c) {
-    return withUpload(c, reviewUpload, 'image', function (err) {
+    return withUpload(c, reviewUpload, 'image', async function (err) {
       if (err) {
         const message = /only jpg\/png/.test(String(err.message))
           ? '评价配图仅支持 JPG / PNG'
@@ -403,7 +415,6 @@ function mountShopRoutes(app, db, options) {
       }
       const id = intParam(c.req.param().id);
       if (id === null || !store.get(db, id)) {
-        if (c.get('file')) removeReviewImage('/uploads/shops/' + c.get('file').filename);
         c.res = c.json({ error: 'shop not found', message: '店铺不存在或已被删除' }, 404);
         return;
       }
@@ -411,9 +422,7 @@ function mountShopRoutes(app, db, options) {
       const content = String((c.get('body') && c.get('body').content) || '').trim();
       const guests = store.reviewGuests(c.get('body') && c.get('body').guests);
       const totalPrice = store.reviewTotalPrice(c.get('body') && c.get('body').total_price);
-      const dropUpload = function () {
-        if (c.get('file')) removeReviewImage('/uploads/shops/' + c.get('file').filename);
-      };
+      const dropUpload = function () {};
       if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
         dropUpload();
         c.res = c.json(
@@ -466,39 +475,27 @@ function mountShopRoutes(app, db, options) {
         db,
         'SELECT id, image_url FROM shop_reviews WHERE shop_id = ? AND user_id = ?',
       ).get(id, c.get('user').id);
-      // 配图规则：上传新图则替换旧图；勾选不带图则清除；未上传且未勾选时保留原图
-      let imageUrl = previous ? previous.image_url || '' : '';
-      if (c.get('file')) {
-        removeReviewImage(imageUrl);
-        imageUrl = '/uploads/shops/' + c.get('file').filename;
-      } else if (String((c.get('body') && c.get('body').remove_image) || '') === '1') {
-        removeReviewImage(imageUrl);
-        imageUrl = '';
-      }
-      query(
-        db,
-        `INSERT INTO shop_reviews (shop_id, user_id, rating, content, guests, total_price, image_url)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-        ON CONFLICT(shop_id, user_id) DO UPDATE SET rating = excluded.rating, content = excluded.content,
-          guests = excluded.guests, total_price = excluded.total_price, image_url = excluded.image_url,
-          updated_at = strftime('%s','now')`,
-      ).run(id, c.get('user').id, rating, content, guests, totalPrice, imageUrl);
-      const enriched = attachEngagement([store.get(db, id)], c.get('user').id)[0];
-      c.res = c.json(
-        {
-          review: {
-            rating: rating,
-            content: content,
-            guests: guests,
+      try {
+        let imageUrl = previous ? previous.image_url || '' : '';
+        if (String(c.get('body')?.remove_image || '') === '1') imageUrl = '';
+        const result = opt.moderation.submit(
+          c.get('user'),
+          'shop_review',
+          {
+            shop_id: id,
+            rating,
+            content,
+            guests,
             total_price: totalPrice,
             image_url: imageUrl,
-            per_person: store.perPerson(guests, totalPrice),
+            image_data: await image(c.get('file')),
           },
-          shop: enriched,
-          message: previous ? '评价已更新' : '评价已提交',
-        },
-        previous ? 200 : 201,
-      );
+          String(id),
+        );
+        c.res = c.json(result, 202);
+      } catch (error) {
+        fail(c, error);
+      }
     });
   });
   router.delete('/shops/:id/reviews/me', authenticate, requireVerifiedStudent, function (c) {
@@ -511,10 +508,32 @@ function mountShopRoutes(app, db, options) {
       db,
       'SELECT image_url FROM shop_reviews WHERE shop_id = ? AND user_id = ?',
     ).get(id, c.get('user').id);
-    query(db, 'DELETE FROM shop_reviews WHERE shop_id = ? AND user_id = ?').run(
-      id,
-      c.get('user').id,
-    );
+    db.$client.transaction(() => {
+      const userId = c.get('user').id;
+      query(db, 'DELETE FROM shop_reviews WHERE shop_id=? AND user_id=?').run(id, userId);
+      for (const request of query(
+        db,
+        "SELECT id,payload FROM moderation_requests WHERE user_id=? AND kind='shop_review' AND subject_key=? AND status='pending'",
+      ).all(userId, String(id))) {
+        const payload = JSON.parse(request.payload);
+        delete payload.image_data;
+        query(
+          db,
+          "UPDATE moderation_requests SET status='withdrawn',reason='评价已删除',reviewed_at=unixepoch(),payload=? WHERE id=?",
+        ).run(JSON.stringify(payload), request.id);
+        const { audit, notify } = require('../accounts/security');
+        require('../accounts/notifications').settleNotifications(
+          db,
+          'moderation_pending',
+          request.id,
+        );
+        audit(db, userId, userId, 'submission.withdrawn', { id: request.id });
+        notify(db, userId, '店铺评价已撤回', '评价已删除，对应待审核修改已撤回。', {
+          kind: 'moderation_result',
+          id: request.id,
+        });
+      }
+    })();
     if (previous) removeReviewImage(previous.image_url);
     c.res = c.json({
       shop: attachEngagement([store.get(db, id)], c.get('user').id)[0],
@@ -523,15 +542,11 @@ function mountShopRoutes(app, db, options) {
   });
   router.post('/shops', requireCreate, function (c) {
     try {
-      const shop = store.create(db, c.get('body') || {}, c.get('user'), store.loadConfig(root));
-      if (
-        opt.onCreated &&
-        c.get('user') &&
-        c.get('user').id !== null &&
-        c.get('user').id !== undefined
-      )
-        opt.onCreated(c.get('user').id);
-      c.res = c.json({ shop: shop, message: '已添加' }, 201);
+      const values = store.validate(c.get('body') || {}, store.loadConfig(root)?.area?.polygon);
+      const existing = query(db, 'SELECT id FROM shops WHERE name=?').get(values.name);
+      if (existing) throw new store.ShopError(409, '已有同名店铺', { existing_id: existing.id });
+      const request = opt.moderation.submit(c.get('user'), 'shop', values, values.name);
+      c.res = c.json(request, 202);
     } catch (error) {
       fail(c, error);
     }

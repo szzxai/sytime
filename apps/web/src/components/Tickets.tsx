@@ -15,8 +15,7 @@ export interface Ticket {
 }
 export const ticketVisibility = {
   admin: '管理员及以上',
-  super_admin: '超级管理员及以上',
-  developer: '仅开发者',
+  operator: '仅运营者',
 };
 export function TicketCard({
   ticket: t,

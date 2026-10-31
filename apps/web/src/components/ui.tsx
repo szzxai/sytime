@@ -244,7 +244,7 @@ export function Field({
   children,
 }: {
   label: string;
-  name: string;
+  name?: string;
   required?: boolean;
   type?: string;
   defaultValue?: string | number;
@@ -252,6 +252,13 @@ export function Field({
   maxLength?: number;
   children?: ReactNode;
 }) {
+  if (!name && children)
+    return (
+      <label className="field">
+        <span className="field__label">{label}</span>
+        {children}
+      </label>
+    );
   return (
     <div className="field">
       <label className="field__label" htmlFor={name}>
@@ -332,7 +339,10 @@ export function Dialog({
       className={`dialog ${className}`}
       aria-labelledby={header === undefined ? id : undefined}
       aria-label={header === undefined ? undefined : title}
-      onCancel={onClose}
+      onCancel={(event) => {
+        event.preventDefault();
+        onClose();
+      }}
       onClose={onClose}
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
@@ -412,7 +422,11 @@ export function Confirm({
   onConfirm,
   onClose,
   label = '删除',
+  pending = false,
+  tone = 'danger',
 }: {
+  tone?: 'danger' | 'primary';
+  pending?: boolean;
   label?: string;
   title: string;
   message: string;
@@ -433,7 +447,7 @@ export function Confirm({
           <button type="button" className="btn" autoFocus onClick={onClose}>
             取消
           </button>
-          <button type="submit" className="btn btn--danger" data-r="ok">
+          <button type="submit" className={`btn btn--${tone}`} data-r="ok" disabled={pending}>
             {label}
           </button>
         </div>

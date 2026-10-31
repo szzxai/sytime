@@ -90,6 +90,7 @@ export function SettingsLayout({
                     name="oldPassword"
                     required
                     autoComplete="current-password"
+                    strength={false}
                     hint=""
                   />
                   <PasswordField
@@ -104,6 +105,7 @@ export function SettingsLayout({
                     label="确认新密码"
                     id="confirmPassword"
                     name="confirmPassword"
+                    strength={false}
                     required
                     autoComplete="new-password"
                     hint=""
@@ -328,8 +330,7 @@ export function SettingsLayout({
                     </label>
                     <select className="select" id="ticketVisibility" name="ticketVisibility">
                       <option value="admin">{'管理员及以上'}</option>
-                      <option value="super_admin">{'超级管理员及以上'}</option>
-                      <option value="developer">{'仅开发者'}</option>
+                      <option value="operator">{'仅运营者'}</option>
                     </select>
                     <span className="field__hint">
                       {'工单将提交给所选权限及以上的管理人员处理。'}

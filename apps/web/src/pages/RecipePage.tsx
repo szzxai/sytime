@@ -146,6 +146,7 @@ export function RecipePage() {
   const filteredDishes = [...new Map(advancedRows.map((r) => [r.dish_id, r])).values()];
   function write(row: Supply) {
     if (!session.token) return location.assign(loginUrl());
+    if (session.user?.role === 'user') return location.assign('/student_verify.html');
     setWriter({
       id: row.dish_id,
       name: row.name,
@@ -592,9 +593,21 @@ export function RecipePage() {
   );
 }
 
-export function ReviewCard({ review: r, detail = false }: { review: Review; detail?: boolean }) {
+export function ReviewCard({
+  review: r,
+  detail = false,
+  highlighted = false,
+}: {
+  review: Review;
+  detail?: boolean;
+  highlighted?: boolean;
+}) {
   return detail ? (
-    <article className="card dish-review">
+    <article
+      id={`review-${r.id}`}
+      tabIndex={-1}
+      className={`card dish-review review-target${highlighted ? ' is-highlighted' : ''}`}
+    >
       {r.name && <SiteLink href={'/dish.html?id=' + r.dish_id}>{r.name}</SiteLink>}
       <header className="dish-review__head">
         <UserLine user={{ ...r, id: r.user_id }} time={r.created_at} />

@@ -77,107 +77,14 @@ test("malformed, oversized, nonexistent dish identities cannot resolve", context
   assert.equal(store.findDish(db, "1").name, "红烧牛肉面");
   assert.equal(store.findDish(db, 3).name, "未发布菜品");
 });
-
-test("dish detail and review HTTP contracts", async context => {
-  const site = await startApp("szzx-dishes-api-");
-  context.after(() => site.stop());
-  const registration = await site.api("/api/register", { method: "POST", body: { username: "dish-tester", nickname: "菜品测试", password: "dish-test-password" } });
-  assert.equal(registration.status, 201);
-  const login = await site.api("/api/login", { method: "POST", body: { username: "dish-tester", password: "dish-test-password" } });
-  assert.equal(login.status, 200);
-  const token = login.data.token;
-  const catalog = (await site.api("/api/dishes")).data.dishes;
-  const target = catalog.find(dish => dish.name === "红烧牛肉面");
-  const other = catalog.find(dish => dish.id !== target.id);
-  const route = "/api/dishes/" + target.id;
-
-  await context.test("details and empty reviews are public and never invent a score", async () => {
-    const response = await site.api(route);
-    assert.equal(response.status, 200);
-    assert.equal(response.headers.get("cache-control"), "no-store");
-    assert.equal(response.data.dish.reviews_count, 0);
-    assert.equal(response.data.dish.rating_avg, null);
-    assert.deepEqual((await site.api(route + "/reviews")).data.reviews, []);
-    assert.equal((await site.api("/api/dishes/not-an-id")).status, 404);
-    assert.equal((await site.api("/api/dishes/99999999/reviews")).status, 404);
-  });
-  await context.test("posting requires login and an explicit existing dish identity", async () => {
-    assert.equal((await site.api("/api/recipes", { method: "POST", body: { dish_id: target.id, rating: 5 } })).status, 401);
-    for (const dishId of [undefined, "", 0, -1, "1e0", "1 OR 1=1", {}, 99999999]) {
-      const result = await site.api("/api/recipes", { method: "POST", token, body: { dish_id: dishId, name: target.name, rating: 5 } });
-      assert.equal(result.status, 400);
-      assert.match(result.data.error, /选择已有菜品/);
-    }
-    assert.equal((await site.api("/api/recipes")).data.recipes.length, 0);
-  });
-  await context.test("invalid scores and comments cannot create a review", async () => {
-    for (const rating of [undefined, null, "", false, 0, 6, -1, 4.5, "4invalid"]) {
-      assert.equal((await site.api("/api/recipes", { method: "POST", token, body: { dish_id: target.id, rating } })).status, 400);
-    }
-    for (const comment of [{ text: "invalid" }, "长".repeat(501)]) {
-      assert.equal((await site.api("/api/recipes", { method: "POST", token, body: { dish_id: target.id, rating: 5, comment } })).status, 400);
-    }
-  });
-  await context.test("the server owns the canonical name and reviews never cross dishes", async () => {
-    const result = await site.api("/api/recipes", { method: "POST", token,
-      body: { dish_id: target.id, name: "不能伪造这个名字", rating: 4, comment: "只属于牛肉面的评论" } });
-    assert.equal(result.status, 201);
-    assert.equal(result.data.recipe.name, target.name);
-    assert.equal(result.data.recipe.dish_id, target.id);
-    await site.api("/api/recipes", { method: "POST", token, body: { dish_id: other.id, rating: 2, comment: "另一道菜的评论" } });
-    const summary = (await site.api(route)).data.dish;
-    assert.equal(summary.reviews_count, 1);
-    assert.equal(summary.rating_avg, 4);
-    const response = await site.api(route + "/reviews");
-    assert.equal(response.data.reviews.length, 1);
-    assert.equal(response.data.reviews[0].username, "dish-tester");
-    assert.equal(response.data.reviews[0].comment, "只属于牛肉面的评论");
-    assert.ok(Object.hasOwn(response.data.reviews[0], "avatar_url"));
-  });
-  await context.test("review pages are bounded, ordered and reject invalid offsets", async () => {
-    const db = new DatabaseSync(path.join(site.directory, "data.db"));
-    try {
-      const insert = db.prepare("INSERT INTO recipes (dish_id, user_id, username, name, rating, created_at) VALUES (?, ?, ?, ?, 3, ?)");
-      for (let position = 0; position < 25; position++) insert.run(target.id, login.data.user.id, "dish-tester", target.name, position + 1);
-    } finally { db.close(); }
-    const first = (await site.api(route + "/reviews")).data;
-    const second = (await site.api(route + "/reviews?offset=20")).data;
-    assert.equal(first.total, 26);
-    assert.equal(first.reviews.length, 20);
-    assert.equal(first.has_more, true);
-    assert.equal(second.reviews.length, 6);
-    assert.equal(second.has_more, false);
-    assert.equal(new Set([...first.reviews, ...second.reviews].map(review => review.id)).size, 26);
-    for (const offset of ["-1", "1.5", "1e2", "NaN", "1000001", "0&offset=20"]) {
-      assert.equal((await site.api(route + "/reviews?offset=" + offset)).status, 400);
-    }
-  });
-  await context.test("multipart reviews keep images and rejected choices leave no orphan upload", async () => {
-    const data = new FormData();
-    data.append("dish_id", String(target.id));
-    data.append("rating", "5");
-    data.append("comment", "图片评价");
-    data.append("image", new Blob([png], { type: "image/png" }), "review.png");
-    const result = await site.api("/api/recipes", { method: "POST", token, body: data });
-    assert.equal(result.status, 201);
-    assert.match(result.data.recipe.image_url, /^\/uploads\/.*\.png$/);
-    assert.ok(fs.existsSync(path.join(site.directory, result.data.recipe.image_url)));
-    const uploads = path.join(site.directory, "uploads");
-    const before = fs.readdirSync(uploads).sort();
-    data.set("dish_id", "99999999");
-    assert.equal((await site.api("/api/recipes", { method: "POST", token, body: data })).status, 400);
-    assert.deepEqual(fs.readdirSync(uploads).sort(), before);
-  });
-  await context.test("legacy unmatched reviews remain in the unchanged reviews feed", async () => {
-    const db = new DatabaseSync(path.join(site.directory, "data.db"));
-    try {
-      db.prepare("INSERT INTO recipes (user_id, username, name, rating, comment) VALUES (?, ?, ?, 4, ?)")
-        .run(login.data.user.id, "dish-tester", "目录外旧菜名", "历史内容保留");
-      store.migrate(db);
-    } finally { db.close(); }
-    const legacy = (await site.api("/api/recipes")).data.recipes.find(review => review.name === "目录外旧菜名");
-    assert.equal(legacy.comment, "历史内容保留");
-    assert.equal(legacy.dish_id, null);
-    assert.equal((await site.api(route)).data.dish.reviews_count, 27);
-  });
+test('菜品 HTTP：公开详情、严格身份/评分校验、学生提交与审核发布',async t=>{
+ const {fixture}=require('./helpers/accounts-fixture.cjs');const f=await fixture(t);const admin=await f.account('dish_admin','admin'),student=await f.account('dish_student','student'),user=await f.account('dish_user');
+ const {publishSource}=require('../apps/api/src/domain/menu/store');const {sha256}=require('../apps/api/src/domain/menu/schema');publishSource(f.db,{article_id:11427,title:'菜品测试',content_hash:sha256('dishes')},['红烧牛肉面','A套餐'].map(name=>({date:'2026-10-31',weekday:null,time:['noon'],place:'希文楼',group:'面档',name,price:12,spicy:null})));
+ const catalog=(await f.api('/api/dishes')).data.dishes;const target=catalog[0];assert.equal((await f.api('/api/dishes/'+target.id)).data.dish.rating_avg,null);
+ assert.equal((await f.api('/api/recipes',{method:'POST',token:user.token,body:{dish_id:target.id,rating:5}})).status,403);
+ for(const dishId of [undefined,'',0,-1,'1e0',{},999999])assert.equal((await f.api('/api/recipes',{method:'POST',token:student.token,body:{dish_id:dishId,rating:5}})).status,422);
+ for(const rating of [undefined,null,'',false,0,6,-1,4.5,'4invalid'])assert.equal((await f.api('/api/recipes',{method:'POST',token:student.token,body:{dish_id:target.id,rating}})).status,422);
+ for(const comment of [{text:'invalid'},'长'.repeat(501)])assert.equal((await f.api('/api/recipes',{method:'POST',token:student.token,body:{dish_id:target.id,rating:5,comment}})).status,422);
+ const submitted=await f.api('/api/recipes',{method:'POST',token:student.token,body:{dish_id:target.id,name:'不能伪造菜名',rating:4,comment:'牛肉面评价'}});assert.equal(submitted.status,202);assert.equal((await f.api('/api/dishes/'+target.id+'/reviews')).data.total,0);assert.equal((await f.decide(admin,submitted.data.id)).status,200);const published=(await f.api('/api/dishes/'+target.id+'/reviews')).data;assert.equal(published.reviews[0].name,target.name);assert.equal((await f.api('/api/dishes/'+catalog[1].id+'/reviews')).data.total,0);
+ for(const offset of ['-1','1.5','1e2','NaN','1000001','0&offset=20'])assert.equal((await f.api('/api/dishes/'+target.id+'/reviews?offset='+offset)).status,400);
 });

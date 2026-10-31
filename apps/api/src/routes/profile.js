@@ -1,12 +1,9 @@
-const bcrypt = require('bcrypt');
-
-const { withUpload } = require('../upload');
 const { query } = require('../../../../packages/db/src/client.ts');
 
 const { equippedTitle: equippedTitleOf, ownedTitles } = require('../domain/titles/store');
 
 module.exports = function mountProfileRoutes(app, services) {
-  const { requireLogin, db, userPermissionList, UPLOAD_DIR } = services;
+  const { requireLogin, db } = services;
   app.get('/api/user/profile', requireLogin, function (c) {
     const user = query(
       db,
@@ -18,7 +15,6 @@ module.exports = function mountProfileRoutes(app, services) {
     }
     c.res = c.json({
       user: Object.assign({}, user, {
-        permissions: userPermissionList(c.get('user').id),
         title: equippedTitleOf(db, c.get('user').id),
       }),
     });
@@ -145,54 +141,5 @@ module.exports = function mountProfileRoutes(app, services) {
       collection_default_public: collectionDefaultPublic,
       show_role: showRole,
     });
-  });
-  app.post('/api/user/avatar', requireLogin, async function (c) {
-    return withUpload(c, { directory: UPLOAD_DIR, maxBytes: 2097152 }, 'avatar', function (err) {
-      if (err) {
-        c.res = c.json({ error: err.message }, 400);
-        return;
-      }
-      if (!c.get('file')) {
-        c.res = c.json({ error: 'avatar image is required' }, 400);
-        return;
-      }
-      const avatarUrl = '/uploads/' + c.get('file').filename;
-      query(db, 'UPDATE users SET avatar_url = ? WHERE id = ?').run(avatarUrl, c.get('user').id);
-      c.res = c.json({ avatar_url: avatarUrl });
-    });
-  });
-  app.put('/api/user/nickname', requireLogin, function (c) {
-    const body = c.get('body') || {};
-    const nickname = body.nickname;
-    if (!nickname) {
-      c.res = c.json({ error: 'nickname is required' }, 400);
-      return;
-    }
-    query(db, 'UPDATE users SET nickname = ? WHERE id = ?').run(nickname, c.get('user').id);
-    c.res = c.json({ id: c.get('user').id, username: c.get('user').username, nickname: nickname });
-  });
-  app.put('/api/user/signature', requireLogin, function (c) {
-    const body = c.get('body') || {};
-    const signature =
-      body.signature === undefined || body.signature === null ? '' : String(body.signature);
-    query(db, 'UPDATE users SET signature = ? WHERE id = ?').run(signature, c.get('user').id);
-    c.res = c.json({ id: c.get('user').id, signature: signature });
-  });
-  app.put('/api/user/password', requireLogin, function (c) {
-    const body = c.get('body') || {};
-    const oldPassword = body.oldPassword || body.old_password;
-    const newPassword = body.newPassword || body.new_password;
-    if (!oldPassword || !newPassword) {
-      c.res = c.json({ error: 'oldPassword and newPassword are required' }, 400);
-      return;
-    }
-    const user = query(db, 'SELECT password_hash FROM users WHERE id = ?').get(c.get('user').id);
-    if (!user || !user.password_hash || !bcrypt.compareSync(oldPassword, user.password_hash)) {
-      c.res = c.json({ error: 'old password is incorrect' }, 400);
-      return;
-    }
-    const newHash = bcrypt.hashSync(newPassword, 10);
-    query(db, 'UPDATE users SET password_hash = ? WHERE id = ?').run(newHash, c.get('user').id);
-    c.res = c.json({ ok: true });
   });
 };

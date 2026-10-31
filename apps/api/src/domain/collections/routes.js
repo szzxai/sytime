@@ -146,6 +146,10 @@ function mountCollectionRoutes(app, db, options) {
       fail(c, 400, 'invalid is_public', '收藏夹公开状态只能是 0 或 1');
       return;
     }
+    if (isPublic && c.get('user').role === 'user') {
+      fail(c, 403, 'student required', '普通用户仅可使用私密收藏夹，请先完成学生认证');
+      return;
+    }
     const row = store.create(db, c.get('user').id, section, name, isPublic);
     c.res = c.json({ collection: store.serializeCollection(row) }, 201);
   });
@@ -260,6 +264,10 @@ function mountCollectionRoutes(app, db, options) {
     }
     const isPublic =
       body.is_public === true || body.is_public === 1 || body.is_public === '1' ? 1 : 0;
+    if (isPublic && c.get('user').role === 'user') {
+      fail(c, 403, 'student required', '普通用户仅可使用私密收藏夹，请先完成学生认证');
+      return;
+    }
     store.setPublic(db, collection.id, isPublic);
     const updated = store.getById(db, collection.id);
     const itemsCount = Number(

@@ -13,3 +13,45 @@ output/playwright/
 .playwright-cli/
 apps/*/dist/
 *.tsbuildinfo
+
+# Runtime state and private material (never publish)
+*.db
+*.db-*
+*.sqlite
+*.sqlite3
+*.sqlite-*
+*.sqlite3-*
+/uploads/
+/backups/
+/tmp/
+/temp/
+*.bak
+*.backup
+*.dump
+*.sql.gz
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+
+# Local logs, reports and editor/OS scratch files
+*.log
+*-out.txt
+.DS_Store
+._*
+Thumbs.db
+*.swp
+*.swo
+*~
+*.tmp
+*.temp
+*.orig
+*.rej
+coverage/
+playwright-report/
+test-results/
+
+# Reproducible distributable; build with npm run build:menu-skill
+/szzx-menu.skill

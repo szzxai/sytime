@@ -1,13 +1,9 @@
-import { useUnsavedForm } from '../lib/useUnsavedForm';
-import { atLeast, type Role } from '@sytime/shared';
+import { atLeast } from '@sytime/shared';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { Fragment, useState, type FormEvent, type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { AdminUsers } from '../components/AdminUsers';
-import { Picture, Upload } from '../components/Media';
-import { MenuAdmin } from '../components/MenuAdmin';
-import { MenuImport } from '../components/MenuImport';
-import { TicketCard, type Ticket } from '../components/Tickets';
 import { TitleManagement } from '../components/TitleManagement';
+import { reviewLabels, statusLabels, type Submission } from '../components/Submissions';
 import {
   Confirm,
   Dialog,
@@ -19,526 +15,750 @@ import {
   Submit,
   useToast,
 } from '../components/ui';
-import { AdminLayout } from '../layouts/AdminLayout';
 import { api, endpoint, formatTime, formValues, queryClient } from '../lib/api';
 import { RequireLogin, useSession } from '../lib/session';
 import { usePanel } from '../lib/usePanel';
-const panels: Record<
-  string,
-  { label: string; permission?: string; role: Role; path?: string; key?: string }
-> = {
-  banner: { label: '全站横幅', permission: 'banner_edit', role: 'super_admin' },
-  announce: {
-    label: '更新公告',
-    permission: 'announcement_publish',
-    role: 'super_admin',
-    path: '/api/announcements',
-    key: 'announcements',
-  },
-  notify: { label: '系统通知', permission: 'announcement_publish', role: 'super_admin' },
-  review: {
-    label: '学生认证审核',
-    permission: 'student_review',
-    role: 'super_admin',
-    path: '/api/admin/student-applications',
-    key: 'applications',
-  },
-  appeals: {
-    label: '封禁申诉',
-    permission: 'ban_appeal_review',
-    role: 'super_admin',
-    path: '/api/admin/ban-appeals',
-    key: 'appeals',
-  },
-  tickets: {
-    label: '工单管理',
-    permission: 'ticket_manage',
-    role: 'admin',
-    path: '/api/admin/tickets',
-    key: 'tickets',
-  },
-  users: {
-    label: '用户管理',
-    permission: 'user_manage',
-    role: 'super_admin',
-    path: '/api/admin/users',
-    key: 'users',
-  },
-  invite: {
-    label: '邀请码管理',
-    permission: 'invite_manage',
-    role: 'super_admin',
-    path: '/api/admin/invite-codes',
-    key: 'invite_codes',
-  },
-  'titles-mgmt': {
-    label: '头衔管理',
-    permission: 'title_manage',
-    role: 'super_admin',
-    path: '/api/admin/titles',
-    key: 'titles',
-  },
-  menu: { label: '菜单自动同步', role: 'developer' },
-  'menu-import': { label: '菜单手动导入', role: 'admin' },
+type Overview = {
+  users: number;
+  pending: number;
+  tickets: number;
+  reviewed_today: number;
+  counts: { kind: string; count: number }[];
 };
-type QueueRow = {
-  id: number;
-  title: string;
-  username: string;
-  user_id: number;
-  display_id: string;
-  status: string;
-  student_id: string;
-  class_name: string;
-  real_name: string;
-  extra_info: string;
-  created_at: number;
-  content: string;
-  publish_date: string;
-  code: string;
-  used_count: number;
-  max_uses: number;
-  url: string;
-  uploaded_at: number;
-  appeal_reason: string;
-  appeal_image: string;
-};
-type Action = { path: string; body?: unknown; method?: string };
-const navIcons: Record<string, string> = {
-  banner: 'megaphone',
-  announce: 'mail',
-  notify: 'bell',
-  review: 'graduation',
-  appeals: 'shield',
-  tickets: 'clipboard',
-  users: 'users',
-  invite: 'tag',
-  'titles-mgmt': 'award',
-  menu: 'utensils',
-  'menu-import': 'utensils',
-};
-const navLabels: Record<string, string> = {
-  banner: '编辑横幅',
-  notify: '发送系统通知',
-  appeals: '申诉处理',
-  invite: '邀请码设置',
-};
-const groups = [
-  { label: '内容', items: ['banner', 'announce', 'notify'] },
-  { label: '审核', items: ['review', 'appeals', 'tickets'] },
-  { label: '用户', items: ['users', 'invite', 'titles-mgmt'] },
-  { label: '系统', items: ['menu', 'menu-import'] },
+const nav = [
+  { key: 'overview', label: '工作概览', icon: 'home' },
+  { key: 'reviews', label: '审核中心', icon: 'shield' },
+  { key: 'users', label: '用户管理', icon: 'users' },
+  { key: 'tickets', label: '工单处理', icon: 'clipboard' },
+  { key: 'content', label: '站点内容', icon: 'megaphone' },
+  { key: 'titles', label: '头衔管理', icon: 'award' },
+  { key: 'audit', label: '操作记录', icon: 'clock' },
 ];
 export function AdminPage() {
   return (
     <RequireLogin>
-      <AdminContent />
+      <AdminWorkspace />
     </RequireLogin>
   );
 }
-function AdminContent() {
+function AdminWorkspace() {
   const { user } = useSession();
-  const allowed = Object.entries(panels)
-    .filter(
-      ([, p]) =>
-        atLeast(user?.role, p.role) ||
-        (!!p.permission && user?.permissions?.includes(p.permission)),
-    )
-    .map(([key]) => key);
-  const [panel, setPanel] = usePanel(allowed, allowed[0] || 'banner');
-  const toast = useToast();
-  const draft = useUnsavedForm();
-  const [reply, setReply] = useState<Ticket | null>(null);
-  const [file, setFile] = useState<File | null>(null);
-  const [reject, setReject] = useState<QueueRow | null>(null);
-  const [confirm, setConfirm] = useState<{
-    title: string;
-    message?: string;
-    label?: string;
-    action: Action;
-  } | null>(null);
-  const p = panels[panel];
-  const data = useQuery({
-    ...endpoint<Record<string, QueueRow[]>>(p.path || '/api/me'),
-    enabled: !!p.path && !['users', 'titles-mgmt'].includes(panel) && allowed.includes(panel),
-  });
-  const banner = useQuery({
-    ...endpoint<{ banner: string }>('/api/settings/banner', false),
-    enabled: panel === 'banner',
-  });
-  const counts = useQuery(
-    endpoint<{ counts: Record<string, number> }>('/api/admin/pending-counts'),
+  const [panel, setPanel] = usePanel(
+    nav.map((n) => n.key),
+    'overview',
   );
-  const action = useMutation({
-    mutationFn: ({ path, body, method = 'POST' }: Action) => api(path, { method, body }),
+  const overview = useQuery({
+    ...endpoint<Overview>('/api/admin/overview'),
+    enabled: atLeast(user?.role, 'admin'),
+  });
+  if (!atLeast(user?.role, 'admin'))
+    return (
+      <main id="main" className="main container">
+        <Empty title="暂无权限访问管理后台" description="管理后台仅向管理员与运营者开放。" />
+      </main>
+    );
+  return (
+    <main id="main" className="admin-workspace">
+      <aside className="admin-sidebar">
+        <div className="admin-brand">
+          <span className="admin-brand__icon">
+            <Icon name="shield" />
+          </span>
+          <div>
+            <strong>拾光酥糕</strong>
+            <small>管理工作台</small>
+          </div>
+        </div>
+        <span className="admin-nav-label">管理空间</span>
+        <nav aria-label="后台管理导航">
+          {nav.map((n) => (
+            <button
+              key={n.key}
+              aria-label={n.label}
+              type="button"
+              className={panel === n.key ? 'is-active' : ''}
+              aria-current={panel === n.key ? 'page' : undefined}
+              onClick={() => setPanel(n.key)}
+            >
+              <Icon name={n.icon} />
+              <span>{n.label}</span>
+              {n.key === 'reviews' && !!overview.data?.pending && <b>{overview.data.pending}</b>}
+            </button>
+          ))}
+        </nav>
+        <div className="admin-sidebar__foot">
+          <span className="admin-online" />{' '}
+          {user?.role === 'operator' ? '运营者工作空间' : '管理员工作空间'}
+          <small>所有管理操作均留有记录</small>
+        </div>
+      </aside>
+      <div className="admin-main">
+        <header className="admin-topbar">
+          <div>
+            <p>工作空间 / {nav.find((n) => n.key === panel)?.label}</p>
+            <h1>{nav.find((n) => n.key === panel)?.label}</h1>
+          </div>
+          <button
+            type="button"
+            className="btn btn--sm"
+            onClick={() => queryClient.invalidateQueries()}
+          >
+            <Icon name="refresh" />
+            刷新数据
+          </button>
+        </header>
+        <div className="admin-body">
+          {panel === 'overview' ? (
+            <OverviewPanel query={overview} open={setPanel} />
+          ) : panel === 'reviews' ? (
+            <Reviews />
+          ) : panel === 'users' ? (
+            <AdminUsers />
+          ) : panel === 'tickets' ? (
+            <Tickets />
+          ) : panel === 'content' ? (
+            <Content />
+          ) : panel === 'titles' ? (
+            <TitleManagement />
+          ) : (
+            <Audit />
+          )}
+        </div>
+      </div>
+    </main>
+  );
+}
+function OverviewPanel({
+  query,
+  open,
+}: {
+  query: { data?: Overview; isPending: boolean; error: Error | null; refetch: () => unknown };
+  open: (key: string) => void;
+}) {
+  if (query.isPending) return <Loading />;
+  if (query.error) return <ErrorState error={query.error} retry={query.refetch} />;
+  const d = query.data!;
+  return (
+    <>
+      <div className="admin-welcome">
+        <span className="admin-eyebrow">MODERATION & COMMUNITY</span>
+        <h2>让每一次分享，都值得信赖。</h2>
+        <p>在这里审核内容、处理反馈，并维护校园社区的账号安全。</p>
+        <button className="btn btn--primary" onClick={() => open('reviews')}>
+          前往审核中心 <Icon name="arrow-right" />
+        </button>
+      </div>
+      <div className="admin-metrics">
+        {[
+          { label: '待审核申请', value: d.pending, icon: 'shield', key: 'reviews' },
+          { label: '待处理工单', value: d.tickets, icon: 'clipboard', key: 'tickets' },
+          { label: '今日已处理', value: d.reviewed_today, icon: 'check', key: 'audit' },
+          { label: '社区账号', value: d.users, icon: 'users', key: 'users' },
+        ].map((m) => (
+          <button className="admin-metric" key={m.label} onClick={() => open(m.key)}>
+            <span>
+              {m.label}
+              <Icon name={m.icon} />
+            </span>
+            <strong>{m.value}</strong>
+            <small>
+              查看详情 <Icon name="arrow-right" />
+            </small>
+          </button>
+        ))}
+      </div>
+      <section className="admin-panel">
+        <div className="admin-panel__head">
+          <h2>待办分布</h2>
+          <span>先审核，后发布</span>
+        </div>
+        <div className="admin-queue-grid">
+          {Object.entries(reviewLabels).map(([kind, label]) => (
+            <button
+              key={kind}
+              onClick={() => {
+                location.hash = 'reviews';
+                open('reviews');
+              }}
+            >
+              <span>{label}</span>
+              <strong>{d.counts.find((r) => r.kind === kind)?.count || 0}</strong>
+            </button>
+          ))}
+        </div>
+      </section>
+    </>
+  );
+}
+function useAction() {
+  const toast = useToast();
+  return useMutation({
+    mutationFn: ({
+      path,
+      body,
+      method = 'POST',
+    }: {
+      path: string;
+      body?: unknown;
+      method?: string;
+    }) => api(path, { method, body }),
     onSuccess: () => {
-      toast('操作成功');
+      toast('操作已完成');
       queryClient.invalidateQueries();
-      setReply(null);
-      setReject(null);
-      setFile(null);
     },
     onError: (e) => toast(e.message, 'error'),
   });
-  function submit(
-    e: FormEvent<HTMLFormElement>,
-    path: string,
-    convert: (values: Record<string, string>, form: HTMLFormElement) => unknown,
-    method = 'POST',
-  ) {
-    e.preventDefault();
-    const form = e.currentTarget;
+}
+function Reviews() {
+  const { user } = useSession();
+  const [kind, setKind] = useState('');
+  const [status, setStatus] = useState('pending');
+  const [page, setPage] = useState(0);
+  const [selected, setSelected] = useState<number | null>(
+    () => Number(new URLSearchParams(location.search).get('request')) || null,
+  );
+  const [reason, setReason] = useState('');
+  const [confirm, setConfirm] = useState<'approve' | 'reject' | null>(null);
+  const query = useQuery(
+    endpoint<{ requests: Submission[]; total: number }>(
+      `/api/admin/reviews?status=${status}&kind=${kind}&offset=${page * 20}`,
+    ),
+  );
+  const detail = useQuery({
+    ...endpoint<{ request: Submission }>(`/api/admin/reviews/${selected}`),
+    enabled: selected !== null,
+  });
+  const action = useAction();
+  const request = detail.data?.request;
+  const decision = (value: 'approve' | 'reject') =>
     action.mutate(
-      { path, method, body: convert(formValues(form), form) },
+      { path: `/api/admin/reviews/${selected}/decision`, body: { decision: value, reason } },
       {
         onSuccess: () => {
-          if (form.id === 'annForm') draft.clean();
-          form.reset();
+          setSelected(null);
+          setConfirm(null);
+          setReason('');
         },
       },
     );
-  }
-  const bind: Record<string, Record<string, unknown>> = {
-    adminShell: { hidden: !allowed.length },
-    denyBox: { hidden: !!allowed.length },
-    bannerInput: { defaultValue: banner.data?.banner || '', key: banner.data?.banner },
-    bannerForm: {
-      noValidate: false,
-      onSubmit: (e: FormEvent<HTMLFormElement>) =>
-        submit(e, '/api/admin/settings/banner', (v) => ({ value: v.bannerInput }), 'PUT'),
-    },
-    bannerClear: {
-      disabled: action.isPending,
-      onClick: () =>
-        action.mutate({ path: '/api/admin/settings/banner', method: 'PUT', body: { value: '' } }),
-    },
-    annForm: {
-      onInput: draft.onInput,
-      noValidate: false,
-      onSubmit: (e: FormEvent<HTMLFormElement>) =>
-        submit(e, '/api/admin/announcements', (v) => ({
-          title: v.annTitle,
-          content: v.annContent,
-        })),
-    },
-    notifyForm: {
-      noValidate: false,
-      onSubmit: (e: FormEvent<HTMLFormElement>) => {
-        e.preventDefault();
-        const v = formValues(e.currentTarget);
-        setConfirm({
-          title: '向全体用户发送这条通知？',
-          message: '发送后不可撤回。',
-          label: '确认发送',
-          action: {
-            path: '/api/admin/notifications',
-            body: { title: v.ntTitle, body: v.ntBody, important: !!v.ntImportant },
-          },
-        });
-      },
-    },
-    inviteForm: {
-      noValidate: false,
-      onSubmit: (e: FormEvent<HTMLFormElement>) =>
-        submit(e, '/api/admin/invite-codes', (v) => ({
-          code: v.inviteCodeInput,
-          max_uses: Number(v.inviteMaxInput),
-        })),
-    },
-  };
-  ['bannerSubmit', 'annSubmit', 'ntSubmit', 'inviteAdd'].forEach(
-    (id) => (bind[id] = { disabled: action.isPending }),
-  );
-  Object.keys(panels).forEach(
-    (key) =>
-      (bind[`view-${key}`] = {
-        hidden: key !== panel,
-        className: `view${key === panel ? ' is-active' : ''}`,
-      }),
-  );
-  const rows = data.data?.[p.key || ''] || [];
-  const remove = (title: string, path: string) =>
-    setConfirm({ title, message: '删除后无法恢复。', action: { path, method: 'DELETE' } });
-  const list = data.isPending ? (
-    <Loading />
-  ) : data.error ? (
-    <ErrorState error={data.error} retry={data.refetch} />
-  ) : rows.length ? (
-    rows.map((row) => {
-      if (panel === 'tickets')
-        return (
-          <TicketCard
-            key={row.id}
-            ticket={row as unknown as Ticket}
-            admin
-            onReply={() => {
-              setFile(null);
-              setReply(row as unknown as Ticket);
+  return (
+    <section className="admin-panel">
+      <div className="admin-panel__head">
+        <div>
+          <h2>统一审核队列</h2>
+          <p>资料、学生身份、内容与申诉在此处理；不能审核自己的申请。</p>
+        </div>
+        <strong>{query.data?.total || 0} 项</strong>
+      </div>
+      <div className="admin-toolbar">
+        <label>
+          类型
+          <select
+            className="select"
+            value={kind}
+            onChange={(e) => {
+              setKind(e.target.value);
+              setPage(0);
             }}
-          />
-        );
-      if (panel === 'appeals')
-        return (
-          <article className="card stack" key={row.id}>
-            <h2 className="queue-item__title">
-              用户 {row.display_id || row.user_id}（{row.username}）
-            </h2>
-            <p className="prose">{row.appeal_reason}</p>
-            <Picture src={row.appeal_image} caption="申诉图片" />
-            <div className="row row--sm">
-              {['approve', 'reject'].map((kind) => (
-                <button
-                  key={kind}
-                  type="button"
-                  className="btn btn--sm"
-                  data-approve-appeal={kind === 'approve' ? row.id : undefined}
-                  data-reject-appeal={kind === 'reject' ? row.id : undefined}
-                  onClick={() =>
-                    setConfirm({
-                      title: kind === 'approve' ? '通过该申诉并解封？' : '驳回该申诉？',
-                      label: '确认',
-                      action: {
-                        path: '/api/admin/ban-appeals/review',
-                        method: 'PUT',
-                        body: { appealId: row.id, action: kind },
-                      },
-                    })
-                  }
-                >
-                  {kind === 'approve' ? '通过' : '驳回'}
-                </button>
+          >
+            <option value="">全部类型</option>
+            {Object.entries(reviewLabels).map(([k, v]) => (
+              <option key={k} value={k}>
+                {v}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          状态
+          <select
+            className="select"
+            value={status}
+            onChange={(e) => {
+              setStatus(e.target.value);
+              setPage(0);
+            }}
+          >
+            {Object.entries(statusLabels).map(([k, v]) => (
+              <option key={k} value={k}>
+                {v}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+      {query.isPending ? (
+        <Loading />
+      ) : query.error ? (
+        <ErrorState error={query.error} retry={query.refetch} />
+      ) : query.data?.requests.length ? (
+        <div className="admin-table-wrap" tabIndex={0} role="region" aria-label="数据表格">
+          <table className="admin-table">
+            <thead>
+              <tr>
+                {['申请', '申请人', '提交时间', '状态', '操作'].map((h) => (
+                  <th key={h}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {query.data.requests.map((r) => (
+                <tr key={r.id}>
+                  <td>
+                    <strong>{reviewLabels[r.kind]}</strong>
+                    <small>#{r.id}</small>
+                  </td>
+                  <td>{r.username}</td>
+                  <td>{formatTime(r.created_at)}</td>
+                  <td>
+                    <span className={`review-status review-status--${r.status}`}>
+                      {statusLabels[r.status]}
+                    </span>
+                  </td>
+                  <td>
+                    <button
+                      type="button"
+                      className="btn btn--sm"
+                      onClick={() => {
+                        setSelected(r.id);
+                        setReason('');
+                      }}
+                    >
+                      查看详情
+                    </button>
+                  </td>
+                </tr>
               ))}
-            </div>
-          </article>
-        );
-      return (
-        <article className="card queue-item" key={row.id}>
-          <div className="queue-item__main">
-            <h2 className={`queue-item__title${panel === 'invite' ? ' mono' : ''}`}>
-              {panel === 'invite'
-                ? row.code
-                : panel === 'review'
-                  ? row.username || row.user_id
-                  : row.title}
-            </h2>
-            {panel === 'announce' && (
-              <>
-                <span className="queue-item__meta">发布于 {row.publish_date}</span>
-                <p className="prose">
-                  {row.content.length > 120 ? row.content.slice(0, 120) + '…' : row.content}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <Empty title="当前没有申请" description="新的申请会出现在这里。" />
+      )}
+      <Pagination page={page} total={query.data?.total || 0} setPage={setPage} />
+      {selected !== null && (
+        <Dialog
+          className={confirm ? 'dialog--confirm' : 'dialog--wide'}
+          id="reviewDetail"
+          title={confirm ? (confirm === 'approve' ? '确认通过申请' : '确认不通过') : '审核申请'}
+          onClose={() => {
+            if (action.isPending) return;
+            if (confirm) setConfirm(null);
+            else setSelected(null);
+          }}
+        >
+          {confirm ? (
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (!action.isPending) decision(confirm);
+              }}
+            >
+              <div className="dialog__body stack">
+                <p>
+                  {reviewLabels[request?.kind || '']} #{selected} · {request?.username}
                 </p>
-              </>
-            )}
-            {panel === 'review' && (
-              <>
-                <div className="queue-item__fields">
-                  <span>新生号：{row.student_id}</span>
-                  <span>班级：{row.class_name}</span>
-                  <span>真实姓名：{row.real_name}</span>
-                </div>
-                <p className="prose">{row.extra_info}</p>
-                <span className="queue-item__meta">{formatTime(row.created_at)}</span>
-              </>
-            )}
-            {panel === 'invite' && (
-              <span className="u-muted u-fs-sm">
-                已用 {row.used_count} / {row.max_uses > 0 ? row.max_uses : '不限'}
-              </span>
-            )}
-          </div>
-          {panel === 'announce' && (
-            <button
-              type="button"
-              className="btn btn--sm btn--danger-quiet"
-              data-delete-announce={row.id}
-              onClick={() => remove('删除这条公告？', `/api/admin/announcements/${row.id}`)}
-            >
-              删除
-            </button>
-          )}
-          {panel === 'invite' && (
-            <button
-              type="button"
-              className="btn btn--sm btn--danger-quiet"
-              data-delete-code={row.id}
-              onClick={() => remove('删除这个邀请码？', `/api/admin/invite-codes/${row.id}`)}
-            >
-              删除
-            </button>
-          )}
-          {panel === 'review' && (
-            <div className="queue-item__actions">
-              <button
-                type="button"
-                className="btn btn--sm"
-                data-approve={row.id}
-                disabled={action.isPending}
-                onClick={() =>
-                  action.mutate({
-                    path: '/api/admin/student-applications/approve',
-                    method: 'PUT',
-                    body: { id: row.id },
-                  })
-                }
-              >
-                通过
-              </button>
-              <button
-                type="button"
-                className="btn btn--sm"
-                data-reject={row.id}
-                onClick={() => setReject(row)}
-              >
-                拒绝
-              </button>
+                <p>
+                  {confirm === 'approve'
+                    ? '通过后申请立即生效，并向申请人发送结果通知。'
+                    : '申请将不予发布，并向申请人发送以下原因。'}
+                </p>
+                {reason && <p className="callout prose">{reason}</p>}
+                {action.error && (
+                  <p role="alert" className="field__error">
+                    {action.error.message}
+                  </p>
+                )}
+              </div>
+              <div className="dialog__foot">
+                <button
+                  type="button"
+                  className="btn"
+                  disabled={action.isPending}
+                  autoFocus
+                  onClick={() => setConfirm(null)}
+                >
+                  返回检查
+                </button>
+                <button
+                  type="submit"
+                  className={`btn btn--${confirm === 'approve' ? 'primary' : 'danger'}`}
+                  disabled={action.isPending}
+                >
+                  {action.isPending ? '处理中…' : confirm === 'approve' ? '确认通过' : '确认不通过'}
+                </button>
+              </div>
+            </form>
+          ) : (
+            <div className="dialog__body stack">
+              {detail.isPending ? (
+                <Loading />
+              ) : detail.error ? (
+                <ErrorState error={detail.error} retry={detail.refetch} />
+              ) : (
+                request && (
+                  <>
+                    <div className="row">
+                      <strong>
+                        {reviewLabels[request.kind]} #{request.id}
+                      </strong>
+                      <span className={`review-status review-status--${request.status}`}>
+                        {statusLabels[request.status]}
+                      </span>
+                    </div>
+                    <p>
+                      {request.username} · {formatTime(request.created_at)}
+                    </p>
+                    <Payload payload={request.payload} />
+                    {request.reason && <p className="callout">处理说明：{request.reason}</p>}
+                    {request.reviewed_at && (
+                      <p className="u-muted">
+                        处理时间：{formatTime(request.reviewed_at)} · 审核人 #{request.reviewer_id}
+                      </p>
+                    )}
+                    {request.status === 'pending' && (
+                      <>
+                        <Field label="处理说明（拒绝时必填）">
+                          <textarea
+                            className="textarea"
+                            maxLength={500}
+                            value={reason}
+                            onChange={(e) => setReason(e.target.value)}
+                          />
+                        </Field>
+                        <p className="field__hint">
+                          结果会通知申请人。学生认证通过后，同学号的其他申请将自动拒绝。
+                        </p>
+                        <div className="row">
+                          <button
+                            className="btn"
+                            disabled={
+                              action.isPending || !reason.trim() || request.user_id === user?.id
+                            }
+                            onClick={() => setConfirm('reject')}
+                          >
+                            拒绝申请
+                          </button>
+                          <button
+                            className="btn btn--primary"
+                            disabled={action.isPending || request.user_id === user?.id}
+                            onClick={() => setConfirm('approve')}
+                          >
+                            审核通过
+                          </button>
+                        </div>
+                        {request.user_id === user?.id && (
+                          <p className="field__error">请由其他管理员处理你的申请。</p>
+                        )}
+                      </>
+                    )}
+                  </>
+                )
+              )}
             </div>
           )}
-        </article>
-      );
-    })
-  ) : (
-    <Empty
-      icon="check-circle"
-      title={
-        panel === 'review'
-          ? '暂无待审核申请'
-          : panel === 'appeals'
-            ? '暂无待处理申诉'
-            : panel === 'tickets'
-              ? '暂无工单'
-              : panel === 'invite'
-                ? '暂无邀请码'
-                : '暂无记录'
-      }
-    />
+        </Dialog>
+      )}
+    </section>
   );
-  const slots: Record<string, ReactNode> = {
-    adminStatus: null,
-    denyBox: <Empty title="暂无管理权限" icon="lock" />,
-    adminNav: groups.map(
-      (group) =>
-        group.items.some((key) => allowed.includes(key)) && (
-          <Fragment key={group.label}>
-            <span className="side-nav__group">{group.label}</span>
-            {group.items
-              .filter((key) => allowed.includes(key))
-              .map((key) => {
-                const count = counts.data?.counts[panels[key].permission || ''] || 0;
-                return (
-                  <button
-                    key={key}
-                    type="button"
-                    className={`side-nav__item${key === panel ? ' is-active' : ''}`}
-                    aria-current={key === panel ? 'page' : undefined}
-                    data-panel={key}
-                    onClick={() => setPanel(key)}
-                  >
-                    <Icon name={navIcons[key]} />
-                    {navLabels[key] || panels[key].label}
-                    {count > 0 && <span className="side-nav__count">{count}</span>}
-                  </button>
-                );
-              })}
-          </Fragment>
-        ),
-    ),
-    annList: panel === 'announce' ? list : null,
-    reviewList: panel === 'review' ? list : null,
-    appealList: panel === 'appeals' ? list : null,
-    ticketList: panel === 'tickets' ? list : null,
-    inviteList: panel === 'invite' ? list : null,
-    userList: panel === 'users' ? <AdminUsers /> : null,
-    'view-titles-mgmt': panel === 'titles-mgmt' ? <TitleManagement /> : null,
-    'view-menu': panel === 'menu' ? <MenuAdmin /> : null,
-    'view-menu-import': panel === 'menu-import' ? <MenuImport /> : null,
-  };
+}
+const fields: Record<string, string> = {
+  student_id: '学号',
+  class_name: '班级',
+  real_name: '真实姓名',
+  extra_info: '补充信息',
+  value: '申请内容',
+  name: '名称',
+  dish_id: '菜品编号',
+  shop_id: '店铺编号',
+  rating: '评分',
+  comment: '评论',
+  content: '评论',
+  appeal_reason: '申诉理由',
+  address: '地址',
+  location_note: '位置说明',
+  dianping_url: '点评链接',
+  type: '店铺类型',
+  lat: '纬度',
+  lng: '经度',
+  campus_distance_m: '距学校 / 米',
+  campus_walk_min: '步行 / 分钟',
+  metro_station: '地铁站',
+  metro_exit: '出口',
+  metro_distance_m: '距地铁 / 米',
+  metro_walk_min: '步行 / 分钟',
+  guests: '就餐人数',
+  total_price: '总价',
+};
+function Payload({ payload }: { payload: Record<string, unknown> }) {
   return (
     <>
-      <AdminLayout bind={bind} slots={slots} />
-      {reply && (
-        <Dialog
-          id="ticketModal"
-          title={`批复工单 ${reply.title}`}
-          className="dialog--sheet dialog--wide"
-          onClose={() => setReply(null)}
-        >
-          <form
-            onSubmit={async (e) => {
-              e.preventDefault();
-              const v = formValues(e.currentTarget);
-              try {
-                const image = file
-                  ? await new Promise<string>((resolve, reject) => {
-                      const reader = new FileReader();
-                      reader.onload = () => resolve(String(reader.result));
-                      reader.onerror = () => reject(new Error('图片读取失败'));
-                      reader.readAsDataURL(file);
-                    })
-                  : '';
-                action.mutate({
-                  path: '/api/admin/tickets/reply',
-                  method: 'PUT',
-                  body: { id: reply.id, reply: v.ticketReplyInput, reply_image: image },
-                });
-              } catch (error) {
-                toast((error as Error).message, 'error');
-              }
-            }}
-          >
-            <div className="dialog__body stack">
-              <Field label="批复内容" name="ticketReplyInput" required>
-                <textarea
-                  className="textarea"
-                  name="ticketReplyInput"
-                  id="ticketReplyInput"
-                  required
-                />
-              </Field>
-              <Upload name="ticketImageInput" file={file} onChange={setFile} />
+      <dl className="admin-detail">
+        {Object.entries(payload)
+          .filter(([key, value]) => !['image_data', 'image_url'].includes(key) && value != null)
+          .map(([k, v]) => (
+            <div key={k}>
+              <dt>{fields[k] || k}</dt>
+              <dd>{typeof v === 'object' ? JSON.stringify(v) : String(v)}</dd>
             </div>
-            <div className="dialog__foot">
-              <button type="button" className="btn" onClick={() => setReply(null)}>
-                取消
-              </button>
-              <Submit id="ticketConfirm" pending={action.isPending}>
-                提交批复
-              </Submit>
-            </div>
-          </form>
-        </Dialog>
-      )}
-      {reject && (
-        <Dialog id="rejectModal" title="拒绝认证申请" onClose={() => setReject(null)}>
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              action.mutate({
-                path: '/api/admin/student-applications/reject',
-                method: 'PUT',
-                body: { id: reject.id, reason: formValues(e.currentTarget).rejectReasonInput },
-              });
-            }}
-          >
-            <div className="dialog__body">
-              <Field label="拒绝原因（选填）" name="rejectReasonInput" maxLength={100} />
-            </div>
-            <div className="dialog__foot">
-              <Submit id="rejectConfirm" pending={action.isPending}>
-                确认拒绝
-              </Submit>
-            </div>
-          </form>
-        </Dialog>
-      )}
-      {confirm && (
-        <Confirm
-          title={confirm.title}
-          message={confirm.message || '确认执行此操作？'}
-          label={confirm.label}
-          onClose={() => setConfirm(null)}
-          onConfirm={() => action.mutate(confirm.action)}
+          ))}
+      </dl>
+      {!!(payload.image_data || payload.image_url) && (
+        <img
+          className="admin-review-image"
+          src={String(payload.image_data || payload.image_url)}
+          alt="待审核图片"
         />
       )}
     </>
+  );
+}
+export function Pagination({
+  page,
+  total,
+  setPage,
+}: {
+  page: number;
+  total: number;
+  setPage: (value: number) => void;
+}) {
+  return total > 20 ? (
+    <div className="admin-pagination">
+      <span>
+        共 {total} 项 · 第 {page + 1} 页
+      </span>
+      <button className="btn btn--sm" disabled={!page} onClick={() => setPage(page - 1)}>
+        上一页
+      </button>
+      <button
+        className="btn btn--sm"
+        disabled={(page + 1) * 20 >= total}
+        onClick={() => setPage(page + 1)}
+      >
+        下一页
+      </button>
+    </div>
+  ) : null;
+}
+function Tickets() {
+  const query = useQuery(
+    endpoint<{
+      tickets: {
+        id: number;
+        title: string;
+        content: string;
+        username: string;
+        status: string;
+        reply_content: string;
+        visibility: string;
+      }[];
+    }>('/api/admin/tickets'),
+  );
+  const action = useAction();
+  return (
+    <section className="admin-panel">
+      <div className="admin-panel__head">
+        <h2>用户反馈</h2>
+        <p>仅显示当前角色可见的工单。</p>
+      </div>
+      {query.isPending ? (
+        <Loading />
+      ) : query.error ? (
+        <ErrorState error={query.error} retry={query.refetch} />
+      ) : query.data?.tickets.length ? (
+        query.data.tickets.map((t) => (
+          <article className="admin-ticket" key={t.id}>
+            <div className="row">
+              <h3>{t.title}</h3>
+              <span className="review-status">{t.status === 'pending' ? '待回复' : '已回复'}</span>
+            </div>
+            <p className="u-muted">
+              #{t.id} · {t.username} · {t.visibility === 'operator' ? '仅运营者' : '管理员可见'}
+            </p>
+            <p className="prose">{t.content}</p>
+            {t.reply_content ? (
+              <blockquote>{t.reply_content}</blockquote>
+            ) : (
+              <form
+                className="form"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  action.mutate({
+                    path: '/api/admin/tickets/reply',
+                    method: 'PUT',
+                    body: { id: t.id, reply: formValues(e.currentTarget).reply },
+                  });
+                }}
+              >
+                <Field label="回复内容">
+                  <textarea name="reply" className="textarea" required maxLength={2000} />
+                </Field>
+                <Submit pending={action.isPending}>回复并通知用户</Submit>
+              </form>
+            )}
+          </article>
+        ))
+      ) : (
+        <Empty title="暂无工单" />
+      )}
+    </section>
+  );
+}
+function Content() {
+  const action = useAction();
+  const banner = useQuery(endpoint<{ banner: string }>('/api/settings/banner'));
+  const news = useQuery(
+    endpoint<{ announcements: { id: number; title: string }[] }>('/api/announcements'),
+  );
+  const [deleting, setDeleting] = useState<number | null>(null);
+  function form(title: string, path: string, children: ReactNode, method = 'POST') {
+    return (
+      <section className="admin-panel">
+        <div className="admin-panel__head">
+          <h2>{title}</h2>
+        </div>
+        <form
+          className="form admin-content-form"
+          onSubmit={(e) => {
+            e.preventDefault();
+            const f = e.currentTarget;
+            action.mutate({ path, method, body: formValues(f) }, { onSuccess: () => f.reset() });
+          }}
+        >
+          {children}
+          <Submit pending={action.isPending}>确认发布</Submit>
+        </form>
+      </section>
+    );
+  }
+  return (
+    <div className="stack stack--lg">
+      {form(
+        '站点横幅',
+        '/api/admin/settings/banner',
+        <Field label="横幅内容（留空取消）">
+          <textarea
+            key={banner.data?.banner}
+            className="textarea"
+            name="value"
+            defaultValue={banner.data?.banner}
+            maxLength={500}
+          />
+        </Field>,
+        'PUT',
+      )}
+      {form(
+        '发布公告',
+        '/api/admin/announcements',
+        <>
+          <Field label="公告标题">
+            <input className="input" name="title" required maxLength={100} />
+          </Field>
+          <Field label="公告正文">
+            <textarea className="textarea" name="content" required maxLength={5000} />
+          </Field>
+        </>,
+      )}
+      {form(
+        '全站系统通知',
+        '/api/admin/notifications',
+        <>
+          <Field label="通知标题">
+            <input className="input" name="title" required maxLength={100} />
+          </Field>
+          <Field label="通知内容">
+            <textarea className="textarea" name="body" required maxLength={2000} />
+          </Field>
+        </>,
+      )}
+      <section className="admin-panel">
+        <div className="admin-panel__head">
+          <h2>已发布公告</h2>
+        </div>
+        {news.isPending ? (
+          <Loading />
+        ) : news.error ? (
+          <ErrorState error={news.error} retry={news.refetch} />
+        ) : (
+          news.data?.announcements.map((n) => (
+            <div className="submission-row" key={n.id}>
+              <strong>{n.title}</strong>
+              <button className="btn btn--sm" onClick={() => setDeleting(n.id)}>
+                删除
+              </button>
+            </div>
+          ))
+        )}
+      </section>
+      {deleting !== null && (
+        <Confirm
+          message="删除后无法恢复。"
+          title="删除这条公告？"
+          pending={action.isPending}
+          onClose={() => setDeleting(null)}
+          onConfirm={() =>
+            action.mutate(
+              { path: `/api/admin/announcements/${deleting}`, method: 'DELETE' },
+              { onSuccess: () => setDeleting(null) },
+            )
+          }
+        />
+      )}
+    </div>
+  );
+}
+function Audit() {
+  const [page, setPage] = useState(0);
+  const query = useQuery(
+    endpoint<{
+      events: {
+        id: number;
+        actor_name: string;
+        target_name: string;
+        action: string;
+        created_at: number;
+        detail: string;
+      }[];
+      total: number;
+    }>(`/api/admin/audit?offset=${page * 20}`),
+  );
+  return (
+    <section className="admin-panel">
+      <div className="admin-panel__head">
+        <h2>可追溯的管理记录</h2>
+        <span>按时间倒序</span>
+      </div>
+      {query.isPending ? (
+        <Loading />
+      ) : query.error ? (
+        <ErrorState error={query.error} retry={query.refetch} />
+      ) : (
+        <div className="admin-table-wrap" tabIndex={0} role="region" aria-label="数据表格">
+          <table className="admin-table">
+            <thead>
+              <tr>
+                {['时间', '操作者', '动作', '对象', '详情'].map((h) => (
+                  <th key={h}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {query.data?.events.map((e) => (
+                <tr key={e.id}>
+                  <td>{formatTime(e.created_at)}</td>
+                  <td>{e.actor_name || '系统'}</td>
+                  <td>{e.action}</td>
+                  <td>{e.target_name || '—'}</td>
+                  <td>
+                    <code>{e.detail}</code>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      <Pagination page={page} total={query.data?.total || 0} setPage={setPage} />
+    </section>
   );
 }

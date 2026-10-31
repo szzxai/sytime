@@ -417,7 +417,7 @@ class MenuService {
       active.worker.postMessage({ type: 'cancel' });
       active.cancelTimer = setTimeout(() => {
         active.worker.terminate();
-        this.finish(active, 'cancelled', 'developer 已停止任务，未完成菜单未发布');
+        this.finish(active, 'cancelled', '任务已停止，未完成菜单未发布');
       }, 2000);
       active.cancelTimer.unref();
     }

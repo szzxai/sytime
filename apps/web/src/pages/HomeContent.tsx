@@ -21,11 +21,11 @@ export function HomeContent() {
         <section className="landing-about" id="about" aria-labelledby="aboutTitle">
           <h2 id="aboutTitle">{'关于我们'}</h2>
           <p>
-            {'我们是一群苏州中学的学生，想让校园信息更容易找到。'}
+            {'「拾光酥糕」是由苏中学子自主构建的校园数字指南。'}
             <br className="desktop-break"></br>
-            {'从每天的食堂菜谱，到校园里的一处风景，'}
+            {'从每日三餐的食谱测评，到校园角落的地理坐标，'}
             <br className="desktop-break"></br>
-            {'我们一起建设、完善和维护 拾光酥糕。'}
+            {'我们致力于整合分散的校园资讯，让每一份信息都触手可及。'}
           </p>
           <SiteLink className="btn btn--sm" href="about.html">
             {'了解更多'}
@@ -34,7 +34,7 @@ export function HomeContent() {
         <section className="landing-row" aria-labelledby="teamTitle">
           <div className="landing-row__intro">
             <h2 id="teamTitle">{'开发团队'}</h2>
-            <p>{'由热爱技术的同学共同开发与维护，把想法写成代码，让校园生活更方便一点。'}</p>
+            <p>{'源于热爱，始于代码。由志愿者构建和维护，用技术探索校园生活的更多可能。'}</p>
           </div>
           <ul className="landing-teams" aria-label="开发团队">
             <li className="landing-team">
@@ -56,7 +56,9 @@ export function HomeContent() {
           <div className="landing-row__intro">
             <h2 id="involvedTitle">{'一起完善'}</h2>
             <p>
-              {'一个由同学共同维护的校园信息平台。你的每一次分享，都让大家的校园生活方便一点。'}
+              {
+                '这是一个工具，更是一座由全体同学共建的校园信息库。你的每一次标注与评价，都在让这个平台变得更加完整。'
+              }
             </p>
           </div>
           <div className="landing-accordion">
@@ -108,11 +110,11 @@ export function HomeContent() {
           </div>
         </section>
         <section className="landing-note" aria-labelledby="noteTitle">
-          <h2 id="noteTitle">{'在苏中，记录属于我们的拾光'}</h2>
+          <h2 id="noteTitle">{'探索苏中日常，定格校园拾光'}</h2>
           <p>
-            {'从人民路到道山，从教室到食堂。'}
+            {'连接三餐四季与道山风物，'}
             <br></br>
-            {'愿每一份分享，都成为后来同学的路标。'}
+            {'汇聚属于苏中人的共同记忆。'}
           </p>
         </section>
       </div>

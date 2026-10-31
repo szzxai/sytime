@@ -34,6 +34,15 @@ function mountDishRoutes(app, db, attachAuthors) {
       return (c.res = c.json({ error: '评价分页参数无效' }, 400));
     }
     const result = store.reviews(db, dish.id, Number(rawOffset));
+    const reviewId = Number(c.req.query().review);
+    if (Number.isSafeInteger(reviewId) && reviewId > 0) {
+      result.focus_review =
+        query(db, 'SELECT * FROM recipes WHERE id=? AND dish_id=? AND is_weekly=0').get(
+          reviewId,
+          dish.id,
+        ) || null;
+      if (result.focus_review) attachAuthors([result.focus_review]);
+    }
     attachAuthors(result.reviews);
     setHeaders(c, 'Cache-Control', 'no-store');
     c.res = c.json(result);

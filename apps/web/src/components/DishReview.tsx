@@ -26,6 +26,7 @@ export function DishReview({
   const [active, setActive] = useState(-1);
   const [error, setError] = useState('');
   const [file, setFile] = useState<File | null>(null);
+  const [preparingImage, setPreparingImage] = useState(false);
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState('');
   const input = useRef<HTMLInputElement>(null);
@@ -63,18 +64,18 @@ export function DishReview({
       body.set('rating', String(rating));
       body.set('comment', comment);
       if (file) body.set('image', file);
-      return api<{ recipe: Review }>('/api/recipes', { method: 'POST', body });
+      return api<{ status: string }>('/api/recipes', { method: 'POST', body });
     },
-    onSuccess: (data) => {
+    onSuccess: () => {
       draft.clean();
-      toast('评价已发布');
+      toast('评价已提交审核，通过后公开');
       queryClient.invalidateQueries({
         predicate: (q) =>
           String(q.queryKey[0]).startsWith('/api/dishes') ||
           String(q.queryKey[0]).startsWith('/api/menu') ||
           q.queryKey[0] === '/api/recipes',
       });
-      onPublished?.(data.recipe);
+      void onPublished;
       onClose();
     },
     onError: (e) => toast(e.message, 'error'),
@@ -93,7 +94,7 @@ export function DishReview({
         noValidate
         onSubmit={(e) => {
           e.preventDefault();
-          mutation.mutate();
+          if (!preparingImage) mutation.mutate();
         }}
       >
         <div className="dialog__body">
@@ -273,14 +274,14 @@ export function DishReview({
               <span className="field__counter">{comment.length} / 500</span>
             </div>
           </div>
-          <Upload file={file} onChange={setFile} />
+          <Upload file={file} onChange={setFile} onProcessingChange={setPreparingImage} />
         </div>
         <div className="dialog__foot">
           <button type="button" className="btn" onClick={onClose}>
             取消
           </button>
-          <Submit id="recipeSubmit" pending={mutation.isPending}>
-            发布
+          <Submit id="recipeSubmit" pending={mutation.isPending} disabled={preparingImage}>
+            提交审核
           </Submit>
         </div>
       </form>

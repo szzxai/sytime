@@ -7,6 +7,7 @@ export function ProfileLayout({
   slots?: {
     profileStatus?: ReactNode;
     heroUsername?: ReactNode;
+    heroDisplayId?: ReactNode;
     heroNickname?: ReactNode;
     heroSignature?: ReactNode;
     heroRole?: ReactNode;
@@ -73,6 +74,7 @@ export function ProfileLayout({
               {slots['heroNickname']}
             </span>
           </div>
+          {slots.heroDisplayId && <p className="profile-hero__id">{slots.heroDisplayId}</p>}
           <div className="profile-hero__row">
             <span
               className="profile-hero__edit profile-hero__edit--sig"

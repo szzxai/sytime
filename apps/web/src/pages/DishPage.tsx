@@ -6,9 +6,10 @@ import { DishReview } from '../components/DishReview';
 import { Empty, ErrorState, Icon, Loading, Stars } from '../components/ui';
 import { api, endpoint, loginUrl } from '../lib/api';
 import { useSession } from '../lib/session';
+import { useReviewTarget } from '../lib/useReviewTarget';
 import { ReviewCard } from './RecipePage';
 export function DishPage() {
-  const { token } = useSession();
+  const { token, user } = useSession();
   const id = new URLSearchParams(location.search).get('id');
   const valid = !!id && /^[1-9]\d*$/.test(id) && Number.isSafeInteger(Number(id));
   const dish = useQuery({
@@ -27,19 +28,30 @@ export function DishPage() {
     enabled: valid,
   });
   const [writer, setWriter] = useState(false);
+  const targetId = Number(new URLSearchParams(location.search).get('review')) || null;
   const reviews = useInfiniteQuery({
-    queryKey: [`/api/dishes/${id}/reviews`],
+    queryKey: [`/api/dishes/${id}/reviews`, targetId],
     initialPageParam: 0,
     enabled: !!dish.data,
     queryFn: ({ pageParam, signal }) =>
-      api<{ reviews: Review[]; total: number; offset: number; has_more: boolean }>(
-        `/api/dishes/${id}/reviews?offset=${pageParam}`,
-        { auth: false, signal },
-      ),
+      api<{
+        reviews: Review[];
+        total: number;
+        offset: number;
+        has_more: boolean;
+        focus_review?: Review | null;
+      }>(`/api/dishes/${id}/reviews?offset=${pageParam}${targetId ? `&review=${targetId}` : ''}`, {
+        auth: false,
+        signal,
+      }),
     getNextPageParam: (p) => (p.has_more ? p.offset + p.reviews.length : undefined),
   });
+  useReviewTarget(reviews.isSuccess);
   const d = dish.data?.dish;
-  const rows = reviews.data?.pages.flatMap((p) => p.reviews) || [];
+  const loadedRows = reviews.data?.pages.flatMap((p) => p.reviews) || [];
+  const focused = reviews.data?.pages[0].focus_review;
+  const rows =
+    focused && !loadedRows.some((r) => r.id === focused.id) ? [focused, ...loadedRows] : loadedRows;
   return (
     <main id="main" className="main container dish-detail">
       <SiteLink className="back-link" href="/recipe.html">
@@ -74,7 +86,13 @@ export function DishPage() {
             className="btn btn--primary"
             id="writeDishReview"
             hidden={!d}
-            onClick={() => (token ? setWriter(true) : location.assign(loginUrl()))}
+            onClick={() =>
+              !token
+                ? location.assign(loginUrl())
+                : user?.role === 'user'
+                  ? location.assign('/student_verify.html')
+                  : setWriter(true)
+            }
           >
             <Icon name="pencil" />
             写评价
@@ -144,7 +162,9 @@ export function DishPage() {
           ) : reviews.error ? (
             <ErrorState error={reviews.error} retry={reviews.refetch} />
           ) : rows.length ? (
-            rows.map((r) => <ReviewCard review={r} detail key={r.id} />)
+            rows.map((r) => (
+              <ReviewCard review={r} detail highlighted={r.id === targetId} key={r.id} />
+            ))
           ) : (
             <Empty icon="message" title="还没有评价" description="吃过这道菜？来分享你的感受吧。" />
           )}

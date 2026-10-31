@@ -1,5 +1,12 @@
 # 头衔系统 · titles.md（#10）
 
+## 当前规则 · 2026-10-31
+
+头衔管理统一归 admin/operator；目标保护与账号管理一致，管理员不能管理同级管理员或运营者。已批准的评价/推荐才累计内容类成就。删除个人特殊授权与旧角色面板，授予、撤销和自动获得均通知。
+
+以下早期页面规格中的旧角色、即时发布与菜单管理描述已由本节取代。完整当前权限见 [账号重建](../../account-rebuild.md)。
+
+
 ## 当前 React 实现 · 2026-10-25
 
 实现位于 `apps/web/src/pages/`：../components/TitleManagement.tsx、AccountManagement.tsx、ProfilePage.tsx。目录、自动达成、专属头衔、授予/撤销与佩戴组件化；新 Hono 领域模块保留种子和规则，Query 刷新目录与用户状态。

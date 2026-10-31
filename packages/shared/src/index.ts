@@ -1,28 +1,31 @@
-export const roleWeights = {
-  developer: 6,
-  super_admin: 5,
-  admin: 4,
-  student: 3,
-  user: 2,
-  guest: 1,
-} as const;
+export const roleWeights = { operator: 5, admin: 4, student: 3, user: 2, guest: 1 } as const;
 export type Role = keyof typeof roleWeights;
 export const roleLabels: Record<Role, string> = {
-  developer: '开发者',
-  super_admin: '超级管理员',
+  operator: '运营者',
   admin: '管理员',
   student: '学生',
   user: '普通用户',
   guest: '访客',
 };
 export const roleHues: Record<Role, string> = {
-  developer: 'vermilion',
-  super_admin: 'wisteria',
+  operator: 'wisteria',
   admin: 'ochre',
   student: 'bamboo',
   user: 'stone',
   guest: 'stone',
 };
+export const passwordRules = (value: string) => [
+  {
+    label: '至少 8 个字符',
+    passed: value.length >= 8 && new TextEncoder().encode(value).length <= 72,
+  },
+  { label: '至少 1 个大写字母', passed: /[A-Z]/.test(value) },
+  { label: '至少 1 个小写字母', passed: /[a-z]/.test(value) },
+  { label: '至少 1 个数字', passed: /[0-9]/.test(value) },
+  { label: '首尾没有空白', passed: !!value && value.trim() === value },
+];
+export const validPassword = (value: unknown): value is string =>
+  typeof value === 'string' && passwordRules(value).every((rule) => rule.passed);
 export const pageSize = 20;
 export const titleHues = [
   'teal',
@@ -54,7 +57,6 @@ export interface User {
   show_role?: number;
   signature?: string;
   display_id?: string;
-  permissions?: string[];
   user_title?: Title | null;
   title?: Title | null;
   status?: 'active' | 'banned';

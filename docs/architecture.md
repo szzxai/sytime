@@ -1,6 +1,6 @@
 # 全栈 Monorepo 架构
 
-更新：2026-10-25。当前实现为 React 19 + TanStack Router/Query + Hono + Drizzle；此前技术研究中的 Fastify、PostgreSQL、服务端会话与其他候选不代表已经部署。
+更新：2026-10-31。当前实现为 React 19 + TanStack Router/Query + Hono + Drizzle；此前技术研究中的 Fastify、PostgreSQL、服务端会话与其他候选不代表已经部署。
 
 ## 工作区与边界
 
@@ -23,27 +23,27 @@ CSS 令牌、响应式规则、字体、图像、SVG 和本地 Leaflet 原样迁
 
 ## HTTP、权限和文件
 
-Hono 保留完整业务 API 的方法、地址、状态码和响应字段。JWT 仍由浏览器以 Bearer 发送；服务端每次重新核对账号是否存在、当前角色、封禁和显式授权。权限撤销不等待 token 过期；改密不额外引入会话撤销机制。
+Hono 业务接口以根目录 MAP 的当前全量索引为准。账号统一由 domain/accounts 处理：五级角色、学生唯一绑定、审核、会话、限流及审计。浏览器使用 HttpOnly/SameSite=Strict Cookie，localStorage 仅存会话标记；API 客户端支持 Bearer。JWT 必须匹配数据库会话、版本和当前账号状态。退出撤销当前会话，改密、封禁、角色变更及解绑撤销全部会话；写请求检查来源。无邀请码或个人特殊权限。登录不检查密码强度；注册与新密码执行共享策略。
 
-JSON 请求限额、multipart 数量/类型/单文件大小和存储规则由 Hono 中间件及上传模块控制。文件通过验证后使用随机名称写入，菜单补图保持内存输入并进入私有存储。公开上传只从 `uploads/` 提供，`.private/`、`.env` 和数据库不在静态根目录。
+JSON 与 multipart 限额由 Hono 和领域校验控制。公开资料、菜品评价、推荐店铺及店铺评价进入统一私有审核队列；审核批准才写公开表。待审图片实际解码、限制像素与大小、去元数据转 PNG，批准后写入 uploads/approved 随机文件，终态清理私有字节。通知、审计和公开发布在同一事务中处理。公开上传只从 uploads 提供，.private、.env 和数据库不在静态根目录。菜单同步仅由服务器环境变量配置，网页管理、上传、手动导入及地图写接口已删除。
 
-生产入口 `server.js` 加载 `apps/api/dist/index.cjs`。API、worker 各自产生 CJS bundle；前端由 Vite 构建。未知 API（含 `/api` 本身）返回 JSON 404；已有页面地址返回 React 入口，其他页面返回带同样站点壳的 404。静态文件和 SPA 均由同一 Hono 服务提供。
+生产入口 `server.js` 加载 `apps/api/dist/index.cjs`。API、worker、服务器 operator CLI 各自产生 CJS bundle；前端由 Vite 构建。未知 API（含 `/api` 本身）返回 JSON 404；已有页面地址返回 React 入口，其他页面返回带同样站点壳的 404。静态文件和 SPA 均由同一 Hono 服务提供。
 
 ## SQLite 接入与迁移
 
-继续使用 SQLite 是为了保留现有数据、主键和单实例部署方式。驱动改为 better-sqlite3，所有业务读写进入 Drizzle。类型化 schema 列出 27 张业务表、默认值、复合键、外键、CHECK 和索引；内部还包括 SQLite 自增序列和 Drizzle journal。
+继续使用 SQLite 是为了保留现有数据、主键和单实例部署方式。驱动改为 better-sqlite3，所有业务读写进入 Drizzle。类型化 schema 与账号幂等升级对应当前 29 张业务表、默认值、复合键、外键、CHECK 和索引；内部还包括 SQLite 自增序列和 Drizzle journal。
 
-启动顺序：打开库 → 执行 `packages/db/migrations` → 幂等历史字段/数据升级 → 菜单种子与既有内容关联 → 领域初始化 → 接收请求与启动调度。首个基线使用 `CREATE TABLE IF NOT EXISTS` 接入没有 Drizzle journal 的旧库。不会为已有行重排 ID、重建账号或清空内容；早期库可能仍需历史 ALTER / 数据修正逻辑，不可提前删除。
+启动顺序：打开库 → 执行 `packages/db/migrations` → 幂等历史字段/数据升级 → 菜单种子与既有内容关联 → 领域初始化 → 接收请求与启动调度。首个基线使用 `CREATE TABLE IF NOT EXISTS` 接入没有 Drizzle journal 的旧库。不会为已有行重排 ID 或清空业务内容；账号升级映射旧管理角色，旧学生回到 user 重新认证，删除邀请码/个人权限/旧每周图片表。旧认证与申诉表只读保留，不自动并入新队列；六张新表管理会话、学号绑定、审核、审计、限流和升级标记。详情见 account-rebuild.md。
 
 后续修改 `packages/db/src/schema.ts`，运行 `npm run db:generate`，审查生成 SQL 与 snapshot，再在临时旧库上验证升级。生产启动自动应用已提交迁移，不在运行中执行生成命令。历史库中原有约束差异不会仅因登记基线而被强行重建。
 
-菜单任务仍使用原有持久租约、取消、重试、定时和 fencing。worker 使用同一驱动/schema 与独立 bundle，私有目录、任务诊断与主密钥路径保持不变。API 停止前先关闭菜单服务和 worker，再关闭 HTTP 与数据库。
+菜单任务仍使用原有持久租约、取消、重试、定时和 fencing。worker 使用同一驱动/schema 与独立 bundle，私有目录与任务诊断保留，旧数据库菜单凭据和主密钥管理入口移除，识别凭据来自环境变量。API 停止前先关闭菜单服务和 worker，再关闭 HTTP 与数据库。
 
 ## 开发、生产和回退
 
 开发：`npm ci`、`npm run dev`。Node >=22.13，推荐 24 LTS。Vite 默认 5173，API 默认 3000；开发进程管理器直接管理 Node 子进程，源码改动后重新打包 API/worker，优雅停止旧服务再重启，收到退出信号同时关闭前后端。`APP_ROOT` 可将运行数据定位到隔离目录；它不是前端资源的单独配置。
 
-源码部署：`npm ci` → `npm run build` → 可选 `npm prune --omit=dev` → `npm start`。必须保留根入口、构建目录、迁移目录、workspace manifests、运行依赖与种子。先安装仅生产依赖不能完成源码构建；不要跨操作系统直接复制原生模块。生产不依赖 Python、Playwright、tsx 或 Vite。
+源码部署：`npm ci --include=dev` → `npm run build` → 可选 `npm prune --omit=dev` → `npm start`。显式包含构建依赖，避免 `NODE_ENV=production` 时 npm 默认省略开发依赖而无法构建。必须保留根入口、构建目录、迁移目录、workspace manifests、运行依赖与种子。先安装仅生产依赖不能完成源码构建；不要跨操作系统直接复制原生模块。生产不依赖 Python、Playwright、tsx 或 Vite。构建后的 npm run account:operator 可在裁剪依赖后创建运营账号，命令先备份且拒绝覆盖同名账号；生产禁止测试清理选项。
 
 部署前停写并备份 `data.db`、`uploads/`、`.private/`、`data/`、`data.json` 与本机配置，再在相同平台构建和启动。只使用一个 API 调度入口；不要将应用目录当临时容器层丢弃运行数据。先检查页面、登录、目录、私有文件保护与任务状态，再恢复流量。
 
@@ -56,3 +56,13 @@ JSON 请求限额、multipart 数量/类型/单文件大小和存储规则由 Ho
 `test:deploy` 在临时源码副本安装完整依赖、构建、移除开发依赖并启动，核对种子和私有文件保护。构建、typecheck、lint 与 format:check 属于源码门禁。实际执行结果和复验范围记录在根目录 MAP 与 UI 验收记录中，不将分组通过描述成未执行的整条 npm test 结果。
 
 导航细节及地图链接接入见 [导航规范](navigation.md)。
+
+## 2026-10-31 通知与上传交互补充
+
+账号领域 notifications 模块复用 messages 已有 target_kind/target_id，按当前身份生成安全的站内跳转目标；审核与工单事务同步结清旧待办，消息读取按本人补偿已处理状态。新结果通知保留未读，前端等待标已读请求成功再跳转。旧消息幂等关联仅处理可唯一匹配的系统文案。公开评价接口允许资源内单独查找目标评论，保持普通分页不变；私人申请过滤始终限定本人。
+
+前端 imageUpload 统一进行超限图片本机压缩，后端继续真实解码与限额校验。个人与公开主页使用昵称和用户名，展示 ID 为辅助字段；后台铺满宽度、认证桌面双栏、审核单弹窗分步，移动输入最终字号至少 16px。详细行为及测试以 MAP 最新记录为准。
+
+## 2026-10-31 公开源码边界
+
+运行库、uploads、私有配置、日志与生成技能包不再跟踪，所有本地可达历史中的旧运行数据已在外部备份后清除。公开地图配置和菜单测试来源保留；数据分类、历史处理、检查命令和远端发布阻塞项见 [公开仓库准备](public-release.md)。新增 public:check / public:check:history、三项门禁回归与只读 CI。生产部署测试只复制 Git 可发布文件，隔离本机环境，在 production 下显式安装构建依赖，构建并裁剪后验证空目录、私有文件 404 和 operator 登录。

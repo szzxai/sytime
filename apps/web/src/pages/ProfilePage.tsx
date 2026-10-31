@@ -1,6 +1,7 @@
 import { atLeast, roleWeights, type Title, type User } from '@sytime/shared';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useRef, useState, type FocusEvent } from 'react';
+import { SubmissionHistory } from '../components/Submissions';
 import { AccountManagement } from '../components/AccountManagement';
 import { CollectionsBrowser } from '../components/Collections';
 import {
@@ -19,6 +20,7 @@ import { UserLayout } from '../layouts/UserLayout';
 import { api, endpoint, queryClient } from '../lib/api';
 import { RequireLogin, useSession } from '../lib/session';
 import { usePanel } from '../lib/usePanel';
+import { prepareImage } from '../lib/imageUpload';
 type OwnedTitle = Omit<Title, 'progress'> & {
   hue: string;
   equipped: number;
@@ -69,6 +71,7 @@ function ProfileContent({ userId }: { userId?: number }) {
   const [edit, setEdit] = useState<{ field: 'nickname' | 'signature'; value: string } | null>(null);
   const [selection, setSelection] = useState<string | null>(null);
   const file = useRef<HTMLInputElement>(null);
+  const [preparingAvatar, setPreparingAvatar] = useState(false);
   const titles = useQuery({
     ...endpoint<{ titles: OwnedTitle[]; locked: OwnedTitle[] }>(
       userId ? `/api/users/${userId}/titles` : '/api/user/titles',
@@ -83,7 +86,7 @@ function ProfileContent({ userId }: { userId?: number }) {
     mutationFn: ({ path, body }: { path: string; body: unknown }) =>
       api(path, { method: path.endsWith('/avatar') ? 'POST' : 'PUT', body }),
     onSuccess: () => {
-      toast('已保存');
+      toast('已提交审核或保存设置');
       queryClient.invalidateQueries({
         predicate: (q) =>
           String(q.queryKey[0]).includes('/profile') || q.queryKey[0] === '/api/user/titles',
@@ -95,6 +98,7 @@ function ProfileContent({ userId }: { userId?: number }) {
   function blur(field: 'nickname' | 'signature', e: FocusEvent<HTMLSpanElement>) {
     const text = e.currentTarget.textContent?.replace(/\s+/g, ' ').trim() || '';
     if (text !== String(user?.[field] || '')) setEdit({ field, value: text });
+    e.currentTarget.textContent = String(user?.[field] || '');
   }
   if (profile.isPending)
     return (
@@ -113,7 +117,7 @@ function ProfileContent({ userId }: { userId?: number }) {
     !!actor &&
     actor.id !== user.id &&
     roleWeights[actor.role] > roleWeights[user.role] &&
-    (atLeast(actor.role, 'super_admin') || actor.permissions?.includes('user_manage'));
+    atLeast(actor.role, 'admin');
   const bind: Record<string, Record<string, unknown>> = {
     profileStatus: {},
     userHero: { hidden: false },
@@ -152,19 +156,28 @@ function ProfileContent({ userId }: { userId?: number }) {
             }
           },
         },
-    chooseAvatar: { onClick: () => file.current?.click() },
+    chooseAvatar: {
+      disabled: preparingAvatar || mutation.isPending,
+      onClick: () => file.current?.click(),
+      'aria-label': preparingAvatar ? '正在压缩头像' : '更换头像',
+    },
     avatarFile: {
       ref: file,
-      onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
-        const f = e.target.files?.[0];
-        if (!f) return;
-        if (!['image/jpeg', 'image/png'].includes(f.type) || f.size > 2097152) {
-          toast('请选择 2 MB 以内的 JPG / PNG 图片', 'error');
-          return;
+      onChange: async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const input = e.currentTarget;
+        const f = input.files?.[0];
+        if (!f || preparingAvatar) return;
+        setPreparingAvatar(true);
+        try {
+          const body = new FormData();
+          body.set('avatar', await prepareImage(f));
+          mutation.mutate({ path: '/api/user/avatar', body });
+        } catch (error) {
+          toast((error as Error).message, 'error');
+        } finally {
+          setPreparingAvatar(false);
+          input.value = '';
         }
-        const body = new FormData();
-        body.set('avatar', f);
-        mutation.mutate({ path: '/api/user/avatar', body });
       },
     },
     wearSubmit: {
@@ -232,6 +245,7 @@ function ProfileContent({ userId }: { userId?: number }) {
     profileStatus: null,
     userStatus: null,
     heroUsername: user.username,
+    heroDisplayId: user.display_id ? `ID：${user.display_id}` : null,
     heroNickname: user.nickname || '',
     heroSignature: String(user.signature || ''),
     heroRole: (
@@ -242,14 +256,49 @@ function ProfileContent({ userId }: { userId?: number }) {
     ),
     avatarBox: <Avatar user={user} size="xl" />,
     heroAvatar: <Avatar user={user} size="xl" />,
-    'view-home': (
+    'view-home': userId ? (
       <Empty
         icon="compass"
-        title={userId ? `${user.nickname || user.username} 的主页` : '个人主页'}
-        description={
-          userId ? '这里会展示该用户的动态与发布内容。' : '这里会展示你的动态与发布内容。'
-        }
+        title={`${user.nickname || user.username} 的主页`}
+        description="公开资料与内容均经过审核。"
       />
+    ) : (
+      <div className="stack stack--lg">
+        <section className="card stack">
+          <h2 className="section__title">公开资料</h2>
+          <p className="u-muted">
+            登录用户名：{user.username}。展示 ID 与登录用户名独立，修改需审核后生效。
+          </p>
+          <form
+            className="form"
+            onSubmit={(e) => {
+              e.preventDefault();
+              mutation.mutate({
+                path: '/api/user/display_id',
+                body: { display_id: new FormData(e.currentTarget).get('display_id') },
+              });
+            }}
+          >
+            <label className="field">
+              <span className="field__label">展示 ID</span>
+              <input
+                className="input"
+                name="display_id"
+                required
+                minLength={3}
+                maxLength={24}
+                pattern="[a-zA-Z0-9_]{3,24}"
+                defaultValue={user.display_id}
+              />
+            </label>
+            <button type="submit" className="btn" disabled={mutation.isPending}>
+              提交 ID 修改审核
+            </button>
+          </form>
+          <a href="/student_verify.html">管理学生身份与解绑</a>
+        </section>
+        <SubmissionHistory />
+      </div>
     ),
     'view-favorites': panel === 'favorites' ? <CollectionsBrowser userId={userId} /> : null,
     titleChoices: titlesContent,

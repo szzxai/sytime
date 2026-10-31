@@ -1,0 +1,11 @@
+title = "sytime public repository secret scan"
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Reviewed synthetic password used only by isolated test fixtures"
+condition = "AND"
+paths = ['''(?:^|/)tests/''']
+regexTarget = "secret"
+regexes = ['''^CampusTest2026$''']

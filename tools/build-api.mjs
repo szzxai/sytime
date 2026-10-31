@@ -12,6 +12,7 @@ export const apiBuildOptions = {
   entryPoints: {
     index: 'apps/api/src/index.ts',
     worker: 'apps/api/src/domain/menu/worker.js',
+    operator: 'tools/operator.cjs',
   },
   outdir: 'apps/api/dist',
   outExtension: { '.js': '.cjs' },

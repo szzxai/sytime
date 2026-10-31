@@ -2629,7 +2629,14 @@ dialog .toast-host {
   color: var(--red);
 }
 .dialog--confirm .dialog__head {
-  display: block;
+  align-items: center;
+}
+.dialog__head .dialog__title {
+  margin: 0;
+  flex: 1;
+}
+.dialog__head [data-dialog-close] {
+  flex-shrink: 0;
 }
 
 /* 手机上：表单类对话框变底部面板 */
@@ -4802,7 +4809,7 @@ dialog .toast-host {
 }
 .msg__time {
   font-size: var(--fs-xs);
-  color: var(--ink-3);
+  color: var(--ink-2);
 }
 .msg__dot {
   width: 0.5rem;
@@ -7003,4 +7010,61 @@ html.theme-transitioning *::after {
   .landing-hero h1 {
     font-size: 28px;
   }
+}
+
+/* Student certification is a desktop page, not an authentication card. */
+.student-identity {
+  max-width: 72rem;
+}
+.student-identity > .page-head {
+  display: block;
+}
+.student-identity > .page-head h1 {
+  margin-bottom: var(--sp-2);
+}
+@media (min-width: 900px) {
+  .student-identity {
+    display: grid;
+    grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+    align-items: start;
+    align-content: start;
+    gap: var(--sp-6);
+  }
+  .student-identity > * + * {
+    margin-top: 0;
+  }
+  .student-identity > .page-head {
+    grid-column: 1 / -1;
+    margin-bottom: 0;
+  }
+}
+.profile-hero__id {
+  color: var(--ink-3);
+  font-size: var(--fs-xs);
+  margin: var(--sp-2) 0;
+  overflow-wrap: anywhere;
+}
+/* Keep iOS focus from zooming while preserving user pinch zoom. Comes after theme overrides. */
+@media (max-width: 800px), (pointer: coarse) {
+  input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']),
+  textarea,
+  select,
+  [contenteditable='true'],
+  [contenteditable='plaintext-only'],
+  .input,
+  .textarea,
+  .select,
+  .table .select,
+  .select--sm {
+    font-size: max(16px, 1rem);
+  }
+}
+.review-target {
+  scroll-margin-top: calc(var(--header-h) + var(--sp-6));
+}
+.review-target:target,
+.review-target.is-highlighted,
+.submission-row.is-highlighted {
+  outline: 2px solid var(--primary);
+  outline-offset: 4px;
 }

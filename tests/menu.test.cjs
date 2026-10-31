@@ -19,6 +19,7 @@ const record = (name = "免费汤", price = 0) => ({date: "2026-10-01", weekday:
 const source = id => ({article_id: id, title: "每周菜单", published_date: "2026-09-30", content_hash: sha256(String(id))});
 const at = value => Date.parse(value + "+08:00");
 function fixture(t) {
+  const keys=['MENU_PROVIDER','MENU_MODEL','MENU_API_KEY','GEMINI_API_KEY','MENU_SYNC_MODE','MENU_SYNC_TIME','MENU_SYNC_ENABLED'];const old=Object.fromEntries(keys.map(k=>[k,process.env[k]]));for(const k of keys)delete process.env[k];t.after(()=>{for(const k of keys)if(old[k]===undefined)delete process.env[k];else process.env[k]=old[k];});
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "szzx-menu-test-")), db = new DatabaseSync(path.join(root, "data.db"));
   db.exec("PRAGMA foreign_keys=ON; CREATE TABLE settings(key TEXT PRIMARY KEY,value TEXT); CREATE TABLE users(id INTEGER PRIMARY KEY,role TEXT,status TEXT)");
   migrate(db);
@@ -30,9 +31,8 @@ class FakeWorker extends EventEmitter {
   postMessage(message) { this.messages.push(message); }
   async terminate() { this.emit("exit", 0); }
 }
-function configure(service) {
-  service.saveSettings({provider:"openrouter", schedule_mode:"daily", model: "vision-test", api_key: "test-only-key", daily_time: "08:00"});
-  service.config.recordTest(fingerprint(service.config.raw()), {ok: true, message: "test"});
+function configure(_service) {
+  Object.assign(process.env,{MENU_PROVIDER:'openrouter',MENU_MODEL:'vision-test',MENU_API_KEY:'test-only-key',MENU_SYNC_MODE:'daily',MENU_SYNC_TIME:'08:00',MENU_SYNC_ENABLED:'false'});
 }
 test('weekend schedule uses Shanghai slots, catches up once and retries in the next slot', () => {
   const config={enabled:true,schedule_mode:'weekend',schedule_effective_at:at('2026-10-23T12:00:00')};
@@ -125,31 +125,11 @@ test("Shanghai daily schedule: midnight, edits, once per day and downtime catch-
   assert.equal(dueOccurrence({...config, enabled: false}, null, at("2026-10-01T10:00:00")), null);
   assert.throws(() => validateTime("24:00")); assert.throws(() => validateTime("8:00"));
 });
-test("config encryption, masked output, time-only validation and stale revisions", t => {
-  const {root, db} = fixture(t); let now = at("2026-10-01T07:00:00");
-  const config = new MenuConfig(db, path.join(root, ".private"), () => now);
-  config.save({model: "vision-test", api_key: "a-secret-test-key"});
-  assert.ok(!JSON.stringify(config.raw()).includes("a-secret-test-key"));
-  assert.ok(!JSON.stringify(config.public()).includes("a-secret-test-key"));
-  assert.equal(config.snapshot().api_key, "a-secret-test-key");
-  assert.equal(fs.readFileSync(config.keyPath).length, 32);
-  assert.throws(() => config.save({enabled: true}), /测试/);
-  config.recordTest(fingerprint(config.raw()), {ok: true, message: "probe passed"});
-  config.save({enabled: true});
-  now = at("2026-10-01T09:00:00");
-  config.save({daily_time: "11:30", api_key: ""});
-  assert.equal(config.public().model_tested, true); assert.equal(config.public().enabled, true);
-  assert.equal(config.raw().schedule_effective_at, now);
-  config.save({model: "another-vision", enabled: true});
-  assert.equal(config.public().model, "another-vision");
-  assert.equal(config.public().enabled, false); assert.equal(config.public().model_tested, false);
-  assert.throws(() => config.save({revision: 0}), error => error.status === 409);
-  assert.throws(() => config.save({provider: "compatible", base_url: "http://localhost/v1", api_key: "new"}), /HTTPS/);
-  assert.throws(() => config.save({provider: "compatible", base_url: "https://example.com/v1"}), /重新填写/);
-  config.save({model: "different"}); assert.equal(config.public().enabled, false); assert.equal(config.public().model_tested, false);
-  fs.unlinkSync(config.keyPath); assert.equal(config.public().key_unavailable, true);
-  config.save({api_key: "replacement"}); assert.equal(config.snapshot().api_key, "replacement");
-  config.save({clear_api_key: true}); assert.equal(config.public().has_api_key, false);
+test('environment menu config is private, validates endpoints and cannot be changed through save',t=>{
+ const {root,db}=fixture(t),config=new MenuConfig(db,path.join(root,'.private'));configure();
+ assert.equal(config.snapshot().api_key,'test-only-key');assert.ok(!JSON.stringify(config.raw()).includes('test-only-key'));assert.ok(!JSON.stringify(config.public()).includes('test-only-key'));
+ assert.throws(()=>config.save({api_key:'web-key'}),e=>e.status===403);
+ process.env.MENU_PROVIDER='compatible';process.env.MENU_BASE_URL='http://localhost/v1';assert.throws(()=>config.raw(),/HTTPS/);delete process.env.MENU_BASE_URL;
 });
 test("historical seed is idempotent, preserves live data and uses stable pinyin IDs", t => {
   const {db} = fixture(t), seed = require("../data/menu-bootstrap.json");
@@ -257,16 +237,10 @@ test("worker refuses incomplete multi-image articles and reuses unchanged conten
   }});
   assert.equal(calls, 2); assert.equal(multi.failed, 1); assert.equal(multiEvents.some(e => e.type === "publish"), false);
 });
-test("clearing a key during image preparation or a capability test prevents later use", async t => {
-  const {root, db} = fixture(t);
-  const service = new MenuService(db, root, {capabilityTester: async (_config, {signal}) => new Promise((resolve, reject) => { signal.addEventListener("abort", () => reject(new MenuError("已停止测试")), {once: true}); })});
-  t.after(() => service.close()); configure(service); publishSource(db, source(1), [record()]);
-  const png = await sharp({create: {width: 40, height: 40, channels: 3, background: "white"}}).png().toBuffer();
-  const preparing = service.enqueue({sourceIds: [sourceId(1)], files: [{buffer: png}]});
-  service.saveSettings({clear_api_key: true}); await assert.rejects(preparing, error => error.status === 409);
-  assert.equal(service.jobs().length, 0);
-  configure(service); const testing = service.testSettings(); service.saveSettings({clear_api_key: true});
-  await assert.rejects(testing, /停止测试/); assert.equal(service.settings().model_tested, false);
+test('environment key changes while preparing a job prevent stale publication',async t=>{
+ const {root,db}=fixture(t),service=new MenuService(db,root);t.after(()=>service.close());configure();publishSource(db,source(1),[record()]);
+ const png=await sharp({create:{width:40,height:40,channels:3,background:'white'}}).png().toBuffer();
+ const preparing=service.enqueue({sourceIds:[sourceId(1)],files:[{buffer:png}]});delete process.env.MENU_API_KEY;await assert.rejects(preparing,e=>e.status===409);assert.equal(service.jobs().length,0);
 });
 test("service lease prevents overlap; time changes preserve running snapshot; cancelled work cannot publish", async t => {
   const {root, db} = fixture(t); let now = at("2026-10-01T07:00:00"), workers = [];
@@ -274,51 +248,29 @@ test("service lease prevents overlap; time changes preserve running snapshot; ca
   t.after(() => service.close()); configure(service); publishSource(db, source(1), [record()]);
   const job = await service.enqueue({sourceIds: [sourceId(1)]});
   await assert.rejects(() => service.enqueue(), error => error.status === 409);
-  service.saveSettings({daily_time: "09:30"}); assert.equal(service.settings().model_tested, true); assert.equal(workers[0].input.config.daily_time, "08:00");
+  process.env.MENU_SYNC_TIME='09:30'; assert.equal(service.settings().model_tested, true); assert.equal(workers[0].input.config.daily_time, "08:00");
   workers[0].emit("message", {type: "item", article_id: 1, source_id: sourceId(1), title: "菜单", status: "running", phase: "recognize"});
   service.cancel(job.id);
   workers[0].emit("message", {type: "publish", request_id: 1, source: {...source(1), content_hash: sha256("updated")}, records: [record("不应发布")]});
   assert.equal(workers[0].messages.at(-1).ok, false); assert.equal(catalog(db).dishes.length, 1);
   await workers[0].terminate(); assert.equal(service.job(job.id).status, "cancelled");
   assert.ok(service.sources()[0].last_error, "cancelled old article remains in durable pending queue");
-  now = at("2026-10-01T10:00:00"); service.saveSettings({enabled: true});
+  now = at("2026-10-01T10:00:00"); process.env.MENU_SYNC_ENABLED='true';
   now = at("2026-10-02T10:00:00"); await service.tick(); assert.equal(workers.length, 2);
   workers[1].emit("message", {type: "done", result: {status: "succeeded", total: 0, processed: 0, succeeded: 0, failed: 0}});
   await service.tick(); assert.equal(workers.length, 2);
 });
-test("website API checks current developer status on every request, including old tokens", async t => {
-  const {root, db} = fixture(t), service = new MenuService(db, root);
-  t.after(() => service.close()); publishSource(db, source(1), [record()]);
-  db.exec("INSERT INTO users VALUES(1,'developer','active'),(2,'super_admin','active'),(3,'user','active')");
-  const app = new Hono(); app.use('*', async (c,next) => { if (c.req.method !== 'GET' && (c.req.header('content-type')||'').includes('application/json')) c.set('body', await c.req.json()); await next(); });
-  mountMenuRoutes(app, db, service, async (c, next) => { const id = Number(c.req.header("authorization")); if (!id) return c.json({error: "login"},401); c.set("user", {id, role: "developer"}); await next(); });
-  const server = serve({ fetch: app.fetch, port: 0, hostname: "127.0.0.1" }); await new Promise(r => server.once("listening", r)); t.after(() => new Promise(r => server.close(r)));
-  const base = `http://127.0.0.1:${server.address().port}`;
-  assert.equal((await fetch(base + "/api/dishes")).status, 200);
-  assert.equal((await fetch(base + "/api/admin/menu-sync/settings")).status, 401);
-  for (const id of [2,3]) assert.equal((await fetch(base + "/api/admin/menu-sync/settings", {headers: {authorization: String(id)}})).status, 403);
-  assert.equal((await fetch(base + "/api/admin/menu-sync/settings", {headers: {authorization: "1"}})).status, 200);
-  const jobId = "11111111-1111-4111-8111-111111111111";
-  db.prepare("INSERT INTO menu_sync_jobs(id,trigger,status,created_at,config_revision,provider,model) VALUES(?,'manual','failed',1,0,'openrouter','test')").run(jobId);
-  db.prepare("INSERT INTO menu_job_items(job_id,source_id,article_id,title,status) VALUES(?,?,1,'menu','failed')").run(jobId, sourceId(1));
-  const dir = path.join(root, ".private/menu-jobs", jobId, "1"); fs.mkdirSync(dir, {recursive: true}); fs.writeFileSync(path.join(dir, "diagnostic.json"), '{"complete":false}');
-  const artifact = `/api/admin/menu-sync/jobs/${jobId}/artifacts/diagnostic?source_id=${sourceId(1)}`;
-  const privateResult = await fetch(base + artifact, {headers: {authorization: "1"}});
-  assert.equal(privateResult.status, 200); assert.deepEqual(await privateResult.json(), {complete: false}); assert.equal(privateResult.headers.get("cache-control"), "no-store");
-  assert.equal((await fetch(base + artifact, {headers: {authorization: "2"}})).status, 200);
-  assert.equal((await fetch(base + artifact, {headers: {authorization: "3"}})).status, 403);
-  assert.equal((await fetch(base + artifact.replace("diagnostic", "other"), {headers: {authorization: "1"}})).status, 404);
-  db.exec("UPDATE users SET role='user' WHERE id=1");
-  assert.equal((await fetch(base + "/api/admin/menu-sync/jobs", {headers: {authorization: "1"}})).status, 403);
-  db.exec("UPDATE users SET role='developer',status='banned' WHERE id=1");
-  assert.equal((await fetch(base + "/api/admin/menu-sync/test", {method: "POST", headers: {authorization: "1"}})).status, 403);
+test('menu management and upload HTTP endpoints are removed for all identities',async t=>{
+ const {root,db}=fixture(t),service=new MenuService(db,root);t.after(()=>service.close());publishSource(db,source(1),[record()]);const app=new Hono();mountMenuRoutes(app,db);
+ assert.equal((await app.request('/api/dishes')).status,200);
+ for(const endpoint of ['/settings','/jobs','/test','/imports','/imports/preview','/jobs/anything/artifacts/diagnostic'])for(const method of ['GET','POST','PUT','DELETE'])assert.equal((await app.request('/api/admin/menu-sync'+endpoint,{method,headers:{authorization:'operator'}})).status,404);
 });
 test("restart recovers a lease that expires after startup even when today already triggered", async t => {
   const {root, db} = fixture(t); let now = at("2026-10-01T09:00:00");
   db.prepare("INSERT INTO menu_sync_jobs(id,trigger,auto_day,status,created_at,config_revision,provider,model) VALUES('old-job','automatic','2026-10-01','running',?,1,'openrouter','test')").run(now);
   db.prepare("INSERT INTO menu_sync_lease(id,owner,expires_at) VALUES(1,'old-job',?)").run(now+60000);
   const service = new MenuService(db, root, {clock: () => now, workerFactory: () => {throw new Error("today must not run twice");}});
-  t.after(() => service.close()); configure(service); service.saveSettings({enabled: true});
+  t.after(() => service.close()); configure(service); process.env.MENU_SYNC_ENABLED='true';
   assert.equal(service.job("old-job").status, "running");
   now += 120000; await service.tick();
   assert.equal(service.job("old-job").status, "interrupted"); assert.equal(service.settings().active_job_id, null);
@@ -385,22 +337,10 @@ test("upgrade permits manual sources without changing existing foreign keys or p
   assert.equal(db.prepare("PRAGMA foreign_keys").get().foreign_keys,1);
 });
 
-test("manual APIs permit only active developer, super admin and admin without exposing AI settings",async t=>{
-  const {root,db}=fixture(t),service=new MenuService(db,root);t.after(()=>service.close());
-  db.exec("INSERT INTO users VALUES(1,'developer','active'),(2,'super_admin','active'),(3,'admin','active'),(4,'student','active'),(5,'user','active'),(6,'admin','banned')");
-  const app=new Hono();app.use('*', async (c,next) => { if (c.req.method !== 'GET' && (c.req.header('content-type')||'').includes('application/json')) c.set('body', await c.req.json()); await next(); });mountMenuRoutes(app,db,service,async (c,next)=>{const id=Number(c.req.header("authorization"));if(!id)return c.json({error:"login"},401);c.set("user",{id,role:"developer"});await next();});
-  const server=serve({fetch:app.fetch,port:0,hostname:"127.0.0.1"});await new Promise(r=>server.once("listening",r));t.after(()=>new Promise(r=>server.close(r)));
-  const base=`http://127.0.0.1:${server.address().port}/api/admin/menu-sync`,request=(url,id,body)=>fetch(base+url,{method:body?"POST":"GET",headers:{authorization:String(id),"content-type":"application/json"},body:body?JSON.stringify(body):undefined});
-  assert.equal((await request("/imports",0)).status,401);
-  for(const id of [4,5,6]){assert.equal((await request("/imports",id)).status,403);assert.equal((await request("/imports/preview",id,{json_text:"[]"})).status,403);assert.equal((await request("/imports",id,{json_text:"[]"})).status,403);}
-  for(const id of [1,2,3]){
-    const input={title:"角色测试",json_text:JSON.stringify([record("角色菜"+id)])};
-    const preview=await (await request("/imports/preview",id,input)).json();assert.ok(preview.digest);
-    assert.equal((await request("/imports",id,{...input,digest:preview.digest,reviewed:true})).status,201);
-    const list=await (await request("/imports",id)).json();assert.equal(Object.hasOwn(list,"settings"),false);
-    if(id!==1){assert.equal((await request("/settings",id)).status,403);assert.equal((await request("/jobs",id,{})).status,403);}
-  }
-  db.exec("UPDATE users SET role='user' WHERE id=3");assert.equal((await request("/imports",3)).status,403);
+test('manual menu publishing remains a server-side utility without HTTP upload access',async t=>{
+ const {root,db}=fixture(t),service=new MenuService(db,root);t.after(()=>service.close());const app=new Hono();mountMenuRoutes(app,db);
+ assert.equal((await app.request('/api/admin/menu-sync/imports',{method:'POST',body:'{}'})).status,404);
+ assert.equal((await app.request('/api/menu')).status,200);
 });
 
 test('Gemini groups use consistent school names and explicit local stalls',()=>{

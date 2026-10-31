@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { safeUrl } from '../lib/api';
+import { prepareImage } from '../lib/imageUpload';
 import { Dialog, Icon, useToast } from './ui';
 export function Picture({
   src,
@@ -155,12 +156,14 @@ export function Upload({
   file,
   onChange,
   maxMB = 2,
+  onProcessingChange,
   children,
 }: {
   name?: string;
   file: File | null;
   onChange: (file: File | null) => void;
   maxMB?: number;
+  onProcessingChange?: (processing: boolean) => void;
   children?: ReactNode;
 }) {
   const toast = useToast();
@@ -175,20 +178,30 @@ export function Upload({
     setPreview(url);
     return () => URL.revokeObjectURL(url);
   }, [file]);
-  function select(f?: File) {
+  const [processing, setProcessing] = useState(false);
+  const selection = useRef(0);
+  async function select(f?: File) {
     if (!f) return;
-    if (!['image/jpeg', 'image/png'].includes(f.type)) {
-      toast('仅支持 JPG / PNG 格式的图片', 'error');
-      return;
+    const version = ++selection.current;
+    setProcessing(true);
+    onProcessingChange?.(true);
+    // An earlier selection must never remain uploadable while this photo is being prepared.
+    onChange(null);
+    try {
+      const prepared = await prepareImage(f, maxMB);
+      if (version === selection.current) onChange(prepared);
+    } catch (error) {
+      if (version === selection.current) toast((error as Error).message, 'error');
+    } finally {
+      if (version === selection.current) {
+        setProcessing(false);
+        onProcessingChange?.(false);
+        if (input.current) input.current.value = '';
+      }
     }
-    if (f.size > maxMB * 1024 * 1024) {
-      toast(`图片不能超过 ${maxMB} MB`, 'error');
-      return;
-    }
-    onChange(f);
   }
   return (
-    <div className="field" data-upload>
+    <div className="field" data-upload aria-busy={processing}>
       <span className="field__label">
         图片 <span className="field__opt">（选填）</span>
       </span>
@@ -203,10 +216,13 @@ export function Upload({
         <span className="upload__icon">
           <Icon name="image" className="icon--lg" />
         </span>
-        <span className="upload__title">点击选择或拖入图片</span>
-        <span className="upload__hint">JPG / PNG，不超过 {maxMB} MB</span>
+        <span className="upload__title">{processing ? '正在压缩图片…' : '点击选择或拖入图片'}</span>
+        <span className="upload__hint">JPG / PNG，超过 {maxMB} MB 将自动压缩后上传</span>
         <input
-          ref={input}
+          ref={(element) => {
+            input.current = element;
+            element?.setCustomValidity(processing ? '图片正在压缩，请稍候' : '');
+          }}
           type="file"
           name={name}
           id={name}
@@ -228,6 +244,9 @@ export function Upload({
               className="icon-btn"
               aria-label="移除图片"
               onClick={() => {
+                ++selection.current;
+                setProcessing(false);
+                onProcessingChange?.(false);
                 onChange(null);
                 if (input.current) input.current.value = '';
               }}
