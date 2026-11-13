@@ -31,7 +31,7 @@ export function HomeContent() {
             {'了解更多'}
           </SiteLink>
         </section>
-        <section className="landing-row" aria-labelledby="teamTitle">
+        <section className="landing-row landing-row--teams" aria-labelledby="teamTitle">
           <div className="landing-row__intro">
             <h2 id="teamTitle">{'开发团队'}</h2>
             <p>{'源于热爱，始于代码。由志愿者构建和维护，用技术探索校园生活的更多可能。'}</p>
@@ -39,7 +39,7 @@ export function HomeContent() {
           <ul className="landing-teams" aria-label="开发团队">
             <li className="landing-team">
               <img src="/img/team-vc.svg" alt="橙子切面标志" width="48" height="48"></img>
-              <span>{'软开人工智能部'}</span>
+              <span>{'苏州中学人工智能实验室'}</span>
             </li>
             <li className="landing-team">
               <img

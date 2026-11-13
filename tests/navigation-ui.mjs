@@ -34,9 +34,9 @@ try {
     page.on('request', r => requests.push(new URL(r.url()).pathname));
     await page.goto(app.base + '/index.html');
     await page.locator('.landing').waitFor();
-    check(await page.locator('.landing-team').first().innerText() === '软开人工智能部', 'updated development team name');
+    check(await page.locator('.landing-team').first().innerText() === '苏州中学人工智能实验室', 'updated development team name');
     check(await page.locator('.landing-team img').first().getAttribute('src') === '/img/team-vc.svg', 'team icon unchanged');
-    check(await page.locator('.site-footer__bottom p').innerText() === '© 2026 苏州中学软件开发社人工智能部', 'exact copyright text');
+    check(await page.locator('.site-footer__bottom p').innerText() === '© 2026 苏州中学人工智能实验室', 'exact copyright text');
     if (width < 900) {
       const toggle = page.locator('.site-header__menu');
       const panel = page.locator('#navDrawer');

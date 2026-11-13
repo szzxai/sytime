@@ -6342,6 +6342,11 @@ body[data-page='home'] .site-header {
   height: 48px;
   flex: none;
 }
+@media (min-width: 1016px) {
+  .landing-row--teams {
+    grid-template-columns: minmax(0, 1fr) max-content;
+  }
+}
 .landing-accordion details {
   border-bottom: 1px solid var(--line);
 }

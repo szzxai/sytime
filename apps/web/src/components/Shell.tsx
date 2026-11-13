@@ -493,7 +493,7 @@ export function Shell({ children }: { children: ReactNode }) {
               </nav>
             </div>
             <div className="site-footer__bottom">
-              <p>© 2026 苏州中学软件开发社人工智能部</p>
+              <p>© 2026 苏州中学人工智能实验室</p>
               <ThemeControls />
             </div>
           </div>

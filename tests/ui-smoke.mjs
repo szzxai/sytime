@@ -363,7 +363,7 @@ try {
           await landing.page
             .locator('.site-footer__bottom')
             .innerText()
-            .then((text) => text.includes('© 2026 苏州中学软件开发社人工智能部')),
+            .then((text) => text.includes('© 2026 苏州中学人工智能实验室')),
         );
         check(
           'original campus illustration loaded',
@@ -379,7 +379,7 @@ try {
         check(
           'both development teams credited',
           (await landing.page.locator('.landing-team').allTextContents()).join('|') ===
-            '软开人工智能部|苏州中学软件开发社',
+            '苏州中学人工智能实验室|苏州中学软件开发社',
         );
         check(
           'both team marks loaded',
