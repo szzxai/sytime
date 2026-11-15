@@ -6,6 +6,10 @@ useDefault = true
 [[allowlists]]
 description = "Reviewed synthetic password used only by isolated test fixtures"
 condition = "AND"
-paths = ['''(?:^|/)tests/''']
+paths = [
+  '''(?:^|/)tests/''',
+  '''^apps/ios/scripts/test-server\.cjs$''',
+  '''^apps/ios/SytimeTests/LiveAPITests\.swift$''',
+]
 regexTarget = "secret"
 regexes = ['''^CampusTest2026$''']
