@@ -1,3 +1,4 @@
+import seedAccount from './helpers/seed-account.cjs';
 // #23 收藏按钮与弹窗：店铺收藏与个人主页。独立浏览器回归。
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -10,7 +11,6 @@ const root = path.resolve(import.meta.dirname, "..");
 const temp = fs.mkdtempSync(path.join(os.tmpdir(), "szzx-collections-ui-"));
 fs.copyFileSync(path.join(root, "server.js"), path.join(temp, "server.js"));
 fs.copyFileSync(path.join(root, "data.json"), path.join(temp, "data.json"));
-fs.copyFileSync(path.join(root, "menu-json-rules.md"), path.join(temp, "menu-json-rules.md"));
 fs.cpSync(path.join(root, "apps"), path.join(temp, "apps"), { recursive: true, filter: source => !source.includes("node_modules") && (!source.includes("/src") && !source.includes("/public")) });
 fs.cpSync(path.join(root,"packages"),path.join(temp,"packages"),{recursive:true});
 fs.cpSync(path.join(root, "data"), path.join(temp, "data"), { recursive: true });
@@ -37,7 +37,8 @@ async function api(url, { token, method = "GET", body } = {}) {
   return { status: res.status, data: await res.json() };
 }
 async function account(username) {
-  await api("/api/register", { method: "POST", body: { username, nickname: username + "昵", password: "CampusTest2026" } });
+  const seed = new (await import('./helpers/database.cjs')).default.DatabaseSync(path.join(temp, 'data.db'));
+  try { seedAccount(seed, username, 'user', username + '昵'); } finally { seed.close(); }
   return (await api("/api/login", { method: "POST", body: { username, password: "CampusTest2026" } })).data;
 }
 

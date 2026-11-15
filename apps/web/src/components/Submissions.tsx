@@ -1,10 +1,10 @@
-import { useState, type FormEvent } from 'react';
+import { useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useUrlSearch } from '../lib/useUrlSearch';
-import { api, endpoint, formatTime, formValues, queryClient } from '../lib/api';
-import { Empty, ErrorState, Field, Loading, Submit, useToast } from './ui';
+import { api, endpoint, formatTime, queryClient } from '../lib/api';
+import { Empty, ErrorState, Loading, useToast } from './ui';
+import { WikiMarkdown } from './WikiMarkdown';
 export const reviewLabels: Record<string, string> = {
-  student: '学生认证',
   display_id: '展示 ID',
   avatar: '头像',
   nickname: '昵称',
@@ -13,6 +13,8 @@ export const reviewLabels: Record<string, string> = {
   shop: '店铺推荐',
   shop_review: '店铺评价',
   appeal: '封禁申诉',
+  wiki_create: 'Wiki 新建词条',
+  wiki_edit: 'Wiki 修改词条',
 };
 export const statusLabels: Record<string, string> = {
   pending: '待审核',
@@ -63,7 +65,7 @@ export function SubmissionHistory() {
           </button>
         )}
         <p className="u-muted">
-          公开资料、评价与店铺均在审核通过后生效。拒绝原因与结果也会送达消息箱。
+          公开资料、评价、店铺与 Wiki 均在审核通过后生效。拒绝原因与结果也会送达消息箱。
         </p>
       </div>
       {query.isPending ? (
@@ -84,11 +86,27 @@ export function SubmissionHistory() {
               <p className="u-muted">{formatTime(r.created_at)}</p>
               {r.summary && <p className={focused ? 'prose' : 'submission-summary'}>{r.summary}</p>}
               {r.reason && <p>{r.reason}</p>}
+              {r.kind.startsWith('wiki_') && r.payload && (
+                <details>
+                  <summary>查看提交内容</summary>
+                  <p>文件夹：{String(r.payload.folder_path)}</p>
+                  <p>编辑摘要：{String(r.payload.summary)}</p>
+                  <WikiMarkdown source={String(r.payload.markdown || '')} />
+                </details>
+              )}
               {r.target_url &&
                 r.status === 'approved' &&
-                ['shop', 'dish_review', 'shop_review'].includes(r.kind) &&
+                ['shop', 'dish_review', 'shop_review', 'wiki_create', 'wiki_edit'].includes(
+                  r.kind,
+                ) &&
                 !r.target_url.startsWith('/profile.html') && (
-                  <a href={r.target_url}>{r.kind === 'shop' ? '查看店铺' : '查看评价'}</a>
+                  <a href={r.target_url}>
+                    {r.kind.startsWith('wiki_')
+                      ? '查看词条'
+                      : r.kind === 'shop'
+                        ? '查看店铺'
+                        : '查看评价'}
+                  </a>
                 )}
             </div>
             <span className={`review-status review-status--${r.status}`}>
@@ -127,96 +145,5 @@ export function SubmissionHistory() {
         </div>
       )}
     </section>
-  );
-}
-export function StudentIdentity() {
-  const binding = useQuery(
-    endpoint<{ binding: { student_id: string; real_name: string; class_name: string } | null }>(
-      '/api/student/binding',
-    ),
-  );
-  const toast = useToast();
-  const mutation = useMutation({
-    mutationFn: ({ path, body }: { path: string; body: unknown }) =>
-      api(path, { method: 'POST', body }),
-    onSuccess: (_data, variables) => {
-      if (variables.path.endsWith('/unbind')) {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        location.assign('/login.html');
-      } else {
-        toast('学生认证已提交，请等待审核');
-        queryClient.invalidateQueries();
-      }
-    },
-    onError: (e) => toast(e.message, 'error'),
-  });
-  function submit(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    mutation.mutate({ path: '/api/student/apply', body: formValues(e.currentTarget) });
-  }
-  return (
-    <main id="main" className="main container student-identity stack stack--lg">
-      <div className="page-head">
-        <h1>学生身份</h1>
-        <p className="u-muted">一个学号只能绑定一个账号，所有认证由管理员人工核验。</p>
-      </div>
-      {binding.isPending ? (
-        <Loading />
-      ) : binding.error ? (
-        <ErrorState error={binding.error} retry={binding.refetch} />
-      ) : binding.data?.binding ? (
-        <section className="card stack">
-          <h2>已绑定学生身份</h2>
-          <p>
-            {binding.data.binding.student_id} · {binding.data.binding.class_name} ·{' '}
-            {binding.data.binding.real_name}
-          </p>
-          <p className="callout">
-            解绑会释放学号、撤回待审评价与推荐，并退出所有设备。学生账号将恢复为普通用户。
-          </p>
-          <form
-            className="form"
-            onSubmit={(e) => {
-              e.preventDefault();
-              mutation.mutate({ path: '/api/student/unbind', body: formValues(e.currentTarget) });
-            }}
-          >
-            <Field label="输入当前密码以确认解绑">
-              <input
-                className="input"
-                type="password"
-                name="password"
-                required
-                autoComplete="current-password"
-              />
-            </Field>
-            <Submit pending={mutation.isPending}>确认解绑学生身份</Submit>
-          </form>
-        </section>
-      ) : (
-        <section className="card">
-          <form className="form" onSubmit={submit}>
-            <Field label="学号 / 新生号">
-              <input className="input" name="student_id" required maxLength={32} />
-            </Field>
-            <Field label="班级">
-              <input className="input" name="class_name" required maxLength={40} />
-            </Field>
-            <Field label="真实姓名">
-              <input className="input" name="real_name" required maxLength={40} />
-            </Field>
-            <Field label="补充信息（选填）">
-              <textarea className="textarea" name="extra_info" maxLength={500} />
-            </Field>
-            <p className="field__hint">
-              待审核不占用学号；一份申请通过后，同学号的其他申请会自动拒绝。10 分钟内只能提交一次。
-            </p>
-            <Submit pending={mutation.isPending}>提交学生认证</Submit>
-          </form>
-        </section>
-      )}
-      <SubmissionHistory />
-    </main>
   );
 }

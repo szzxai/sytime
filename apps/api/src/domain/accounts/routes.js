@@ -5,7 +5,7 @@ const jwt = require('jsonwebtoken');
 const { setCookie, deleteCookie } = require('hono/cookie');
 const { query } = require('../../../../../packages/db/src/client.ts');
 const { withUpload } = require('../../upload');
-const { createModeration, image, studentId, labels } = require('./moderation');
+const { createModeration, image, labels } = require('./moderation');
 const {
   action,
   error,
@@ -37,37 +37,44 @@ module.exports = function mountAccounts(app, services) {
     username: user.username,
     nickname: user.nickname,
     role: user.role,
+    default_page: user.default_page,
+    auth_source: user.sso_subject ? 'sso' : 'local',
   });
-  app.post(
-    '/api/register',
-    action((c) => {
-      consume(c, 'register', 10);
-      const value = body(c);
-      const username = text(value.username, '用户名', 32).toLowerCase();
-      if (!/^[a-z][a-z0-9_-]{2,31}$/.test(username))
-        throw error(422, '用户名须为 3–32 位英文字母、数字、下划线或连字符，并以字母开头');
-      const nickname = text(value.nickname, '昵称', 20);
-      const hash = bcrypt.hashSync(password(value.password), 12);
-      return db.$client.transaction(() => {
-        if (query(db, 'SELECT id FROM users WHERE username=? COLLATE NOCASE').get(username))
-          throw error(409, '用户名已被使用');
-        const id = Number(
-          query(
-            db,
-            "INSERT INTO users(username,nickname,password_hash,role,recipe_default_view) VALUES (?,'新用户',?,'user','daily')",
-          ).run(username, hash).lastInsertRowid,
-        );
-        query(db, 'UPDATE users SET display_id=?,nickname=? WHERE id=?').run(
-          String(id),
-          '用户' + id,
-          id,
-        );
-        moderation.submit({ id }, 'nickname', { value: nickname });
-        audit(db, id, id, 'account.registered');
-        return c.json({ id, username, role: 'user' }, 201);
-      })();
-    }),
-  );
+  const localAllowed = (user) => !user.sso_subject;
+  function verifyLocal(id) {
+    if (query(db, 'SELECT sso_subject FROM users WHERE id=?').get(id)?.sso_subject)
+      throw error(403, '姓名和账号密码由社盟管理');
+  }
+  function issueSession(c, user) {
+    const sid = crypto.randomBytes(32).toString('hex');
+    const token = jwt.sign({ id: user.id, sid }, JWT_SECRET, {
+      algorithm: 'HS256',
+      issuer: 'sytime',
+      audience: 'sytime-web',
+      expiresIn: JWT_EXPIRES_IN,
+    });
+    const expires = jwt.decode(token).exp;
+    db.$client.transaction(() => {
+      query(db, 'DELETE FROM account_sessions WHERE expires_at<=?').run(now());
+      query(db, 'INSERT INTO account_sessions(id,user_id,version,expires_at) VALUES(?,?,?,?)').run(
+        sid,
+        user.id,
+        user.session_version,
+        expires,
+      );
+      audit(db, user.id, user.id, 'session.created');
+      recordLogin(user.id);
+    })();
+    setCookie(c, 'sytime_session', token, {
+      httpOnly: true,
+      secure: secure(c),
+      sameSite: 'Lax',
+      path: '/',
+      maxAge: expires - now(),
+    });
+    return token;
+  }
+  const sso = require('./sso')(app, { ...services, issueSession, sessionUser, localAllowed });
   app.post(
     '/api/login',
     action((c) => {
@@ -81,7 +88,7 @@ module.exports = function mountAccounts(app, services) {
           ? value.password
           : '';
       const correct = bcrypt.compareSync(candidate, user?.password_hash || dummyHash);
-      if (!user || !correct) throw error(401, '用户名或密码不正确');
+      if (!user || !correct || !localAllowed(user)) throw error(401, '用户名或密码不正确');
       if (user.status === 'banned')
         return c.json(
           {
@@ -99,30 +106,7 @@ module.exports = function mountAccounts(app, services) {
         );
       if (!['user', 'student', 'admin', 'operator'].includes(user.role))
         throw error(403, '账号角色无效，请联系运营者');
-      const sid = crypto.randomBytes(32).toString('hex');
-      const token = jwt.sign({ id: user.id, sid }, JWT_SECRET, {
-        algorithm: 'HS256',
-        issuer: 'sytime',
-        audience: 'sytime-web',
-        expiresIn: JWT_EXPIRES_IN,
-      });
-      const expires = jwt.decode(token).exp;
-      db.$client.transaction(() => {
-        query(db, 'DELETE FROM account_sessions WHERE expires_at<=?').run(now());
-        query(
-          db,
-          'INSERT INTO account_sessions(id,user_id,version,expires_at) VALUES(?,?,?,?)',
-        ).run(sid, user.id, user.session_version, expires);
-        audit(db, user.id, user.id, 'session.created');
-        recordLogin(user.id);
-      })();
-      setCookie(c, 'sytime_session', token, {
-        httpOnly: true,
-        secure: secure(c),
-        sameSite: 'Strict',
-        path: '/',
-        maxAge: expires - now(),
-      });
+      const token = issueSession(c, user);
       return c.json({ token, user: sessionUser(user) });
     }),
   );
@@ -132,13 +116,17 @@ module.exports = function mountAccounts(app, services) {
     action((c) => {
       query(db, 'DELETE FROM account_sessions WHERE id=?').run(current(c).session_id);
       deleteCookie(c, 'sytime_session', { path: '/' });
-      return c.json({ ok: true });
+      return c.json({
+        ok: true,
+        logout_url: current(c).auth_source === 'sso' ? sso.logoutUrl() : '',
+      });
     }),
   );
   app.post(
     '/api/user/sessions/revoke',
     requireLogin,
     action((c) => {
+      verifyLocal(current(c).id);
       verifyPassword(db, current(c).id, body(c).password);
       revoke(db, current(c).id);
       deleteCookie(c, 'sytime_session', { path: '/' });
@@ -152,6 +140,7 @@ module.exports = function mountAccounts(app, services) {
     action((c) => {
       limited(db, 'password:' + current(c).id, 10);
       const value = body(c);
+      verifyLocal(current(c).id);
       verifyPassword(db, current(c).id, value.oldPassword || value.old_password);
       const hash = bcrypt.hashSync(password(value.newPassword || value.new_password), 12);
       db.$client.transaction(() => {
@@ -164,49 +153,12 @@ module.exports = function mountAccounts(app, services) {
       return c.json({ ok: true, reauthenticate: true });
     }),
   );
-  app.get('/api/student/binding', requireLogin, (c) =>
-    c.json({
-      binding:
-        query(
-          db,
-          'SELECT student_id,real_name,class_name,bound_at FROM student_bindings WHERE user_id=?',
-        ).get(current(c).id) || null,
-    }),
-  );
-  app.post(
-    '/api/student/apply',
-    requireLogin,
-    action((c) => {
-      const value = body(c);
-      const id = studentId(value.student_id);
-      if (query(db, 'SELECT user_id FROM student_bindings WHERE user_id=?').get(current(c).id))
-        throw error(409, '本账号已绑定学生身份，请先解绑');
-      const payload = {
-        student_id: id,
-        class_name: text(value.class_name, '班级', 40),
-        real_name: text(value.real_name, '真实姓名', 40),
-        extra_info: text(value.extra_info, '补充信息', 500, true),
-      };
-      // Pending submissions intentionally do not reserve a student identity.
-      return c.json(moderation.submit(current(c), 'student', payload), 202);
-    }),
-  );
-  app.post(
-    '/api/student/unbind',
-    requireLogin,
-    action((c) => {
-      limited(db, 'unbind:' + current(c).id, 5);
-      verifyPassword(db, current(c).id, body(c).password);
-      db.$client.transaction(() => moderation.unbind(current(c).id, current(c).id))();
-      deleteCookie(c, 'sytime_session', { path: '/' });
-      return c.json({ ok: true, reauthenticate: true });
-    }),
-  );
   for (const field of ['display_id', 'nickname', 'signature'])
     app.put(
       '/api/user/' + field,
       requireLogin,
       action((c) => {
+        if (field === 'nickname') verifyLocal(current(c).id);
         const value = text(
           body(c)[field],
           field === 'display_id' ? '展示 ID' : field === 'nickname' ? '昵称' : '个性签名',
@@ -273,15 +225,18 @@ module.exports = function mountAccounts(app, services) {
     action((c) => {
       consume(c, 'appeal', 15);
       const value = body(c);
-      const username = text(value.username, '用户名', 32).toLowerCase();
-      const owner = query(db, 'SELECT * FROM users WHERE username=? COLLATE NOCASE').get(username);
-      const correct = bcrypt.compareSync(
-        typeof value.password === 'string' && Buffer.byteLength(value.password) <= 72
-          ? value.password
-          : '',
-        owner?.password_hash || dummyHash,
-      );
-      if (!owner || !correct) throw error(403, '账号或密码不正确');
+      let owner = sso.appealOwner(c);
+      if (!owner) {
+        const username = text(value.username, '用户名', 32).toLowerCase();
+        owner = query(db, 'SELECT * FROM users WHERE username=? COLLATE NOCASE').get(username);
+        const correct = bcrypt.compareSync(
+          typeof value.password === 'string' && Buffer.byteLength(value.password) <= 72
+            ? value.password
+            : '',
+          owner?.password_hash || dummyHash,
+        );
+        if (!owner || !correct || !localAllowed(owner)) throw error(403, '账号或密码不正确');
+      }
       if (owner.status !== 'banned' || !owner.allow_appeal)
         throw error(403, '此账号不允许在线申诉，请联系运营者');
       const imageData = null;
@@ -338,14 +293,16 @@ module.exports = function mountAccounts(app, services) {
             const value = JSON.parse(payload);
             return {
               ...row,
+              ...(row.kind.startsWith('wiki_') ? { payload: value } : {}),
               target_url: submissionTarget(db, { ...row, user_id: current(c).id, payload: value }),
               summary:
+                value.title ||
                 value.value ||
                 value.content ||
                 value.comment ||
                 value.name ||
                 value.appeal_reason ||
-                (row.kind === 'student' ? '学号 ' + value.student_id : '头像变更'),
+                '头像变更',
             };
           }),
         total: query(
@@ -479,7 +436,7 @@ module.exports = function mountAccounts(app, services) {
       return c.json({
         users: query(
           db,
-          'SELECT u.id,u.display_id,u.username,u.nickname,u.role,u.status,u.allow_appeal,u.ban_reason,b.student_id FROM users u LEFT JOIN student_bindings b ON b.user_id=u.id WHERE u.username LIKE ? OR u.display_id LIKE ? OR u.nickname LIKE ? ORDER BY u.id DESC LIMIT ? OFFSET ?',
+          "SELECT CASE WHEN u.sso_subject IS NULL THEN 'local' ELSE 'sso' END auth_source,u.id,u.display_id,u.username,u.nickname,u.role,u.status,u.allow_appeal,u.ban_reason FROM users u WHERE u.username LIKE ? OR u.display_id LIKE ? OR u.nickname LIKE ? ORDER BY u.id DESC LIMIT ? OFFSET ?",
         ).all(search, search, search, limit, offset),
         total: query(
           db,
@@ -494,7 +451,7 @@ module.exports = function mountAccounts(app, services) {
     action((c) => {
       const user = query(
         db,
-        'SELECT id,display_id,username,nickname,role,status FROM users WHERE id=?',
+        "SELECT CASE WHEN sso_subject IS NULL THEN 'local' ELSE 'sso' END auth_source,id,display_id,username,nickname,role,status FROM users WHERE id=?",
       ).get(Number(c.req.param('id')));
       if (!user) throw error(404, '用户不存在');
       return c.json({
@@ -518,16 +475,7 @@ module.exports = function mountAccounts(app, services) {
           (role === 'admin' && current(c).role !== 'operator')
         )
           throw error(403, '仅运营者可任命管理员');
-        if (
-          role === 'student' &&
-          !query(db, 'SELECT user_id FROM student_bindings WHERE user_id=?').get(user.id)
-        )
-          throw error(409, '请先通过学生认证，不能直接授予学生身份');
-        if (
-          role === 'user' &&
-          query(db, 'SELECT user_id FROM student_bindings WHERE user_id=?').get(user.id)
-        )
-          moderation.unbind(user.id, current(c).id);
+        if (user.sso_subject || role === 'student') throw error(409, '学生角色由社盟登录身份确定');
         query(db, 'UPDATE users SET role=? WHERE id=?').run(role, user.id);
         revoke(db, user.id);
         audit(db, current(c).id, user.id, 'role.changed', { from: user.role, to: role });
@@ -568,16 +516,5 @@ module.exports = function mountAccounts(app, services) {
         })(),
       ),
     );
-  app.post(
-    '/api/admin/users/:id/unbind',
-    staff,
-    action((c) =>
-      db.$client.transaction(() => {
-        const user = target(db, current(c), Number(c.req.param('id')));
-        moderation.unbind(user.id, current(c).id);
-        return c.json({ ok: true });
-      })(),
-    ),
-  );
   return { moderation };
 };

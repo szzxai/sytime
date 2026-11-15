@@ -20,6 +20,7 @@ const nav = [
   { key: 'map', href: 'map.html', label: '地图', icon: 'map' },
   { key: 'recipe', href: 'recipe.html', label: '菜谱', icon: 'utensils' },
   { key: 'shops', href: 'shops.html', label: '必吃榜', icon: 'store' },
+  { key: 'wiki', href: 'wiki.html', label: 'Wiki', icon: 'clipboard' },
   { key: 'announce', href: 'announcements.html', label: '更新公告', icon: 'megaphone' },
 ];
 function NetworkStatus() {
@@ -97,15 +98,17 @@ export function Shell({ children }: { children: ReactNode }) {
   const pathname = useRouterState({
     select: (state) => state.matches.at(-1)?.pathname || state.location.pathname,
   });
-  const active = pathname.includes('shop')
-    ? 'shops'
-    : pathname.includes('recipe') || pathname.includes('dish')
-      ? 'recipe'
-      : pathname.includes('announcements')
-        ? 'announce'
-        : pathname.includes('map')
-          ? 'map'
-          : 'home';
+  const active = pathname.includes('wiki')
+    ? 'wiki'
+    : pathname.includes('shop')
+      ? 'shops'
+      : pathname.includes('recipe') || pathname.includes('dish')
+        ? 'recipe'
+        : pathname.includes('announcements')
+          ? 'announce'
+          : pathname.includes('map')
+            ? 'map'
+            : 'home';
   const banner = useQuery(
     endpoint<{ banner: string; version: string | number }>('/api/settings/banner', false),
   );
@@ -122,9 +125,6 @@ export function Shell({ children }: { children: ReactNode }) {
   const account = [
     { href: 'profile.html', icon: 'user', label: '个人中心' },
     { href: 'settings.html', icon: 'settings', label: '设置' },
-    ...(!atLeast(user?.role, 'student')
-      ? [{ href: 'student_verify.html', icon: 'graduation', label: '学生认证' }]
-      : []),
     ...(atLeast(user?.role, 'admin')
       ? [{ href: 'admin.html', icon: 'shield', label: '管理后台' }]
       : []),
@@ -428,10 +428,7 @@ export function Shell({ children }: { children: ReactNode }) {
             >
               {(user
                 ? [...account, { href: 'inbox.html', icon: 'bell', label: '消息箱' }]
-                : [
-                    { href: 'login.html', icon: 'login', label: '登录' },
-                    { href: 'register.html', icon: 'user', label: '注册' },
-                  ]
+                : [{ href: 'login.html', icon: 'login', label: '登录' }]
               ).map((n) => (
                 <SiteLink
                   key={n.href}
@@ -481,13 +478,13 @@ export function Shell({ children }: { children: ReactNode }) {
                   <SiteLink href="/map.html">校园地图</SiteLink>
                   <SiteLink href="/recipe.html">食堂菜谱</SiteLink>
                   <SiteLink href="/shops.html">三元坊必吃榜</SiteLink>
+                  <SiteLink href="/wiki.html">Wiki</SiteLink>
                   <SiteLink href="/inbox.html">消息箱</SiteLink>
                 </div>
                 <div>
                   <h2>关于我们</h2>
                   <SiteLink href="/about.html">拾光酥糕</SiteLink>
                   <SiteLink href="/profile.html">个人中心</SiteLink>
-                  <SiteLink href="/student_verify.html">学生认证</SiteLink>
                   <SiteLink href="/settings.html">网站设置</SiteLink>
                 </div>
               </nav>

@@ -5,7 +5,7 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "test": "npm run test:public-safety && npm run test:accounts && npm run test:accounts:ui && npm run test:navigation && npm run test:architecture && npm run test:architecture:ui && npm run test:menu && npm run test:dishes && npm run test:dishes:ui && npm run test:menu:ui && npm run test:titles && npm run test:shops && npm run test:collections && npm run test:collections:ui && npm run test:shops:ui && npm run test:user && npm run test:ui && npm run test:map",
+    "test": "npm run test:public-safety && npm run test:accounts && npm run test:wiki && npm run test:wiki:ui && npm run test:accounts:ui && npm run test:navigation && npm run test:architecture && npm run test:architecture:ui && npm run test:menu && npm run test:dishes && npm run test:dishes:ui && npm run test:menu:ui && npm run test:titles && npm run test:shops && npm run test:collections && npm run test:collections:ui && npm run test:shops:ui && npm run test:user && npm run test:ui && npm run test:map",
     "test:menu": "node --import tsx --test tests/menu.test.cjs",
     "test:dishes": "node --import tsx --test tests/dishes.test.cjs",
     "test:dishes:ui": "node --import tsx tests/dishes-ui.mjs",
@@ -28,7 +28,7 @@
     "lint": "eslint apps packages tools",
     "db:generate": "drizzle-kit generate",
     "db:studio": "drizzle-kit studio",
-    "test:backend": "node --import tsx --test tests/accounts-v2.test.cjs tests/architecture.test.cjs tests/menu.test.cjs tests/dishes.test.cjs tests/titles.test.cjs tests/shops.test.cjs tests/review-image.test.cjs tests/collections.test.cjs tests/forum-removal.test.cjs",
+    "test:backend": "node --import tsx --test tests/accounts-v2.test.cjs tests/sso.test.cjs tests/architecture.test.cjs tests/menu.test.cjs tests/dishes.test.cjs tests/titles.test.cjs tests/shops.test.cjs tests/review-image.test.cjs tests/collections.test.cjs tests/forum-removal.test.cjs tests/wiki.test.cjs",
     "test:navigation": "node --import tsx tests/navigation-ui.mjs",
     "test:architecture": "node --import tsx --test tests/architecture.test.cjs",
     "format:check": "prettier --check apps packages tools tsconfig.json drizzle.config.ts eslint.config.mjs server.js package.json",
@@ -36,11 +36,13 @@
     "menu:setup": "node --import tsx tools/menu-setup.cjs",
     "test:menu:ui": "node --import tsx tests/menu-daily-ui.mjs",
     "account:operator": "node apps/api/dist/operator.cjs",
-    "test:accounts": "node --import tsx --test tests/accounts-v2.test.cjs",
-    "test:accounts:ui": "node --import tsx tests/accounts-ui.mjs && node --import tsx tests/accounts-followup-ui.mjs",
+    "test:accounts": "node --import tsx --test tests/accounts-v2.test.cjs tests/sso.test.cjs",
+    "test:accounts:ui": "node --import tsx --test tests/sso-ui.mjs && node --import tsx tests/accounts-ui.mjs && node --import tsx tests/accounts-followup-ui.mjs",
     "test:public-safety": "node --test tests/public-safety.test.mjs",
     "public:check": "node tools/public-safety.mjs",
-    "public:check:history": "node tools/public-safety.mjs --history"
+    "public:check:history": "node tools/public-safety.mjs --history",
+    "test:wiki": "node --import tsx --test tests/wiki.test.cjs",
+    "test:wiki:ui": "node --import tsx tests/wiki-ui.mjs"
   },
   "keywords": [],
   "author": "",
@@ -56,6 +58,7 @@
     "@vitejs/plugin-react": "^6.1.2",
     "axe-core": "^4.13.0",
     "drizzle-kit": "^0.31.11",
+    "esbuild": "^0.27.4",
     "eslint": "^10.13.0",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.7",
@@ -64,8 +67,7 @@
     "tsx": "^4.23.15",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.72.0",
-    "vite": "^8.3.5",
-    "esbuild": "^0.27.4"
+    "vite": "^8.3.5"
   },
   "private": true,
   "workspaces": [

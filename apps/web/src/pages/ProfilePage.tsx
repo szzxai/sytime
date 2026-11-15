@@ -122,23 +122,24 @@ function ProfileContent({ userId }: { userId?: number }) {
     profileStatus: {},
     userHero: { hidden: false },
     userNav: { hidden: false },
-    heroNickname: userId
-      ? {}
-      : {
-          contentEditable: 'plaintext-only',
-          suppressContentEditableWarning: true,
-          onBlur: (e: FocusEvent<HTMLSpanElement>) => blur('nickname', e),
-          onKeyDown: (e: React.KeyboardEvent<HTMLSpanElement>) => {
-            if (e.key === 'Enter') {
-              e.preventDefault();
-              e.currentTarget.blur();
-            }
-            if (e.key === 'Escape') {
-              e.currentTarget.textContent = user.nickname;
-              e.currentTarget.blur();
-            }
+    heroNickname:
+      userId || user.auth_source === 'sso'
+        ? {}
+        : {
+            contentEditable: 'plaintext-only',
+            suppressContentEditableWarning: true,
+            onBlur: (e: FocusEvent<HTMLSpanElement>) => blur('nickname', e),
+            onKeyDown: (e: React.KeyboardEvent<HTMLSpanElement>) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                e.currentTarget.blur();
+              }
+              if (e.key === 'Escape') {
+                e.currentTarget.textContent = user.nickname;
+                e.currentTarget.blur();
+              }
+            },
           },
-        },
     heroSignature: userId
       ? {}
       : {
@@ -244,7 +245,7 @@ function ProfileContent({ userId }: { userId?: number }) {
   const slots: Record<string, React.ReactNode> = {
     profileStatus: null,
     userStatus: null,
-    heroUsername: user.username,
+    heroUsername: user.auth_source === 'sso' ? user.nickname : user.username,
     heroDisplayId: user.display_id ? `ID：${user.display_id}` : null,
     heroNickname: user.nickname || '',
     heroSignature: String(user.signature || ''),
@@ -295,7 +296,9 @@ function ProfileContent({ userId }: { userId?: number }) {
               提交 ID 修改审核
             </button>
           </form>
-          <a href="/student_verify.html">管理学生身份与解绑</a>
+          {user.auth_source === 'sso' && (
+            <p className="field__hint">姓名由社盟账号同步：{user.nickname}</p>
+          )}
         </section>
         <SubmissionHistory />
       </div>

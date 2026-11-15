@@ -1,4 +1,5 @@
 import { campusPlaces as places } from './places';
+import campusArtworkUrl from './campus.svg?url';
 const categories = {
   study: '教学空间',
   heritage: '人文地标',
@@ -216,6 +217,9 @@ export async function createCampusMap(host, onSelect, signal) {
   }
   function renderScene(svg) {
     var layer = svg.querySelector('#atlas-places');
+    var landscape = svg.querySelector('#atlas-landscape-places');
+    var buildings = svg.querySelector('#atlas-buildings');
+    var labels = svg.querySelector('#atlas-labels');
     var highlights = svgNode('g', {
       id: 'atlas-highlights',
       'aria-hidden': 'true',
@@ -265,6 +269,13 @@ export async function createCampusMap(host, onSelect, signal) {
           preserveAspectRatio: 'none',
         }),
       );
+      var labelGroup = svgNode('g', {
+        transform: 'translate(' + p.x + ' ' + p.y + ')',
+        class: 'campus-map-label-group',
+        'data-map-label': p.id,
+        'aria-hidden': 'true',
+        'pointer-events': 'none',
+      });
       var label = svgNode('text', {
         x: p.labelX || 0,
         y: p.labelY == null ? height / 2 + 18 : p.labelY,
@@ -272,14 +283,20 @@ export async function createCampusMap(host, onSelect, signal) {
         'data-label-size': p.labelSize || 23,
         'text-anchor': 'middle',
         'aria-hidden': 'true',
+        'pointer-events': 'visiblePainted',
       });
       if (p.labelSize) label.style.fontSize = p.labelSize + 'px';
       label.textContent = p.name;
-      group.appendChild(label);
-      listen(group, 'click', function (e) {
+      labelGroup.appendChild(label);
+      labels.appendChild(labelGroup);
+      function choose(e) {
         L.DomEvent.stopPropagation(e);
         if (!map.dragging.moved()) onSelect(p, group);
-      });
+      }
+      listen(group, 'click', choose);
+      listen(label, 'click', choose);
+      listen(label, 'pointerenter', () => halo.classList.add('is-hovered'));
+      listen(label, 'pointerleave', () => halo.classList.remove('is-hovered'));
       listen(group, 'keydown', function (e) {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
@@ -302,15 +319,25 @@ export async function createCampusMap(host, onSelect, signal) {
         halo.classList.add('is-focused');
         revealPlace(p);
       });
-      layer.appendChild(group);
+      const isLandscape =
+        p.category === 'nature' || ['track', 'basketball', 'panchi'].includes(p.id);
+      (isLandscape ? landscape : buildings).appendChild(group);
     });
     return svg;
   }
 
-  const response = await fetch('/img/map/campus.svg', { signal });
+  // Vite emits a content-hashed URL: cached old artwork cannot accompany new styles/code.
+  const response = await fetch(campusArtworkUrl, { signal, cache: 'no-cache' });
   if (!response.ok) throw new Error('map artwork unavailable');
   const doc = new DOMParser().parseFromString(await response.text(), 'image/svg+xml');
-  if (doc.querySelector('parsererror') || !doc.querySelector('#atlas-places'))
+  if (
+    doc.querySelector('parsererror') ||
+    doc.documentElement.getAttribute('data-map-version') !== '3' ||
+    !['atlas-places', 'atlas-landscape-places', 'atlas-buildings', 'atlas-labels'].every((id) =>
+      doc.getElementById(id),
+    ) ||
+    !places.every((p) => doc.getElementById('art-' + p.icon))
+  )
     throw new Error('invalid artwork');
   scene = renderScene(document.importNode(doc.documentElement, true));
   map = L.map(host, {
@@ -358,18 +385,27 @@ export async function createCampusMap(host, onSelect, signal) {
         node.classList.toggle('is-selected', active);
         node.setAttribute('aria-pressed', String(active));
       });
+      scene.querySelectorAll('[data-map-label]').forEach((node) => {
+        node.classList.toggle('is-selected', node.dataset.mapLabel === id);
+      });
       scene
         .querySelectorAll('[data-map-highlight]')
         .forEach((node) => node.classList.toggle('is-selected', node.dataset.mapHighlight === id));
     },
-    filter: (ids) =>
+    filter: (ids) => {
       scene.querySelectorAll('[data-map-place]').forEach((node) => {
         const visible = ids.has(node.dataset.mapPlace);
         node.classList.toggle('is-muted', !visible);
         node.setAttribute('tabindex', visible ? '0' : '-1');
         node.setAttribute('aria-hidden', String(!visible));
         node.style.pointerEvents = visible ? '' : 'none';
-      }),
+      });
+      scene.querySelectorAll('[data-map-label]').forEach((node) => {
+        const visible = ids.has(node.dataset.mapLabel);
+        node.classList.toggle('is-muted', !visible);
+        node.querySelector('text').style.pointerEvents = visible ? 'visiblePainted' : 'none';
+      });
+    },
     destroy: () => {
       listeners.forEach((fn) => fn());
       resize.disconnect();

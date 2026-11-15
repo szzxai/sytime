@@ -22,6 +22,13 @@ function submissionTarget(db, request) {
     typeof request.payload === 'string' ? JSON.parse(request.payload) : request.payload;
   if (request.status === 'approved') {
     if (
+      ['wiki_create', 'wiki_edit'].includes(request.kind) &&
+      query(db, 'SELECT id FROM wiki_entries WHERE id=? AND deleted_at IS NULL').get(
+        request.published_id,
+      )
+    )
+      return `/wiki.html?id=${request.published_id}`;
+    if (
       request.kind === 'dish_review' &&
       request.published_id &&
       query(db, 'SELECT id FROM recipes WHERE id=? AND dish_id=? AND is_weekly=0').get(

@@ -1,0 +1,6 @@
+# Start the local development servers when Codex starts a session in this project.
+[[hooks.SessionStart]]
+[[hooks.SessionStart.hooks]]
+type = "command"
+command = "node tools/codex-dev.mjs"
+timeout = 30

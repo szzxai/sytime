@@ -7,7 +7,7 @@ module.exports = function mountProfileRoutes(app, services) {
   app.get('/api/user/profile', requireLogin, function (c) {
     const user = query(
       db,
-      'SELECT id, display_id, username, nickname, avatar_url, signature, role, default_page, default_floor, recipe_default_view, shop_default_sort, shop_default_type, shop_layout, shop_layout_mode, default_collection_shops, collection_default_public, show_role, status FROM users WHERE id = ?',
+      "SELECT CASE WHEN sso_subject IS NULL THEN 'local' ELSE 'sso' END auth_source, id, display_id, username, nickname, avatar_url, signature, role, default_page, default_floor, recipe_default_view, shop_default_sort, shop_default_type, shop_layout, shop_layout_mode, default_collection_shops, collection_default_public, show_role, status FROM users WHERE id = ?",
     ).get(c.get('user').id);
     if (!user) {
       c.res = c.json({ error: 'user not found' }, 404);
@@ -27,7 +27,7 @@ module.exports = function mountProfileRoutes(app, services) {
     }
     const user = query(
       db,
-      'SELECT id, display_id, username, nickname, avatar_url, signature, role, show_role, status FROM users WHERE id = ?',
+      "SELECT CASE WHEN sso_subject IS NULL THEN 'local' ELSE 'sso' END auth_source, id, display_id, username, nickname, avatar_url, signature, role, show_role, status FROM users WHERE id = ?",
     ).get(id);
     if (!user) {
       c.res = c.json({ error: 'user not found' }, 404);

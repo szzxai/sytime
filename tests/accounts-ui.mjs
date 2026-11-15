@@ -22,20 +22,11 @@ try {
     [390, 'dark'],
   ]) {
     const { ctx, page } = await f.context(null, { width, theme });
-    await page.goto(f.site.base + '/register.html');
-    await page.locator('#password').fill('abc');
-    f.check(
-      (await page.locator('.password-checks li.is-met').count()) === 2,
-      'partial password checklist',
-    );
-    await page.locator('#password').fill(PASSWORD);
-    f.check(
-      (await page.locator('.password-checks li.is-met').count()) === 5,
-      'all password requirements',
-    );
-    await page.screenshot({ path: path.join(output, `password-${width}-${theme}.png`) });
-    await f.audit(page, 'registration ' + width + theme);
     await page.goto(f.site.base + '/login.html');
+    f.check(await page.getByRole('link', { name: '通过社盟账号登录', exact: true }).isVisible(), 'SSO login is visible');
+    f.check((await page.locator('#loginForm,input[name=username],input[name=password]').count()) === 0, 'login selection has no credential inputs');
+    f.check((await page.getByRole('link', { name: '立即注册', exact: true }).count()) === 0, 'registration entry removed');
+    await page.getByRole('link', { name: '使用账号密码登录', exact: true }).click();
     f.check((await page.locator('.password-checks').count()) === 0, 'login has no strength checks');
     await page.locator('#password').fill(PASSWORD);
     await f.audit(page, 'login ' + width + theme);
@@ -48,7 +39,7 @@ try {
     );
     const cookies = await ctx.cookies();
     f.check(
-      cookies.some((c) => c.name === 'sytime_session' && c.httpOnly && c.sameSite === 'Strict'),
+      cookies.some((c) => c.name === 'sytime_session' && c.httpOnly && c.sameSite === 'Lax'),
       'HttpOnly SameSite session',
     );
     await page.goto(f.site.base + '/admin.html');
@@ -94,9 +85,9 @@ try {
     'owner sees approved history',
   );
   await f.audit(regular.page, 'profile applications');
-  await regular.page.goto(f.site.base + '/student_verify.html');
-  await f.audit(regular.page, 'student application');
+  f.check((await regular.page.locator('a[href="/student_verify.html"]').count()) === 0, 'student verification links removed');
   await regular.page.goto(f.site.base + '/admin.html');
+  await regular.page.getByText('暂无权限访问管理后台', { exact: true }).waitFor();
   f.check(
     await regular.page.getByText('暂无权限访问管理后台', { exact: true }).isVisible(),
     'user cannot open admin',
@@ -104,7 +95,7 @@ try {
   await regular.ctx.close();
   const staff = await f.context(admin, { cookie: true });
   await staff.page.goto(f.site.base + '/admin.html#users');
-  await staff.page.getByPlaceholder('用户名、昵称或展示 ID').fill('ui_operator');
+  await staff.page.getByPlaceholder('用户名、姓名、昵称或展示 ID').fill('ui_operator');
   await staff.page.getByText('受保护账号', { exact: true }).waitFor();
   f.check(
     (await staff.page.getByRole('button', { name: '封禁', exact: true }).count()) === 0,
@@ -119,6 +110,7 @@ try {
   assert.equal(banned.status, 200);
   const ban = await f.context(null);
   await ban.page.goto(f.site.base + '/login.html');
+  await ban.page.getByRole('link', { name: '使用账号密码登录', exact: true }).click();
   await ban.page.locator('#username').fill(user.username);
   await ban.page.locator('#password').fill(PASSWORD);
   await ban.page.locator('#submitBtn').click();

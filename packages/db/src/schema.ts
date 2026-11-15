@@ -416,26 +416,6 @@ export const shops = sqliteTable(
   ],
 );
 
-export const studentApplications = sqliteTable(
-  'student_applications',
-  {
-    id: integer('id').primaryKey({ autoIncrement: true }),
-    user_id: integer('user_id').notNull(),
-    student_id: text('student_id').notNull(),
-    class_name: text('class_name').notNull(),
-    real_name: text('real_name').notNull(),
-    extra_info: text('extra_info'),
-    reject_reason: text('reject_reason'),
-    status: text('status')
-      .notNull()
-      .default(sql`'pending'`),
-    created_at: integer('created_at')
-      .notNull()
-      .default(sql`(strftime('%s','now'))`),
-  },
-  (table) => [index('idx_student_applications_user').on(table.user_id)],
-);
-
 export const tickets = sqliteTable(
   'tickets',
   {
@@ -545,6 +525,8 @@ export const users = sqliteTable(
     display_id: text('display_id'),
     email: text('email'),
     password_hash: text('password_hash'),
+    sso_subject: text('sso_subject'),
+    sso_issuer: text('sso_issuer'),
     session_version: integer('session_version').notNull().default(0),
     username: text('username'),
     nickname: text('nickname'),
@@ -607,6 +589,7 @@ export const users = sqliteTable(
     equipped_title_id: integer('equipped_title_id'),
   },
   (table) => [
+    uniqueIndex('users_sso_subject').on(table.sso_issuer, table.sso_subject),
     unique('users_username_unique').on(table.username),
     unique('users_email_unique').on(table.email),
     unique('users_display_id_unique').on(table.display_id),
@@ -622,18 +605,6 @@ export const accountSessions = sqliteTable('account_sessions', {
   version: integer('version').notNull(),
   expires_at: integer('expires_at').notNull(),
   created_at: integer('created_at')
-    .notNull()
-    .default(sql`(unixepoch())`),
-});
-export const studentBindings = sqliteTable('student_bindings', {
-  student_id: text('student_id').primaryKey(),
-  user_id: integer('user_id')
-    .notNull()
-    .unique()
-    .references(() => users.id, { onDelete: 'cascade' }),
-  real_name: text('real_name').notNull(),
-  class_name: text('class_name').notNull(),
-  bound_at: integer('bound_at')
     .notNull()
     .default(sql`(unixepoch())`),
 });
@@ -660,6 +631,9 @@ export const moderationRequests = sqliteTable(
     uniqueIndex('moderation_one_pending')
       .on(table.user_id, table.kind, table.subject_key)
       .where(sql`status='pending'`),
+    uniqueIndex('wiki_pending_edit')
+      .on(table.subject_key)
+      .where(sql`kind='wiki_edit' AND status='pending'`),
   ],
 );
 export const accountAudit = sqliteTable('account_audit', {
@@ -681,3 +655,69 @@ export const accountMigrations = sqliteTable('account_migrations', {
   key: text('key').primaryKey(),
   applied_at: integer('applied_at').notNull(),
 });
+
+export const wikiFolders = sqliteTable('wiki_folders', {
+  id: integer('id').primaryKey(),
+  parent_id: integer('parent_id').references(
+    (): import('drizzle-orm/sqlite-core').AnySQLiteColumn => wikiFolders.id,
+  ),
+  name: text('name').notNull(),
+  position: integer('position').notNull().default(0),
+  deleted_at: integer('deleted_at'),
+});
+export const wikiEntries = sqliteTable(
+  'wiki_entries',
+  {
+    id: integer('id').primaryKey(),
+    folder_id: integer('folder_id')
+      .notNull()
+      .references(() => wikiFolders.id),
+    position: integer('position').notNull().default(0),
+    current_revision_id: integer('current_revision_id'),
+    manual_locked: integer('manual_locked').notNull().default(0),
+    lock_reason: text('lock_reason').notNull().default(''),
+    deleted_at: integer('deleted_at'),
+  },
+  (table) => [index('wiki_entries_folder').on(table.folder_id, table.position, table.id)],
+);
+export const wikiRevisions = sqliteTable(
+  'wiki_revisions',
+  {
+    id: integer('id').primaryKey(),
+    entry_id: integer('entry_id')
+      .notNull()
+      .references(() => wikiEntries.id),
+    title: text('title').notNull(),
+    aliases: text('aliases').notNull().default('[]'),
+    markdown: text('markdown').notNull(),
+    sources: text('sources').notNull().default('[]'),
+    images: text('images').notNull().default('[]'),
+    summary: text('summary').notNull(),
+    user_id: integer('user_id').notNull(),
+    reviewer_id: integer('reviewer_id').notNull(),
+    created_at: integer('created_at')
+      .notNull()
+      .default(sql`(unixepoch())`),
+    hidden: integer('hidden').notNull().default(0),
+    search_text: text('search_text').notNull().default(''),
+  },
+  (table) => [index('wiki_revisions_entry').on(table.entry_id, table.id)],
+);
+export const wikiImages = sqliteTable('wiki_images', {
+  id: text('id').primaryKey(),
+  user_id: integer('user_id').notNull(),
+  data: text('data').notNull(),
+  created_at: integer('created_at')
+    .notNull()
+    .default(sql`(unixepoch())`),
+});
+
+export const oidcFlows = sqliteTable(
+  'oidc_flows',
+  {
+    id: text('id').primaryKey(),
+    payload: text('payload').notNull(),
+    expires_at: integer('expires_at').notNull(),
+  },
+  (table) => [index('oidc_flows_expiry').on(table.expires_at)],
+);

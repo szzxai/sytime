@@ -1,3 +1,4 @@
+import seedAccount from './helpers/seed-account.cjs';
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -15,10 +16,8 @@ function check(name, condition) {
   checks++;
 }
 async function account(username) {
-  const registration = await site.api("/api/register", { method: "POST",
-    body: { username, nickname: "收藏隐私体验员", password: "CampusTest2026" } });
-  assert.equal(registration.status, 201);
-  const seedDb=new (await import('./helpers/database.cjs')).default.DatabaseSync(path.join(site.directory,'data.db'));seedDb.prepare("UPDATE users SET role='student' WHERE id=?").run(registration.data.id);seedDb.close();
+  const seedDb = new (await import('./helpers/database.cjs')).default.DatabaseSync(path.join(site.directory, 'data.db'));
+  try { seedAccount(seedDb, username, 'student', '收藏隐私体验员'); } finally { seedDb.close(); }
   return (await site.api("/api/login", { method: "POST", body: { username, password: "CampusTest2026" } })).data;
 }
 async function audit(page, name) {

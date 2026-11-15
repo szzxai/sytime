@@ -9,7 +9,7 @@ const { spawn } = require("node:child_process");
 async function startApp(prefix) {
   const root = path.resolve(__dirname, "../..");
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), prefix));
-  for (const filename of ["server.js", "data.json", "menu-json-rules.md"]) {
+  for (const filename of ["server.js", "data.json"]) {
     fs.copyFileSync(path.join(root, filename), path.join(directory, filename));
   }
   for (const dirname of ["apps", "packages", "data"]) {

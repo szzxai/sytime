@@ -54,11 +54,11 @@ test("Hono checks current account authority even when a JWT remains valid", asyn
   const app = await startApp("sytime-current-auth-");
   let db;
   try {
+    db = createDatabase(path.join(app.directory, "data.db"));
     for (const username of ["developer", "member"]) {
-      assert.equal((await app.api("/api/register", { method: "POST", body: { username, nickname: username, password: "CampusTest2026" } })).status, 201);
+      require("./helpers/seed-account.cjs")(db, username);
     }
     const login = (await app.api("/api/login", { method: "POST", body: { username: "member", password: "CampusTest2026" } })).data;
-    db = createDatabase(path.join(app.directory, "data.db"));
     query(db, "UPDATE users SET role='admin' WHERE id=?").run(login.user.id);
     const settings = body => app.api("/api/admin/settings/banner", { method: "PUT", token: login.token, body });
     assert.equal((await settings({ value: "authorized" })).status, 200);

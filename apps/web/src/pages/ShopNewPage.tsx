@@ -161,13 +161,10 @@ export function ShopNewPage() {
           ) : null
         ) : (
           <Empty
-            title={token ? '需要学生认证' : '登录后才能添加店铺'}
+            title={token ? '请通过社盟账号登录' : '登录后才能添加店铺'}
             description="学生每天最多推荐 10 家，审核通过后收录。"
           >
-            <SiteLink
-              className="btn btn--primary"
-              href={token ? '/student_verify.html' : loginUrl()}
-            >
+            <SiteLink className="btn btn--primary" href={token ? loginUrl() : loginUrl()}>
               {token ? '去认证' : '去登录'}
             </SiteLink>
           </Empty>

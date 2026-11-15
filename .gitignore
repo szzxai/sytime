@@ -55,3 +55,11 @@ test-results/
 
 # Reproducible distributable; build with npm run build:menu-skill
 /szzx-menu.skill
+
+# Native iOS build products and per-developer signing state
+apps/ios/build/
+apps/ios/DerivedData/
+apps/ios/TestResults/
+**/xcuserdata/
+*.xcuserstate
+apps/ios/Config/Local.xcconfig

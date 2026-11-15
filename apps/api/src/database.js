@@ -173,20 +173,6 @@ CREATE TABLE IF NOT EXISTS settings (
 INSERT OR IGNORE INTO settings (key, value) VALUES ('banner', '欢迎来到校园信息网');
 INSERT OR IGNORE INTO settings (key, value) VALUES ('banner_version', '0');
 
-CREATE TABLE IF NOT EXISTS student_applications (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  user_id INTEGER NOT NULL,
-  student_id TEXT NOT NULL,
-  class_name TEXT NOT NULL,
-  real_name TEXT NOT NULL,
-  extra_info TEXT,
-  reject_reason TEXT,
-  status TEXT NOT NULL DEFAULT 'pending',
-  created_at INTEGER NOT NULL DEFAULT (strftime('%s','now'))
-);
-
-CREATE INDEX IF NOT EXISTS idx_student_applications_user ON student_applications(user_id);
-
 CREATE TABLE IF NOT EXISTS ban_appeals (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   user_id INTEGER NOT NULL,
@@ -236,19 +222,6 @@ CREATE TABLE IF NOT EXISTS messages (
 CREATE INDEX IF NOT EXISTS idx_messages_user ON messages(user_id, read_at);
 CREATE INDEX IF NOT EXISTS idx_messages_created ON messages(user_id, created_at);
 `);
-  (function migrateStudentApplications() {
-    const cols = query(db, 'PRAGMA table_info(student_applications)')
-      .all()
-      .map(function (c) {
-        return c.name;
-      });
-    if (cols.indexOf('extra_info') === -1) {
-      db.$client.exec('ALTER TABLE student_applications ADD COLUMN extra_info TEXT');
-    }
-    if (cols.indexOf('reject_reason') === -1) {
-      db.$client.exec('ALTER TABLE student_applications ADD COLUMN reject_reason TEXT');
-    }
-  })();
   // 三元坊必吃榜（#6）：店铺表
   migrateShops(db);
   // 头衔系统（#10）：头衔目录、拥有关系与佩戴状态

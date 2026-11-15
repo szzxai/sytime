@@ -15,7 +15,7 @@ import {
   Submit,
   useToast,
 } from './ui';
-type Account = User & { student_id?: string; allow_appeal: number; ban_reason: string };
+type Account = User & { allow_appeal: number; ban_reason: string };
 export function AdminUsers() {
   const { user: actor } = useSession();
   const toast = useToast();
@@ -75,7 +75,7 @@ export function AdminUsers() {
           搜索用户
           <input
             className="input"
-            placeholder="用户名、昵称或展示 ID"
+            placeholder="用户名、姓名、昵称或展示 ID"
             value={search}
             maxLength={50}
             onChange={(e) => {
@@ -94,7 +94,7 @@ export function AdminUsers() {
           <table className="admin-table">
             <thead>
               <tr>
-                {['账号', '展示 ID', '角色', '学生身份', '状态', '管理操作'].map((h) => (
+                {['账号', '展示 ID', '角色', '状态', '管理操作'].map((h) => (
                   <th key={h}>{h}</th>
                 ))}
               </tr>
@@ -112,7 +112,6 @@ export function AdminUsers() {
                   <td>
                     <RoleTag role={u.role} />
                   </td>
-                  <td>{u.student_id || '未绑定'}</td>
                   <td>
                     <span
                       className={`review-status review-status--${u.status === 'active' ? 'approved' : 'rejected'}`}
@@ -125,6 +124,8 @@ export function AdminUsers() {
                       <div className="admin-user-actions">
                         <button
                           className="btn btn--sm"
+                          disabled={u.auth_source === 'sso'}
+                          title={u.auth_source === 'sso' ? '学生角色由社盟登录身份确定' : undefined}
                           onClick={() => setDialog({ user: u, kind: 'role' })}
                         >
                           角色
@@ -149,20 +150,6 @@ export function AdminUsers() {
                         >
                           {u.status === 'banned' ? '解封' : '封禁'}
                         </button>
-                        {u.student_id && (
-                          <button
-                            className="btn btn--sm"
-                            onClick={() =>
-                              setConfirm({
-                                title: `解绑 ${u.username} 的学生身份？`,
-                                path: `/api/admin/users/${u.id}/unbind`,
-                                method: 'POST',
-                              })
-                            }
-                          >
-                            解绑
-                          </button>
-                        )}
                       </div>
                     ) : (
                       <span className="u-muted">
@@ -245,17 +232,13 @@ export function AdminUsers() {
                 <>
                   <Field label="角色">
                     <select className="select" name="role" defaultValue={dialog.user.role}>
-                      {(
-                        [
-                          'user',
-                          ...(dialog.user.student_id ? ['student'] : []),
-                          ...(actor?.role === 'operator' ? ['admin'] : []),
-                        ] as const
-                      ).map((r) => (
-                        <option key={r} value={r}>
-                          {roleLabels[r as keyof typeof roleLabels]}
-                        </option>
-                      ))}
+                      {(['user', ...(actor?.role === 'operator' ? ['admin'] : [])] as const).map(
+                        (r) => (
+                          <option key={r} value={r}>
+                            {roleLabels[r as keyof typeof roleLabels]}
+                          </option>
+                        ),
+                      )}
                     </select>
                   </Field>
                   <p className="field__hint">
@@ -276,7 +259,7 @@ export function AdminUsers() {
       {confirm && (
         <Confirm
           title={confirm.title}
-          message="操作将记录并通知用户；身份解绑会撤回待审内容，角色或封禁变更会撤销会话。"
+          message="操作将记录并通知用户；角色或封禁变更会撤销会话。"
           label="确认"
           onClose={() => setConfirm(null)}
           onConfirm={() => action.mutate(confirm)}

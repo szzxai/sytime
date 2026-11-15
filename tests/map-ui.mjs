@@ -10,7 +10,7 @@ const root = path.resolve(import.meta.dirname, '..');
 const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'szzx-map-ui-'));
 const output = path.join(root, 'output/playwright/map');
 fs.mkdirSync(output, { recursive: true });
-for (const file of ['server.js', 'data.json', 'menu-json-rules.md']) fs.copyFileSync(path.join(root, file), path.join(temp, file));
+for (const file of ['server.js', 'data.json']) fs.copyFileSync(path.join(root, file), path.join(temp, file));
 for (const dir of ['apps', 'packages', 'data']) fs.cpSync(path.join(root, dir), path.join(temp, dir), { recursive: true });
 fs.symlinkSync(path.join(root, 'apps/web/dist'), path.join(temp, 'public'), 'junction');
 const base = 'http://127.0.0.1:4348';
@@ -41,10 +41,21 @@ try {
     const page = await context.newPage();
     page.on('pageerror', e => errors.push(e.message));
     const oldMapRequests = [];
-    page.on('request', request => { if (request.url().includes('/api/map-data') || request.url().includes('/map-floor.js')) oldMapRequests.push(request.url()); });
+    page.on('request', request => { if (request.url().includes('/api/map-data') || request.url().includes('/map-floor.js') || request.url().includes('/img/map/campus.svg')) oldMapRequests.push(request.url()); });
     await page.goto(base + '/map.html', { waitUntil: 'networkidle' });
     await page.waitForSelector('body[data-guide-ready="true"]');
+    check('artwork uses current version', await page.locator('svg[data-map-version="3"]').count() === 1);
+    check('labels paint above all map geometry', await page.evaluate(() => {
+      const labels = document.getElementById('atlas-labels');
+      return labels === labels.parentElement.lastElementChild && labels.children.length === 31
+        && document.querySelectorAll('#atlas-places text').length === 0;
+    }));
+    check('buildings paint after the global canopy', await page.evaluate(() => document.getElementById('atlas-trees').nextElementSibling.id === 'atlas-buildings'));
     check('all reference locations included', await page.locator('[data-map-place]').count() === 31);
+    check('map remains pure white in either theme', await page.locator('#guideMap').evaluate(el => getComputedStyle(el).backgroundColor === 'rgb(255, 255, 255)'));
+    check('SVG itself has an opaque white background', await page.locator('#atlas-white-background').getAttribute('fill') === '#fff');
+    check('artwork contains no raster images or external image references', await page.locator('.campus-art image, .campus-art foreignObject').count() === 0 && await page.locator('.campus-art use').evaluateAll(nodes => nodes.every(node => node.getAttribute('href')?.startsWith('#'))));
+    check('every landmark uses the detailed aerial artwork', await page.evaluate(places => places.every(p => document.getElementById('art-' + p.icon)?.hasAttribute('data-aerial-detail')), CampusPlaces));
     check('all landmarks have substantive introductions', CampusPlaces.every(p => p.summary && p.description.length >= 65 && !p.description.includes(p.area)));
     check('view switcher and floor map removed', await page.locator('#floorView, #guideViewBtn, #floorViewBtn, .campus-view-switch').count() === 0);
     const courtBounds = await page.locator('[data-map-place="basketball"] > use').boundingBox();
@@ -62,12 +73,12 @@ try {
         && p.temple.y < p.daomeng.y && p.daomeng.y < p.panchi.y && p.panchi.y < p.panshui.y
         && p.sanyuan.height > p.sanyuan.size * 3;
     })());
-    check('no unknown label invented for pink plot', await page.locator('#atlas-unnamed-plot text, [data-map-place="unnamed"]').count() === 0);
+    check('unnamed planted plot has no invented place name', await page.locator('#atlas-unnamed-plot text, [data-map-place="unnamed"]').count() === 0);
     check('all places reference existing vector artwork', await page.evaluate(places => places.every(p => document.getElementById('art-' + p.icon)), CampusPlaces));
     check('map has usable height', (await page.locator('#guideMap').boundingBox()).height > 200);
     await page.screenshot({ path: path.join(output, `${width}-${theme}.png`) });
     await audit(page, `${width}/${theme}/overview`);
-    const basketballLabel = page.locator('[data-map-place="basketball"] text');
+    const basketballLabel = page.locator('[data-map-label="basketball"] text');
     check('basketball label stays clear of the track footprint', await basketballLabel.evaluate(el => {
       const label = el.getBoundingClientRect();
       const track = document.querySelector('[data-map-place="track"] > rect').getBoundingClientRect();
@@ -228,7 +239,8 @@ try {
       await page.locator('#closeDetail').click();
       await page.locator('#guideReset').click();
       for (const [id, name] of [['zhengdao', '政道楼'], ['stele-gallery', '府学碑廊'], ['panchi', '泮池与泮桥']]) {
-        await page.locator('[data-map-place="' + id + '"]').click();
+        const target = await page.locator('[data-map-place="' + id + '"]').boundingBox();
+        await page.mouse.click(target.x + target.width / 2, target.y + target.height / 2);
         check('new reference landmark opens its own detail: ' + id, await page.locator('#detailName').textContent() === name);
         await page.locator('#closeDetail').click();
         await page.locator('#guideReset').click();
@@ -295,14 +307,24 @@ try {
   // A failed artwork request offers a retry without relying on the API or floor data.
   const context = await browser.newContext();
   const page = await context.newPage();
-  await page.route('**/img/map/campus.svg', route => route.fulfill({ status: 503, body: '' }));
+  await page.route('**/assets/campus-*.svg', route => route.fulfill({ status: 503, body: '' }));
   await page.goto(base + '/map.html', { waitUntil: 'networkidle' });
   check('artwork failure is recoverable', await page.locator('#guideStatus button').isVisible());
-  await page.unroute('**/img/map/campus.svg');
+  await page.unroute('**/assets/campus-*.svg');
   await page.locator('#guideStatus button').click();
   await page.waitForSelector('body[data-guide-ready="true"]');
   check('retry succeeds', await page.locator('#guideStatus').isHidden());
   await context.close();
+  // Stale or incomplete SVG must fail visibly instead of rendering black silhouettes.
+  for (const invalid of ['<svg xmlns="http://www.w3.org/2000/svg"><defs/></svg>', '<svg xmlns="http://www.w3.org/2000/svg" data-map-version="3"><g id="atlas-places"/></svg>']) {
+    const invalidContext = await browser.newContext();
+    const invalidPage = await invalidContext.newPage();
+    await invalidPage.route('**/assets/campus-*.svg', route => route.fulfill({ contentType: 'image/svg+xml', body: invalid }));
+    await invalidPage.goto(base + '/map.html', { waitUntil: 'networkidle' });
+    check('incompatible artwork offers retry', await invalidPage.locator('#guideStatus button').isVisible());
+    check('incompatible artwork never mounts', await invalidPage.locator('.campus-art').count() === 0);
+    await invalidContext.close();
+  }
   check('no browser errors', errors.length === 0);
 } catch (error) {
   errors.push({ fatal: error.stack, log: log.slice(-800) });

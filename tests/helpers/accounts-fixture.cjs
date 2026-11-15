@@ -51,13 +51,9 @@ async function fixture(t) {
     return r.data.token;
   }
   async function account(username, role = 'user') {
-    const r = await api('/api/register', {
-      method: 'POST',
-      body: { username, nickname: username, password: PASSWORD },
-    });
-    assert.equal(r.status, 201, JSON.stringify(r.data));
-    if (role !== 'user') query(db, 'UPDATE users SET role=? WHERE id=?').run(role, r.data.id);
-    return { id: r.data.id, username, token: await login(username) };
+    const id = Number(query(db, 'INSERT INTO users(username,nickname,password_hash,role) VALUES(?,?,?,?)').run(username, username, bcrypt.hashSync(PASSWORD, 4), role).lastInsertRowid);
+    query(db, 'UPDATE users SET display_id=? WHERE id=?').run(String(id), id);
+    return { id, username, token: await login(username) };
   }
   async function decide(actor, id, decision = 'approve', reason = '') {
     return api(`/api/admin/reviews/${id}/decision`, {
@@ -66,6 +62,6 @@ async function fixture(t) {
       body: { decision, reason },
     });
   }
-  return { root, api, db, account, login, decide };
+  return { root, app, api, db, account, login, decide };
 }
 module.exports = { fixture, PASSWORD, SHOP };

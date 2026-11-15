@@ -8,6 +8,8 @@ export function SettingsLayout({
 }: {
   slots?: {
     settingsStatus?: ReactNode;
+    accountSecurity?: ReactNode;
+    sessionSecurity?: ReactNode;
     siteMsg?: ReactNode;
     shopDefaultType?: ReactNode;
     defaultCollectionShops?: ReactNode;
@@ -78,52 +80,55 @@ export function SettingsLayout({
         </nav>
         <div className="shell__main">
           <section className="view" id="view-security" hidden {...bind['view-security']}>
-            <form id="passwordForm" noValidate {...bind['passwordForm']}>
-              <div className="panel">
-                <div className="panel__head">
-                  <h2 className="panel__title">{'修改密码'}</h2>
+            {slots.accountSecurity ?? (
+              <form id="passwordForm" noValidate {...bind['passwordForm']}>
+                <div className="panel">
+                  <div className="panel__head">
+                    <h2 className="panel__title">{'修改密码'}</h2>
+                  </div>
+                  <div className="panel__body form">
+                    <PasswordField
+                      label="旧密码"
+                      id="oldPassword"
+                      name="oldPassword"
+                      required
+                      autoComplete="current-password"
+                      strength={false}
+                      hint=""
+                    />
+                    <PasswordField
+                      label="新密码"
+                      id="newPassword"
+                      name="newPassword"
+                      required
+                      autoComplete="new-password"
+                      hint=""
+                    />
+                    <PasswordField
+                      label="确认新密码"
+                      id="confirmPassword"
+                      name="confirmPassword"
+                      strength={false}
+                      required
+                      autoComplete="new-password"
+                      hint=""
+                    />
+                  </div>
+                  <div className="panel__foot">
+                    <span className="status-text" id="passwordMsg" role="status"></span>
+                    <button
+                      type="submit"
+                      className="btn btn--primary"
+                      id="passwordSubmit"
+                      {...bind['passwordSubmit']}
+                    >
+                      {' 保存 '}
+                    </button>
+                  </div>
                 </div>
-                <div className="panel__body form">
-                  <PasswordField
-                    label="旧密码"
-                    id="oldPassword"
-                    name="oldPassword"
-                    required
-                    autoComplete="current-password"
-                    strength={false}
-                    hint=""
-                  />
-                  <PasswordField
-                    label="新密码"
-                    id="newPassword"
-                    name="newPassword"
-                    required
-                    autoComplete="new-password"
-                    hint=""
-                  />
-                  <PasswordField
-                    label="确认新密码"
-                    id="confirmPassword"
-                    name="confirmPassword"
-                    strength={false}
-                    required
-                    autoComplete="new-password"
-                    hint=""
-                  />
-                </div>
-                <div className="panel__foot">
-                  <span className="status-text" id="passwordMsg" role="status"></span>
-                  <button
-                    type="submit"
-                    className="btn btn--primary"
-                    id="passwordSubmit"
-                    {...bind['passwordSubmit']}
-                  >
-                    {' 保存 '}
-                  </button>
-                </div>
-              </div>
-            </form>
+              </form>
+            )}
+            {slots.sessionSecurity}
           </section>
           <section className="view" id="view-site" hidden {...bind['view-site']}>
             <form id="siteForm" noValidate {...bind['siteForm']}>

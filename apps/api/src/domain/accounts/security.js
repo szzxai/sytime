@@ -98,6 +98,7 @@ const action = (handler) => async (c) => {
         error: e.status ? e.message : '操作失败，请稍后重试',
         message: e.status ? e.message : '操作失败，请稍后重试',
         ...(e.retry_after ? { retry_after: e.retry_after } : {}),
+        ...(e.entry_id ? { entry_id: e.entry_id } : {}),
       },
       e.status || 500,
     );

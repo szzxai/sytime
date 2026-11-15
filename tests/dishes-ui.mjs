@@ -1,3 +1,4 @@
+import seedAccount from './helpers/seed-account.cjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -52,12 +53,8 @@ try {
     ],
   );
   db.close();
-  await site.api('/api/register', {
-    method: 'POST',
-    body: { username: 'menu-ui', nickname: '食谱测试', password: 'CampusTest2026' },
-  });
   const roleDb = new database.DatabaseSync(path.join(site.directory, 'data.db'));
-  roleDb.prepare("UPDATE users SET role='student' WHERE username='menu-ui'").run();
+  seedAccount(roleDb, 'menu-ui', 'student', '食谱测试');
   roleDb.close();
   const login = (
     await site.api('/api/login', {
@@ -65,12 +62,8 @@ try {
       body: { username: 'menu-ui', password: 'CampusTest2026' },
     })
   ).data;
-  await site.api('/api/register', {
-    method: 'POST',
-    body: { username: 'menu-reviewer', nickname: '审核员', password: 'CampusTest2026' },
-  });
   const staffDb = new database.DatabaseSync(path.join(site.directory, 'data.db'));
-  staffDb.prepare("UPDATE users SET role='admin' WHERE username='menu-reviewer'").run();
+  seedAccount(staffDb, 'menu-reviewer', 'admin', '审核员');
   staffDb.close();
   const staff = (
     await site.api('/api/login', {

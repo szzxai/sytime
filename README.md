@@ -46,3 +46,22 @@
 <div align="center">
   <sub>Built with ❤️ by <a href="https://github.com/szzxai">苏州中学人工智能实验室</a></sub>
 </div>
+
+### 社盟单点登录配置
+
+学生通过苏州中学社团管理系统的 OpenID Connect 登录，首次登录自动建立 `student` 账号并同步真实姓名。管理员及全部现有本地账号继续使用原用户名、密码和角色。登录页提供两个入口。
+
+在社盟后台为拾光酥糕创建独立的 Confidential / Authorization Code 应用，使用 RS256 与 PKCE S256，然后在服务端环境配置：
+
+```dotenv
+APP_ORIGIN=https://你的站点域名
+OIDC_ISSUER=https://szzxclubunion.cn/o
+OIDC_CLIENT_ID=社盟分配的客户端标识
+OIDC_CLIENT_SECRET=社盟分配的客户端密钥
+```
+
+向社盟登记精确地址：回调地址为 `<APP_ORIGIN>/api/sso/callback`，登出回跳地址为 `<APP_ORIGIN>/login.html`。密钥通过服务端环境注入。配置尚未完成时，社盟登录页会提示稍后重试，现有账号密码登录可继续使用。
+
+iOS 通过系统认证浏览器完成同一服务端流程，使用绑定客户端校验值、有效期 60 秒的一次性凭证返回 App，再向本站兑换会话；社盟后台登记的仍是上述 HTTPS 回调地址。
+
+启动时执行账号迁移，保留现有本地账号及其资料、角色、收藏和内容，清理旧学生认证申请、认证通知与绑定表。部署前备份数据库。学生封禁与解封由本站管理，每次登录及身份操作按本站状态执行。

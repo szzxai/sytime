@@ -5,7 +5,13 @@ import type { DatabaseClient } from '../../../packages/db/src/client';
 import { roleWeights, type Role } from '../../../packages/shared/src/index';
 export function createAuth(db: DatabaseClient, secret: string) {
   const checkRole = (requiredRole?: Role) => async (c: Context, next: Next) => {
-    let user: { id: number | null; role: Role; username: string | null; session_id?: string } = {
+    let user: {
+      id: number | null;
+      role: Role;
+      username: string | null;
+      session_id?: string;
+      auth_source?: string;
+    } = {
       id: null,
       role: 'guest',
       username: null,
@@ -21,10 +27,17 @@ export function createAuth(db: DatabaseClient, secret: string) {
         }) as jwt.JwtPayload;
         const account = db.$client
           .prepare(
-            `SELECT u.id,u.username,u.role,u.status,u.session_version FROM users u JOIN account_sessions s ON s.user_id=u.id WHERE s.id=? AND s.expires_at>unixepoch() AND s.version=u.session_version`,
+            `SELECT u.id,u.username,u.role,u.status,u.session_version,u.sso_subject FROM users u JOIN account_sessions s ON s.user_id=u.id WHERE s.id=? AND s.expires_at>unixepoch() AND s.version=u.session_version`,
           )
           .get(payload.sid) as
-          | { id: number; username: string; role: Role; status: string; session_version: number }
+          | {
+              id: number;
+              username: string;
+              role: Role;
+              status: string;
+              session_version: number;
+              sso_subject: string | null;
+            }
           | undefined;
         if (
           account?.status === 'active' &&
@@ -37,6 +50,7 @@ export function createAuth(db: DatabaseClient, secret: string) {
             role: account.role,
             username: account.username,
             session_id: payload.sid,
+            auth_source: account.sso_subject ? 'sso' : 'local',
           };
       } catch {
         /* Invalid, expired, or revoked sessions are anonymous. */

@@ -3,6 +3,8 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { useState, type ReactNode } from 'react';
 import { AdminUsers } from '../components/AdminUsers';
 import { TitleManagement } from '../components/TitleManagement';
+import { WikiManagement } from '../components/WikiManagement';
+import { WikiDiff } from '../components/WikiMarkdown';
 import { reviewLabels, statusLabels, type Submission } from '../components/Submissions';
 import {
   Confirm,
@@ -31,6 +33,7 @@ const nav = [
   { key: 'users', label: '用户管理', icon: 'users' },
   { key: 'tickets', label: '工单处理', icon: 'clipboard' },
   { key: 'content', label: '站点内容', icon: 'megaphone' },
+  { key: 'wiki', label: 'Wiki 管理', icon: 'clipboard' },
   { key: 'titles', label: '头衔管理', icon: 'award' },
   { key: 'audit', label: '操作记录', icon: 'clock' },
 ];
@@ -118,6 +121,8 @@ function AdminWorkspace() {
             <Tickets />
           ) : panel === 'content' ? (
             <Content />
+          ) : panel === 'wiki' ? (
+            <WikiManagement />
           ) : panel === 'titles' ? (
             <TitleManagement />
           ) : (
@@ -246,7 +251,7 @@ function Reviews() {
       <div className="admin-panel__head">
         <div>
           <h2>统一审核队列</h2>
-          <p>资料、学生身份、内容与申诉在此处理；不能审核自己的申请。</p>
+          <p>资料、内容与申诉在此处理；不能审核自己的申请。</p>
         </div>
         <strong>{query.data?.total || 0} 项</strong>
       </div>
@@ -426,9 +431,7 @@ function Reviews() {
                             onChange={(e) => setReason(e.target.value)}
                           />
                         </Field>
-                        <p className="field__hint">
-                          结果会通知申请人。学生认证通过后，同学号的其他申请将自动拒绝。
-                        </p>
+                        <p className="field__hint">结果会通知申请人。</p>
                         <div className="row">
                           <button
                             className="btn"
@@ -463,9 +466,6 @@ function Reviews() {
   );
 }
 const fields: Record<string, string> = {
-  student_id: '学号',
-  class_name: '班级',
-  real_name: '真实姓名',
   extra_info: '补充信息',
   value: '申请内容',
   name: '名称',
@@ -491,6 +491,26 @@ const fields: Record<string, string> = {
   total_price: '总价',
 };
 function Payload({ payload }: { payload: Record<string, unknown> }) {
+  if (typeof payload.markdown === 'string')
+    return (
+      <div className="stack">
+        <p>标题：{String(payload.title)}</p>
+        <p>归属文件夹：{String(payload.folder_path)}</p>
+        <p>别名：{String(payload.aliases || '')}</p>
+        <p>编辑摘要：{String(payload.summary)}</p>
+        <p>参考来源：{String(payload.sources || '')}</p>
+        <WikiDiff before={String(payload.before_markdown || '')} after={payload.markdown} />
+        {Array.isArray(payload.images) &&
+          payload.images.map((id) => (
+            <img
+              key={String(id)}
+              className="admin-review-image"
+              src={`/api/wiki/images/${id}`}
+              alt="待审核 Wiki 配图"
+            />
+          ))}
+      </div>
+    );
   return (
     <>
       <dl className="admin-detail">

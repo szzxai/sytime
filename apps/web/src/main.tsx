@@ -21,6 +21,8 @@ import { Loading, ToastProvider } from './components/ui';
 import { queryClient } from './lib/api';
 import { SessionProvider } from './lib/session';
 const pages = {
+  wiki: lazyRouteComponent(() => import('./pages/WikiPage'), 'WikiPage'),
+  'wiki-edit': lazyRouteComponent(() => import('./pages/WikiEditPage'), 'WikiEditPage'),
   home: lazyRouteComponent(() => import('./pages/HomePage'), 'HomePage'),
   about: lazyRouteComponent(() => import('./pages/AboutPage'), 'AboutPage'),
   map: lazyRouteComponent(() => import('./pages/MapPage'), 'MapPage'),
@@ -36,14 +38,15 @@ const pages = {
   settings: lazyRouteComponent(() => import('./pages/SettingsPage'), 'SettingsPage'),
   admin: lazyRouteComponent(() => import('./pages/AdminPage'), 'AdminPage'),
   login: lazyRouteComponent(() => import('./pages/AuthPages'), 'LoginPage'),
-  register: lazyRouteComponent(() => import('./pages/AuthPages'), 'RegisterPage'),
-  student_verify: lazyRouteComponent(() => import('./pages/AuthPages'), 'StudentVerifyPage'),
+  'login-password': lazyRouteComponent(() => import('./pages/AuthPages'), 'PasswordLoginPage'),
   '404': lazyRouteComponent(() => import('./pages/NotFoundPage'), 'NotFoundPage'),
 };
 function Layout() {
   const loc = useDisplayedLocation();
   useEffect(() => {
     const names: Record<string, string> = {
+      wiki: 'Wiki',
+      'wiki-edit': '编辑 Wiki',
       map: '校园地图',
       recipe: '菜品与食谱',
       dish: '菜品详情',
@@ -57,8 +60,7 @@ function Layout() {
       settings: '设置',
       admin: '管理后台',
       login: '登录',
-      register: '注册',
-      student_verify: '学生认证',
+      'login-password': '账号密码登录',
       about: '关于我们',
     };
     const name = loc.pathname.slice(1).replace('.html', '');

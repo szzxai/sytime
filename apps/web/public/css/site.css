@@ -183,7 +183,7 @@
   /* 布局 */
   --header-h: 3.5rem; /* 56，所有视口一致 */
   --page-pad: 1rem;
-  --w-narrow: 25rem; /* 400 登录/注册 */
+  --w-narrow: 25rem; /* 400 登录 */
   --w-form: 36rem; /* 576 表单页 */
   --w-prose: 50rem; /* 720 阅读页 */
   --w-page: 74rem; /* 1088 常规列表页 */
@@ -4991,7 +4991,7 @@ dialog .toast-host {
   border-top: 1px solid var(--line);
 }
 
-/* 登录 / 注册 / 学生认证 */
+/* 登录 */
 .auth {
   flex: 1 0 auto;
   display: grid;
@@ -7017,32 +7017,6 @@ html.theme-transitioning *::after {
   }
 }
 
-/* Student certification is a desktop page, not an authentication card. */
-.student-identity {
-  max-width: 72rem;
-}
-.student-identity > .page-head {
-  display: block;
-}
-.student-identity > .page-head h1 {
-  margin-bottom: var(--sp-2);
-}
-@media (min-width: 900px) {
-  .student-identity {
-    display: grid;
-    grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
-    align-items: start;
-    align-content: start;
-    gap: var(--sp-6);
-  }
-  .student-identity > * + * {
-    margin-top: 0;
-  }
-  .student-identity > .page-head {
-    grid-column: 1 / -1;
-    margin-bottom: 0;
-  }
-}
 .profile-hero__id {
   color: var(--ink-3);
   font-size: var(--fs-xs);

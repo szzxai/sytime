@@ -15,7 +15,6 @@ const base = "http://127.0.0.1:" + port;
 
 fs.copyFileSync(path.join(root, "server.js"), path.join(temp, "server.js"));
 fs.copyFileSync(path.join(root, "data.json"), path.join(temp, "data.json"));
-fs.copyFileSync(path.join(root, "menu-json-rules.md"), path.join(temp, "menu-json-rules.md"));
 fs.cpSync(path.join(root, "apps"), path.join(temp, "apps"), { recursive: true, filter: source => !source.includes("node_modules") && (!source.includes("/src") && !source.includes("/public")) });
 fs.cpSync(path.join(root,"packages"),path.join(temp,"packages"),{recursive:true});
 fs.cpSync(path.join(root, "data"), path.join(temp, "data"), { recursive: true });
@@ -51,7 +50,8 @@ async function api(url, { token, method = "GET", body } = {}) {
 }
 
 async function account(username) {
-  await api("/api/register", { method: "POST", body: { username, nickname: username, password: "CampusTest2026" } });
+  const seed = new DatabaseSync(path.join(temp, "data.db"));
+  try { require("./helpers/seed-account.cjs")(seed, username); } finally { seed.close(); }
   const login = await api("/api/login", { method: "POST", body: { username, password: "CampusTest2026" } });
   assert.equal(login.status, 200, "login " + username);
   return login.data;

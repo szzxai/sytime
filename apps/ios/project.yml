@@ -1,0 +1,47 @@
+name: Sytime
+options:
+  developmentLanguage: zh-Hans
+  bundleIdPrefix: cn.szzxai.sytime
+  deploymentTarget:
+    iOS: '26.0'
+  xcodeVersion: '27.2'
+settings:
+  base:
+    SWIFT_VERSION: '5.0'
+    MARKETING_VERSION: '1.0.0'
+    CURRENT_PROJECT_VERSION: '1'
+    DEVELOPMENT_TEAM: ''
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+targets:
+  Sytime:
+    type: application
+    platform: iOS
+    sources: [Sytime]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: cn.szzxai.sytime.ios
+        TARGETED_DEVICE_FAMILY: '1,2'
+        GENERATE_INFOPLIST_FILE: NO
+        INFOPLIST_FILE: Sytime/Resources/Info.plist
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        SUPPORTS_MACCATALYST: NO
+    scheme:
+      testTargets: [SytimeTests, SytimeUITests]
+      gatherCoverageData: true
+  SytimeTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources: [SytimeTests]
+    dependencies:
+      - target: Sytime
+    settings:
+      GENERATE_INFOPLIST_FILE: YES
+  SytimeUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources: [SytimeUITests]
+    dependencies:
+      - target: Sytime
+    settings:
+      GENERATE_INFOPLIST_FILE: YES

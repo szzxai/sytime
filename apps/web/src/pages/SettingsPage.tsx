@@ -204,6 +204,54 @@ function SettingsContent() {
   bind.ticketSubmit = { disabled: ticket.isPending };
   const slots: Record<string, React.ReactNode> = {
     settingsStatus: null,
+    accountSecurity:
+      user.auth_source === 'sso' ? (
+        <div className="panel">
+          <div className="panel__body stack">
+            <h2>社盟账号安全</h2>
+            <p>姓名与账号密码由社盟管理。</p>
+            <p>重新验证社盟身份后，可撤销所有设备的本站会话。</p>
+            <a className="btn" href="/api/sso/start?purpose=revoke">
+              撤销所有设备会话
+            </a>
+          </div>
+        </div>
+      ) : undefined,
+    sessionSecurity:
+      user.auth_source !== 'sso' ? (
+        <form
+          className="panel"
+          onSubmit={async (e) => {
+            e.preventDefault();
+            const password = formValues(e.currentTarget).password;
+            try {
+              await api('/api/user/sessions/revoke', { method: 'POST', body: { password } });
+              localStorage.removeItem('token');
+              localStorage.removeItem('user');
+              location.assign('/login.html');
+            } catch (e) {
+              toast((e as Error).message, 'error');
+            }
+          }}
+        >
+          <div className="panel__body stack">
+            <h2>撤销所有设备会话</h2>
+            <label className="field">
+              当前密码
+              <input
+                className="input"
+                type="password"
+                name="password"
+                autoComplete="current-password"
+                required
+              />
+            </label>
+            <button className="btn" type="submit">
+              撤销所有设备会话
+            </button>
+          </div>
+        </form>
+      ) : null,
     siteMsg: privacyStatus,
     shopDefaultType: (
       <>
@@ -270,7 +318,6 @@ function SettingsContent() {
       onClick={(e) => {
         if ((e.target as HTMLElement).closest('[data-logout]')) {
           logout();
-          location.href = '/index.html';
         }
       }}
     >

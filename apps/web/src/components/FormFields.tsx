@@ -1,5 +1,4 @@
 import { passwordRules } from '@sytime/shared';
-import { SiteLink } from './SiteLink';
 import { useEffect, useState, type InputHTMLAttributes, type ReactNode } from 'react';
 import { Icon } from './ui';
 
@@ -84,15 +83,11 @@ export function AuthFrame({
   title,
   description,
   children,
-  register = false,
 }: {
   title: string;
   description: string;
   children: ReactNode;
-  register?: boolean;
 }) {
-  const next = new URLSearchParams(location.search).get('next');
-  const href = `${register ? '/login.html' : '/register.html'}${next ? `?next=${encodeURIComponent(next)}` : ''}`;
   return (
     <main id="main" className="auth container container--narrow">
       <div className="card auth-card">
@@ -108,10 +103,6 @@ export function AuthFrame({
         <h1 className="auth-card__title">{title}</h1>
         <p className="auth-card__desc">{description}</p>
         {children}
-        <p className="auth-card__switch">
-          {register ? '已有账号？' : '还没有账号？'}
-          <SiteLink href={href}>{register ? '立即登录' : '立即注册'}</SiteLink>
-        </p>
       </div>
     </main>
   );

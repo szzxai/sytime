@@ -129,19 +129,6 @@ try {
     (await portrait.page.locator('#heroUsername').textContent()) === student.username,
     'public profile uses username',
   );
-  await portrait.page.goto(f.site.base + '/student_verify.html');
-  await portrait.page.getByRole('heading', { name: '学生身份', exact: true }).waitFor();
-  f.check(
-    await portrait.page
-      .locator('.student-identity')
-      .evaluate((el) => el.getBoundingClientRect().width > 900),
-    'student application uses desktop width',
-  );
-  await f.audit(portrait.page, 'desktop student application');
-  await portrait.page.screenshot({
-    path: path.join(output, 'student-desktop-light.png'),
-    fullPage: true,
-  });
   await portrait.ctx.close();
   const learner = await f.context(student, { cookie: true, width: 390 });
   await learner.page.goto(f.site.base + `/dish.html?id=${dish.id}`);
@@ -180,7 +167,7 @@ try {
   // Compression must reach server validation rather than fail the upload-size check.
   await learner.page.getByRole('alert').filter({ hasText: '已有待审核申请' }).waitFor();
   await learner.page.keyboard.press('Escape');
-  await learner.page.goto(f.site.base + '/student_verify.html');
+  await learner.page.goto(f.site.base + '/settings.html');
   const smallInputs = await learner.page
     .locator('input:not([type=hidden]),textarea,select')
     .evaluateAll((elements) =>
@@ -190,7 +177,7 @@ try {
         .map((el) => el.outerHTML),
     );
   assert.deepEqual(smallInputs, []);
-  f.check(true, 'mobile certification inputs are at least 16px');
+  f.check(true, 'mobile settings inputs are at least 16px');
   await learner.page.goto(f.site.base + '/map.html');
   await learner.page.waitForFunction(() => document.body.dataset.guideReady === 'true');
   await learner.page.locator('#placesToggle').click();

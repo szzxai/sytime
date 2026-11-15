@@ -327,13 +327,10 @@ export function ShopPage() {
                           <span id="reviewAccess" className="callout__text">
                             {token
                               ? '学生及以上权限可点赞或评价'
-                              : '登录并完成学生认证后可点赞或评价'}
+                              : '通过社盟账号登录后可点赞或评价'}
                           </span>
-                          <SiteLink
-                            className="btn btn--sm"
-                            href={token ? '/student_verify.html' : loginUrl()}
-                          >
-                            {token ? '学生认证' : '去登录'}
+                          <SiteLink className="btn btn--sm" href={token ? loginUrl() : loginUrl()}>
+                            {'去登录'}
                           </SiteLink>
                         </div>
                       )}

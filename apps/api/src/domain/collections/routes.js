@@ -147,11 +147,32 @@ function mountCollectionRoutes(app, db, options) {
       return;
     }
     if (isPublic && c.get('user').role === 'user') {
-      fail(c, 403, 'student required', '普通用户仅可使用私密收藏夹，请先完成学生认证');
+      fail(c, 403, 'student required', '普通用户仅可使用私密收藏夹，请通过社盟账号登录');
       return;
     }
     const row = store.create(db, c.get('user').id, section, name, isPublic);
     c.res = c.json({ collection: store.serializeCollection(row) }, 201);
+  });
+  router.put('/collections/:id', requireLogin, function (c) {
+    const collection = ownedCollection(c);
+    if (!collection) return;
+    const body = c.get('body') || {};
+    const name = typeof body.name === 'string' ? body.name.trim() : '';
+    if (!name || name.length > store.NAME_MAX) {
+      fail(c, 400, 'invalid name', '收藏夹名称需为 1–' + store.NAME_MAX + ' 个字符');
+      return;
+    }
+    query(db, 'UPDATE collections SET name = ? WHERE id = ?').run(name, collection.id);
+    const updated = store.getById(db, collection.id);
+    const count = query(
+      db,
+      'SELECT COUNT(*) AS n FROM collection_items WHERE collection_id = ?',
+    ).get(collection.id).n;
+    c.res = c.json({
+      collection: store.serializeCollection(
+        Object.assign({}, updated, { items_count: Number(count) }),
+      ),
+    });
   });
   router.post('/collections/:id/items', requireLogin, function (c) {
     const collection = ownedCollection(c);
@@ -265,7 +286,7 @@ function mountCollectionRoutes(app, db, options) {
     const isPublic =
       body.is_public === true || body.is_public === 1 || body.is_public === '1' ? 1 : 0;
     if (isPublic && c.get('user').role === 'user') {
-      fail(c, 403, 'student required', '普通用户仅可使用私密收藏夹，请先完成学生认证');
+      fail(c, 403, 'student required', '普通用户仅可使用私密收藏夹，请通过社盟账号登录');
       return;
     }
     store.setPublic(db, collection.id, isPublic);

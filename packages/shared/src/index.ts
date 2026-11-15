@@ -49,6 +49,7 @@ export interface Title {
   progress?: number;
 }
 export interface User {
+  auth_source?: 'local' | 'sso';
   id: number;
   username: string;
   nickname: string;

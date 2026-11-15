@@ -1,3 +1,4 @@
+import seedAccount from './helpers/seed-account.cjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -14,7 +15,6 @@ const output = path.join(root, 'output/playwright');
 fs.mkdirSync(output, { recursive: true });
 fs.copyFileSync(path.join(root, 'server.js'), path.join(temp, 'server.js'));
 fs.copyFileSync(path.join(root, 'data.json'), path.join(temp, 'data.json'));
-fs.copyFileSync(path.join(root, 'menu-json-rules.md'), path.join(temp, 'menu-json-rules.md'));
 fs.cpSync(path.join(root, 'apps'), path.join(temp, 'apps'), {
   recursive: true,
   filter: (source) =>
@@ -64,12 +64,8 @@ async function api(url, { token, method = 'GET', body } = {}) {
   return { status: response.status, data };
 }
 async function account(username, role = 'user') {
-  await api('/api/register', {
-    method: 'POST',
-    body: { username, nickname: username, password: 'CampusTest2026' },
-  });
   const roleDb = new DatabaseSync(path.join(temp, 'data.db'));
-  roleDb.prepare('UPDATE users SET role=? WHERE username=?').run(role, username);
+  seedAccount(roleDb, username, role);
   roleDb.close();
   return (
     await api('/api/login', {
@@ -153,15 +149,6 @@ try {
     method: 'PUT',
     body: { value: '校园信息网新界面测试横幅。' },
   });
-  await api('/api/student/apply', {
-    token: ordinary.token,
-    method: 'POST',
-    body: {
-      student_id: '2026001',
-      class_name: '高一（1）班',
-      real_name: '测试同学',
-    },
-  });
   await api('/api/tickets', {
     token: ordinary.token,
     method: 'POST',
@@ -231,8 +218,6 @@ try {
     'settings',
     'inbox',
     'login',
-    'register',
-    'student_verify',
     'announcements',
     'recipe',
     'dish',
@@ -245,7 +230,7 @@ try {
     for (const width of [360, 1280]) {
       for (const theme of ['light', 'dark']) {
         for (const file of files) {
-          const login = ['profile', 'admin', 'student_verify', 'settings', 'inbox'].includes(file)
+          const login = ['profile', 'admin', 'settings', 'inbox'].includes(file)
             ? admin
             : null;
           const url = `/${file}.html${file === 'dish' ? '?id=1' : ''}`;
@@ -866,21 +851,15 @@ try {
     await audit(settings.page, 'settings ' + panel);
   }
   await settings.ctx.close();
-  const registration = await pageFor(null, '/register.html?next=%2Fshops.html', 360);
-  for (const [id, value] of [
-    ['username', 'ui-registration'],
-    ['nickname', '注册昵称'],
-    ['password', 'CampusTest2026'],
-    ['confirm', 'CampusTest2026'],
-  ])
-    await registration.page.locator('#' + id).fill(value);
-  await registration.page.locator('#submitBtn').click();
-  await registration.page.waitForURL('**/shops.html');
-  check(
-    'registration logs in and respects return URL',
-    (await registration.page.evaluate(() => localStorage.getItem('token'))) === 'session',
-  );
-  await registration.ctx.close();
+  const passwordLogin = await pageFor(null, '/login.html?next=%2Fshops.html', 360);
+  await passwordLogin.page.getByRole('link', { name: '使用账号密码登录', exact: true }).click();
+  await passwordLogin.page.locator('#username').fill('campus-user');
+  await passwordLogin.page.locator('#password').fill('CampusTest2026');
+  await passwordLogin.page.locator('#submitBtn').click();
+  await passwordLogin.page.waitForURL('**/shops.html');
+  check('existing account login respects return URL',
+    (await passwordLogin.page.evaluate(() => localStorage.getItem('token'))) === 'session');
+  await passwordLogin.ctx.close();
   const catalog = (await api('/api/admin/titles', { token: admin.token })).data.titles;
   check(
     'automatic and manual title catalog',

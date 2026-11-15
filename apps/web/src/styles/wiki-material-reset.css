@@ -1,0 +1,120 @@
+/* Upstream base reset, scoped to leave the host chrome untouched. */
+.wiki-material,
+.wiki-material *,
+.wiki-material ::before,
+.wiki-material ::after {
+  box-sizing: border-box;
+}
+.wiki-material a {
+  color: inherit;
+  text-decoration: none;
+}
+.wiki-material a:hover {
+  text-decoration: none;
+}
+.wiki-material hr {
+  box-sizing: content-box;
+  display: block;
+  height: calc(var(--wiki-unit) * 0.05);
+  padding: 0;
+  overflow: visible;
+  border: 0;
+}
+.wiki-material small {
+  font-size: 80%;
+}
+.wiki-material sub,
+.wiki-material sup {
+  line-height: 1em;
+}
+.wiki-material img {
+  border-style: none;
+}
+.wiki-material table {
+  border-spacing: 0;
+  border-collapse: separate;
+}
+.wiki-material td,
+.wiki-material th {
+  font-weight: 400;
+  vertical-align: top;
+}
+.wiki-material button {
+  padding: 0;
+  margin: 0;
+  font-family: inherit;
+  font-size: inherit;
+  background: transparent;
+  border: 0;
+}
+.wiki-material input {
+  border: 0;
+  outline: none;
+}
+.wiki-material aside,
+.wiki-material input {
+  font-family: var(--md-text-font-family);
+  font-feature-settings: 'kern', 'liga';
+  color: var(--md-typeset-color);
+}
+.wiki-material code,
+.wiki-material kbd,
+.wiki-material pre {
+  font-family: var(--md-code-font-family);
+  font-feature-settings: 'kern';
+}
+.wiki-material p {
+  margin-block: 1em;
+}
+.wiki-material ul,
+.wiki-material ol {
+  list-style: revert;
+}
+.wiki-material h1,
+.wiki-material h2,
+.wiki-material h3,
+.wiki-material h4,
+.wiki-material h5,
+.wiki-material h6 {
+  font-family: inherit;
+  text-wrap: initial;
+  color: inherit;
+}
+.wiki-material strong,
+.wiki-material b {
+  font-weight: 700;
+}
+.wiki-material label {
+  font: inherit;
+}
+.wiki-material a,
+.wiki-material button,
+.wiki-material input,
+.wiki-material label {
+  -webkit-tap-highlight-color: transparent;
+}
+.wiki-material [hidden] {
+  display: none !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  .wiki-material *,
+  .wiki-material ::before,
+  .wiki-material ::after {
+    transition: none !important;
+  }
+}
+
+.wiki-material h4,
+.wiki-material h5,
+.wiki-material h6 {
+  line-height: inherit;
+}
+.wiki-material button {
+  font-feature-settings: normal;
+  line-height: normal;
+}
+.wiki-material input[type='checkbox'] {
+  font-size: 13.33333333333333px;
+  line-height: normal;
+  margin: 3px 3px 3px 4px;
+}

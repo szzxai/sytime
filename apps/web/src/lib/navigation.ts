@@ -30,8 +30,13 @@ declare module '@tanstack/react-router' {
     sitePanelTransition?: boolean;
   }
 }
-const sections = ['index', 'map', 'recipe', 'shops', 'announcements'];
-const parents: Record<string, string> = { dish: 'recipe', shop: 'shops', 'shop-new': 'shops' };
+const sections = ['index', 'map', 'recipe', 'shops', 'wiki', 'announcements'];
+const parents: Record<string, string> = {
+  dish: 'recipe',
+  shop: 'shops',
+  'shop-new': 'shops',
+  'wiki-edit': 'wiki',
+};
 export function pageName(path: string) {
   return path.slice(1).replace('.html', '') || 'index';
 }

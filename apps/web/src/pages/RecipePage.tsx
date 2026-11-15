@@ -146,7 +146,7 @@ export function RecipePage() {
   const filteredDishes = [...new Map(advancedRows.map((r) => [r.dish_id, r])).values()];
   function write(row: Supply) {
     if (!session.token) return location.assign(loginUrl());
-    if (session.user?.role === 'user') return location.assign('/student_verify.html');
+    if (session.user?.role === 'user') return location.assign(loginUrl());
     setWriter({
       id: row.dish_id,
       name: row.name,

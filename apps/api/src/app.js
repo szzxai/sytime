@@ -80,6 +80,7 @@ module.exports = function createApp(root) {
   require('../../../packages/db/src/migrate').migrateDatabase(db, root);
   require('./database')(db);
   require('./domain/accounts/migrate')(db);
+  require('./domain/wiki/store').migrate(db);
   const UPLOAD_DIR = path.join(root, 'uploads');
   if (!fs.existsSync(UPLOAD_DIR)) {
     fs.mkdirSync(UPLOAD_DIR);
@@ -90,7 +91,6 @@ module.exports = function createApp(root) {
   const permissions = new Set([
     'banner_edit',
     'announcement_publish',
-    'student_review',
     'user_manage',
     'ban_appeal_review',
     'ticket_manage',
@@ -209,6 +209,11 @@ module.exports = function createApp(root) {
     checkRole,
     requireLogin,
     recordLogin,
+  });
+  require('./domain/wiki/routes').mountWikiRoutes(app, db, {
+    checkRole,
+    moderation,
+    attachAuthors,
   });
   mountShopRoutes(app, db, {
     root: root,

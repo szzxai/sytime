@@ -6,19 +6,11 @@ const path = require('node:path');
 const sharp = require('sharp');
 const { query } = require('../packages/db/src/client.ts');
 const { fixture, PASSWORD, SHOP } = require('./helpers/accounts-fixture.cjs');
-test('账号与审核：注册、角色、认证竞争、解绑、私密审核、通知与会话撤销', async (t) => {
+test('账号与审核：角色、私密审核、通知与会话撤销', async (t) => {
   const f = await fixture(t);
   const { api, db, account, decide } = f;
-  await t.test('首个注册账号也是普通用户；弱密码与非法用户名拒绝', async () => {
-    assert.equal(
-      (
-        await api('/api/register', {
-          method: 'POST',
-          body: { username: 'first', nickname: '首个用户', password: 'weak' },
-        })
-      ).status,
-      422,
-    );
+  await t.test('注册接口已关闭；现有账号沿用原权限', async () => {
+    assert.equal((await api('/api/register', { method: 'POST', body: { username: 'newuser', password: PASSWORD } })).status, 404);
     const first = await account('first');
     assert.equal(query(db, 'SELECT role FROM users WHERE id=?').get(first.id).role, 'user');
     for (const route of [
@@ -91,38 +83,8 @@ test('账号与审核：注册、角色、认证竞争、解绑、私密审核�
       404,
     );
   });
-  await t.test('待审认证不占用学号，首个批准原子绑定并自动拒绝其他申请', async () => {
-    const apply = (actor) =>
-      api('/api/student/apply', {
-        method: 'POST',
-        token: actor.token,
-        body: { student_id: 'ＳＺ２０２６０１', class_name: '高一1班', real_name: '测试同学' },
-      });
-    const a = await apply(alice),
-      b = await apply(bob);
-    assert.equal(a.status, 202);
-    assert.equal(b.status, 202);
-    assert.equal(query(db, 'SELECT count(*) n FROM student_bindings').get().n, 0);
-    const results = await Promise.all([decide(admin, a.data.id), decide(operator, b.data.id)]);
-    assert.deepEqual(
-      results.map((r) => r.status),
-      [200, 409],
-    );
-    assert.equal(
-      query(db, 'SELECT student_id FROM student_bindings WHERE user_id=?').get(alice.id).student_id,
-      'SZ202601',
-    );
-    assert.equal(
-      query(db, 'SELECT status FROM moderation_requests WHERE id=?').get(b.data.id).status,
-      'rejected',
-    );
-    assert.equal((await api('/api/user/profile', { token: alice.token })).status, 401);
-    alice.token = await f.login('alice');
-    assert.ok(
-      query(db, "SELECT id FROM messages WHERE user_id=? AND title='学生认证未通过'").get(bob.id),
-    );
-    assert.equal((await decide(admin, a.data.id)).status, 409);
-  });
+  // Existing student accounts retain their role without an identity application.
+  query(db, "UPDATE users SET role='student' WHERE id=?").run(alice.id);
   await t.test('展示 ID、头像在通过前不改变公开资料；拒绝必须说明原因；禁止自审', async () => {
     const before = (await api(`/api/users/${alice.id}/profile`)).data.user;
     const request = await api('/api/user/display_id', {
@@ -271,36 +233,6 @@ test('账号与审核：注册、角色、认证竞争、解绑、私密审核�
     );
     assert.equal((await decide(admin, pending.data.id)).status, 409);
     assert.equal((await api(`/api/shops/${shopId}/reviews`)).data.total, 0);
-  });
-  await t.test('解绑验证密码、释放身份、降级、撤回待审内容且保留历史与通知', async () => {
-    assert.equal(
-      (
-        await api('/api/student/unbind', {
-          method: 'POST',
-          token: alice.token,
-          body: { password: 'wrong' },
-        })
-      ).status,
-      403,
-    );
-    const result = await api('/api/student/unbind', {
-      method: 'POST',
-      token: alice.token,
-      body: { password: PASSWORD },
-    });
-    assert.equal(result.status, 200);
-    assert.equal(query(db, 'SELECT count(*) n FROM student_bindings').get().n, 0);
-    assert.equal(query(db, 'SELECT role FROM users WHERE id=?').get(alice.id).role, 'user');
-    assert.equal(
-      query(
-        db,
-        "SELECT count(*) n FROM moderation_requests WHERE user_id=? AND kind='shop' AND status='pending'",
-      ).get(alice.id).n,
-      0,
-    );
-    assert.equal((await api('/api/user/profile', { token: alice.token })).status, 401);
-    alice.token = await f.login('alice');
-    assert.ok((await api('/api/user/submissions', { token: alice.token })).data.total > 10);
   });
   await t.test('封禁、禁申诉后端校验、密码验证、解封等级限制和一次性审核', async () => {
     assert.equal(

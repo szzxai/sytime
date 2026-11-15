@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import seedAccount from './seed-account.cjs';
 import fs from 'node:fs';
 import path from 'node:path';
 import { chromium } from 'playwright';
@@ -11,21 +12,9 @@ export async function browserFixture(prefix) {
   const browser = await chromium.launch();
   const errors = [];
   async function account(username, role = 'user') {
-    const registration = await site.api('/api/register', {
-      method: 'POST',
-      body: { username, nickname: '测试' + username.slice(-5), password: PASSWORD },
-    });
-    assert.equal(registration.status, 201, JSON.stringify(registration.data));
     const db = new database.DatabaseSync(path.join(site.directory, 'data.db'));
-    try {
-      db.prepare('UPDATE users SET role=?,nickname=? WHERE id=?').run(
-        role,
-        '测试' + username.slice(-5),
-        registration.data.id,
-      );
-    } finally {
-      db.close();
-    }
+    try { seedAccount(db, username, role, '测试' + username.slice(-5)); }
+    finally { db.close(); }
     const login = await site.api('/api/login', {
       method: 'POST',
       body: { username, password: PASSWORD },

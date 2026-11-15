@@ -90,7 +90,7 @@ export function DishPage() {
               !token
                 ? location.assign(loginUrl())
                 : user?.role === 'user'
-                  ? location.assign('/student_verify.html')
+                  ? location.assign(loginUrl())
                   : setWriter(true)
             }
           >

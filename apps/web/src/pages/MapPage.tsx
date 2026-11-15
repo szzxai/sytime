@@ -357,7 +357,7 @@ export function MapPage() {
         </div>
         <div className="campus-map-note" id="guideNote">
           <span className="campus-note-dot" />
-          校园位置示意 · 建筑插画非实景还原
+          航拍参考绘制 · 校园位置示意
         </div>
         <div className="campus-map-tip" id="guideTip">
           双指移动 <span>·</span> 捏合或 Ctrl / ⌘ + 滚轮缩放

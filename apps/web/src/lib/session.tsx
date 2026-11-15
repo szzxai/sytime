@@ -25,12 +25,18 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   });
   const user = token ? profile.data?.user || saved : null;
   function logout() {
-    void api('/api/logout', { method: 'POST' }).catch(() => {});
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    setToken('');
-    setSaved(null);
-    queryClient.clear();
+    void api<{ logout_url?: string }>('/api/logout', { method: 'POST' })
+      .then((data) => {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        setToken('');
+        setSaved(null);
+        queryClient.clear();
+        location.assign(data.logout_url || '/index.html');
+      })
+      .catch(() => {
+        window.alert('退出未完成，请重试以结束服务器会话。');
+      });
   }
   useEffect(() => {
     const expired = () => {

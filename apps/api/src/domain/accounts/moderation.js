@@ -9,7 +9,6 @@ const { settleNotifications } = require('./notifications');
 const dishStore = require('../dishes/store');
 const { evaluateAutoTitles } = require('../titles/rules');
 const labels = {
-  student: '学生认证',
   display_id: '展示 ID',
   avatar: '头像',
   nickname: '昵称',
@@ -18,6 +17,8 @@ const labels = {
   shop: '店铺推荐',
   shop_review: '店铺评价',
   appeal: '封禁申诉',
+  wiki_create: 'Wiki 新建词条',
+  wiki_edit: 'Wiki 修改词条',
 };
 async function image(file) {
   if (!file) return null;
@@ -34,13 +35,9 @@ async function image(file) {
     throw error(422, '图片损坏或尺寸过大');
   }
 }
-function studentId(value) {
-  const id = text(value, '学号', 32).toUpperCase();
-  if (!/^[A-Z0-9-]{2,32}$/.test(id)) throw error(422, '学号仅支持 2–32 位字母、数字和连字符');
-  return id;
-}
 function createModeration(db, root) {
   function submit(user, kind, payload, key = kind) {
+    if (!labels[kind]) throw error(422, '审核类型无效');
     return db.$client.transaction(() => {
       limited(db, 'submission:' + user.id, 30);
       const account = query(db, 'SELECT role,status FROM users WHERE id=?').get(user.id);
@@ -50,10 +47,10 @@ function createModeration(db, root) {
       )
         throw error(403, '账号状态不允许此操作');
       if (
-        ['dish_review', 'shop', 'shop_review'].includes(kind) &&
+        ['dish_review', 'shop', 'shop_review', 'wiki_create', 'wiki_edit'].includes(kind) &&
         !['student', 'admin', 'operator'].includes(account.role)
       )
-        throw error(403, '请先完成学生认证');
+        throw error(403, '请通过社盟账号登录后参与');
       if (
         query(
           db,
@@ -72,7 +69,7 @@ function createModeration(db, root) {
         )
           throw error(429, '每天最多推荐 10 家店铺，请明天再来');
       }
-      if (['student', 'appeal'].includes(kind)) {
+      if (kind === 'appeal') {
         const last = query(
           db,
           'SELECT created_at FROM moderation_requests WHERE user_id=? AND kind=? ORDER BY id DESC LIMIT 1',
@@ -98,30 +95,6 @@ function createModeration(db, root) {
       });
       return { id, status: 'pending', message: '已提交审核，通过后生效' };
     })();
-  }
-  function unbind(userId, actorId) {
-    const binding = query(db, 'SELECT * FROM student_bindings WHERE user_id=?').get(userId);
-    if (!binding) throw error(409, '当前账号未绑定学生身份');
-    query(db, 'DELETE FROM student_bindings WHERE user_id=?').run(userId);
-    query(db, "UPDATE users SET role='user' WHERE id=? AND role='student'").run(userId);
-    for (const request of query(
-      db,
-      "SELECT id,kind FROM moderation_requests WHERE user_id=? AND status='pending' AND kind IN ('student','dish_review','shop','shop_review')",
-    ).all(userId)) {
-      query(
-        db,
-        "UPDATE moderation_requests SET status='withdrawn',reason='学生身份已解绑',reviewer_id=?,reviewed_at=unixepoch() WHERE id=?",
-      ).run(actorId, request.id);
-      settleNotifications(db, 'moderation_pending', request.id);
-      notify(db, userId, `${labels[request.kind]}已撤回`, '学生身份解绑，待审核申请已取消。', {
-        kind: 'moderation_result',
-        id: request.id,
-      });
-    }
-    query(db, 'UPDATE collections SET is_public=0 WHERE user_id=?').run(userId);
-    revoke(db, userId);
-    audit(db, actorId, userId, 'student.unbound', { student_id: binding.student_id });
-    notify(db, userId, '学生身份已解绑', '原学生身份已释放，重新绑定需要审核。请重新登录。');
   }
   function review(actor, id, decision, reason) {
     const createdFiles = [];
@@ -165,53 +138,17 @@ function createModeration(db, root) {
             } else {
               if (owner.status !== 'active') throw error(409, '账号已被封禁，请拒绝该申请');
               if (
-                ['dish_review', 'shop', 'shop_review'].includes(request.kind) &&
+                ['dish_review', 'shop', 'shop_review', 'wiki_create', 'wiki_edit'].includes(
+                  request.kind,
+                ) &&
                 !['student', 'admin', 'operator'].includes(owner.role)
               )
                 throw error(409, '申请人已不具备学生权限，请拒绝该申请');
               switch (request.kind) {
-                case 'student': {
-                  const occupied = query(
-                    db,
-                    'SELECT user_id FROM student_bindings WHERE student_id=? OR user_id=?',
-                  ).get(payload.student_id, owner.id);
-                  if (occupied) {
-                    decision = 'reject';
-                    reason = '该学生身份或账号已完成其他绑定';
-                    break;
-                  }
-                  query(
-                    db,
-                    'INSERT INTO student_bindings(student_id,user_id,real_name,class_name) VALUES(?,?,?,?)',
-                  ).run(payload.student_id, owner.id, payload.real_name, payload.class_name);
-                  if (owner.role === 'user')
-                    query(db, "UPDATE users SET role='student' WHERE id=?").run(owner.id);
-                  // Binding and losing applications are updated in the same write transaction.
-                  for (const other of query(
-                    db,
-                    "SELECT id,user_id,payload FROM moderation_requests WHERE kind='student' AND status='pending' AND id<>?",
-                  ).all(request.id)) {
-                    if (JSON.parse(other.payload).student_id !== payload.student_id) continue;
-                    query(
-                      db,
-                      "UPDATE moderation_requests SET status='rejected',reason='该学号已绑定其他账号',reviewer_id=?,reviewed_at=unixepoch() WHERE id=?",
-                    ).run(actor.id, other.id);
-                    notify(
-                      db,
-                      other.user_id,
-                      '学生认证未通过',
-                      '该学号已绑定其他账号。如有异议，请提交工单。',
-                      { kind: 'moderation_result', id: other.id },
-                    );
-                    settleNotifications(db, 'moderation_pending', other.id);
-                    audit(db, actor.id, other.user_id, 'submission.auto_rejected', {
-                      id: other.id,
-                      winner: request.id,
-                    });
-                  }
-                  revoke(db, owner.id);
+                case 'wiki_create':
+                case 'wiki_edit':
+                  publishedId = require('../wiki/store').publish(db, request, payload, actor);
                   break;
-                }
                 case 'display_id':
                   if (
                     query(db, 'SELECT id FROM users WHERE display_id=? AND id<>?').get(
@@ -229,6 +166,8 @@ function createModeration(db, root) {
                   );
                   break;
                 case 'nickname':
+                  if (owner.sso_subject) throw error(409, '学生姓名由社盟同步');
+                // falls through
                 case 'signature':
                   query(db, `UPDATE users SET ${request.kind}=? WHERE id=?`).run(
                     payload.value,
@@ -315,10 +254,7 @@ function createModeration(db, root) {
             db,
             owner.id,
             labels[request.kind] + (decision === 'approve' ? '已通过' : '未通过'),
-            reason ||
-              (request.kind === 'student'
-                ? '学生身份已绑定，请重新登录以刷新身份。'
-                : '审核已通过，内容已生效。'),
+            reason || '审核已通过，内容已生效。',
             { kind: 'moderation_result', id },
           );
           return {
@@ -333,6 +269,6 @@ function createModeration(db, root) {
       throw e;
     }
   }
-  return { submit, review, unbind };
+  return { submit, review };
 }
-module.exports = { createModeration, labels, image, studentId };
+module.exports = { createModeration, labels, image };

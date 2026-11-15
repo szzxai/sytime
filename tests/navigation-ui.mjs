@@ -1,3 +1,4 @@
+import seedAccount from './helpers/seed-account.cjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -201,7 +202,8 @@ try {
     assert.deepEqual(errors, []); checks++;
     await context.close();
   }
-  await app.api('/api/register', { method: 'POST', body: { username: 'navigation-admin', password: 'CampusTest2026', nickname: '导航测试' } });
+  const accountDb = new (await import('./helpers/database.cjs')).default.DatabaseSync(app.directory + '/data.db');
+  try { seedAccount(accountDb, 'navigation-admin', 'operator', '导航测试'); } finally { accountDb.close(); }
   const seedDb = new (await import('./helpers/database.cjs')).default.DatabaseSync(path.join(app.directory,'data.db'));seedDb.prepare("UPDATE users SET role='admin' WHERE username='navigation-admin'").run();
   const login = (await app.api('/api/login', { method: 'POST', body: { username: 'navigation-admin', password: 'CampusTest2026' } })).data;
   const shop = (await import('../apps/api/src/domain/shops/store.js')).default.create(seedDb,{name:'导航面馆',address:'十梓街 123 号',type:'面馆',lat:31.3004,lng:120.6226,campus_distance_m:420,campus_walk_min:6,metro_station:'乐桥',metro_exit:'3 号口',metro_distance_m:480,metro_walk_min:7},login.user,{});seedDb.close();
