@@ -6654,6 +6654,16 @@ body[data-page='home'] .site-header {
 .workspace--shops {
   grid-template-columns: 330px minmax(0, 1fr);
 }
+.shop-sort-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-3);
+}
+.shop-sort-controls > .field {
+  flex: 1 1 8rem;
+  min-width: 0;
+  margin: 0;
+}
 .workspace--shops .shop-search {
   border: 0;
   padding: 0;

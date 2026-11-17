@@ -1,5 +1,5 @@
 import { useRouterState, type AnyRouter, type ParsedLocation } from '@tanstack/react-router';
-import type { User } from '@sytime/shared';
+import { normalizeShopSorting, type User } from '@sytime/shared';
 import { endpoint, queryClient } from './api';
 
 /** Keep the displayed page tied to its committed URL while another route loads. */
@@ -124,14 +124,23 @@ export function recipeView(search: Record<string, unknown>) {
   return ['all', 'reviews', 'weekly', 'daily'].includes(String(view)) ? String(view) : 'daily';
 }
 export function shopFilters(search: Record<string, string>, user: User | null) {
+  const explicitSort = search.sort !== undefined;
+  const sorting = normalizeShopSorting(
+    explicitSort ? search.sort : user?.shop_default_sort,
+    search.order !== undefined ? search.order : explicitSort ? undefined : user?.shop_default_order,
+  );
   return {
     ...search,
     type: search.type ?? user?.shop_default_type ?? '',
-    sort: search.sort || user?.shop_default_sort || 'campus',
+    ...sorting,
   };
 }
 export function shopsPath(filters: Record<string, string>) {
-  return `/api/shops?${new URLSearchParams(Object.entries(filters).filter(([key, value]) => !!value && key !== 'page'))}`;
+  return `/api/shops?${new URLSearchParams(
+    Object.entries(filters)
+      .filter(([key, value]) => !!value && key !== 'page')
+      .sort(([a], [b]) => a.localeCompare(b)),
+  )}`;
 }
 /** Intent preloading and actual navigation share the same query cache and request. */
 export async function preloadPage(name: string, search: Record<string, unknown>) {
@@ -153,6 +162,10 @@ export async function preloadPage(name: string, search: Record<string, unknown>)
   } else if (name === 'dish' && /^[1-9]\d*$/.test(String(search.id))) {
     requests.push([`/api/dishes/${search.id}`, false]);
   } else if (name === 'shops') {
+    if (localStorage.getItem('token') && search.sort === undefined)
+      await queryClient
+        .fetchQuery({ ...endpoint<{ user: User }>('/api/user/profile'), staleTime: 0 })
+        .catch(() => undefined);
     requests.push(
       [shopsPath(shopFilters(search as Record<string, string>, savedUser())), true],
       ['/api/shops/meta', true],

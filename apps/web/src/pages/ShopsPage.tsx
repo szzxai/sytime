@@ -1,5 +1,12 @@
 import { SiteLink } from '../components/SiteLink';
-import { roleLabels, type Role, type Shop } from '@sytime/shared';
+import {
+  defaultShopOrder,
+  roleLabels,
+  shopSortHasOrder,
+  shopSorts,
+  type Role,
+  type Shop,
+} from '@sytime/shared';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
 import { Pager } from '../components/Collections';
@@ -10,15 +17,6 @@ import { endpoint } from '../lib/api';
 import { useSession } from '../lib/session';
 import { shopFilters, shopsPath } from '../lib/navigation';
 import { useUrlSearch } from '../lib/useUrlSearch';
-export const shopSorts = {
-  campus: '距苏州中学本部最近',
-  az: '拼音排序',
-  metro: '距地铁最近',
-  likes: '按点赞数',
-  reviews: '按评价数',
-  rating: '按评分',
-  new: '最新添加',
-};
 const ranges = [
   {
     label: '距苏州中学本部（米）',
@@ -63,18 +61,36 @@ const ranges = [
 ];
 export function ShopsPage() {
   const { user, token } = useSession();
-  const [paramsState, updateSearch] = useUrlSearch();
+  const [paramsState, updateSearch] = useUrlSearch({ pendingSearch: true });
   const filters = useMemo<Record<string, string>>(
     () => shopFilters(paramsState, user),
     [paramsState, user],
   );
   const page = Math.max(1, Number(paramsState.page) || 1);
-  const setPage = (value: number) => updateSearch({ page: value > 1 ? String(value) : undefined });
-  const [debounced, setDebounced] = useState(filters);
+  const setPage = (value: number) =>
+    updateSearch({ ...filters, page: value > 1 ? String(value) : undefined });
+  const [search, setSearch] = useState(filters.q || '');
   useEffect(() => {
-    const timer = setTimeout(() => setDebounced(filters), 250);
+    const timer = setTimeout(() => setSearch(filters.q || ''), 250);
     return () => clearTimeout(timer);
-  }, [filters]);
+  }, [filters.q]);
+  // Make initial defaults shareable and keep an open list independent of later preference saves.
+  useEffect(() => {
+    if (
+      paramsState.sort !== filters.sort ||
+      paramsState.order !== filters.order ||
+      paramsState.type === undefined
+    )
+      updateSearch({ sort: filters.sort, order: filters.order, type: filters.type });
+  }, [
+    paramsState.sort,
+    paramsState.order,
+    paramsState.type,
+    filters.sort,
+    filters.order,
+    filters.type,
+    updateSearch,
+  ]);
   const query = useQuery(
     endpoint<{
       shops: Shop[];
@@ -83,22 +99,23 @@ export function ShopsPage() {
       can_create: boolean;
       create_min_role: Role;
       area: { text: string };
-    }>(shopsPath(debounced)),
+    }>(shopsPath({ ...filters, q: search })),
   );
   const meta = useQuery(endpoint<ShopMeta>('/api/shops/meta'));
   const rows = [...(query.data?.shops || [])];
-  if (debounced.sort === 'az')
-    rows.sort(
-      (a, b) =>
-        new Intl.Collator('zh-Hans-CN-u-co-pinyin', { numeric: true, sensitivity: 'base' }).compare(
-          a.name,
-          b.name,
-        ) || a.id - b.id,
-    );
   const pages = Math.max(1, Math.ceil(rows.length / 20));
   const current = Math.min(page, pages);
   function change(key: string, value: string) {
-    updateSearch({ [key]: value, page: undefined });
+    updateSearch(
+      {
+        sort: filters.sort,
+        order: key === 'sort' ? defaultShopOrder(value) : filters.order,
+        type: filters.type,
+        [key]: value,
+        page: undefined,
+      },
+      { replace: key !== 'sort' && key !== 'order' },
+    );
   }
   return (
     <main id="main" className="workspace workspace--shops">
@@ -117,7 +134,7 @@ export function ShopsPage() {
             )}
           </span>
         </PageHead>
-        <div className="row row--between row--top u-mb-4">
+        <div className="stack u-mb-4">
           <div className="filter-bar" id="typeFilter" role="radiogroup" aria-label="店铺类型筛选">
             {['', ...(meta.data?.types.all || [])].map((type) => (
               <label className="chip" key={type}>
@@ -133,23 +150,40 @@ export function ShopsPage() {
               </label>
             ))}
           </div>
-          <div className="row row--sm">
-            <label className="u-fs-sm u-muted" htmlFor="sortSelect">
-              排序
-            </label>
-            <select
-              className="select select--sm"
-              id="sortSelect"
-              aria-label="排序"
-              value={filters.sort || 'campus'}
-              onChange={(e) => change('sort', e.target.value)}
-            >
-              {Object.entries(shopSorts).map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </select>
+          <div className="shop-sort-controls">
+            <div className="field">
+              <label className="field__label" htmlFor="sortSelect">
+                排序方式
+              </label>
+              <select
+                className="select select--sm"
+                id="sortSelect"
+                value={filters.sort}
+                onChange={(e) => change('sort', e.target.value)}
+              >
+                {Object.entries(shopSorts).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            {shopSortHasOrder(filters.sort) && (
+              <div className="field">
+                <label className="field__label" htmlFor="sortOrderSelect">
+                  排序顺序
+                </label>
+                <select
+                  className="select select--sm"
+                  id="sortOrderSelect"
+                  value={filters.order}
+                  onChange={(e) => change('order', e.target.value)}
+                >
+                  <option value="asc">从低到高</option>
+                  <option value="desc">从高到低</option>
+                </select>
+              </div>
+            )}
           </div>
         </div>
         <section className="card shop-search u-mb-4" aria-labelledby="searchTitle">
@@ -214,7 +248,9 @@ export function ShopsPage() {
                   Object.fromEntries([
                     ...Object.keys(filters).map((key) => [key, undefined]),
                     ['sort', 'campus'],
+                    ['order', 'asc'],
                     ['type', ''],
+                    ['page', undefined],
                   ]),
                 );
               }}
@@ -239,10 +275,16 @@ export function ShopsPage() {
           <ShopMap meta={meta.data} shops={rows} />
         </section>
         <p className="u-muted u-fs-sm u-mb-4" id="shopSummary" role="status">
-          共 {rows.length} 家店铺 · 第 {current} / {pages} 页
+          {query.isPending
+            ? '正在加载店铺…'
+            : query.error
+              ? '店铺加载失败，请重试'
+              : `共 ${rows.length} 家店铺 · 第 ${current} / ${pages} 页`}
         </p>
         <span className="sr-only" aria-live="polite" id="shopLive">
-          找到 {rows.length} 家店铺
+          {query.isSuccess
+            ? `找到 ${rows.length} 家店铺，${shopSorts[filters.sort as keyof typeof shopSorts]}${shopSortHasOrder(filters.sort) ? (filters.order === 'asc' ? '，从低到高' : '，从高到低') : ''}`
+            : ''}
         </span>
         {query.isPending ? (
           <Loading />

@@ -1,4 +1,8 @@
 const { query } = require('../../../../../packages/db/src/client.ts');
+const {
+  normalizeShopSorting,
+  shopSortHasOrder,
+} = require('../../../../../packages/shared/src/shopSort.ts');
 /* 三元坊必吃榜 · 店铺数据层（#6）
    - 建表、配置读取、校验、查询与创建
    - 距离/步行时间由上传者用高德地图步行路线查询后录入，均为步行距离
@@ -11,6 +15,8 @@ const SHOP_TYPES = ['面馆', '小吃', '饮品', '快餐', '甜点', '正餐'];
 const CAMPUS_ORDER = 'campus_distance_m ASC, campus_walk_min ASC, name COLLATE NOCASE ASC, id ASC';
 const SORTS = {
   campus: CAMPUS_ORDER,
+  walk: 'campus_walk_min ASC, campus_distance_m ASC, name COLLATE NOCASE ASC, id ASC',
+  az: 'name COLLATE NOCASE ASC, id ASC',
   // Legacy query values remain aliases during migration.
   north: CAMPUS_ORDER,
   east: CAMPUS_ORDER,
@@ -24,6 +30,35 @@ const SORTS = {
   new: 'created_at DESC, id DESC',
 };
 const DEFAULT_SORT = 'campus';
+const LIKES_COUNT = '(SELECT COUNT(*) FROM shop_likes WHERE shop_id = shops.id)';
+const REVIEWS_COUNT = '(SELECT COUNT(*) FROM shop_reviews WHERE shop_id = shops.id)';
+const RATING_AVERAGE = '(SELECT AVG(rating) FROM shop_reviews WHERE shop_id = shops.id)';
+const PRIMARY_SORT = {
+  campus: 'campus_distance_m',
+  walk: 'campus_walk_min',
+  likes: LIKES_COUNT,
+  reviews: REVIEWS_COUNT,
+  rating: RATING_AVERAGE,
+};
+function sortOrder(sort, order) {
+  if (!shopSortHasOrder(sort)) return SORTS[sort];
+  const nullsLast = sort === 'rating' ? RATING_AVERAGE + ' IS NULL ASC, ' : '';
+  const secondary =
+    sort === 'campus'
+      ? 'campus_walk_min ASC, '
+      : sort === 'rating'
+        ? REVIEWS_COUNT + ' DESC, campus_distance_m ASC, '
+        : 'campus_distance_m ASC, ';
+  return (
+    nullsLast +
+    PRIMARY_SORT[sort] +
+    ' ' +
+    order.toUpperCase() +
+    ', ' +
+    secondary +
+    'name COLLATE NOCASE ASC, id ASC'
+  );
+}
 // 覆盖范围文字（司前街、十梓街、凤凰街、新市路围合区域）
 const AREA_TEXT = '苏州市姑苏区行政区全域（含行政区边界沿街）';
 const LIMITS = {
@@ -428,15 +463,13 @@ function normalizeType(value) {
   return text(value);
 }
 function normalizeSort(value) {
-  const key = text(value);
-  if (key === 'north' || key === 'east') return 'campus';
-  return SORTS[key] ? key : DEFAULT_SORT;
+  return normalizeShopSorting(value).sort;
 }
 function list(db, options) {
   const opt = options || {};
   const type = text(opt.type);
   const q = text(opt.q).slice(0, 80);
-  const sort = normalizeSort(opt.sort);
+  const { sort, order } = normalizeShopSorting(opt.sort, opt.order);
   const clauses = [];
   const params = [];
   if (type && type !== '全部') {
@@ -493,12 +526,20 @@ function list(db, options) {
     'SELECT * FROM shops' +
       (clauses.length ? ' WHERE ' + clauses.join(' AND ') : '') +
       ' ORDER BY ' +
-      SORTS[sort],
+      sortOrder(sort, order),
   ).all(...params);
+  if (sort === 'az') {
+    const collator = new Intl.Collator('zh-Hans-CN-u-co-pinyin', {
+      numeric: true,
+      sensitivity: 'base',
+    });
+    rows.sort((a, b) => collator.compare(a.name, b.name) || a.id - b.id);
+  }
   return {
     shops: rows.map(publicShop),
     total: rows.length,
     sort: sort,
+    order: order,
     type: type,
     filters: {
       q: q,

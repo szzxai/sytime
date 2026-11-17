@@ -22,6 +22,7 @@ CREATE TABLE IF NOT EXISTS users (
   default_floor INTEGER NOT NULL DEFAULT 1,
   recipe_default_view TEXT NOT NULL DEFAULT 'all',
   shop_default_sort TEXT NOT NULL DEFAULT 'campus',
+  shop_default_order TEXT NOT NULL DEFAULT '',
   shop_default_type TEXT NOT NULL DEFAULT '',
   shop_layout TEXT NOT NULL DEFAULT 'stacked',
   shop_layout_mode TEXT NOT NULL DEFAULT 'manual',
@@ -56,6 +57,7 @@ CREATE TABLE IF NOT EXISTS users (
       default_floor INTEGER NOT NULL DEFAULT 1,
       recipe_default_view TEXT NOT NULL DEFAULT 'all',
       shop_default_sort TEXT NOT NULL DEFAULT 'campus',
+      shop_default_order TEXT NOT NULL DEFAULT '',
       shop_default_type TEXT NOT NULL DEFAULT '',
       shop_layout TEXT NOT NULL DEFAULT 'stacked',
       shop_layout_mode TEXT NOT NULL DEFAULT 'manual',
@@ -97,6 +99,9 @@ CREATE TABLE IF NOT EXISTS users (
       db.$client.exec(
         "ALTER TABLE users ADD COLUMN shop_default_sort TEXT NOT NULL DEFAULT 'campus'",
       );
+    }
+    if (cols.indexOf('shop_default_order') === -1) {
+      db.$client.exec("ALTER TABLE users ADD COLUMN shop_default_order TEXT NOT NULL DEFAULT ''");
     }
     if (cols.indexOf('shop_default_type') === -1) {
       db.$client.exec("ALTER TABLE users ADD COLUMN shop_default_type TEXT NOT NULL DEFAULT ''");

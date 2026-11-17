@@ -549,6 +549,9 @@ export const users = sqliteTable(
     shop_default_sort: text('shop_default_sort')
       .notNull()
       .default(sql`'campus'`),
+    shop_default_order: text('shop_default_order')
+      .notNull()
+      .default(sql`''`),
     shop_default_type: text('shop_default_type')
       .notNull()
       .default(sql`''`),

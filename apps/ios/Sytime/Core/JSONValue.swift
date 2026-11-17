@@ -146,6 +146,21 @@ let statusNames = [
 let mealNames = ["morning": "早餐", "noon": "午餐", "evening": "晚餐", "night": "夜宵", "break": "课间加餐"]
 let mealOrder = ["morning", "noon", "evening", "night", "break"]
 let shopSorts = [
-  "campus": "离学校近", "az": "拼音排序", "metro": "离地铁近", "likes": "点赞最多", "reviews": "评价最多",
-  "rating": "评分最高", "new": "最新收录",
+  "campus": "距离", "likes": "点赞数", "reviews": "评价数", "rating": "评分",
+  "walk": "步行时间", "az": "拼音排序", "metro": "距地铁最近", "new": "最新收录",
 ]
+
+enum ShopSorting {
+  static let methods = ["campus", "likes", "reviews", "rating", "walk", "az", "metro", "new"]
+  static func hasOrder(_ sort: String) -> Bool {
+    ["campus", "likes", "reviews", "rating", "walk"].contains(sort)
+  }
+  static func defaultOrder(_ sort: String) -> String {
+    ["likes", "reviews", "rating", "new"].contains(sort) ? "desc" : "asc"
+  }
+  static func normalized(_ method: String, order: String = "") -> (sort: String, order: String) {
+    let sort = ["north", "east"].contains(method) ? "campus" : method
+    guard methods.contains(sort) else { return ("campus", "asc") }
+    return (sort, hasOrder(sort) && ["asc", "desc"].contains(order) ? order : defaultOrder(sort))
+  }
+}

@@ -5,55 +5,73 @@ struct ShopsView: View {
   @Environment(AppModel.self) private var app
   @State private var query = ""
   @State private var effectiveQuery = ""
-  @State private var filters: [String: String] = ["sort": "campus"]
+  @State private var filters: [String: String] = ["sort": "campus", "order": "asc"]
   @State private var showFilters = false
   @State private var showMap = false
   @State private var showNew = false
   @State private var limit = 20
   @State private var preferenceApplied = false
+  @State private var interacted = false
+  @State private var resource = Resource()
+  @State private var loadedPath = ""
   private var path: String {
     APIClient.path("/api/shops", query: filters.merging(["q": effectiveQuery]) { _, new in new })
   }
   var body: some View {
-    APIContent(path: path) { data in
-      GeometryReader { geometry in
-        let wide = geometry.size.width > 950
-        HStack(spacing: 0) {
-          if !showMap || wide {
-            shopList(data).frame(maxWidth: wide ? geometry.size.width * 0.5 : .infinity)
-          }
-          if showMap || wide { ShopsMap(shops: data["shops"].array).frame(maxWidth: .infinity) }
+    GeometryReader { geometry in
+      let wide = geometry.size.width > 950
+      HStack(spacing: 0) {
+        if !showMap || wide {
+          shopList(resource.value).frame(maxWidth: wide ? geometry.size.width * 0.5 : .infinity)
+        }
+        if showMap || wide {
+          ShopsMap(shops: resource.value["shops"].array).frame(maxWidth: .infinity)
         }
       }
-      .sheet(isPresented: $showFilters) {
-        NavigationStack {
-          filterForm(data).navigationTitle("筛选周边美食").toolbar {
-            ToolbarItem(placement: .cancellationAction) {
-              Button("清除") {
-                filters = ["sort": "campus"]
-                query = ""
-              }
+    }
+    .sheet(isPresented: $showFilters) {
+      NavigationStack {
+        filterForm(resource.value).navigationTitle("筛选周边美食").toolbar {
+          ToolbarItem(placement: .cancellationAction) {
+            Button("清除") {
+              interacted = true
+              filters = ["sort": "campus", "order": "asc"]
+              query = ""
+              effectiveQuery = ""
+              limit = 20
             }
-            ToolbarItem(placement: .confirmationAction) { Button("完成") { showFilters = false } }
           }
+          ToolbarItem(placement: .confirmationAction) { Button("完成") { showFilters = false } }
         }
       }
     }
     .navigationTitle("三元坊必吃榜")
+    .task(id: "\(app.sessionRevision):\(path)") { await load() }
+    .refreshable { await load() }
+    .onChange(of: filters) { _, _ in
+      interacted = true
+      limit = 20
+    }
     .searchable(text: $query, prompt: "店名、道路、商场")
     .task(id: query) {
+      guard query != effectiveQuery else { return }
+      interacted = true
       do {
         try await Task.sleep(for: .milliseconds(250))
         effectiveQuery = query
         limit = 20
       } catch {}
     }
-    .task(id: app.user.id) {
-      if !preferenceApplied && !app.user.isNull {
-        preferenceApplied = true
-        filters["sort"] = app.user.text("shop_default_sort", "campus")
-        filters["type"] = app.user["shop_default_type"].string
-      }
+    .task(id: app.sessionRevision) {
+      guard !preferenceApplied && !interacted else { return }
+      await app.refreshAccount()
+      guard !Task.isCancelled, !interacted, !app.user.isNull else { return }
+      preferenceApplied = true
+      let sorting = ShopSorting.normalized(
+        app.user.text("shop_default_sort", "campus"), order: app.user["shop_default_order"].string)
+      filters["sort"] = sorting.sort
+      filters["order"] = sorting.order
+      filters["type"] = app.user["shop_default_type"].string
     }
     .toolbar {
       ToolbarItemGroup(placement: .topBarTrailing) {
@@ -74,22 +92,50 @@ struct ShopsView: View {
         Text(data["area"]["text"].string).font(.caption).foregroundStyle(.secondary)
         Text("校园与地铁距离为步行路线距离，非直线距离。").font(.caption).foregroundStyle(.secondary)
         Picker(
-          "排序",
-          selection: Binding(get: { filters["sort"] ?? "campus" }, set: { filters["sort"] = $0 })
+          "排序方式",
+          selection: Binding(
+            get: { filters["sort"] ?? "campus" },
+            set: { sort in
+              filters["sort"] = sort
+              filters["order"] = ShopSorting.defaultOrder(sort)
+            })
         ) {
-          ForEach(["campus", "az", "metro", "likes", "reviews", "rating", "new"], id: \.self) {
+          ForEach(ShopSorting.methods, id: \.self) {
             Text(shopSorts[$0] ?? $0).tag($0)
           }
         }
+        .accessibilityIdentifier("shopSort")
+        if ShopSorting.hasOrder(filters["sort"] ?? "campus") {
+          Picker(
+            "排序顺序",
+            selection: Binding(
+              get: { filters["order"] ?? "asc" }, set: { filters["order"] = $0 })
+          ) {
+            Text("从低到高").tag("asc")
+            Text("从高到低").tag("desc")
+          }
+          .accessibilityIdentifier("shopSortOrder")
+        }
       }
-      if data["shops"].array.isEmpty {
+      if loadedPath != path {
+        ProgressView("正在加载店铺…")
+      } else if let error = resource.error {
+        FailureView(message: error) { await load() }
+      } else if data["shops"].array.isEmpty {
         EmptyView(title: "没有匹配的店铺", description: "试试其他关键词或清除筛选。", icon: "storefront")
+      } else {
+        ForEach(Array(data["shops"].array.prefix(limit))) { shop in
+          NavigationLink(value: AppRoute.shop(shop["id"].int)) { ShopRow(shop: shop) }
+        }
+        if data["shops"].array.count > limit { Button("加载更多店铺") { limit += 20 } }
       }
-      ForEach(Array(data["shops"].array.prefix(limit))) { shop in
-        NavigationLink(value: AppRoute.shop(shop["id"].int)) { ShopRow(shop: shop) }
-      }
-      if data["shops"].array.count > limit { Button("加载更多店铺") { limit += 20 } }
     }
+  }
+  private func load() async {
+    let requestedPath = path
+    await resource.load(app.api, requestedPath)
+    guard !Task.isCancelled, requestedPath == path else { return }
+    loadedPath = requestedPath
   }
   private func filterForm(_ data: JSONValue) -> some View {
     Form {

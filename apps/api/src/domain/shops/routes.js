@@ -168,6 +168,7 @@ function mountShopRoutes(app, db, options) {
       const result = store.list(db, {
         type: c.req.query().type,
         sort: c.req.query().sort,
+        order: c.req.query().order,
         q: c.req.query().q,
         distance_min_m: c.req.query().distance_min_m,
         distance_max_m: c.req.query().distance_max_m,
@@ -191,6 +192,7 @@ function mountShopRoutes(app, db, options) {
         total: result.total,
         type: result.type || '全部',
         sort: result.sort,
+        order: result.order,
         types: store.types(db),
         create_min_role: createMinRole,
         can_create: canCreate(c),

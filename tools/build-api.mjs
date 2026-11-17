@@ -1,4 +1,5 @@
 import { build } from 'esbuild';
+import { realpathSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 const root = fileURLToPath(new URL('../', import.meta.url));
 export const apiBuildOptions = {
@@ -17,4 +18,8 @@ export const apiBuildOptions = {
   outdir: 'apps/api/dist',
   outExtension: { '.js': '.cjs' },
 };
-if (process.argv[1] === fileURLToPath(import.meta.url)) await build(apiBuildOptions);
+if (
+  process.argv[1] &&
+  realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url))
+)
+  await build(apiBuildOptions);

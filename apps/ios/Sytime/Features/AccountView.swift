@@ -355,11 +355,16 @@ struct SettingsView: View {
                   ("daily", "今日与明日"), ("weekly", "每周食谱"), ("all", "全部菜品"), ("reviews", "大家的评价"),
                 ])),
               FormField(
-                "shop_default_sort", "必吃榜默认排序",
+                "shop_default_sort", "必吃榜默认排序方式",
                 .choice(
-                  ["campus", "az", "metro", "likes", "reviews", "rating", "new"].map {
+                  ShopSorting.methods.map {
                     ($0, shopSorts[$0] ?? $0)
-                  })),
+                  }),
+                onChange: { values, sort in values["shop_default_order"] = ShopSorting.defaultOrder(sort) }),
+              FormField(
+                "shop_default_order", "必吃榜默认排序顺序",
+                .choice([("asc", "从低到高"), ("desc", "从高到低")]),
+                visibleWhen: { ShopSorting.hasOrder($0["shop_default_sort"] ?? "campus") }),
               FormField("shop_default_type", "默认店铺类型（留空表示全部）", required: false),
               FormField(
                 "shop_layout_mode", "详情布局", .choice([("auto", "自动适配"), ("manual", "手动选择")])),
@@ -372,10 +377,15 @@ struct SettingsView: View {
               "shop_default_sort": "campus", "shop_layout_mode": "auto", "shop_layout": "stacked",
               "show_role": "1", "collection_default_public": "0",
             ]
+            var initial = Dictionary(
+              uniqueKeysWithValues: fields.map { ($0.id, u.text($0.id, defaults[$0.id] ?? "")) })
+            let sorting = ShopSorting.normalized(
+              u.text("shop_default_sort", "campus"), order: u["shop_default_order"].string)
+            initial["shop_default_sort"] = sorting.sort
+            initial["shop_default_order"] = sorting.order
             form = FormPresentation(
               title: "浏览偏好", path: "/api/user/settings", method: "PUT", fields: fields,
-              initial: Dictionary(
-                uniqueKeysWithValues: fields.map { ($0.id, u.text($0.id, defaults[$0.id] ?? "")) }),
+              initial: initial,
               explanation: "偏好保存到你的账号。普通用户仅可使用私密收藏夹；已有收藏夹不随默认公开设置改变。")
           }
           NavigationLink("管理默认收藏夹", value: AppRoute.collections)

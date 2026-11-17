@@ -1,4 +1,5 @@
 const { query } = require('../../../../packages/db/src/client.ts');
+const { normalizeShopSorting } = require('../../../../packages/shared/src/shopSort.ts');
 
 const { equippedTitle: equippedTitleOf, ownedTitles } = require('../domain/titles/store');
 
@@ -7,7 +8,7 @@ module.exports = function mountProfileRoutes(app, services) {
   app.get('/api/user/profile', requireLogin, function (c) {
     const user = query(
       db,
-      "SELECT CASE WHEN sso_subject IS NULL THEN 'local' ELSE 'sso' END auth_source, id, display_id, username, nickname, avatar_url, signature, role, default_page, default_floor, recipe_default_view, shop_default_sort, shop_default_type, shop_layout, shop_layout_mode, default_collection_shops, collection_default_public, show_role, status FROM users WHERE id = ?",
+      "SELECT CASE WHEN sso_subject IS NULL THEN 'local' ELSE 'sso' END auth_source, id, display_id, username, nickname, avatar_url, signature, role, default_page, default_floor, recipe_default_view, shop_default_sort, shop_default_order, shop_default_type, shop_layout, shop_layout_mode, default_collection_shops, collection_default_public, show_role, status FROM users WHERE id = ?",
     ).get(c.get('user').id);
     if (!user) {
       c.res = c.json({ error: 'user not found' }, 404);
@@ -58,7 +59,7 @@ module.exports = function mountProfileRoutes(app, services) {
     const body = c.get('body') || {};
     const current = query(
       db,
-      'SELECT default_page, default_floor, recipe_default_view, shop_default_sort, shop_default_type, shop_layout, shop_layout_mode, collection_default_public, show_role FROM users WHERE id = ?',
+      'SELECT default_page, default_floor, recipe_default_view, shop_default_sort, shop_default_order, shop_default_type, shop_layout, shop_layout_mode, collection_default_public, show_role FROM users WHERE id = ?',
     ).get(c.get('user').id);
     if (!current) {
       c.res = c.json({ error: 'user not found' }, 404);
@@ -90,12 +91,16 @@ module.exports = function mountProfileRoutes(app, services) {
           ? 'all'
           : body.recipe_default_view;
     }
-    const allowedShopSorts = ['campus', 'az', 'metro', 'likes', 'reviews', 'rating', 'new'];
-    let shopSort = current.shop_default_sort;
-    if (body.shop_default_sort !== undefined) {
-      shopSort =
-        allowedShopSorts.indexOf(body.shop_default_sort) === -1 ? 'campus' : body.shop_default_sort;
-    }
+    const sorting = normalizeShopSorting(
+      body.shop_default_sort !== undefined ? body.shop_default_sort : current.shop_default_sort,
+      body.shop_default_order !== undefined
+        ? body.shop_default_order
+        : body.shop_default_sort !== undefined
+          ? undefined
+          : current.shop_default_order,
+    );
+    const shopSort = sorting.sort;
+    const shopOrder = sorting.order;
     let shopType = current.shop_default_type;
     if (body.shop_default_type !== undefined) {
       shopType =
@@ -117,12 +122,13 @@ module.exports = function mountProfileRoutes(app, services) {
     }
     query(
       db,
-      'UPDATE users SET default_page = ?, default_floor = ?, recipe_default_view = ?, shop_default_sort = ?, shop_default_type = ?, shop_layout = ?, shop_layout_mode = ?, collection_default_public = ?, show_role = ? WHERE id = ?',
+      'UPDATE users SET default_page = ?, default_floor = ?, recipe_default_view = ?, shop_default_sort = ?, shop_default_order = ?, shop_default_type = ?, shop_layout = ?, shop_layout_mode = ?, collection_default_public = ?, show_role = ? WHERE id = ?',
     ).run(
       defaultPage,
       defaultFloor,
       recipeView,
       shopSort,
+      shopOrder,
       shopType,
       shopLayout,
       shopLayoutMode,
@@ -135,6 +141,7 @@ module.exports = function mountProfileRoutes(app, services) {
       default_floor: defaultFloor,
       recipe_default_view: recipeView,
       shop_default_sort: shopSort,
+      shop_default_order: shopOrder,
       shop_default_type: shopType,
       shop_layout: shopLayout,
       shop_layout_mode: shopLayoutMode,

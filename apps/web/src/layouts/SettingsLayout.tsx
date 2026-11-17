@@ -11,6 +11,7 @@ export function SettingsLayout({
     accountSecurity?: ReactNode;
     sessionSecurity?: ReactNode;
     siteMsg?: ReactNode;
+    shopSortOptions?: ReactNode;
     shopDefaultType?: ReactNode;
     defaultCollectionShops?: ReactNode;
     shopLayoutModeChoices?: ReactNode;
@@ -28,6 +29,8 @@ export function SettingsLayout({
     recipeDefaultView?: ComponentProps<'select'>;
     shopPrefFields?: ComponentProps<'div'>;
     shopDefaultSort?: ComponentProps<'select'>;
+    shopDefaultOrder?: ComponentProps<'select'>;
+    shopDefaultOrderField?: ComponentProps<'div'>;
     shopDefaultType?: ComponentProps<'select'>;
     defaultCollectionShops?: ComponentProps<'select'>;
     collectionDefaultPublic?: ComponentProps<'input'>;
@@ -170,10 +173,10 @@ export function SettingsLayout({
                     </select>
                     <span className="field__hint"></span>
                   </div>
-                  <div id="shopPrefFields" hidden {...bind['shopPrefFields']}>
+                  <div className="form" id="shopPrefFields" hidden {...bind['shopPrefFields']}>
                     <div className="field">
                       <label className="field__label" htmlFor="shopDefaultSort">
-                        {'必吃榜默认排序'}
+                        {'必吃榜默认排序方式'}
                       </label>
                       <select
                         className="select"
@@ -181,15 +184,26 @@ export function SettingsLayout({
                         name="shopDefaultSort"
                         {...bind['shopDefaultSort']}
                       >
-                        <option value="campus">{'距苏州中学本部最近'}</option>
-                        <option value="az">{'拼音排序'}</option>
-                        <option value="metro">{'距地铁最近'}</option>
-                        <option value="likes">{'按点赞数'}</option>
-                        <option value="reviews">{'按评价数'}</option>
-                        <option value="rating">{'按评分'}</option>
-                        <option value="new">{'最新添加'}</option>
+                        {slots['shopSortOptions']}
                       </select>
                       <span className="field__hint">{'进入三元坊必吃榜时默认使用的排序'}</span>
+                    </div>
+                    <div className="field" {...bind['shopDefaultOrderField']}>
+                      <label className="field__label" htmlFor="shopDefaultOrder">
+                        {'必吃榜默认排序顺序'}
+                      </label>
+                      <select
+                        className="select"
+                        id="shopDefaultOrder"
+                        name="shopDefaultOrder"
+                        {...bind['shopDefaultOrder']}
+                      >
+                        <option value="asc">{'从低到高'}</option>
+                        <option value="desc">{'从高到低'}</option>
+                      </select>
+                      <span className="field__hint">
+                        {'排序方式与顺序共同保存到账号，并在 Web 与 iOS 共用'}
+                      </span>
                     </div>
                     <div className="field">
                       <label className="field__label" htmlFor="shopDefaultType">

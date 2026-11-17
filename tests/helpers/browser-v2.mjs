@@ -9,7 +9,13 @@ import shops from '../../apps/api/src/domain/shops/store.js';
 export const PASSWORD = 'CampusTest2026';
 export async function browserFixture(prefix) {
   const site = await appFixture.startApp(prefix);
-  const browser = await chromium.launch();
+  let browser;
+  try {
+    browser = await chromium.launch({ channel: process.platform === 'win32' ? 'msedge' : undefined });
+  } catch (error) {
+    await site.stop();
+    throw error;
+  }
   const errors = [];
   async function account(username, role = 'user') {
     const db = new database.DatabaseSync(path.join(site.directory, 'data.db'));

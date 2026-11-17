@@ -11,9 +11,12 @@ struct FormField: Identifiable {
   var required = true
   var maxLength: Int? = nil
   var help: String? = nil
+  var visibleWhen: (([String: String]) -> Bool)? = nil
+  var onChange: ((inout [String: String], String) -> Void)? = nil
   init(
     _ id: String, _ title: String, _ kind: Kind = .text, required: Bool = true, max: Int? = nil,
-    help: String? = nil
+    help: String? = nil, visibleWhen: (([String: String]) -> Bool)? = nil,
+    onChange: ((inout [String: String], String) -> Void)? = nil
   ) {
     self.id = id
     self.title = title
@@ -21,6 +24,8 @@ struct FormField: Identifiable {
     self.required = required
     maxLength = max
     self.help = help
+    self.visibleWhen = visibleWhen
+    self.onChange = onChange
   }
 }
 
@@ -28,9 +33,16 @@ struct FormFields: View {
   let fields: [FormField]
   @Binding var values: [String: String]
   var body: some View {
-    ForEach(fields) { field in
+    ForEach(fields.filter { $0.visibleWhen?(values) ?? true }) { field in
       VStack(alignment: .leading, spacing: 6) {
-        let binding = Binding(get: { values[field.id] ?? "" }, set: { values[field.id] = $0 })
+        let binding = Binding(
+          get: { values[field.id] ?? "" },
+          set: { value in
+            var updated = values
+            updated[field.id] = value
+            field.onChange?(&updated, value)
+            values = updated
+          })
         switch field.kind {
         case .password:
           SecureField(field.title, text: binding).textContentType(
@@ -132,7 +144,7 @@ struct NativeForm: View {
   }
   private func save() async {
     var body = fixed
-    for field in fields {
+    for field in fields where (field.visibleWhen?(values) ?? true) {
       let value = values[field.id] ?? ""
       if field.required && value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
         error = "请填写\(field.title)"

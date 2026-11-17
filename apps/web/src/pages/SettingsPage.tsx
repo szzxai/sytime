@@ -1,4 +1,12 @@
-import type { User } from '@sytime/shared';
+import {
+  defaultShopOrder,
+  normalizeShopSorting,
+  shopSortHasOrder,
+  shopSorts,
+  type User,
+  type ShopSort,
+  type ShopOrder,
+} from '@sytime/shared';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useState, type ChangeEvent, type FormEvent } from 'react';
 import { type Collection } from '../components/Collections';
@@ -20,6 +28,9 @@ function SettingsContent() {
   const ticketDraft = useUnsavedForm();
   const [privacy, setPrivacy] = useState<boolean | null>(null);
   const [privacyStatus, setPrivacyStatus] = useState('');
+  const [sortingDraft, setSortingDraft] = useState<{ sort: ShopSort; order: ShopOrder } | null>(
+    null,
+  );
   const { logout } = useSession();
   const toast = useToast();
   const [panel, setPanel] = usePanel(['security', 'site', 'tickets', 'messages'], 'security');
@@ -33,6 +44,8 @@ function SettingsContent() {
     enabled: panel === 'tickets',
   });
   const user = profile.data?.user;
+  const sorting =
+    sortingDraft ?? normalizeShopSorting(user?.shop_default_sort, user?.shop_default_order);
   const mutation = useMutation({
     mutationFn: ({ path, body }: { path: string; body: unknown }) =>
       api(path, { method: 'PUT', body }),
@@ -56,15 +69,15 @@ function SettingsContent() {
     },
   });
   const site = useMutation({
-    mutationFn: async (form: HTMLFormElement) => {
-      const values = formValues(form);
+    mutationFn: async (values: Record<string, string>) => {
       const body = {
         default_page: values.defaultPage,
         recipe_default_view: values.recipeDefaultView,
         shop_default_sort: values.shopDefaultSort,
+        shop_default_order: values.shopDefaultOrder,
         shop_default_type: values.shopDefaultType,
         shop_layout_mode: values.shopLayoutMode,
-        show_role: user?.role === 'user' || new FormData(form).has('showRole') ? 1 : 0,
+        show_role: user?.role === 'user' || 'showRole' in values ? 1 : 0,
       };
       await api('/api/user/settings', { method: 'PUT', body });
       if ('defaultCollectionShops' in values)
@@ -80,14 +93,16 @@ function SettingsContent() {
         'defaultPage',
         'recipeDefaultView',
         'shopDefaultSort',
+        'shopDefaultOrder',
         'shopDefaultType',
         'shopLayoutMode',
       ])
         if (values[key]) localStorage.setItem(key, values[key]);
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       toast('网站设置已保存到账号');
-      queryClient.invalidateQueries({ queryKey: ['/api/user/profile'] });
+      await queryClient.invalidateQueries({ queryKey: ['/api/user/profile'] });
+      setSortingDraft(null);
     },
     onError: (e) => toast(e.message, 'error'),
   });
@@ -158,13 +173,27 @@ function SettingsContent() {
   bind.siteForm = {
     onSubmit: (e: FormEvent<HTMLFormElement>) => {
       e.preventDefault();
-      site.mutate(e.currentTarget);
+      site.mutate(formValues(e.currentTarget));
     },
   };
   bind.siteSubmit = { disabled: site.isPending };
   bind.defaultPage = { defaultValue: user.default_page };
   bind.recipeDefaultView = { defaultValue: user.recipe_default_view };
-  bind.shopDefaultSort = { defaultValue: user.shop_default_sort };
+  bind.shopDefaultSort = {
+    value: sorting.sort,
+    disabled: site.isPending,
+    onChange: (e: ChangeEvent<HTMLSelectElement>) => {
+      const sort = e.target.value as ShopSort;
+      setSortingDraft({ sort, order: defaultShopOrder(sort) });
+    },
+  };
+  bind.shopDefaultOrder = {
+    value: sorting.order,
+    disabled: site.isPending,
+    onChange: (e: ChangeEvent<HTMLSelectElement>) =>
+      setSortingDraft({ ...sorting, order: e.target.value as ShopOrder }),
+  };
+  bind.shopDefaultOrderField = { hidden: !shopSortHasOrder(sorting.sort) };
   bind.shopDefaultType = { defaultValue: user.shop_default_type };
   bind.shopPrefFields = { hidden: false };
   bind.defaultCollectionShops = {
@@ -203,6 +232,11 @@ function SettingsContent() {
   };
   bind.ticketSubmit = { disabled: ticket.isPending };
   const slots: Record<string, React.ReactNode> = {
+    shopSortOptions: Object.entries(shopSorts).map(([value, label]) => (
+      <option key={value} value={value}>
+        {label}
+      </option>
+    )),
     settingsStatus: null,
     accountSecurity:
       user.auth_source === 'sso' ? (

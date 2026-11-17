@@ -3,6 +3,24 @@ import XCTest
 @testable import Sytime
 
 final class CoreTests: XCTestCase {
+  func testShopSortingMatchesLegacyDefaultsAndExplicitDirections() {
+    XCTAssertEqual(ShopSorting.methods.count, 8)
+    for method in ["campus", "walk", "likes", "reviews", "rating"] {
+      XCTAssertTrue(ShopSorting.hasOrder(method))
+      XCTAssertEqual(ShopSorting.normalized(method, order: "asc").order, "asc")
+      XCTAssertEqual(ShopSorting.normalized(method, order: "desc").order, "desc")
+    }
+    XCTAssertEqual(ShopSorting.normalized("likes").order, "desc")
+    XCTAssertEqual(ShopSorting.normalized("walk", order: "invalid").order, "asc")
+    XCTAssertEqual(ShopSorting.normalized("rating", order: "invalid").order, "desc")
+    XCTAssertEqual(ShopSorting.normalized("unknown", order: "desc").sort, "campus")
+    XCTAssertEqual(ShopSorting.normalized("unknown", order: "desc").order, "asc")
+    XCTAssertEqual(ShopSorting.normalized("north").sort, "campus")
+    for method in ["az", "metro", "new"] {
+      XCTAssertFalse(ShopSorting.hasOrder(method))
+      XCTAssertEqual(ShopSorting.normalized(method, order: "desc").order, ShopSorting.defaultOrder(method))
+    }
+  }
   func testJSONDecodesServerBooleansNullsAndNumbers() throws {
     let data = Data(
       #"{"id":42,"user_liked":true,"rating_avg":null,"price":3.5,"time":["noon"]}"#.utf8)

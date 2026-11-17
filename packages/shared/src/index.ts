@@ -1,3 +1,5 @@
+export * from './shopSort';
+
 export const roleWeights = { operator: 5, admin: 4, student: 3, user: 2, guest: 1 } as const;
 export type Role = keyof typeof roleWeights;
 export const roleLabels: Record<Role, string> = {
@@ -64,6 +66,7 @@ export interface User {
   default_page?: string;
   recipe_default_view?: 'all' | 'reviews' | 'weekly' | 'daily';
   shop_default_sort?: string;
+  shop_default_order?: string;
   shop_default_type?: string;
   shop_layout?: 'stacked' | 'split';
   shop_layout_mode?: 'manual' | 'auto';
