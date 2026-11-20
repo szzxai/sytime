@@ -158,10 +158,23 @@ body[data-page='about'] {
   border-top: 1px solid var(--about-border);
   padding: 20px;
   display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  overflow: hidden;
+}
+.about-member__avatar {
+  flex: none;
+  border-radius: 50%;
+  object-fit: cover;
+}
+.about-member__details {
+  display: flex;
+  flex: 1;
   flex-direction: column;
   gap: 4px;
   min-width: 0;
-  overflow: hidden;
 }
 .about-member__name-row {
   display: flex;

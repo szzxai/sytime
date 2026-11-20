@@ -80,6 +80,23 @@ function ValueIcon({ kind }: { kind: string }) {
     </svg>
   );
 }
+function GitHubAvatar({ link }: { link: string }) {
+  const [failed, setFailed] = useState(false);
+  const username = new URL(link).pathname.split('/')[1];
+
+  return failed ? null : (
+    <img
+      className="about-member__avatar"
+      src={`https://github.com/${username}.png?size=96`}
+      alt=""
+      width={36}
+      height={36}
+      loading="lazy"
+      referrerPolicy="no-referrer"
+      onError={() => setFailed(true)}
+    />
+  );
+}
 function ProfileLink({ member }: { member: Member }) {
   return member.link ? (
     <a
@@ -155,11 +172,14 @@ export function AboutPage() {
           {team.members.map((member) => (
             <article className="about-member" key={member.name}>
               <div className="about-member__body">
-                <div className="about-member__name-row">
-                  <h3>{member.name}</h3>
-                  <ProfileLink member={member} />
+                {member.link && <GitHubAvatar key={member.link} link={member.link} />}
+                <div className="about-member__details">
+                  <div className="about-member__name-row">
+                    <h3>{member.name}</h3>
+                    <ProfileLink member={member} />
+                  </div>
+                  <p>{member.role}</p>
                 </div>
-                <p>{member.role}</p>
               </div>
             </article>
           ))}
