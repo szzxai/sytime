@@ -12,7 +12,7 @@ import { Suspense, useEffect } from 'react';
 import { NavigationScope } from './components/SiteLink';
 import { installNavigation, preloadPage, useDisplayedLocation } from './lib/navigation';
 import { createRoot } from 'react-dom/client';
-import '../public/css/map.css';
+import '../public/css/campus-sidebar.css';
 import '../public/css/site.css';
 import '../public/vendor/leaflet/leaflet.css';
 import './app.css';
@@ -25,6 +25,8 @@ const pages = {
   'wiki-edit': lazyRouteComponent(() => import('./pages/WikiEditPage'), 'WikiEditPage'),
   home: lazyRouteComponent(() => import('./pages/HomePage'), 'HomePage'),
   about: lazyRouteComponent(() => import('./pages/AboutPage'), 'AboutPage'),
+  terms: lazyRouteComponent(() => import('./pages/LegalPages'), 'TermsPage'),
+  privacy: lazyRouteComponent(() => import('./pages/LegalPages'), 'PrivacyPage'),
   map: lazyRouteComponent(() => import('./pages/MapPage'), 'MapPage'),
   recipe: lazyRouteComponent(() => import('./pages/RecipePage'), 'RecipePage'),
   dish: lazyRouteComponent(() => import('./pages/DishPage'), 'DishPage'),
@@ -62,6 +64,8 @@ function Layout() {
       login: '登录',
       'login-password': '账号密码登录',
       about: '关于我们',
+      terms: '用户协议',
+      privacy: '隐私政策',
     };
     const name = loc.pathname.slice(1).replace('.html', '');
     document.title = names[name] ? `${names[name]} · 拾光酥糕` : '拾光酥糕 · 苏州中学校园信息平台';

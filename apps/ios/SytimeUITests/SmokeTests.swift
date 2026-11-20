@@ -25,6 +25,27 @@ final class SmokeTests: XCTestCase {
     add(shot)
   }
 
+  @MainActor func testCampusMapPinchesAndRotates() throws {
+    let app = XCUIApplication()
+    app.launch()
+    XCTAssertTrue(app.buttons["走进苏中"].waitForExistence(timeout: 15))
+    app.buttons["走进苏中"].tap()
+    let atlas = app.otherElements["campus-atlas"]
+    XCTAssertTrue(atlas.waitForExistence(timeout: 10))
+    let landmark = atlas.buttons.containing(NSPredicate(format: "label BEGINSWITH %@", "春雨池"))
+      .firstMatch
+    XCTAssertTrue(landmark.exists)
+    let original = landmark.frame
+    atlas.pinch(withScale: 1.35, velocity: 1)
+    XCTAssertGreaterThan(landmark.frame.width, original.width)
+    atlas.rotate(.pi / 5, withVelocity: 1)
+    XCTAssertNotEqual(atlas.value as? String, "0°")
+    XCTAssertNotEqual(landmark.frame.midX, original.midX)
+    app.buttons["回到校园全景"].tap()
+    XCTAssertEqual(atlas.value as? String, "0°")
+    XCTAssertTrue(landmark.exists)
+  }
+
   @MainActor func testRotationDoesNotLoseCampus() throws {
     let app = XCUIApplication()
     app.launch()

@@ -1,0 +1,217 @@
+/* Berkeleytime About: original dimensions, colors and responsive grid breakpoints. */
+.about-page {
+  --about-heading: #171717;
+  --about-paragraph: #737373;
+  --about-label: #a3a3a3;
+  --about-border: rgb(0 0 0 / 10%);
+  --about-surface: #fff;
+  --about-blue: #3b82f6;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 48px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 64px;
+  font-family: var(--font-sans);
+  line-height: normal;
+  color: var(--about-heading);
+}
+[data-theme='dark'] .about-page {
+  --about-heading: #fff;
+  --about-paragraph: #a1a1aa;
+  --about-label: #71717a;
+  --about-border: rgb(255 255 255 / 10%);
+  --about-surface: #18181b;
+}
+body[data-page='about'] {
+  background: #fff;
+}
+[data-theme='dark'] body[data-page='about'] {
+  background: #18181b;
+}
+.about-page :is(h1, h2, h3, p) {
+  margin: 0;
+  letter-spacing: normal;
+}
+.about-intro {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  text-align: center;
+}
+.about-intro h1 {
+  font-size: 32px;
+  font-weight: 700;
+}
+.about-intro p {
+  max-width: 700px;
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--about-paragraph);
+}
+.about-page h2 {
+  font-size: 24px;
+  font-weight: 600;
+}
+.about-values {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 32px;
+}
+.about-values__grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  max-width: 900px;
+  width: 100%;
+}
+.about-value {
+  background: var(--about-surface);
+  border: 1px solid var(--about-border);
+  border-radius: 12px;
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 16px;
+}
+.about-value__icon {
+  color: var(--about-blue);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 8px;
+}
+.about-value h3 {
+  font-size: 20px;
+  font-weight: 600;
+}
+.about-value p {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--about-paragraph);
+}
+.about-team {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+.about-team__years {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  border-bottom: 1px solid var(--about-border);
+  padding-bottom: 12px;
+}
+.about-team__years button {
+  background: none;
+  border: none;
+  border-radius: 0;
+  font: 500 14px / normal var(--font-sans);
+  color: var(--about-label);
+  cursor: pointer;
+  padding: 4px 0;
+  position: relative;
+  transition: color 0.15s ease;
+}
+.about-team__years button:hover {
+  color: var(--about-heading);
+}
+.about-team__years button[aria-pressed='true'] {
+  color: var(--about-blue);
+  font-weight: 600;
+}
+.about-team__years button[aria-pressed='true']::after {
+  content: '';
+  position: absolute;
+  bottom: -12px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--about-blue);
+}
+.about-team__grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+  width: 100%;
+  justify-items: start;
+}
+.about-member {
+  border: 1px solid var(--about-border);
+  border-radius: 12px;
+  width: 100%;
+  max-width: 250px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+.about-member__body {
+  background: var(--about-surface);
+  border-top: 1px solid var(--about-border);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  overflow: hidden;
+}
+.about-member__name-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.about-member h3 {
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.16px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.about-member p {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--about-paragraph);
+  letter-spacing: -0.14px;
+}
+.about-member__link {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  color: var(--about-paragraph);
+}
+.about-member__link:hover {
+  color: var(--about-heading);
+}
+.about-page :is(button, a):focus-visible {
+  outline: 2px solid var(--about-blue);
+  outline-offset: 4px;
+}
+@media (max-width: 1024px) {
+  .about-team__grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+@media (max-width: 768px) {
+  .about-values__grid {
+    grid-template-columns: 1fr;
+    max-width: 400px;
+  }
+  .about-team__grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (max-width: 480px) {
+  .about-team__grid {
+    grid-template-columns: 1fr;
+  }
+}

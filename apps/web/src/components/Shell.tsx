@@ -484,13 +484,20 @@ export function Shell({ children }: { children: ReactNode }) {
                 <div>
                   <h2>关于我们</h2>
                   <SiteLink href="/about.html">拾光酥糕</SiteLink>
+                  <SiteLink href="/terms.html">用户协议</SiteLink>
+                  <SiteLink href="/privacy.html">隐私政策</SiteLink>
                   <SiteLink href="/profile.html">个人中心</SiteLink>
                   <SiteLink href="/settings.html">网站设置</SiteLink>
                 </div>
               </nav>
             </div>
             <div className="site-footer__bottom">
-              <p>© 2026 苏州中学人工智能实验室</p>
+              <div className="site-footer__legal">
+                <p>© 2026 苏州中学人工智能实验室</p>
+                <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer">
+                  苏ICP备2026066695号-1
+                </a>
+              </div>
               <ThemeControls />
             </div>
           </div>

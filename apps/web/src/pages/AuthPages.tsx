@@ -30,6 +30,21 @@ function LoginScreen({ passwordLogin }: { passwordLogin: boolean }) {
     ? '/' + nextUrl().replace(/^\//, '')
     : '';
   const [ssoMessage, setSSOMessage] = useState('');
+  const [agreed, setAgreed] = useState(false);
+  const consentRef = useRef<HTMLDivElement>(null);
+  function checkConsent() {
+    if (agreed) return true;
+    const area = consentRef.current;
+    area?.querySelector('input')?.focus({ preventScroll: true });
+    area?.getAnimations().forEach((animation) => animation.cancel());
+    area?.animate(
+      matchMedia('(prefers-reduced-motion: reduce)').matches
+        ? [{ opacity: 1 }, { opacity: 0.5 }, { opacity: 1 }]
+        : [0, -6, 6, -4, 4, 0].map((x) => ({ transform: `translateX(${x}px)` })),
+      { duration: 360, easing: 'ease-in-out' },
+    );
+    return false;
+  }
   const [username, setUsername] = useState('');
   const credentials = useRef('');
   const [ban, setBan] = useState<Record<string, unknown> | null>(null);
@@ -128,14 +143,23 @@ function LoginScreen({ passwordLogin }: { passwordLogin: boolean }) {
         </SiteLink>
       ) : (
         <div className="stack">
-          <a
+          <button
+            type="button"
             className="btn btn--primary btn--lg btn--block"
-            href={'/api/sso/start' + (returnPath ? '?next=' + encodeURIComponent(returnPath) : '')}
+            onClick={() => {
+              if (checkConsent())
+                location.assign(
+                  '/api/sso/start' + (returnPath ? '?next=' + encodeURIComponent(returnPath) : ''),
+                );
+            }}
           >
             通过社盟账号登录
-          </a>
+          </button>
           <SiteLink
             className="btn btn--lg btn--block"
+            onClick={(e) => {
+              if (!checkConsent()) e.preventDefault();
+            }}
             href={
               '/login-password.html' + (returnPath ? '?next=' + encodeURIComponent(returnPath) : '')
             }
@@ -181,6 +205,7 @@ function LoginScreen({ passwordLogin }: { passwordLogin: boolean }) {
           autoComplete="on"
           onSubmit={(e) => {
             e.preventDefault();
+            if (!checkConsent()) return;
             const body = formValues(e.currentTarget);
             setUsername(body.username);
             credentials.current = body.password;
@@ -210,11 +235,34 @@ function LoginScreen({ passwordLogin }: { passwordLogin: boolean }) {
             className="btn btn--primary btn--lg btn--block"
             id="submitBtn"
             disabled={login.isPending || login.isSuccess}
+            onClick={(e) => {
+              if (!checkConsent()) e.preventDefault();
+            }}
           >
             登录
           </button>
         </form>
       )}
+      <div className="login-consent" ref={consentRef}>
+        <input
+          id="loginConsent"
+          type="checkbox"
+          checked={agreed}
+          onChange={(e) => setAgreed(e.target.checked)}
+          form={passwordLogin ? 'loginForm' : undefined}
+          aria-required="true"
+        />
+        <div>
+          <label htmlFor="loginConsent">我已阅读并同意</label>
+          <a href="/terms.html" target="_blank" rel="noopener noreferrer">
+            《用户协议》
+          </a>
+          <span>和</span>
+          <a href="/privacy.html" target="_blank" rel="noopener noreferrer">
+            《隐私政策》
+          </a>
+        </div>
+      </div>
       <div id="appealBox" hidden={!ban || Number(ban.allow_appeal) !== 1}>
         <h2 className="form__group-title">申请解封</h2>
         <div className="field">

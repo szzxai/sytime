@@ -29,8 +29,7 @@ module.exports = function mountAccounts(app, services) {
   const current = (c) => c.get('user');
   const secure = (c) =>
     new URL(c.req.url).protocol === 'https:' || process.env.NODE_ENV === 'production';
-  const consume = (c, operation, max = 10) =>
-    limited(db, operation + ':' + (c.env?.incoming?.socket?.remoteAddress || 'local'), max);
+  const consume = (c, operation, max = 10) => limited(db, operation + ':' + c.get('clientIp'), max);
   const sessionUser = (user) => ({
     id: user.id,
     display_id: user.display_id,

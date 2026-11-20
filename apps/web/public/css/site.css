@@ -6408,34 +6408,6 @@ body[data-page='home'] .site-header {
   font-size: 16px;
   line-height: 1.6;
 }
-.about-page {
-  padding-top: 72px;
-}
-.about-page .page-head__title {
-  font-size: 36px;
-}
-.about-page__art {
-  width: 100%;
-  height: 280px;
-  object-fit: contain;
-  object-position: bottom;
-  background: linear-gradient(var(--surface), var(--primary-200));
-  margin: 40px 0;
-}
-.about-story {
-  margin-top: 36px;
-}
-.about-story h2 {
-  font-size: 23px;
-  margin-bottom: 16px;
-}
-.about-story p {
-  font-size: 16px;
-  color: var(--ink-2);
-  line-height: 1.9;
-  margin-bottom: 18px;
-}
-
 /* Footer follows the reference's identity + three columns + bottom theme switch. */
 .site-footer {
   border: 0;
@@ -6869,9 +6841,6 @@ body[data-page='home'] .site-header {
   }
   .desktop-break {
     display: none;
-  }
-  .about-page .page-head__title {
-    font-size: 28px;
   }
 }
 @media (max-width: 660px) {

@@ -17,10 +17,25 @@ const { mountCollectionRoutes } = require('./domain/collections/routes');
 const { localDay, shiftDay } = require('./domain/menu/schedule');
 module.exports = function createApp(root) {
   const app = new Hono();
+  const resolveClientIp = require('./client-ip').createClientIpResolver(
+    process.env.TRUSTED_PROXIES || '',
+  );
+  app.use('*', async (c, next) => {
+    c.set('clientIp', resolveClientIp(c));
+    c.header('X-Content-Type-Options', 'nosniff');
+    c.header('X-Frame-Options', 'DENY');
+    c.header('Referrer-Policy', 'strict-origin-when-cross-origin');
+    c.header(
+      'Content-Security-Policy',
+      "frame-ancestors 'none'; base-uri 'self'; object-src 'none'",
+    );
+    if (process.env.NODE_ENV === 'production' && process.env.APP_ORIGIN?.startsWith('https://'))
+      c.header('Strict-Transport-Security', 'max-age=31536000');
+    return next();
+  });
   const { bodyLimit } = require('hono/body-limit');
   app.use('/api/*', async (c, next) => {
     c.header('Cache-Control', 'no-store');
-    c.header('X-Content-Type-Options', 'nosniff');
     if (!['GET', 'HEAD', 'OPTIONS'].includes(c.req.method)) {
       const origin = c.req.header('Origin');
       const allowed = new URL(process.env.APP_ORIGIN || c.req.url).origin;

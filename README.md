@@ -37,6 +37,8 @@
 
 参与开发请阅读[架构与运行说明](./docs/architecture.md)及[公开仓库准备](./docs/public-release.md)。源码不包含运行站点的账号、学生资料或上传内容；安全问题请按[安全反馈说明](./SECURITY.md)私下联系。
 
+生产环境、NAT 反代及可信代理配置见[部署说明](./docs/deployment.md)。
+
 ## 开源协议
 
 本项目基于 [GNU Affero General Public License v3.0 (AGPL-3.0)](./LICENSE) 协议开源。

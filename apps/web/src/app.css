@@ -180,3 +180,87 @@ body[data-page='map'] #root > .campus-page {
     transition: none !important;
   }
 }
+/* Keep agreement links independently focusable beside the checkbox label. */
+.login-consent {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  margin-top: 1.25rem;
+  font-size: 0.875rem;
+  line-height: 1.7;
+}
+.login-consent input {
+  flex: 0 0 auto;
+  margin-top: 0.35rem;
+  accent-color: var(--color-primary, #218653);
+}
+.login-consent a,
+.login-consent a:hover {
+  text-decoration: none;
+}
+.site-footer__bottom {
+  flex-wrap: wrap;
+}
+.site-footer__legal {
+  display: flex;
+  flex: 1 1 200px;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.35rem 1rem;
+}
+.site-footer__legal a {
+  white-space: nowrap;
+}
+.site-footer__bottom .theme-switch {
+  flex: 0 0 auto;
+}
+
+.legal-content {
+  font-size: 1rem;
+  line-height: 1.9;
+  overflow-wrap: anywhere;
+}
+.legal-content section + section {
+  margin-top: 2.5rem;
+}
+.legal-content h2 {
+  margin: 0 0 1rem;
+  font-size: 1.35rem;
+  line-height: 1.5;
+}
+.legal-content h3 {
+  margin: 1.5rem 0 0.75rem;
+  font-size: 1.1rem;
+  line-height: 1.6;
+}
+.legal-content p,
+.legal-content ul,
+.legal-content ol {
+  margin: 0 0 1rem;
+}
+.legal-content ul,
+.legal-content ol {
+  padding-left: 1.5em;
+}
+.legal-content ul {
+  list-style: disc;
+}
+.legal-content ol {
+  list-style: decimal;
+}
+.legal-content li + li {
+  margin-top: 0.75rem;
+}
+.legal-content strong {
+  font-weight: 600;
+}
+.legal-content a {
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+.legal-content code {
+  font-size: 0.9em;
+}
+.legal-content section > :last-child {
+  margin-bottom: 0;
+}

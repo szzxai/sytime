@@ -1,9 +1,10 @@
 import { SiteLink } from '../components/SiteLink';
-import { flushSync } from 'react-dom';
-import { useEffect, useRef, useState } from 'react';
-import { createCampusMap } from '../maps/campus';
-import { campusPlaces, campusSources } from '../maps/places';
-type Place = (typeof campusPlaces)[number];
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { mountCampus, type CampusViewport, type CampusMode } from '../maps/campus/viewport';
+import { campusPlaces, campusSources, type Place } from '../maps/campus/catalog';
+import { footprints, boundaryFor } from '../maps/campus/survey';
+import { detailReadings } from '../maps/campus/detail-readings';
+import './CampusScene.css';
 const categories: Record<string, string> = {
   study: '教学空间',
   heritage: '人文地标',
@@ -13,132 +14,132 @@ const categories: Record<string, string> = {
   gate: '校园出入口',
 };
 function Thumbnail({ place }: { place: Place }) {
+  const shapes = footprints.get(place.id) || [];
+  if (!shapes.length)
+    return (
+      <svg viewBox="0 0 64 48" aria-hidden="true">
+        <path
+          d="M12 32 30 8l20 24-18 9Z"
+          fill={place.category === 'nature' ? '#b2c99b' : '#b6ccc3'}
+        />
+      </svg>
+    );
+  const points = shapes.flat(),
+    xs = points.map((p) => p[0]),
+    ys = points.map((p) => p[1]),
+    x = Math.min(...xs),
+    y = Math.min(...ys),
+    w = Math.max(...xs) - x,
+    h = Math.max(...ys) - y;
   return (
-    <svg viewBox="0 0 160 120" aria-hidden="true">
-      <use href={`#art-${place.icon}`} />
+    <svg viewBox={`${x - 10} ${y - 10} ${w + 20} ${h + 20}`} aria-hidden="true">
+      {shapes.map((pts, i) => (
+        <polygon
+          key={i}
+          points={pts.map((p) => p.join(',')).join(' ')}
+          fill="#d8c6a8"
+          stroke="#fdfbf5"
+          strokeWidth="2"
+        />
+      ))}
     </svg>
   );
 }
 export function MapPage() {
-  const host = useRef<HTMLDivElement>(null);
-  const engine = useRef<Awaited<ReturnType<typeof createCampusMap>>>(null);
-  const [ready, setReady] = useState(false);
-  const [error, setError] = useState(false);
-  const [revision, setRevision] = useState(0);
-  const [search, setSearch] = useState('');
-  const [category, setCategory] = useState('all');
-  const [selected, setSelected] = useState<Place | null>(null);
-  const [directory, setDirectory] = useState(false);
-  const origin = useRef<HTMLElement | null>(null);
-  const detail = useRef<HTMLHeadingElement>(null);
-  const rows = campusPlaces.filter(
-    (p) =>
-      (category === 'all' || p.category === category) &&
-      (!search.trim() ||
-        (p.name + ('alias' in p ? p.alias : '') + p.summary + p.area + categories[p.category])
-          .toLowerCase()
-          .includes(search.trim().toLowerCase())),
+  const host = useRef<HTMLDivElement>(null),
+    engine = useRef<CampusViewport | null>(null),
+    origin = useRef<HTMLElement | null>(null),
+    detail = useRef<HTMLHeadingElement>(null);
+  const [mapMode, setMapMode] = useState<CampusMode>('2.5d');
+  const modeRef = useRef<CampusMode>('2.5d');
+  const [state, setState] = useState<'loading' | 'ready' | 'failed'>('loading'),
+    [revision, setRevision] = useState(0);
+  const [search, setSearch] = useState(''),
+    [category, setCategory] = useState('all'),
+    [directory, setDirectory] = useState(false),
+    [selected, setSelected] = useState<Place | null>(null);
+  const rows = useMemo(
+    () =>
+      campusPlaces
+        .filter(
+          (p) =>
+            (category === 'all' || p.category === category) &&
+            (!search.trim() ||
+              (p.name + (p.alias || '') + p.summary + p.area + categories[p.category])
+                .toLowerCase()
+                .includes(search.trim().toLowerCase())),
+        )
+        .sort((a, b) => Number(b.name === search.trim()) - Number(a.name === search.trim())),
+    [category, search],
   );
-  function select(p: Place, source: HTMLElement) {
-    origin.current = source;
+  function select(p: Place, source?: HTMLElement) {
+    origin.current = source || host.current;
     setSelected(p);
     setDirectory(false);
+    engine.current?.focus(p.id);
   }
-  function close(focus = true) {
+  function close() {
     setSelected(null);
-    if (focus)
-      (origin.current?.isConnected ? origin.current : host.current)?.focus({ preventScroll: true });
+    origin.current?.focus({ preventScroll: true });
   }
   useEffect(() => {
-    let disposed = false;
     const controller = new AbortController();
-    setError(false);
-    createCampusMap(
-      host.current,
-      (place: Place, source: HTMLElement) => flushSync(() => select(place, source)),
-      controller.signal,
-    )
-      .then((map) => {
-        if (disposed) {
-          map?.destroy();
+    let active = true;
+    setState('loading');
+    const el = host.current!;
+    const fail = () => {
+      setState('failed');
+      delete document.body.dataset.campusReady;
+    };
+    el.addEventListener('campus-failed', fail);
+    mountCampus(el, (p) => select(p), controller.signal, modeRef.current)
+      .then((view) => {
+        if (!active) {
+          view.destroy();
           return;
         }
-        engine.current = map;
-        setReady(true);
-        document.body.dataset.guideReady = 'true';
+        engine.current = view;
+        setState('ready');
+        document.body.dataset.campusReady = 'true';
       })
       .catch(() => {
-        if (!disposed) setError(true);
+        if (active) setState('failed');
       });
     return () => {
-      disposed = true;
+      active = false;
       controller.abort();
       engine.current?.destroy();
       engine.current = null;
-      delete document.body.dataset.guideReady;
+      el.removeEventListener('campus-failed', fail);
+      delete document.body.dataset.campusReady;
     };
   }, [revision]);
   useEffect(() => {
-    if (!ready) return;
-    engine.current?.filter(
-      new Set(
-        campusPlaces
-          .filter(
-            (p) =>
-              (category === 'all' || p.category === category) &&
-              (!search.trim() ||
-                (
-                  p.name +
-                  ('alias' in p ? p.alias : '') +
-                  p.summary +
-                  p.area +
-                  categories[p.category]
-                )
-                  .toLowerCase()
-                  .includes(search.trim().toLowerCase())),
-          )
-          .map((p) => p.id),
-      ),
-    );
-    if (
-      selected &&
-      ((category !== 'all' && selected.category !== category) ||
-        (search.trim() &&
-          !(
-            selected.name +
-            ('alias' in selected ? selected.alias : '') +
-            selected.summary +
-            selected.area +
-            categories[selected.category]
-          )
-            .toLowerCase()
-            .includes(search.trim().toLowerCase())))
-    )
-      setSelected(null);
-  }, [ready, search, category, selected]);
-  useEffect(() => {
-    engine.current?.selection(selected?.id);
-    if (selected) {
-      engine.current?.reveal(selected);
-      detail.current?.focus({ preventScroll: true });
-      document.getElementById('detailContent')?.scrollTo(0, 0);
+    if (state === 'ready') {
+      engine.current?.filter(new Set(rows.map((p) => p.id)));
+      if (selected && !rows.some((p) => p.id === selected.id)) setSelected(null);
     }
-  }, [selected]);
+  }, [state, rows, selected]);
   useEffect(() => {
-    const key = (e: KeyboardEvent) => {
-      if (e.key !== 'Escape' || document.querySelector('dialog[open]')) return;
-      if (selected) {
-        close();
-        e.preventDefault();
-      }
-      if (directory) {
+    if (state !== 'ready') return;
+    engine.current?.select(selected?.id);
+    if (selected) detail.current?.focus({ preventScroll: true });
+  }, [selected, state]);
+  useEffect(() => {
+    const escape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !document.querySelector('dialog[open]')) {
+        if (selected) close();
         setDirectory(false);
-        document.getElementById('placesToggle')?.focus();
       }
     };
-    addEventListener('keydown', key);
-    return () => removeEventListener('keydown', key);
-  }, [selected, directory]);
+    addEventListener('keydown', escape);
+    return () => removeEventListener('keydown', escape);
+  }, [selected]);
+  const shapes = selected ? boundaryFor(selected.id) : [];
+  const massing = shapes.filter((f) => f.properties.kind === 'building');
+  const scan = shapes.some((f) => f.properties.basis === 'scan');
+  const aerial = shapes.some((f) => f.properties.basis === 'aerial');
+  const tallest = massing.length ? Math.max(...massing.map((f) => f.properties.height || 0)) : null;
   return (
     <main className="campus-page" id="main">
       <aside className="campus-sidebar" aria-label="地点目录">
@@ -276,159 +277,163 @@ export function MapPage() {
         </div>
       </aside>
       <section
-        className="campus-stage"
-        aria-label="校园导览"
+        className="survey-scene"
+        aria-label="苏州中学校园立体地图"
         onPointerDownCapture={() => {
-          if (directory && window.matchMedia('(max-width: 700px)').matches) setDirectory(false);
+          if (directory && innerWidth < 701) setDirectory(false);
         }}
       >
         <div
-          id="guideMap"
+          className="survey-viewport"
           ref={host}
-          role="region"
           tabIndex={0}
-          aria-label="校园导览地图；方向键移动，加减键缩放，Home 键回到全景"
-          onKeyDown={(e) => {
-            if (e.target !== e.currentTarget) return;
-            const moves: Record<string, number[]> = {
-              ArrowUp: [0, -80],
-              ArrowDown: [0, 80],
-              ArrowLeft: [-80, 0],
-              ArrowRight: [80, 0],
-              w: [0, -80],
-              s: [0, 80],
-              a: [-80, 0],
-              d: [80, 0],
-            };
-            if (moves[e.key]) engine.current?.pan(moves[e.key]);
-            else if (e.key === '+' || e.key === '=') engine.current?.zoom(0.4);
-            else if (e.key === '-') engine.current?.zoom(-0.4);
-            else if (e.key === 'Home') {
-              close(false);
-              engine.current?.fit();
-            } else return;
-            e.preventDefault();
-          }}
+          aria-label="交互地图，可拖动、滚轮缩放、右键旋转。地点也可从左侧目录选择。"
         />
-        <div className="campus-compass" id="guideCompass" aria-label="地图上方为北">
-          <span>N</span>
-          <svg viewBox="0 0 40 40" aria-hidden="true">
-            <path d="m20 5 8 28-8-6-8 6Z" />
-            <path className="compass-half" d="m20 5 8 28-8-6Z" />
-          </svg>
-          <span>北</span>
+        {mapMode === 'experimental' && (
+          <div className="survey-heading" aria-hidden="true">
+            <span>SUZHOU HIGH SCHOOL</span>
+            <strong>校园 · 空间导览</strong>
+          </div>
+        )}
+        <div className="survey-mode" role="group" aria-label="地图显示模式">
+          {(
+            [
+              ['2.5d', '2.5D'],
+              ['2d', '2D'],
+              ['experimental', '实验性'],
+            ] as const
+          ).map(([value, label]) => (
+            <button
+              key={value}
+              type="button"
+              aria-pressed={mapMode === value}
+              disabled={state !== 'ready'}
+              onClick={() => {
+                modeRef.current = value;
+                setMapMode(value);
+                engine.current?.mode(value);
+              }}
+            >
+              {label}
+            </button>
+          ))}
         </div>
-        <div className="campus-controls" id="guideControls" role="group" aria-label="地图控制">
-          <button
-            type="button"
-            id="guideZoomIn"
-            aria-label="放大导览地图"
-            onClick={() => engine.current?.zoom(0.4)}
-          >
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M12 5v14M5 12h14" />
-            </svg>
+        <div className="survey-tools" role="group" aria-label="地图视野">
+          <button type="button" aria-label="放大地图" onClick={() => engine.current?.zoom(1)}>
+            ＋
+          </button>
+          <button type="button" aria-label="缩小地图" onClick={() => engine.current?.zoom(-1)}>
+            −
+          </button>
+          <button type="button" aria-label="朝北查看" onClick={() => engine.current?.north()}>
+            N ↑
+          </button>
+          <button type="button" aria-label="旋转视角" onClick={() => engine.current?.orbit()}>
+            ↻
           </button>
           <button
             type="button"
-            id="guideZoomOut"
-            aria-label="缩小导览地图"
-            onClick={() => engine.current?.zoom(-0.4)}
-          >
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M5 12h14" />
-            </svg>
-          </button>
-          <span />
-          <button
-            type="button"
-            id="guideReset"
-            aria-label="回到校园全景"
+            aria-label="校园全景"
             onClick={() => {
-              close(false);
-              engine.current?.fit();
+              setSelected(null);
+              engine.current?.reset();
             }}
           >
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M9 4H4v5m11-5h5v5M4 15v5h5m11-5v5h-5" />
-              <rect x="8" y="8" width="8" height="8" rx="1" />
-            </svg>
+            ⌖
           </button>
         </div>
-        <div className="campus-map-note" id="guideNote">
-          <span className="campus-note-dot" />
-          航拍参考绘制 · 校园位置示意
+        <div className="survey-legend" aria-label="地图图例">
+          <span>
+            <i className="key-building" />
+            建筑
+          </span>
+          <span>
+            <i className="key-green" />
+            绿地
+          </span>
+          <span>
+            <i className="key-water" />
+            水面
+          </span>
+          <span>
+            <i className="key-sport" />
+            运动
+          </span>
         </div>
-        <div className="campus-map-tip" id="guideTip">
-          双指移动 <span>·</span> 捏合或 Ctrl / ⌘ + 滚轮缩放
+        <div className="survey-credit">
+          {mapMode === 'experimental' ? '扫描参考重建 · 航拍补全' : '校园平面简图'}
         </div>
-        <div className="campus-guide-status" id="guideStatus" role="status" hidden={ready}>
-          {error ? (
-            <>
-              校园导览暂时无法加载
-              <button type="button" onClick={() => setRevision((n) => n + 1)}>
-                重新加载
-              </button>
-            </>
-          ) : (
-            '正在展开校园…'
-          )}
-        </div>
-        <article
-          className="campus-detail"
-          id="placeDetail"
-          aria-labelledby="detailName"
-          hidden={!selected}
-        >
-          <button
-            type="button"
-            className="campus-detail-close"
-            id="closeDetail"
-            aria-label="关闭地点介绍"
-            onClick={() => close()}
-          >
-            ×
-          </button>
-          <div className="campus-detail-header">
-            <div className="campus-detail-art" id="detailArt" aria-hidden="true">
-              {selected && <Thumbnail place={selected} />}
-            </div>
-            <div>
-              <p className="campus-detail-category" id="detailCategory">
-                {selected && categories[selected.category]}
-                {selected && 'alias' in selected && selected.alias ? ` / ${selected.alias}` : ''}
-              </p>
-              <h2 id="detailName" ref={detail} tabIndex={-1}>
-                {selected?.name}
-              </h2>
-            </div>
+        <div className="survey-gesture">滚轮缩放 / 拖动平移 / 右键旋转</div>
+        {state !== 'ready' && (
+          <div className="survey-state" role="status">
+            {state === 'failed' ? (
+              <>
+                <strong>地图加载失败</strong>
+                <p>请重试加载校园场景。</p>
+                <button type="button" onClick={() => setRevision((v) => v + 1)}>
+                  重新加载
+                </button>
+              </>
+            ) : (
+              <>
+                <span className="survey-spinner" />
+                <p>正在构建校园场景</p>
+              </>
+            )}
           </div>
-          <div
-            className="campus-detail-content"
-            id="detailContent"
-            tabIndex={0}
-            role="region"
-            aria-label="地点介绍"
-          >
-            <div id="detailDescription">
-              {selected?.description.split('\n\n').map((p, i) => (
+        )}
+        {selected && (
+          <article className="survey-inspector" aria-labelledby="survey-place-name">
+            <div className="survey-inspector-top">
+              <span>{categories[selected.category]}</span>
+              <button type="button" aria-label="关闭地点详情" onClick={close}>
+                ×
+              </button>
+            </div>
+            <h2 id="survey-place-name" ref={detail} tabIndex={-1}>
+              {selected.name}
+            </h2>
+            <p className="survey-summary">{selected.summary}</p>
+            <div className="survey-facts">
+              <span>{selected.area}</span>
+              {mapMode === 'experimental' && tallest && (
+                <span>
+                  {selected.id === 'zhide' ? '檐带' : '檐高'}约 {tallest} m
+                </span>
+              )}
+              {(scan || aerial) && (
+                <span>{scan && aerial ? '扫描与航拍' : scan ? '扫描重建' : '航拍补全'}</span>
+              )}
+            </div>
+            <div className="survey-prose" tabIndex={0} role="region" aria-label="地点介绍">
+              {mapMode === 'experimental' && detailReadings[selected.id] && (
+                <p>{detailReadings[selected.id]}</p>
+              )}
+              {selected.description.split('\n\n').map((p, i) => (
                 <p key={i}>{p}</p>
               ))}
+              {selected.sources && (
+                <nav aria-label="资料来源">
+                  {selected.sources.map((key) => {
+                    const s = campusSources[key as keyof typeof campusSources];
+                    return (
+                      <SiteLink key={key} href={s.url} target="_blank" rel="noopener noreferrer">
+                        {s.label} ↗
+                      </SiteLink>
+                    );
+                  })}
+                </nav>
+              )}
             </div>
-            <nav className="campus-detail-sources" id="detailSources" aria-label="资料来源">
-              {selected &&
-                'sources' in selected &&
-                selected.sources?.map((key) => {
-                  const s = campusSources[key as keyof typeof campusSources];
-                  return (
-                    <SiteLink href={s.url} target="_blank" rel="noopener noreferrer" key={key}>
-                      {s.label}
-                    </SiteLink>
-                  );
-                })}
-            </nav>
-          </div>
-        </article>
+            <button
+              className="survey-refocus"
+              type="button"
+              onClick={() => engine.current?.focus(selected.id)}
+            >
+              定位此处 <span aria-hidden="true">↗</span>
+            </button>
+          </article>
+        )}
       </section>
     </main>
   );

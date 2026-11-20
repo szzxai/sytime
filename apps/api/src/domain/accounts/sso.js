@@ -78,7 +78,7 @@ module.exports = function mountSSO(app, { db, requireLogin, issueSession, sessio
   const clean = () => query(db, 'DELETE FROM oidc_flows WHERE expires_at<=?').run(now());
   app.get('/api/sso/start', async (c) => {
     try {
-      limited(db, 'sso:' + (c.env?.incoming?.socket?.remoteAddress || 'local'), 30);
+      limited(db, 'sso:' + c.get('clientIp'), 30);
       const cfg = config();
       const provider = await discover(cfg);
       const state = random(),
@@ -302,7 +302,7 @@ module.exports = function mountSSO(app, { db, requireLogin, issueSession, sessio
   app.post(
     '/api/sso/native/exchange',
     action(async (c) => {
-      limited(db, 'sso-native:' + (c.env?.incoming?.socket?.remoteAddress || 'local'), 30);
+      limited(db, 'sso-native:' + c.get('clientIp'), 30);
       const { ticket, verifier } = c.get('body') || {};
       const grant = readGrant(ticket, 'native');
       if (

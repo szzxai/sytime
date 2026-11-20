@@ -22,6 +22,8 @@ const pages = new Set([
   ...[
     'index',
     'about',
+    'terms',
+    'privacy',
     'map',
     'recipe',
     'dish',

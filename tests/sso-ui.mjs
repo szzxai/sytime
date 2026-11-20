@@ -102,26 +102,58 @@ test('SSO browser login, real-name profile, bans, appeals and account safety', a
     const errors = [];
     page.on('pageerror', (e) => errors.push(e.message));
     await page.goto(site.origin + '/login.html?next=' + encodeURIComponent('/profile.html'));
-    await page.getByRole('link', { name: '通过社盟账号登录', exact: true }).waitFor();
+    await page.getByRole('button', { name: '通过社盟账号登录', exact: true }).waitFor();
+    assert.equal(await page.getByRole('button', { name: '通过社盟账号登录', exact: true }).isDisabled(), false);
+    assert.equal(await page.locator('#loginConsent').isChecked(), false);
+    for (const [label, title] of [['《用户协议》', '用户协议'], ['《隐私政策》', '隐私政策']]) {
+      const popup = ctx.waitForEvent('page');
+      await page.getByRole('link', { name: label, exact: true }).click();
+      const legal = await popup;
+      await legal.getByRole('heading', { name: title, exact: true }).waitFor();
+      assert.ok((await legal.locator('article').textContent()).length > 100);
+      assert.equal(await legal.locator('article').evaluate((el) => getComputedStyle(el).lineHeight), '30.4px');
+      await legal.reload();
+      await legal.getByRole('heading', { name: title, exact: true }).waitFor();
+      await legal.close();
+    }
+    assert.equal(await page.getByRole('link', { name: '苏ICP备2026066695号-1', exact: true }).getAttribute('href'), 'https://beian.miit.gov.cn/');
     assert.equal(await page.locator('#loginForm,input[name=username],input[name=password]').count(), 0);
     assert.equal(
       await page.locator('a[href*="register.html"],a[href*="student_verify.html"]').count(),
       0,
     );
+    const beforeLogin = page.url();
+    for (const entry of [page.getByRole('button', { name: '通过社盟账号登录', exact: true }), page.getByRole('link', { name: '使用账号密码登录', exact: true })]) {
+      await entry.click();
+      assert.equal(page.url(), beforeLogin);
+      assert.equal(await page.locator('#loginConsent').evaluate((el) => el === document.activeElement), true);
+      assert.ok(await page.locator('.login-consent').evaluate((el) => el.getAnimations().length > 0));
+    }
+    assert.equal(await page.locator('.login-consent a').first().evaluate((el) => getComputedStyle(el).textDecorationLine), 'none');
+    await page.locator('#loginConsent').check();
     await page.getByRole('link', { name: '使用账号密码登录', exact: true }).click();
     await page.waitForURL('**/login-password.html?*');
     assert.equal(new URL(page.url()).searchParams.get('next'), '/profile.html');
     await page.getByRole('heading', { name: '账号密码登录', exact: true }).waitFor();
     assert.equal(await page.locator('#username').isVisible(), true);
-    assert.equal(await page.getByRole('link', { name: '通过社盟账号登录', exact: true }).count(), 0);
+    assert.equal(await page.getByRole('button', { name: '通过社盟账号登录', exact: true }).count(), 0);
     await page.reload();
     await page.locator('#password').waitFor();
+    assert.equal(await page.locator('#submitBtn').isDisabled(), false);
+    await page.locator('#loginConsent').check();
+    assert.equal(await page.locator('#submitBtn').isDisabled(), false);
+    await page.locator('#loginConsent').uncheck();
+    assert.equal(await page.locator('#submitBtn').isDisabled(), false);
+    await page.locator('#submitBtn').click();
+    assert.equal(await page.locator('#loginConsent').evaluate((el) => el === document.activeElement), true);
+    assert.ok(await page.locator('.login-consent').evaluate((el) => el.getAnimations().length > 0));
     await page.getByRole('link', { name: '返回选择登录方式', exact: true }).click();
     await page.waitForURL('**/login.html?*');
     await page.getByRole('heading', { name: '欢迎回来', exact: true }).waitFor();
     assert.equal(new URL(page.url()).searchParams.get('next'), '/profile.html');
     assert.equal(await page.locator('#loginForm,input[name=username],input[name=password]').count(), 0);
-    await page.getByRole('link', { name: '通过社盟账号登录', exact: true }).click();
+    await page.locator('#loginConsent').check();
+    await page.getByRole('button', { name: '通过社盟账号登录', exact: true }).click();
     await page.waitForURL('**/profile.html');
     await page.locator('#heroNickname').getByText('真实姓名同学').waitFor();
     assert.notEqual(
@@ -150,7 +182,8 @@ test('SSO browser login, real-name profile, bans, appeals and account safety', a
         200,
       );
       await page.goto(site.origin + '/login.html');
-      await page.getByRole('link', { name: '通过社盟账号登录', exact: true }).click();
+      await page.locator('#loginConsent').check();
+      await page.getByRole('button', { name: '通过社盟账号登录', exact: true }).click();
       await page.getByText('账号已被封禁', { exact: true }).waitFor();
       assert.equal(await page.locator('#loginForm,input[name=username],input[name=password]').count(), 0);
       assert.equal(await page.locator('#appealBox').isVisible(), true);

@@ -23,14 +23,16 @@ try {
   ]) {
     const { ctx, page } = await f.context(null, { width, theme });
     await page.goto(f.site.base + '/login.html');
-    f.check(await page.getByRole('link', { name: '通过社盟账号登录', exact: true }).isVisible(), 'SSO login is visible');
+    f.check(await page.getByRole('button', { name: '通过社盟账号登录', exact: true }).isVisible(), 'SSO login is visible');
     f.check((await page.locator('#loginForm,input[name=username],input[name=password]').count()) === 0, 'login selection has no credential inputs');
     f.check((await page.getByRole('link', { name: '立即注册', exact: true }).count()) === 0, 'registration entry removed');
+    await page.locator('#loginConsent').check();
     await page.getByRole('link', { name: '使用账号密码登录', exact: true }).click();
     f.check((await page.locator('.password-checks').count()) === 0, 'login has no strength checks');
     await page.locator('#password').fill(PASSWORD);
     await f.audit(page, 'login ' + width + theme);
     await page.locator('#username').fill(operator.username);
+    await page.locator('#loginConsent').check();
     await page.locator('#submitBtn').click();
     await page.waitForURL('**/index.html');
     f.check(
@@ -110,9 +112,11 @@ try {
   assert.equal(banned.status, 200);
   const ban = await f.context(null);
   await ban.page.goto(f.site.base + '/login.html');
+  await ban.page.locator('#loginConsent').check();
   await ban.page.getByRole('link', { name: '使用账号密码登录', exact: true }).click();
   await ban.page.locator('#username').fill(user.username);
   await ban.page.locator('#password').fill(PASSWORD);
+  await ban.page.locator('#loginConsent').check();
   await ban.page.locator('#submitBtn').click();
   await ban.page.getByText('账号已被封禁', { exact: true }).waitFor();
   f.check(!(await ban.page.locator('#appealBox').isVisible()), 'disabled appeal hidden');

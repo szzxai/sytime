@@ -852,9 +852,11 @@ try {
   }
   await settings.ctx.close();
   const passwordLogin = await pageFor(null, '/login.html?next=%2Fshops.html', 360);
+  await passwordLogin.page.locator('#loginConsent').check();
   await passwordLogin.page.getByRole('link', { name: '使用账号密码登录', exact: true }).click();
   await passwordLogin.page.locator('#username').fill('campus-user');
   await passwordLogin.page.locator('#password').fill('CampusTest2026');
+  await passwordLogin.page.locator('#loginConsent').check();
   await passwordLogin.page.locator('#submitBtn').click();
   await passwordLogin.page.waitForURL('**/shops.html');
   check('existing account login respects return URL',

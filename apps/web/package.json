@@ -13,6 +13,8 @@
     "@tanstack/react-router": "^1.170.46",
     "@uiw/react-md-editor": "^4.2.3",
     "diff": "^9.0.0",
+    "maplibre-gl": "^6.19.0",
+    "polygon-clipping": "^0.15.7",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "react-markdown": "^10.1.0",

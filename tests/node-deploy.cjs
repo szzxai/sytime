@@ -40,6 +40,13 @@ async function main() {
     }
     assert.equal(data?.dishes.length, 0); assert.equal(data.meta.records_count || 0, 0);
     assert.equal((await fetch(base + "/recipe.html")).status, 200);
+    for (const page of ['/terms.html', '/privacy.html']) {
+      const response = await fetch(base + page);
+      assert.equal(response.status, 200);
+      assert.equal(response.headers.get('X-Frame-Options'), 'DENY');
+      assert.equal(response.headers.get('X-Content-Type-Options'), 'nosniff');
+      assert.match(response.headers.get('Content-Security-Policy'), /frame-ancestors 'none'/);
+    }
     for (const route of ['/.private/menu-master.key', '/.private/session-secret', '/.env', '/.git/config', '/data.db']) assert.equal((await fetch(base + route)).status, 404, route);
     assert.equal((await fetch(base + "/api/admin/menu-sync/settings")).status, 404);
     assert.equal((await fetch(base + "/api/admin/menu-sync/imports")).status, 404);

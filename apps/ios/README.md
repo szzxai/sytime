@@ -12,7 +12,7 @@
 
 ## 功能
 
-- 首页、公告、关于、校园地图：离线内置 31 个地点及原站地图，原生缩放、搜索、别名、分类、地点说明。
+- 首页、公告、关于、校园地图：离线内置校园简图与地点目录，支持双指缩放、连续旋转、搜索、别名、分类和地点说明。
 - 食谱：今日 / 明日、周食谱、供应筛选、地点与价格合并、菜品详情、评价与配图、审核提交。
 - 周边店铺：搜索 / 筛选 / 排序、MapKit 地图、坐标转换、导航链接、点赞、评价、推荐、收藏及公开收藏。
 - 校园 Wiki：目录、搜索、随机阅读、原生 Markdown、图片、章节跳转、贡献者、历史版本及文字差异；新建 / 编辑、预览、上传、按账号和站点隔离的本地草稿、审核锁定、目录及词条治理。
@@ -52,7 +52,7 @@ CI `.github/workflows/ios.yml` 在 iOS 文件变更时执行模拟器测试及�
 - `Sytime/Features`：按功能划分的原生页面。
 - `Sytime/Resources`：地图、地点数据、品牌图、图标、隐私声明。
 - `project.yml`：工程定义。增删 Swift 文件后执行 `xcodegen generate --spec apps/ios/project.yml`，并保留生成工程。
-- `node --import tsx apps/ios/scripts/sync-resources.mjs`：从现有校园 SVG、地点定义及 favicon 同步资源，需仓库依赖和 Playwright Chromium。仅开发时使用，App 不包含浏览器运行时。
+- `node --import tsx apps/ios/scripts/sync-resources.mjs`：从校园矢量地物、地点目录及 favicon 同步资源，需仓库依赖和 Playwright Chromium。仅开发时使用，App 不包含浏览器运行时。
 
 后端额外补充了 `PUT /api/collections/:id` 重命名接口，带所有权和名称校验，测试位于 `tests/ios-collections.test.cjs`。其余功能复用现有 API。并行开发产生的 Wiki 后端和 Web 变更由各自任务维护。
 

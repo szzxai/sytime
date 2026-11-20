@@ -57,7 +57,7 @@ struct CampusView: View {
             directory = false
           }
           HStack {
-            Label("上方为北 · 校园位置示意", systemImage: "location.north.circle").font(.caption)
+            Label("双指缩放与旋转", systemImage: "hand.draw").font(.caption)
             Spacer()
           }.padding(12).glassEffect(in: .rect(cornerRadius: 16)).padding()
         }
@@ -174,7 +174,7 @@ struct CampusView: View {
   }
 }
 
-/// Native UIScrollView provides bounded pan, pinch, rotation resizing and VoiceOver targets.
+/// Native gestures move the atlas and its VoiceOver targets in the same coordinate space.
 struct CampusAtlas: UIViewRepresentable {
   @Environment(\.colorScheme) private var colorScheme
   let places: [CampusPlace]
@@ -182,90 +182,192 @@ struct CampusAtlas: UIViewRepresentable {
   let reset: Int
   let zoomCommand: Int
   let onSelect: (CampusPlace) -> Void
-  func makeUIView(context: Context) -> AtlasScrollView {
-    let view = AtlasScrollView()
+  func makeUIView(context: Context) -> AtlasMapView {
+    let view = AtlasMapView()
     view.onSelect = onSelect
     return view
   }
-  func updateUIView(_ view: AtlasScrollView, context: Context) {
+  func updateUIView(_ view: AtlasMapView, context: Context) {
     view.onSelect = onSelect
     view.art.image = UIImage(named: colorScheme == .dark ? "Campus-dark.png" : "Campus-light.png")
     view.configure(places, selected: selected, reset: reset, command: zoomCommand)
   }
 }
-final class AtlasScrollView: UIScrollView, UIScrollViewDelegate {
+final class AtlasMapView: UIView, UIGestureRecognizerDelegate {
   let art = UIImageView(frame: CGRect(x: 0, y: 0, width: 1000, height: 1540))
   var onSelect: ((CampusPlace) -> Void)?
   private var buttons: [String: UIButton] = [:]
+  private var previousPlaces: [CampusPlace] = []
   private var previousSize = CGSize.zero
   private var previousReset = 0
   private var previousCommand = 0
   private var selectedID: String?
+  private var scale: CGFloat = 1
+  private var angle: CGFloat = 0
+  private var mapCenter = CGPoint.zero
+  private lazy var pan = UIPanGestureRecognizer(target: self, action: #selector(handlePan))
+  private lazy var pinch = UIPinchGestureRecognizer(target: self, action: #selector(handlePinch))
+  private lazy var rotation = UIRotationGestureRecognizer(
+    target: self, action: #selector(handleRotation))
+
   override init(frame: CGRect) {
     super.init(frame: frame)
-    delegate = self
+    clipsToBounds = true
+    backgroundColor = UIColor(red: 0.94, green: 0.93, blue: 0.90, alpha: 1)
+    accessibilityIdentifier = "campus-atlas"
     art.isUserInteractionEnabled = true
     addSubview(art)
-    contentSize = art.bounds.size
-    backgroundColor = .white
-    bouncesZoom = true
-    showsVerticalScrollIndicator = false
-    showsHorizontalScrollIndicator = false
+    for gesture in [pan, pinch, rotation] {
+      gesture.delegate = self
+      addGestureRecognizer(gesture)
+    }
   }
   required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+
+  private var viewportCenter: CGPoint { CGPoint(x: bounds.midX, y: bounds.midY) }
+  private var rotatedSize: CGSize {
+    let x = abs(cos(angle))
+    let y = abs(sin(angle))
+    return CGSize(
+      width: art.bounds.width * x + art.bounds.height * y,
+      height: art.bounds.width * y + art.bounds.height * x)
+  }
+  private var minimumScale: CGFloat {
+    min(bounds.width / rotatedSize.width, bounds.height / rotatedSize.height)
+  }
+  private var maximumScale: CGFloat { max(minimumScale * 5, 2) }
+
   override func layoutSubviews() {
     super.layoutSubviews()
-    if bounds.size != previousSize && bounds.width > 0 && bounds.height > 0 {
-      let oldMinimum = minimumZoomScale
-      let wasFit = abs(zoomScale - oldMinimum) < 0.02
-      previousSize = bounds.size
-      minimumZoomScale = min(bounds.width / 1000, bounds.height / 1540)
-      maximumZoomScale = max(minimumZoomScale * 5, 2)
-      if wasFit || oldMinimum == 1 { setZoomScale(minimumZoomScale, animated: false) }
+    let size = bounds.size
+    guard size != previousSize, size.width > 0, size.height > 0 else { return }
+    let firstLayout = previousSize == .zero
+    let wasFit =
+      firstLayout
+      || abs(
+        scale
+          - min(
+            previousSize.width / rotatedSize.width,
+            previousSize.height / rotatedSize.height)) < 0.001
+    if wasFit {
+      scale = minimumScale
+      mapCenter = viewportCenter
+    } else {
+      mapCenter.x += (size.width - previousSize.width) / 2
+      mapCenter.y += (size.height - previousSize.height) / 2
     }
-    centerArt()
+    previousSize = size
+    render()
   }
-  func viewForZooming(in scrollView: UIScrollView) -> UIView? { art }
-  func scrollViewDidZoom(_ scrollView: UIScrollView) { centerArt() }
-  private func centerArt() {
-    contentInset = UIEdgeInsets(
-      top: max(0, (bounds.height - art.frame.height) / 2),
-      left: max(0, (bounds.width - art.frame.width) / 2), bottom: 0, right: 0)
+
+  private func render(animated: Bool = false) {
+    guard bounds.width > 0, bounds.height > 0 else { return }
+    scale = max(minimumScale, min(scale, maximumScale))
+    let size = rotatedSize
+    let x = max(0, (size.width * scale - bounds.width) / 2)
+    let y = max(0, (size.height * scale - bounds.height) / 2)
+    mapCenter.x = min(bounds.midX + x, max(bounds.midX - x, mapCenter.x))
+    mapCenter.y = min(bounds.midY + y, max(bounds.midY - y, mapCenter.y))
+    let update = {
+      self.art.transform = CGAffineTransform(rotationAngle: self.angle).scaledBy(
+        x: self.scale, y: self.scale)
+      self.art.center = self.mapCenter
+    }
+    if animated && !UIAccessibility.isReduceMotionEnabled {
+      UIView.animate(
+        withDuration: 0.32, delay: 0, options: [.beginFromCurrentState], animations: update)
+    } else {
+      update()
+    }
+    accessibilityValue = "\(Int((angle * 180 / .pi).rounded()))°"
   }
+
+  private func transformMap(around pivot: CGPoint, magnification: CGFloat = 1, turn: CGFloat = 0) {
+    let position = art.convert(pivot, from: self)
+    angle = (angle + turn).truncatingRemainder(dividingBy: 2 * .pi)
+    scale = max(minimumScale, min(scale * magnification, maximumScale))
+    let local = CGPoint(x: position.x - art.bounds.midX, y: position.y - art.bounds.midY)
+    let offset = local.applying(
+      CGAffineTransform(rotationAngle: angle).scaledBy(x: scale, y: scale))
+    mapCenter = CGPoint(x: pivot.x - offset.x, y: pivot.y - offset.y)
+    render()
+  }
+
+  func gestureRecognizer(
+    _ gestureRecognizer: UIGestureRecognizer,
+    shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer
+  ) -> Bool {
+    [pan, pinch, rotation].contains { $0 === otherGestureRecognizer }
+  }
+  @objc private func handlePan(_ gesture: UIPanGestureRecognizer) {
+    guard gesture.state == .changed else { return }
+    let delta = gesture.translation(in: self)
+    gesture.setTranslation(.zero, in: self)
+    mapCenter.x += delta.x
+    mapCenter.y += delta.y
+    render()
+  }
+  @objc private func handlePinch(_ gesture: UIPinchGestureRecognizer) {
+    guard gesture.state == .changed else { return }
+    transformMap(around: gesture.location(in: self), magnification: gesture.scale)
+    gesture.scale = 1
+  }
+  @objc private func handleRotation(_ gesture: UIRotationGestureRecognizer) {
+    guard gesture.state == .changed else { return }
+    transformMap(around: gesture.location(in: self), turn: gesture.rotation)
+    gesture.rotation = 0
+  }
+
   func configure(_ places: [CampusPlace], selected: String?, reset: Int, command: Int) {
-    for button in buttons.values { button.removeFromSuperview() }
-    buttons.removeAll()
-    for p in places {
-      let b = UIButton(type: .custom)
-      b.frame = CGRect(
-        x: p.x - p.size / 2, y: p.y - (p.height ?? p.size * 0.75) / 2, width: p.size,
-        height: p.height ?? p.size * 0.75)
-      b.accessibilityLabel = "\(p.name)，\(p.categoryName)，\(p.summary)"
-      b.accessibilityTraits = p.id == selected ? [.button, .selected] : [.button]
-      if p.id == selected {
-        b.layer.borderWidth = 4
-        b.layer.borderColor = UIColor.tintColor.cgColor
-        b.layer.cornerRadius = 8
-        b.backgroundColor = UIColor.tintColor.withAlphaComponent(0.12)
+    if previousPlaces != places {
+      for button in buttons.values { button.removeFromSuperview() }
+      buttons.removeAll()
+      for p in places {
+        let button = UIButton(type: .custom)
+        let height = p.height ?? p.size * 0.75
+        button.frame = CGRect(
+          x: p.x - p.size / 2, y: p.y - height / 2, width: p.size, height: height)
+        button.accessibilityLabel = "\(p.name)，\(p.categoryName)，\(p.summary)"
+        button.layer.cornerRadius = 8
+        button.addAction(UIAction { [weak self] _ in self?.onSelect?(p) }, for: .touchUpInside)
+        art.addSubview(button)
+        buttons[p.id] = button
       }
-      b.addAction(UIAction { [weak self] _ in self?.onSelect?(p) }, for: .touchUpInside)
-      art.addSubview(b)
-      buttons[p.id] = b
+      previousPlaces = places
+    }
+    for (id, button) in buttons {
+      button.accessibilityTraits = id == selected ? [.button, .selected] : [.button]
+      button.layer.borderWidth = id == selected ? 4 : 0
+      button.layer.borderColor = tintColor.cgColor
+      button.backgroundColor = id == selected ? tintColor.withAlphaComponent(0.12) : .clear
     }
     if previousReset != reset {
-      setZoomScale(minimumZoomScale, animated: !UIAccessibility.isReduceMotionEnabled)
+      angle = 0
+      scale = minimumScale
+      mapCenter = viewportCenter
+      render(animated: true)
       previousReset = reset
     }
     if previousCommand != command {
       let factor = command > previousCommand ? 1.35 : 1 / 1.35
-      setZoomScale(
-        min(maximumZoomScale, max(minimumZoomScale, zoomScale * factor)),
-        animated: !UIAccessibility.isReduceMotionEnabled)
+      transformMap(around: viewportCenter, magnification: factor)
       previousCommand = command
     }
     if selectedID != selected, let selected, let button = buttons[selected] {
-      let rect = button.frame.insetBy(dx: -100, dy: -100)
-      zoom(to: rect, animated: !UIAccessibility.isReduceMotionEnabled)
+      let target = button.frame.insetBy(dx: -100, dy: -100)
+      let x = abs(cos(angle))
+      let y = abs(sin(angle))
+      scale = min(
+        maximumScale,
+        max(
+          minimumScale,
+          min(
+            bounds.width / (target.width * x + target.height * y),
+            bounds.height / (target.width * y + target.height * x))))
+      let offset = CGPoint(x: target.midX - art.bounds.midX, y: target.midY - art.bounds.midY)
+        .applying(CGAffineTransform(rotationAngle: angle).scaledBy(x: scale, y: scale))
+      mapCenter = CGPoint(x: bounds.midX - offset.x, y: bounds.midY - offset.y)
+      render(animated: true)
     }
     selectedID = selected
   }
