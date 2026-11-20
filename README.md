@@ -17,6 +17,9 @@
     <a href="https://github.com/szzxai/sytime/issues">
       <img src="https://img.shields.io/github/issues/szzxai/sytime?style=flat-square&color=1b7f4b" alt="Issues" />
     </a>
+    <a href="https://github.com/szzxai/sytime/contributors">
+      <img src="https://img.shields.io/github/contributors/szzxai/sytime?style=flat-square&color=1b7f4b" alt="Issues" />
+    </a>
   </p>
 
   <p>
