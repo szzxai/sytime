@@ -1,15 +1,18 @@
 "use strict";
 // Explicit, opt-in real provider check. No credentials are persisted or printed.
 const fs = require("node:fs"), path = require("node:path");
+require('dotenv/config');
+const { MenuConfig } = require('../apps/api/src/domain/menu/config');
 const { testConfiguration, ModelClient } = require("../apps/api/src/domain/menu/provider");
 const { parseArticle } = require("../apps/api/src/domain/menu/source");
-const { normalizeImage, extractImage, preview } = require("../apps/api/src/domain/menu/images");
+const { normalizeImage, preview } = require("../apps/api/src/domain/menu/images");
+const { extractMenuImage } = require('../apps/api/src/domain/menu/extract');
 const { cleanError, VERSION } = require("../apps/api/src/domain/menu/schema");
 const samples = require("./fixtures/menu-manual-review.json");
 async function main() {
-  const key = process.env.OPENROUTER_API_KEY || process.env.OPENROUTER_CODE_API_KEY;
-  if (!key) throw new Error("Set OPENROUTER_API_KEY for the optional live check");
-  const config = { provider: "openrouter", base_url: "https://openrouter.ai/api/v1", model: process.env.MENU_TEST_MODEL || "openai/gpt-6-luna", api_key: key };
+  const config = new MenuConfig().snapshot();
+  if (process.env.MENU_TEST_MODEL) config.model = process.env.MENU_TEST_MODEL;
+  const key = config.api_key;
   const started = new Date().toISOString();
   const out = path.resolve("output/playwright/menu-live", started.replace(/[:.]/g, "-")); fs.mkdirSync(out, {recursive: true});
   const report = { started_at: started, version: VERSION, model: config.model, sample_basis: "人工逐项核对的 30 个供应记录；仅评价抽样字段，不代表全图准确率", sources: [] };
@@ -41,6 +44,34 @@ async function main() {
   const result = await testConfiguration(config, {fetchImpl: diagnosticFetch});
   report.capability = result;
   console.log("Capability:", result.ok, result.elapsed_ms, "ms");
+  fs.writeFileSync(path.join(out, 'report.json'), JSON.stringify(report, null, 2));
+  if (process.argv.includes('--probe')) return;
+  if (process.argv.includes('--image')) {
+    const imagePath = process.argv[process.argv.indexOf('--image') + 1];
+    const sourceIndex = process.argv.indexOf('--source');
+    if (!imagePath || sourceIndex < 0 || !process.argv[sourceIndex + 1])
+      throw new Error('Use --image menu.png --source source.json (title and published_date)');
+    const source = JSON.parse(fs.readFileSync(process.argv[sourceIndex + 1], 'utf8'));
+    if (typeof source.title !== 'string' || typeof source.published_date !== 'string')
+      throw new Error('Source metadata requires title and published_date');
+    const image = await normalizeImage(fs.readFileSync(imagePath));
+    const model = new ModelClient(config, {fetchImpl: diagnosticFetch, cacheDir: path.join(out, 'cache'), signal: AbortSignal.timeout(20*60000)});
+    const imageStarted = Date.now();
+    try {
+      const extracted = await extractMenuImage(image, source, model, {onProgress: phase => console.log(phase, model.stats.requests)});
+      fs.writeFileSync(path.join(out, 'result.json'), JSON.stringify(extracted, null, 2));
+      report.image = {complete: true, records: extracted.records.length, elapsed_ms: Date.now() - imageStarted, stats: model.stats};
+    } catch (error) {
+      report.image = {complete: false, error: cleanError(error, [key]), stats: model.stats};
+      fs.writeFileSync(path.join(out, 'failure.json'), JSON.stringify({ ...report.image, diagnostic: error.menu_diagnostic }, null, 2));
+      process.exitCode = 1;
+    }
+    report.finished_at = new Date().toISOString();
+    report.sample_basis = '本地菜单图片识别与复核；未进行人工准确率评分，不发布菜单';
+    fs.writeFileSync(path.join(out, 'report.json'), JSON.stringify(report, null, 2));
+    console.log('Image result:', JSON.stringify(report.image));
+    return;
+  }
   const archive = path.resolve(process.argv[2] || "../szzx-menu/.scratch/audit_10");
   const ids = process.env.MENU_TEST_IDS ? process.env.MENU_TEST_IDS.split(",").map(Number) : [11392,11389,11386];
   if (ids.some(id => !samples.sources.some(source => source.article_id === id))) throw new Error("Unsupported manual-review article ID");
@@ -55,7 +86,7 @@ async function main() {
     const model = new ModelClient(config, {fetchImpl: diagnosticFetch, cacheDir: path.join(out, "cache"), signal: AbortSignal.timeout(20*60000)});
     console.log("Image", id, image.width, image.height);
     try {
-      const extracted = await extractImage(image, source, model, {onProgress: phase => console.log(id, phase)});
+      const extracted = await extractMenuImage(image, source, model, {onProgress: phase => console.log(id, phase)});
       fs.writeFileSync(path.join(out, `${id}-result.json`), JSON.stringify(extracted));
       console.log(id, "complete", extracted.records.length, "records", model.stats.requests, "requests");
       score(id, extracted.records, true, null, model.stats);
@@ -76,6 +107,6 @@ async function main() {
   console.log("Summary:",JSON.stringify(report.summary));
 }
 main().catch(error => {
-  const key = process.env.OPENROUTER_API_KEY || process.env.OPENROUTER_CODE_API_KEY;
+  const key = process.env.MENU_API_KEY || process.env.GEMINI_API_KEY;
   console.error(error.name, cleanError(new (require("../apps/api/src/domain/menu/schema").MenuError)(error.message), [key])); process.exitCode = 1;
 });

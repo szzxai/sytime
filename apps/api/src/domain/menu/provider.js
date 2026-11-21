@@ -116,6 +116,8 @@ class ModelClient {
         this.config.provider,
         this.config.base_url,
         this.config.model,
+        this.config.response_format || 'json_schema',
+        this.config.thinking,
         name,
         schema,
         prompt,
@@ -172,6 +174,12 @@ class ModelClient {
         },
         max_tokens: 16384,
       };
+      if (this.config.response_format === 'json_object') {
+        content[0].text +=
+          '\n仅输出 JSON 对象，严格遵循以下 JSON Schema：' + JSON.stringify(schema);
+        body.response_format = { type: 'json_object' };
+      }
+      if (this.config.thinking) body.thinking = { type: this.config.thinking };
       if (this.config.provider === 'openrouter') {
         body.provider = { require_parameters: true };
       }

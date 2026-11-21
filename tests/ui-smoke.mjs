@@ -297,10 +297,10 @@ try {
           'short Chinese primary navigation',
           width > 992
             ? (await landing.page.locator('.site-nav__link').allTextContents()).join('|') ===
-                '地图|菜谱|必吃榜|Wiki|更新公告|关于我们'
+                '地图|菜谱|必吃榜|Wiki'
             : (await landing.page.locator('#navDrawer .mobile-nav__link').allTextContents()).join(
                 '|',
-              ) === '首页|地图|菜谱|必吃榜|Wiki|更新公告|关于我们',
+              ) === '首页|地图|菜谱|必吃榜|Wiki',
         );
         if (width <= 992) await landing.page.keyboard.press('Escape');
         check(

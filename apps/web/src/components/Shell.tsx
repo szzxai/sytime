@@ -21,8 +21,6 @@ const nav = [
   { key: 'recipe', href: 'recipe.html', label: '菜谱', icon: 'utensils' },
   { key: 'shops', href: 'shops.html', label: '必吃榜', icon: 'store' },
   { key: 'wiki', href: 'wiki.html', label: 'Wiki', icon: 'clipboard' },
-  { key: 'announce', href: 'announcements.html', label: '更新公告', icon: 'megaphone' },
-  { key: 'about', href: 'about.html', label: '关于我们', icon: 'graduation' },
 ];
 function NetworkStatus() {
   const [online, setOnline] = useState(navigator.onLine);

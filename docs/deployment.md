@@ -19,6 +19,38 @@ OIDC_CLIENT_SECRET=社盟分配的客户端密钥
 
 社盟回调地址为 `https://time.szzxclubunion.cn/api/sso/callback`，登出回跳地址为 `https://time.szzxclubunion.cn/login.html`。客户端使用 Authorization Code、RS256 和 PKCE S256。
 
+## 菜谱识别模型
+
+模型、密钥和同步计划由服务端环境变量配置，修改后重启 API。Gemini 与 OpenAI 兼容接口共用表格分组读取、逐图复核和本地字段校验；失败的文章不会覆盖已有菜单。
+
+Gemini 配置：
+
+```dotenv
+MENU_PROVIDER=gemini
+MENU_MODEL=gemini-flash-lite-latest
+GEMINI_API_KEY=你的Gemini密钥
+MENU_RESPONSE_FORMAT=json_schema
+MENU_THINKING=
+```
+
+OpenAI 官方接口使用 `MENU_PROVIDER=openai`、`MENU_MODEL=支持图片输入的模型` 和 `MENU_API_KEY`，默认地址为 `https://api.openai.com/v1`。第三方 OpenAI 兼容接口使用 `MENU_PROVIDER=compatible`，并设置包含版本路径的 `MENU_BASE_URL`。例如本次测试的 DeepSeek 接口：
+
+```dotenv
+MENU_PROVIDER=compatible
+MENU_BASE_URL=https://sub2api.zquant.site/v1
+MENU_MODEL=deepseek-v4.1-flash-1017
+MENU_API_KEY=你的接口密钥
+MENU_RESPONSE_FORMAT=json_object
+MENU_THINKING=disabled
+MENU_SYNC_ENABLED=true
+MENU_SYNC_MODE=weekend
+MENU_SYNC_TIME=08:00
+```
+
+该接口不支持 `json_schema`，需使用 `json_object`，程序会将 Schema 加入提示并继续执行本地严格校验。`MENU_THINKING` 是可选的提供商扩展；标准 OpenAI 与 Gemini 留空。`MENU_API_KEY` 优先于 `GEMINI_API_KEY`，切回 Gemini 时清空前者或换成 Gemini 的密钥。
+
+部署后先运行 `npm run test:menu:live -- --probe`，检查配置模型能否读取随机图片并返回八字段 JSON；此命令不会发布菜单，测试报告写入 `output/playwright/menu-live/`。真实菜单图片可运行 `npm run test:menu:live -- --image menu.png --source source.json`，其中 `source.json` 提供 `title` 和 `published_date`，输出识别数据与复核诊断供人工核对。完整历史菜单抽样测试可运行 `npm run test:menu:live -- /路径/到/audit_10`，需要包含测试用例所列文章的本地归档。确认配置后，`npm run menu:setup` 会验证并实际同步菜单。内地服务器仍需实测模型接口和学校网站的连通性。
+
 ## 可信代理与 NAT
 
 `TRUSTED_PROXIES` 为逗号分隔的 IP 或 CIDR，默认留空，不信任任何转发头。部署后填写应用实际看到的代理 socket 来源地址，以及可信中间代理地址。IPv4、IPv6 和 IPv4-mapped IPv6 均支持。不要配置 `0.0.0.0/0` 或 `::/0`。

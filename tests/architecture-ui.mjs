@@ -39,7 +39,7 @@ try {
   await page.getByRole('button',{name:'全部菜品',exact:true}).click();
   await page.locator('#dishSearch').fill('红烧');
   await page.waitForURL(url => url.searchParams.get('q') === '红烧');
-  await page.locator('.site-nav__link[href="/announcements.html"]').click();
+  await page.locator('.site-footer a[href="/announcements.html"]').click();
   await page.waitForURL('**/announcements.html');
   await page.goBack();
   await page.waitForFunction(() => document.querySelector('#dishSearch')?.value === '红烧');

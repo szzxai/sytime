@@ -16,7 +16,15 @@ function validateEndpoint(value) {
 }
 function fingerprint(config) {
   return sha256(
-    JSON.stringify([config.provider, config.base_url, config.model, config.key_hash, VERSION]),
+    JSON.stringify([
+      config.provider,
+      config.base_url,
+      config.model,
+      config.response_format,
+      config.thinking,
+      config.key_hash,
+      VERSION,
+    ]),
   );
 }
 class MenuConfig {
@@ -26,7 +34,7 @@ class MenuConfig {
   }
   raw() {
     const provider = process.env.MENU_PROVIDER || 'gemini';
-    if (!['gemini', 'openrouter', 'compatible'].includes(provider))
+    if (!['gemini', 'openai', 'openrouter', 'compatible'].includes(provider))
       throw new MenuError('MENU_PROVIDER 无效');
     const key = this.decrypt();
     const config = {
@@ -37,12 +45,17 @@ class MenuConfig {
           ? GEMINI_BASE
           : provider === 'openrouter'
             ? OPENROUTER_BASE
-            : validateEndpoint(process.env.MENU_BASE_URL || ''),
+            : validateEndpoint(
+                process.env.MENU_BASE_URL ||
+                  (provider === 'openai' ? 'https://api.openai.com/v1' : ''),
+              ),
       model:
         process.env.MENU_MODEL ||
         process.env.MENU_GEMINI_MODEL ||
         (provider === 'gemini' ? 'gemini-flash-lite-latest' : ''),
       daily_time: validateTime(process.env.MENU_SYNC_TIME || '08:00'),
+      response_format: process.env.MENU_RESPONSE_FORMAT || 'json_schema',
+      thinking: process.env.MENU_THINKING || undefined,
       schedule_mode: process.env.MENU_SYNC_MODE || 'weekend',
       enabled: !!key && process.env.MENU_SYNC_ENABLED !== 'false',
       schedule_effective_at: this.effectiveAt,
@@ -52,11 +65,19 @@ class MenuConfig {
     };
     if (!['daily', 'weekend'].includes(config.schedule_mode))
       throw new MenuError('MENU_SYNC_MODE 无效');
+    if (!['json_schema', 'json_object'].includes(config.response_format))
+      throw new MenuError('MENU_RESPONSE_FORMAT 无效');
+    if (config.thinking && !['enabled', 'disabled'].includes(config.thinking))
+      throw new MenuError('MENU_THINKING 无效');
     config.validated_fingerprint = key ? fingerprint(config) : null;
     return config;
   }
   decrypt() {
-    return (process.env.MENU_API_KEY || process.env.GEMINI_API_KEY || '').trim();
+    return (
+      process.env.MENU_API_KEY ||
+      ((process.env.MENU_PROVIDER || 'gemini') === 'gemini' ? process.env.GEMINI_API_KEY : '') ||
+      ''
+    ).trim();
   }
   snapshot() {
     const config = this.raw();

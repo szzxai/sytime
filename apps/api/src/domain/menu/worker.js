@@ -4,13 +4,13 @@ const path = require('node:path');
 const { parentPort, workerData, isMainThread } = require('node:worker_threads');
 const { SchoolSource, writeJson } = require('./source');
 const { ModelClient } = require('./provider');
-const { normalizeImage, extractImage } = require('./images');
+const { normalizeImage } = require('./images');
+const { extractMenuImage } = require('./extract');
 const { MenuError, sha256, validateRecords, cleanError } = require('./schema');
 const { sourceId } = require('./store');
 // Injectable transports/extractors are for offline tests, never HTTP parameters.
 async function runMenuJob(input, { signal, emit, fetchImpl = fetch, extractor } = {}) {
-  extractor ||=
-    input.config.provider === 'gemini' ? require('./extract').extractGeminiImage : extractImage;
+  extractor ||= extractMenuImage;
   const school = new SchoolSource({
     fetchImpl,
     cacheDir: path.join(input.privateDir, 'menu-cache'),

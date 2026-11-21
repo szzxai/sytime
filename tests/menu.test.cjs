@@ -19,7 +19,7 @@ const record = (name = "免费汤", price = 0) => ({date: "2026-10-01", weekday:
 const source = id => ({article_id: id, title: "每周菜单", published_date: "2026-09-30", content_hash: sha256(String(id))});
 const at = value => Date.parse(value + "+08:00");
 function fixture(t) {
-  const keys=['MENU_PROVIDER','MENU_MODEL','MENU_API_KEY','GEMINI_API_KEY','MENU_SYNC_MODE','MENU_SYNC_TIME','MENU_SYNC_ENABLED'];const old=Object.fromEntries(keys.map(k=>[k,process.env[k]]));for(const k of keys)delete process.env[k];t.after(()=>{for(const k of keys)if(old[k]===undefined)delete process.env[k];else process.env[k]=old[k];});
+  const keys=['MENU_PROVIDER','MENU_MODEL','MENU_API_KEY','GEMINI_API_KEY','MENU_BASE_URL','MENU_RESPONSE_FORMAT','MENU_THINKING','MENU_SYNC_MODE','MENU_SYNC_TIME','MENU_SYNC_ENABLED'];const old=Object.fromEntries(keys.map(k=>[k,process.env[k]]));for(const k of keys)delete process.env[k];t.after(()=>{for(const k of keys)if(old[k]===undefined)delete process.env[k];else process.env[k]=old[k];});
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "szzx-menu-test-")), db = new DatabaseSync(path.join(root, "data.db"));
   db.exec("PRAGMA foreign_keys=ON; CREATE TABLE settings(key TEXT PRIMARY KEY,value TEXT); CREATE TABLE users(id INTEGER PRIMARY KEY,role TEXT,status TEXT)");
   migrate(db);
@@ -111,6 +111,40 @@ test('Gemini extraction repairs rejected tables and never accepts a failed compl
   }};
   await assert.rejects(extractGeminiImage(image,source(11427),rejecting),e=>e.menu_diagnostic.partial_records.length===0);
 });
+test('table repair keeps the candidate and source, accepts empty tables and rejects unreadable cells', async () => {
+  const {extractMenuImage}=require('../apps/api/src/domain/menu/extract');
+  const image=await normalizeImage(await sharp({create:{width:200,height:200,channels:3,background:'white'}}).png().toBuffer());
+  const groups=[{date:'2026-10-26',time:['noon'],places:['希文楼'],group:'面档',items:[{name:'候选菜品甲',price_text:'12元',spicy:false}]}];
+  const layout={complete:true,problems:[],tables:[{bbox:[0,0,1000,1000]}]};
+  let reads=0,reviews=0;
+  const repaired=await extractMenuImage(image,source(11427),{async request(request){
+    if(request.name==='menu_layout')return layout;
+    if(request.name.startsWith('menu_table_review'))return {groups,problems:++reviews===1?['候选中的位置需要核对']:[]};
+    if(++reads===2){
+      assert.ok(request.prompt.includes('候选菜品甲'),'repair retains the rejected candidate');
+      assert.ok(request.prompt.includes('每周菜单'),'repair retains source context');
+      assert.ok(request.prompt.includes('price_text'),'repair retains field rules');
+    }
+    return {complete:true,issues:[],groups};
+  }});
+  assert.equal(reads,2);assert.equal(repaired.records[0].name,'候选菜品甲');
+  let emptyRead=0;
+  const empty=await extractMenuImage(image,source(11427),{async request(request){
+    if(request.name==='menu_layout')return {...layout,tables:[{bbox:[0,0,1000,500]},{bbox:[0,500,1000,1000]}]};
+    if(request.name.startsWith('menu_table_review'))return {groups:emptyRead===1?[]:groups,problems:[]};
+    return {complete:true,issues:[],groups:++emptyRead===1?[]:groups};
+  }});
+  assert.equal(empty.records.length,1);assert.equal(empty.blocks[0].records_count,0);
+  await assert.rejects(extractMenuImage(image,source(11427),{async request(request){
+    if(request.name==='menu_layout')return layout;
+    return request.name.startsWith('menu_table_review')?{groups:[],problems:[]}:{complete:true,issues:[],groups:[]};
+  }}),/菜单必须包含/);
+  await assert.rejects(extractMenuImage(image,source(11427),{async request(request){
+    if(request.name==='menu_layout')return layout;
+    const value={complete:false,issues:['周一午餐有模糊菜名'],groups:[]};
+    request.validateResult?.(value);return value;
+  }}),e=>e.message.includes('模糊菜名')&&e.menu_diagnostic.partial_records.length===0);
+});
 test("Shanghai daily schedule: midnight, edits, once per day and downtime catch-up", () => {
   const config = {enabled: true, daily_time: "08:00", schedule_effective_at: at("2026-09-29T12:00:00")};
   assert.equal(localDay(Date.parse("2026-09-30T16:01:00Z")), "2026-10-01");
@@ -197,6 +231,33 @@ test("provider strict JSON/images: retry, repair, truncation and cache isolation
     const body = JSON.parse(options.body); assert.ok(!JSON.stringify(body.response_format).includes("uniqueItems")); assert.ok(!body.messages[0].content[0].text.includes("RANDOM_IMG_ONLY"));
     return new Response(JSON.stringify({choices: [{message: {content: JSON.stringify({complete: true, unreadable: [], records: [{...record("RANDOM_IMG_ONLY"), spicy: false, cell_bbox: [0,0,1000,1000]}]})}}]}));
   }}); assert.equal(probe.ok, true);
+});
+test('OpenAI and DeepSeek config isolates credentials and JSON mode keeps local validation', async t => {
+  const {root,db}=fixture(t), settings=new MenuConfig(db,root);
+  process.env.GEMINI_API_KEY='gemini-only-secret';
+  process.env.MENU_PROVIDER='openai';process.env.MENU_MODEL='vision-test';
+  assert.equal(settings.raw().base_url,'https://api.openai.com/v1');
+  assert.throws(()=>settings.snapshot(),/Key/);
+  Object.assign(process.env,{MENU_API_KEY:'compatible-secret',MENU_BASE_URL:'https://test.invalid/v1/',MENU_RESPONSE_FORMAT:'json_object',MENU_THINKING:'disabled'});
+  const config=settings.snapshot();assert.equal(config.base_url,'https://test.invalid/v1');
+  const firstFingerprint=fingerprint(config);
+  assert.notEqual(firstFingerprint,fingerprint({...config,response_format:'json_schema'}));
+  const schema={type:'object',properties:{ok:{type:'boolean'}},required:['ok'],additionalProperties:false};
+  const request={name:'probe',schema,prompt:'Read image',images:[{data:Buffer.from('image')}]};
+  let calls=0;
+  const model=new ModelClient(config,{cacheDir:root,fetchImpl:async(url,options)=>{
+    calls++;const body=JSON.parse(options.body);
+    assert.equal(url,'https://test.invalid/v1/chat/completions');
+    assert.deepEqual(body.response_format,{type:'json_object'});assert.deepEqual(body.thinking,{type:'disabled'});
+    assert.ok(body.messages[0].content[0].text.includes(JSON.stringify(schema)));
+    return new Response(JSON.stringify({choices:[{message:{content:JSON.stringify(calls===1?{ok:'invalid'}:{ok:true})}}]}));
+  }});
+  assert.deepEqual(await model.request(request),{ok:true});assert.equal(calls,2);
+  await model.request(request);assert.equal(calls,2);
+  const invalid=new ModelClient(config,{fetchImpl:async()=>new Response(JSON.stringify({choices:[{message:{content:'{"ok":"invalid"}'}}]}))});
+  await assert.rejects(invalid.request(request),e=>e.code==='model_format');
+  process.env.MENU_RESPONSE_FORMAT='text';assert.throws(()=>settings.raw(),/MENU_RESPONSE_FORMAT/);
+  process.env.MENU_RESPONSE_FORMAT='json_object';process.env.MENU_THINKING='bad';assert.throws(()=>settings.raw(),/MENU_THINKING/);
 });
 test("block extraction overlap deduplicates, keeps evidence and refuses failed coverage", async () => {
   const image = await normalizeImage(await sharp({create: {width: 600, height: 900, channels: 3, background: "white"}}).png().toBuffer());
