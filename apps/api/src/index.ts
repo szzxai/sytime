@@ -5,7 +5,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import createApp from './app.js';
 const root = path.resolve(process.env.APP_ROOT || process.cwd());
-const { app, db, menuService } = createApp(root);
+const { app, db, menuService, aboutAvatars } = createApp(root);
 const webRoot = path.join(root, 'apps/web/dist');
 app.all('/api', (c) => c.json({ error: 'not found' }, 404));
 app.all('/api/*', (c) => c.json({ error: 'not found' }, 404));
@@ -64,12 +64,13 @@ app.onError((error, c) => {
 const server = serve({ fetch: app.fetch, port: Number(process.env.PORT || 3000) }, () => {
   console.log(`Campus map running at http://localhost:${process.env.PORT || 3000}`);
   menuService.start();
+  aboutAvatars.start();
 });
 let closing = false;
 async function shutdown() {
   if (closing) return;
   closing = true;
-  await menuService.close();
+  await Promise.all([menuService.close(), aboutAvatars.close()]);
   server.close(() => {
     db.$client.close();
   });

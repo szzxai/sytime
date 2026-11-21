@@ -1,4 +1,4 @@
-import { atLeast } from '@sytime/shared';
+import { aboutAvatarInterval, atLeast } from '@sytime/shared';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useState, type ReactNode } from 'react';
 import { AdminUsers } from '../components/AdminUsers';
@@ -624,6 +624,46 @@ function Tickets() {
     </section>
   );
 }
+function AboutAvatarSettings() {
+  const path = '/api/admin/settings/about-avatars';
+  const settings = useQuery(endpoint<{ intervalHours: number }>(path));
+  const action = useAction();
+  return (
+    <section className="admin-panel">
+      <div className="admin-panel__head">
+        <h2>团队头像设置</h2>
+      </div>
+      {settings.isPending ? (
+        <Loading />
+      ) : settings.error ? (
+        <ErrorState error={settings.error} retry={settings.refetch} />
+      ) : (
+        <form
+          className="form admin-content-form"
+          onSubmit={(event) => {
+            event.preventDefault();
+            const { intervalHours } = formValues(event.currentTarget);
+            action.mutate({ path, method: 'PUT', body: { intervalHours: Number(intervalHours) } });
+          }}
+        >
+          <Field label="远程头像同步间隔（小时）">
+            <input
+              key={settings.data?.intervalHours}
+              className="input"
+              name="intervalHours"
+              type="number"
+              min={aboutAvatarInterval.min}
+              max={aboutAvatarInterval.max}
+              defaultValue={settings.data?.intervalHours}
+              required
+            />
+          </Field>
+          <Submit pending={action.isPending}>保存设置</Submit>
+        </form>
+      )}
+    </section>
+  );
+}
 function Content() {
   const action = useAction();
   const banner = useQuery(endpoint<{ banner: string }>('/api/settings/banner'));
@@ -667,6 +707,7 @@ function Content() {
         </Field>,
         'PUT',
       )}
+      <AboutAvatarSettings />
       {form(
         '发布公告',
         '/api/admin/announcements',

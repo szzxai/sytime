@@ -62,7 +62,7 @@ try {
       check(Math.abs(box.y + box.height - 800) < 2, 'menu fills remaining viewport');
       check(await page.locator('#main').evaluate(el => !!el.closest('[inert]')), 'background content is inert');
       check(await page.evaluate(() => document.documentElement.style.overflow) === 'hidden', 'menu locks page scroll');
-      check(await panel.locator('.mobile-nav__link').allTextContents().then(items => items.join('|')) === '首页|地图|菜谱|必吃榜|更新公告', 'primary navigation order');
+      check(await panel.locator('.mobile-nav__link').allTextContents().then(items => items.join('|')) === '首页|地图|菜谱|必吃榜|Wiki|更新公告|关于我们', 'primary navigation order');
       check(await panel.locator('[aria-current="page"]').innerText() === '首页', 'active section is indicated');
       check(await panel.locator('.mobile-nav__link').first().evaluate(el => getComputedStyle(el).fontSize) === '24px', 'reference link typography');
       check(await panel.locator('.mobile-nav__link').nth(1).evaluate(el => getComputedStyle(el).transitionDelay) === '0.15s', 'links have staggered entrance');
@@ -199,6 +199,19 @@ try {
     await page.locator('.dish-detail').waitFor();
     await settled(page);
     check(await page.evaluate(() => transitions.length) === before, 'reduced motion skips slides');
+    const mobile = width < 900;
+    const navigation = page.getByRole('navigation', { name: mobile ? '移动端主导航' : '主导航', exact: true });
+    if (mobile) await page.getByRole('button', { name: '打开菜单' }).click();
+    const aboutLink = navigation.getByRole('link', { name: '关于我们', exact: true });
+    check(await aboutLink.evaluate(link => link.previousElementSibling?.textContent === '更新公告'), 'About follows announcements');
+    await aboutLink.click();
+    await page.waitForURL('**/about.html');
+    await page.getByRole('heading', { level: 1, name: '关于我们' }).waitFor();
+    if (mobile) {
+      check(await page.locator('#navDrawer').getAttribute('data-open') === 'false', 'About navigation closes mobile menu');
+      await page.getByRole('button', { name: '打开菜单' }).click();
+    }
+    check(await aboutLink.getAttribute('aria-current') === 'page', 'About is indicated as the current page');
     assert.deepEqual(errors, []); checks++;
     await context.close();
   }

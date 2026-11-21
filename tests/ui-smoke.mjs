@@ -297,10 +297,10 @@ try {
           'short Chinese primary navigation',
           width > 992
             ? (await landing.page.locator('.site-nav__link').allTextContents()).join('|') ===
-                '地图|菜谱|必吃榜|更新公告'
-            : (await landing.page.locator('#navDrawer .drawer-link').allTextContents())
-                .slice(0, 5)
-                .join('|') === '首页|地图|菜谱|必吃榜|更新公告',
+                '地图|菜谱|必吃榜|Wiki|更新公告|关于我们'
+            : (await landing.page.locator('#navDrawer .mobile-nav__link').allTextContents()).join(
+                '|',
+              ) === '首页|地图|菜谱|必吃榜|Wiki|更新公告|关于我们',
         );
         if (width <= 992) await landing.page.keyboard.press('Escape');
         check(

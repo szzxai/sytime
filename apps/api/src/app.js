@@ -3,6 +3,7 @@ const path = require('path');
 const fs = require('fs');
 
 const { createDatabase, query } = require('../../../packages/db/src/client.ts');
+const { AboutAvatarService, mountAboutAvatarRoutes } = require('./domain/about-avatars');
 const { MenuService } = require('./domain/menu/service');
 const { mountMenuRoutes } = require('./domain/menu/routes');
 const dishStore = require('./domain/dishes/store');
@@ -105,6 +106,7 @@ module.exports = function createApp(root) {
   const { checkRole, requireLogin } = createAuth(db, JWT_SECRET);
   const permissions = new Set([
     'banner_edit',
+    'about_avatar_edit',
     'announcement_publish',
     'user_manage',
     'ban_appeal_review',
@@ -213,6 +215,8 @@ module.exports = function createApp(root) {
       );
   });
   const menuService = new MenuService(db, root);
+  const aboutAvatars = new AboutAvatarService(db);
+  mountAboutAvatarRoutes(app, aboutAvatars, requirePermission);
   dishStore.migrate(db);
   mountDishRoutes(app, db, attachAuthors);
   mountMenuRoutes(app, db);
@@ -270,5 +274,5 @@ module.exports = function createApp(root) {
   require('./routes/map')(app, { root });
   require('./routes/messages')(app, { requireLogin, db, requirePermission });
   app.notFound((c) => c.json({ error: 'not found' }, 404));
-  return { app, db, menuService };
+  return { app, db, menuService, aboutAvatars };
 };

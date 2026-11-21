@@ -22,6 +22,7 @@ const nav = [
   { key: 'shops', href: 'shops.html', label: '必吃榜', icon: 'store' },
   { key: 'wiki', href: 'wiki.html', label: 'Wiki', icon: 'clipboard' },
   { key: 'announce', href: 'announcements.html', label: '更新公告', icon: 'megaphone' },
+  { key: 'about', href: 'about.html', label: '关于我们', icon: 'graduation' },
 ];
 function NetworkStatus() {
   const [online, setOnline] = useState(navigator.onLine);
@@ -108,7 +109,9 @@ export function Shell({ children }: { children: ReactNode }) {
           ? 'announce'
           : pathname.includes('map')
             ? 'map'
-            : 'home';
+            : pathname === '/about.html'
+              ? 'about'
+              : 'home';
   const banner = useQuery(
     endpoint<{ banner: string; version: string | number }>('/api/settings/banner', false),
   );

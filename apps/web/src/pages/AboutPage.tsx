@@ -1,37 +1,7 @@
+import { aboutAvatarSource, aboutTeams as teams, type AboutMember } from '@sytime/shared';
 import { useState } from 'react';
 import './AboutPage.css';
 
-type Member = { name: string; role: string; link?: string };
-const profiles = {
-  zhou: 'https://github.com/Zhou-Shilin',
-  li: 'https://github.com/lirenfei2021',
-  xu: 'https://github.com/Blinstarr',
-  yang: 'https://github.com/williamyang45',
-};
-const teams: { year: string; members: Member[] }[] = [
-  {
-    year: '2026–2027',
-    members: [
-      { name: '周示麟', role: 'Co-Founder', link: profiles.zhou },
-      { name: '李任飞', role: 'Co-Founder', link: profiles.li },
-      { name: '许王熠宸', role: 'Founding Engineer', link: profiles.xu },
-      { name: '杨晨逍', role: 'Founding Engineer', link: profiles.yang },
-      { name: '孙海博', role: 'Geospatial Engineer' },
-      { name: '郑智允', role: 'Full Stack Engineer' },
-      { name: '李今希', role: 'Full Stack Engineer' },
-    ],
-  },
-  {
-    year: '初创',
-    members: [
-      { name: '王勇亮', role: 'Founder', link: 'https://github.com/wyl-b' },
-      { name: '李任飞', role: 'Founding Engineer', link: profiles.li },
-      { name: '周示麟', role: 'Founding Engineer', link: profiles.zhou },
-      { name: '许王熠宸', role: 'Founding Engineer', link: profiles.xu },
-      { name: '杨晨逍', role: 'Founding Engineer', link: profiles.yang },
-    ],
-  },
-];
 const values = [
   {
     title: '成长',
@@ -80,28 +50,34 @@ function ValueIcon({ kind }: { kind: string }) {
     </svg>
   );
 }
-function GitHubAvatar({ link }: { link: string }) {
+function TeamAvatar({ src }: { src: string }) {
   const [failed, setFailed] = useState(false);
-  const username = new URL(link).pathname.split('/')[1];
 
   return failed ? null : (
     <img
       className="about-member__avatar"
-      src={`https://github.com/${username}.png?size=96`}
+      src={src}
       alt=""
       width={36}
       height={36}
       loading="lazy"
-      referrerPolicy="no-referrer"
       onError={() => setFailed(true)}
     />
   );
 }
-function ProfileLink({ member }: { member: Member }) {
-  return member.link ? (
+function MemberAvatar({ member }: { member: AboutMember }) {
+  const source = aboutAvatarSource(member);
+  if (!source) return null;
+  const src =
+    source.kind === 'local' ? source.url : `/api/about/avatars/${encodeURIComponent(member.name)}`;
+  return <TeamAvatar key={src} src={src} />;
+}
+function ProfileLink({ member }: { member: AboutMember }) {
+  const username = member.github?.trim();
+  return username ? (
     <a
       className="about-member__link"
-      href={member.link}
+      href={`https://github.com/${encodeURIComponent(username)}`}
       target="_blank"
       rel="noopener noreferrer"
       aria-label={`${member.name} 的 GitHub（新窗口打开）`}
@@ -172,7 +148,7 @@ export function AboutPage() {
           {team.members.map((member) => (
             <article className="about-member" key={member.name}>
               <div className="about-member__body">
-                {member.link && <GitHubAvatar key={member.link} link={member.link} />}
+                <MemberAvatar member={member} />
                 <div className="about-member__details">
                   <div className="about-member__name-row">
                     <h3>{member.name}</h3>

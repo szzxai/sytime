@@ -175,6 +175,12 @@ CREATE TABLE IF NOT EXISTS settings (
   value TEXT
 );
 
+CREATE TABLE IF NOT EXISTS about_team_avatars (
+  source TEXT PRIMARY KEY,
+  attempted_at INTEGER NOT NULL,
+  image BLOB
+);
+
 INSERT OR IGNORE INTO settings (key, value) VALUES ('banner', '欢迎来到校园信息网');
 INSERT OR IGNORE INTO settings (key, value) VALUES ('banner_version', '0');
 

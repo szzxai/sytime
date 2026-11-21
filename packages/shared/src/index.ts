@@ -1,4 +1,5 @@
 export * from './shopSort';
+export * from './about';
 
 export const roleWeights = { operator: 5, admin: 4, student: 3, user: 2, guest: 1 } as const;
 export type Role = keyof typeof roleWeights;
